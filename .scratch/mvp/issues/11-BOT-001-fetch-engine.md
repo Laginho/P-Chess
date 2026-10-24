@@ -75,7 +75,7 @@ Acceptance: pending | Command-line behavior passes the checks above; comparison 
 - Final diff is limited to the two Primary files and this ticket; `git diff --check` passed. Downloaded engine assets remain ignored. No test-only commit is required by this ticket's explicit verification exemption.
 - Human review must retain the criterion-6 integration condition. This handoff does not confirm equivalence with Bruno's unavailable historical copies.
 
-Gate evidence: C:/Users/Lage/AppData/Local/Temp/P-Chess-BOT-001-evidence-20261024/gate.json
+Gate evidence: C:/Users/Lage/AppData/Local/Temp/P-Chess-BOT-001-foreman-20261024/gate.json
 
 #### Resolution (2026-10-24)
 Verdict: Needs your call: Criterion 6 requires Bruno to confirm the historical-copy comparison or explicitly accept the recorded official upstream artifacts before integration.
@@ -135,3 +135,5 @@ Verdict: Approve
 Acceptance: passed | Command-line runs under "Stage 2 verification" (clean download, cached repeat, tamper, interrupted/corrupt response, default/relative roots), the gate receipt above, and Bruno's acceptance of the upstream hash baseline (criterion 6).
 
 Disclosure: decision | none | Criterion 6 rewritten from Bruno's decision (2026-10-24, `d0b0787`): the official GitHub release artifacts are the hash baseline; this resolves the stage-2 proxy decision's integration condition and the previous pass's Needs-your-call.
+
+- 2026-10-24 Foreman: the driver refused the reused stage-2 receipt at `done` because `.scratch/mvp/issues/29-CI-002-windows-export.md` (the driver's CI-002 parking note, not code) changed on the session after the tested commit. Reran the bound gate on session commit `2583e7f`: exit 0, **81 passed, 0 failed**; the Gate evidence line now points to that receipt (previous receipt: `C:/Users/Lage/AppData/Local/Temp/P-Chess-BOT-001-evidence-20261024/gate.json`). No code changed.
