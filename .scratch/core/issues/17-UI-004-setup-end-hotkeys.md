@@ -1,5 +1,5 @@
 # UI-004: Setup, game end, rematch and hotkeys
-Stage: to-implement
+Stage: implementing
 Blocked by: CLOCK-001
 Review: agent
 Difficulty: normal
@@ -8,6 +8,7 @@ Difficulty: normal
   - ui/setup.tscn, ui/setup.gd
   - ui/main.tscn, ui/main.gd
   - core/game.gd (claim, resign)
+  - ui/move_list.gd (reset only)
   - New: tests/test_session.gd
 
 #### What to build
@@ -37,3 +38,5 @@ The full game loop of §9.1 and §9.2: the complete setup screen, a clear game-e
 ## Comments
 
 - 2026-10-24 Attempt 1 failed: exit 0. Log tail: ...after the first press. /   - The Claim draw button is wired up, and auto-claim is on as a constant until UI-005. /   - `F11` toggles focus mode. /  / **Two decisions:** / - **Move list reset:** a rematch has to clear the move list, so I added a `reset()` to `ui/move_list.gd`. That file wasn't in the ticket's Primary files; the proxy approved adding it, and that decision is recorded in the ticket. / - **Maia's late reply:** if you rematch while Maia is still thinking, her late answer would have been played as a move in the new game. A rematch now throws that reply away. /  / **Things to know:** / - With auto-claim on, a threefold repetition ends the game by itself, so the Claim draw button never actually becomes clickable. / - In focus mode the Esc hint still shows, since it's the only warning before a resign. The ticket says only the board and clocks should be visible, so a reviewer may flag this. / - Not checked: I didn't open the app. A quick headless launch to catch broken scene paths also needed approval, so I skipped it. The fix for Maia's late reply has no test either, because it would need the real window. The manual checks in the ticket (resign with Esc Esc, rematch, F11, claim) are still to do.
+
+Proxy decided (opus): `ui/move_list.gd` joins Primary files, scoped to a new `reset()` that calls `clear()` and sets `_plies = 0` — a rematch is the first time the move list has to empty, `_plies` is private to that script (a `set("_plies", 0)` from main would fail silently on a rename), and replacing the node is more code and fights `_set_flipped`'s panel order.
