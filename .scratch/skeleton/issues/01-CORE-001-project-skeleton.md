@@ -1,5 +1,5 @@
 # CORE-001: Project skeleton and test runner
-Stage: to-review
+Stage: reviewing
 Blocked by: none
 Review: agent
 Difficulty: normal
