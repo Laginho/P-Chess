@@ -1,5 +1,5 @@
 # BOT-003: Move picker and time-pressure panic
-Stage: implementing
+Stage: to-review
 Blocked by: CORE-001
 Review: agent
 Difficulty: hard
@@ -48,8 +48,12 @@ Difficulty: hard
   - Non-blocking 5, behaviour now defined and tested: `T = 0` keeps only the top move (the limit of `p^(1/T)`); all-zero policy or weights give the first move all the mass, not the policy's top move, since §6.3 weights are `1 + (B − 1)·f(d) ≥ 1` and cannot be zero. Not guarded: a NaN weight or policy entry still gives NaN mass, and a negative `T` is undefined. Neither can come from Maia's softmax, §6.3 or the settings defaults; UI-005 owns the `T` setting's range.
   - Callers: none outside the tests (`git grep move_picker`). The change creates two degenerate inputs: `p_top = 0`, which only an input with no positive mass reaches and the early return covers, and `1/T = inf` at `T = 0` (tested). Spec §3.3 needs no edit: scaling before renormalising does not change the result.
   - Gate: 29 passed, 0 failed, exit 0 on 66229f6. The stage-3 receipt this line replaces (`c08c5649-…\scratchpad\BOT-003-review-gate.json`, 8cb80e4) is superseded.
+- 2026-10-24 Stage 2, reopen 2 (opus-5.5, hard) on `bot-003`, fast-forwarded to the session tip 3489479. Review 3's one blocking item, one cycle:
+  - Cycle 5 (a1bac01 red, 77451eb green): `test_a_draw_of_exactly_one_picks_a_move_with_mass` uses Review 3's seed 1 and state -6990051623618564479. It first asserts that a reference RNG at that state draws exactly 1.0, so on a Godot whose `randf()` never reaches 1.0 the test fails instead of passing vacuously. Red: `expected "a", got "c"` (77 passed, 1 failed). Fix: `pick()` skips zero-mass keys in the cumulative loop, so a draw of 1.0, or a sum left short by rounding, falls back to the last move with mass. A draw below 1.0 picks the same move as before, because a zero-mass key could only be returned by falling through. RNG use is unchanged (`test_pick_draws_once_from_the_rng` still passes).
+  - Callers: none outside the tests (`git grep move_picker`). The change creates no new degenerate input: `distribution()` always gives the top move mass 1 before renormalising, so a non-empty policy always has a key with mass; the empty policy still returns `""`. NaN stays deferred, as Review 3 recorded: a NaN entry is not `<= 0`, so it is not skipped.
+  - Gate: 78 passed, 0 failed, exit 0 on 77451eb. The reopen-1 receipt (`a130588f-…\scratchpad\BOT-003-reopen1-gate.json`, 66229f6) is superseded.
 
-Gate evidence: C:\Users\Lage\AppData\Local\Temp\claude\D--Desktop-Projects-P-Chess--artifacts-build-lanes-bot\a130588f-7fbc-4fbb-ba34-d34eceb8e27e\scratchpad\BOT-003-reopen1-gate.json
+Gate evidence: C:\Users\Lage\AppData\Local\Temp\claude\D--Desktop-Projects-P-Chess--artifacts-build-lanes-bot\7fe85063-0203-4a45-8e24-992827b49355\scratchpad\BOT-003-reopen2-gate.json
 
 #### Resolution (2026-10-24)
 
