@@ -19,3 +19,4 @@ Single-context: one `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agent
 - Gate: `godot --headless -s tests/run.gd`
 - Base branch: `main`
 - Models: stage 2 gpt-6.1-sol high, hard gpt-6.1-sol xhigh, stage 3 gpt-6.1-sol xhigh
+- Models (night): stage 2 haiku-5.5 high, hard opus-5.5 xhigh, stage 3 opus-5.5 xhigh
