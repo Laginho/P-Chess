@@ -305,7 +305,7 @@ and exits with a non-zero code when a test fails.
 | M8 | Time-model calibration from Lichess data | `time_model.json` loaded; delays feel human | BOT-006, BOT-007 |
 | M9 | Windows export and release workflow | A tag produces a downloadable zip that runs | CI-002, CI-003 |
 
-Tickets live in `.scratch/mvp/issues/`.
+Tickets live in `.scratch/<lane>/issues/`, one folder per sweatshop lane: `skeleton`, `core`, `bot`, `side`, and `mvp` for the `Review: human` tickets and CI-002.
 
 The GitHub repo is created before M1's CI job, and **only after Bruno confirms** it.
 
