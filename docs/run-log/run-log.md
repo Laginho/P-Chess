@@ -33,3 +33,12 @@
 | 2026-10-24 12:23 | UI-002 | review | opus-5.5 xhigh | 1 | failed (incomplete handoff), blocked | sweatshop/side/2026-10-24-1141 | 8m | 3.7M in (96% cached), 52k out | $2.184 | 0.518 |
 | 2026-10-24 12:50 | BOT-003 | implement | opus-5.5 xhigh | 1 | to-review | sweatshop/bot/2026-10-24-0159 | 3m | 1.9M in (97% cached), 10k out | $1.095 | 0.518 |
 | 2026-10-24 12:54 | BOT-003 | review | opus-5.5 xhigh | 1 | merged | sweatshop/bot/2026-10-24-0159 | 4m | 2.5M in (95% cached), 23k out | $1.300 | 0.514 |
+| 2026-10-24 13:15 | CI-001 | implement | gpt-6.1-sol high | 1 | to-review | sweatshop/mvp/2026-10-24-1310 | 5m | 1.3M in (96% cached), 6k out | $0.420 | 1.304 |
+| 2026-10-24 13:19 | CI-001 | review | gpt-6.1-sol xhigh | 1 | merged | sweatshop/mvp/2026-10-24-1310 | 4m | 1.5M in (92% cached), 10k out | $0.636 | 1.308 |
+| 2026-10-24 13:31 | UI-003 | implement | gpt-6.1-sol high | 1 | to-review | sweatshop/mvp/2026-10-24-1310 | 12m | 2.8M in (96% cached), 20k out | $0.953 | 1.314 |
+| 2026-10-24 13:35 | UI-003 | review | gpt-6.1-sol xhigh | 1 | merged | sweatshop/mvp/2026-10-24-1310 | 4m | 2.2M in (91% cached), 13k out | $0.899 | 1.317 |
+| 2026-10-24 13:47 | BOT-001 | implement | gpt-6.1-sol high | 1 | to-review | sweatshop/mvp/2026-10-24-1310 | 12m | 2.9M in (96% cached), 22k out | $1.029 | 1.580 |
+| 2026-10-24 13:51 | BOT-001 | review | gpt-6.1-sol xhigh | 1 | review ended at blocked (exit 0) | sweatshop/mvp/2026-10-24-1310 | 5m | 1.5M in (88% cached), 15k out | $0.758 | 1.571 |
+| 2026-10-24 14:04 | CI-002 | implement | gpt-6.1-sol high | 1 | to-review | sweatshop/mvp/2026-10-24-1310 | 12m | 3.4M in (97% cached), 21k out | $1.096 | 1.307 |
+| 2026-10-24 14:09 | CI-002 | review | gpt-6.1-sol xhigh | 1 | review ended at blocked (exit 0) | sweatshop/mvp/2026-10-24-1310 | 5m | 1.8M in (90% cached), 13k out | $0.842 | 1.566 |
+| 2026-10-24 14:16 | BOT-001 | review | opus-5.5 xhigh | 1 | failed (incomplete handoff), blocked | sweatshop/mvp/2026-10-24-1310 | 5m | 2.7M in (95% cached), 31k out | $1.439 | 0.792 |
