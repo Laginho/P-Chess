@@ -43,6 +43,9 @@ static func pick(policy: Dictionary, rng: RandomNumberGenerator, weights := {}, 
 	var r := rng.randf()
 	var move := ""
 	for m in dist:
+		# randf() can return 1.0 (or rounding leave the sum short): fall back to a move with mass.
+		if dist[m] <= 0.0:
+			continue
 		move = m
 		r -= dist[m]
 		if r < 0.0:
