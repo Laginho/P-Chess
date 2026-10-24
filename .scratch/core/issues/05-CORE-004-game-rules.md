@@ -1,5 +1,5 @@
 # CORE-004: Game results and draw rules
-Stage: to-implement
+Stage: implementing
 Blocked by: CORE-003
 Review: agent
 Difficulty: hard
