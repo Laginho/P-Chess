@@ -1,5 +1,5 @@
 # BOT-004: Play a game against Maia
-Stage: blocked
+Stage: to-implement
 Blocked by: UI-001, BOT-002, BOT-003
 Review: agent
 Difficulty: normal
@@ -39,5 +39,3 @@ The first game against the bot (M3): a minimal setup picks colour and level, and
   - Question for Bruno: Lc0 v0.32.1's default `PolicyTemperature` is not 1. `engine/uci.gd` leaves it at that default, so the `P:` it returns is flatter than Maia's raw policy. c2's τ/T (§3.3), the 0.9 premove check (§4.1) and BOT-007's calibration all read `P:`. Pick one value, and if it is not Lc0's default, set it in the bridge. BOT-007 must use the same value.
   - `engine/uci.gd` has no timeout and does not notice Lc0 exiting. A bad `WeightsFile` path or a crash leaves requests queued forever, with `available` still true, so Maia would never move and c6 would not catch it.
 - 2026-10-24 From the UI-002 review (a note, not a criterion until stage 1 folds it in): Maia's move will reach the board through `BoardView.play()`, and BOT-004 is its first caller. `play()` does not handle a piece the human is holding, or a promotion picker that is open. While Maia is to move, `_pick_up` lets the human pick up Maia's pieces, because they belong to the side to move. If Maia's move arrives at that moment, the old target dots stay on the board and the next drop can play a move from an earlier position. With the picker open, it records an illegal SAN in the move list. Stage 1 has two ways to fix it, and either one needs `ui/board_view.gd` in this ticket's Primary files: stop the human picking up Maia's pieces, or make `play()` drop the held piece and close the picker. Details are in UI-002's Resolution.
-
-- 2026-10-24 Stage stopped (incomplete handoff): Invalid committed handoff: BOT-004: missing Gate evidence receipt. See D:\Desktop\Projects\P-Chess\.artifacts-build\lanes\core\.scratch\run-log\BOT-004-implement-20261024-155622.txt.runtime.json and run-log/recovery.txt; inspect the saved work before retrying.
