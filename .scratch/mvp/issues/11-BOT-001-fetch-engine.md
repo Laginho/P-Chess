@@ -1,5 +1,5 @@
 # BOT-001: Engine fetch script
-Stage: to-review
+Stage: done
 Blocked by: none
 Review: human
 Difficulty: normal
@@ -110,3 +110,28 @@ Disclosure: pending | integration | Criterion 6 and this Resolution: Bruno must 
 - 2026-10-24 Bruno decided (human, relayed to the foreman): "Aceito os arquivos oficiais do GitHub como referência dos hashes; não tenho cópias locais. Registre isso no BOT-001 no lugar do critério 6." Folded into criterion 6 in place of the comparison with his copies. This answers the Needs-your-call verdict above and the integration condition of the proxy decision and Disclosures; no code changed. Stage restored to `to-review` for re-review.
 
 Disclosure: decision | integration | Resolved 2026-10-24: Bruno accepted the official GitHub release artifacts as the hash baseline (criterion 6).
+
+#### Resolution (2026-10-24, re-review)
+Verdict: Approve
+
+- Re-review of the diff since the previous pass, `422758c...d0b0787` (rebased `64ffe7c`): ticket metadata only. Production is unchanged since the tested commit `01e0eb6` (`git diff --stat 01e0eb6 BOT-001 -- . ':!.scratch'` is empty after the rebase onto the session). The previous pass had no ❌ items; its only open point was criterion 6's human condition, now rewritten from Bruno's decision.
+- Merged into the session as `83b8d00` (`--no-ff`); the rebase onto the session was clean. No production or test changes were authored during review.
+
+##### Standards
+
+- No findings. The re-review diff touches only this ticket. The Standards sub-agent flagged the `#### Resolution` heading placement as breaking the `## Comments` convention; dismissed: the ticket-flow loop mandates appending a `#### Resolution (YYYY-MM-DD)` block to the ticket.
+
+##### Spec
+
+- Criterion 6 as rewritten passes: the script builds its URLs from the official `LeelaChessZero/lc0` `v0.32.1` and `CSSLab/maia-chess` `v1.0` release download prefixes with the exact asset names; all ten pinned asset hashes equal the provenance table above; tags, asset names, URLs and hashes are recorded in the verification evidence; the Lc0 ZIP hash matches GitHub's published release-asset digest (checked independently in the previous pass); `docs/THIRD_PARTY.md` states the Maia hashes are computed because v1.0 publishes no digests. No conflict with the other criteria.
+- Criteria 1-5 and 7: pass, carried from the previous pass; the code they were verified against is unchanged.
+- `Proxy decided (gpt-6-astra high, fallback)` (stage 2): implement with hashes from official upstream downloads, keep the historical-copy comparison as a human integration gate. That gate is now closed by Bruno's decision (`Bruno decided`, relayed through the foreman, `d0b0787`), folded into criterion 6. The earlier `Proxy escalated` line and the "Bruno-copy comparison: pending" note are history, superseded by that decision.
+
+##### Verification and review coverage
+
+- Gate receipt `C:/Users/Lage/AppData/Local/Temp/P-Chess-BOT-001-evidence-20261024/gate.json`: exit 0, code `01e0eb6`, log reports **81 passed, 0 failed**. Reused: no production changed during rebase or review. This session could not recompute the log's SHA-256 (sandbox blocks the temp directory); the previous pass verified it.
+- Examined: the criterion-6 rewrite against the script, `docs/THIRD_PARTY.md` and the recorded evidence; Comments and Disclosures for contradictions. Not re-examined: callers, failure paths and cross-feature interactions, unchanged since the previous pass recorded them. Live UCI/gameplay and clean-machine release remain outside this ticket (BOT-002, CI-003).
+
+Acceptance: passed | Command-line runs under "Stage 2 verification" (clean download, cached repeat, tamper, interrupted/corrupt response, default/relative roots), the gate receipt above, and Bruno's acceptance of the upstream hash baseline (criterion 6).
+
+Disclosure: decision | none | Criterion 6 rewritten from Bruno's decision (2026-10-24, `d0b0787`): the official GitHub release artifacts are the hash baseline; this resolves the stage-2 proxy decision's integration condition and the previous pass's Needs-your-call.
