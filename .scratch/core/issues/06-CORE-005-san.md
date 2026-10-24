@@ -1,5 +1,5 @@
 # CORE-005: SAN in and out
-Stage: to-implement
+Stage: blocked
 Blocked by: CORE-003
 Review: agent
 Difficulty: normal
@@ -28,3 +28,5 @@ Moves in Standard Algebraic Notation, both ways. The move list, the PGN files, t
 - `tests/test_san.gd`: the cases above and the round-trip. Red because there is no SAN code.
 
 ## Comments
+
+- 2026-10-24 Stage stopped (incomplete handoff): Invalid committed handoff: CORE-005: code changed after gate (core/board.gd, tests/test_san.gd); reuse evidence only for identical code. See D:\Desktop\Projects\P-Chess\.artifacts-build\lanes\core\.scratch\run-log\CORE-005-implement-20261024-030601.txt.runtime.json and run-log/recovery.txt; inspect the saved work before retrying.
