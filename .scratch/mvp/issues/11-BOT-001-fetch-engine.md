@@ -1,5 +1,5 @@
 # BOT-001: Engine fetch script
-Stage: done
+Stage: blocked
 Blocked by: none
 Review: human
 Difficulty: normal
@@ -135,3 +135,5 @@ Verdict: Approve
 Acceptance: passed | Command-line runs under "Stage 2 verification" (clean download, cached repeat, tamper, interrupted/corrupt response, default/relative roots), the gate receipt above, and Bruno's acceptance of the upstream hash baseline (criterion 6).
 
 Disclosure: decision | none | Criterion 6 rewritten from Bruno's decision (2026-10-24, `d0b0787`): the official GitHub release artifacts are the hash baseline; this resolves the stage-2 proxy decision's integration condition and the previous pass's Needs-your-call.
+
+- 2026-10-24 Stage stopped (incomplete handoff): Invalid committed handoff: BOT-001: code changed after gate (.scratch/mvp/issues/29-CI-002-windows-export.md); reuse evidence only for identical code. See D:\Desktop\Projects\P-Chess\.artifacts-build\lanes\mvp\.scratch\run-log\BOT-001-review-20261024-141138.txt.runtime.json and run-log/recovery.txt; inspect the saved work before retrying.
