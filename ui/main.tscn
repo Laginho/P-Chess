@@ -1,0 +1,41 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://ui/main.gd" id="1"]
+[ext_resource type="PackedScene" path="res://ui/board_view.tscn" id="2"]
+[ext_resource type="PackedScene" path="res://ui/move_list.tscn" id="3"]
+
+[node name="Main" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1")
+
+[node name="Layout" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = 16.0
+offset_right = -16.0
+offset_bottom = -16.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 16
+
+[node name="BoardView" parent="Layout" instance=ExtResource("2")]
+layout_mode = 2
+
+[node name="Side" type="VBoxContainer" parent="Layout"]
+custom_minimum_size = Vector2(240, 0)
+layout_mode = 2
+
+[node name="Result" type="Label" parent="Layout/Side"]
+layout_mode = 2
+autowrap_mode = 3
+
+[node name="MoveList" parent="Layout/Side" instance=ExtResource("3")]
+layout_mode = 2
