@@ -1,4 +1,4 @@
-﻿| When | ID | Stage | Model | Attempt | Outcome | Session | Took | Tokens | Cost | Shutdown s |
+| When | ID | Stage | Model | Attempt | Outcome | Session | Took | Tokens | Cost | Shutdown s |
 |---|---|---|---|---|---|---|---|---|---|---|
 | 2026-10-24 01:35 | CORE-001 | implement | haiku-5.5 high | 1 | failed (exit 0), will retry | sweatshop/skeleton/2026-10-24-0135 | 0m | 157k in (66% cached), 1k out | $0.470 | 0.781 |
 | 2026-10-24 01:36 | CORE-001 | implement | haiku-5.5 high | 2 | failed (incomplete handoff), blocked | sweatshop/skeleton/2026-10-24-0135 | 1m | 607k in (95% cached), 10k out | $0.531 | 0.773 |
@@ -24,3 +24,10 @@
 | 2026-10-24 03:59 | UI-001 | review | opus-5.5 xhigh | 1 | merged | sweatshop/core/2026-10-24-0159 | 9m | 4.8M in (96% cached), 53k out | $2.518 | 0.760 |
 | 2026-10-24 12:05 | BOT-003 | implement | opus-5.5 xhigh | 1 | to-review | sweatshop/bot/2026-10-24-0159 | 5m | 2.7M in (97% cached), 28k out | $1.728 | 0.781 |
 | 2026-10-24 12:12 | BOT-003 | review | opus-5.5 xhigh | 1 | merged | sweatshop/bot/2026-10-24-0159 | 7m | 3.0M in (95% cached), 40k out | $1.745 | 0.780 |
+| 2026-10-24 11:46 | CORE-006 | implement | opus-5.5 high | 1 | failed (exit 0), will retry | sweatshop/side/2026-10-24-1141 | 5m | 2.2M in (96% cached), 25k out | $1.680 | 0.785 |
+| 2026-10-24 11:48 | CORE-006 | implement | opus-5.5 high | 2 | to-review | sweatshop/side/2026-10-24-1141 | 2m | 1.2M in (96% cached), 7k out | $0.756 | 0.790 |
+| 2026-10-24 11:59 | CORE-006 | review | opus-5.5 xhigh | 2 | reopened | sweatshop/side/2026-10-24-1141 | 10m | 2.8M in (94% cached), 56k out | $2.022 | 0.525 |
+| 2026-10-24 12:02 | CORE-006 | implement | opus-5.5 high | 2 | to-review | sweatshop/side/2026-10-24-1141 | 4m | 1.8M in (97% cached), 14k out | $1.093 | 0.786 |
+| 2026-10-24 12:09 | CORE-006 | review | opus-5.5 xhigh | 2 | merged | sweatshop/side/2026-10-24-1141 | 7m | 3.5M in (96% cached), 36k out | $2.338 | 0.513 |
+| 2026-10-24 12:15 | UI-002 | implement | opus-5.5 high | 1 | to-review | sweatshop/side/2026-10-24-1141 | 6m | 3.0M in (97% cached), 29k out | $1.784 | 0.776 |
+| 2026-10-24 12:23 | UI-002 | review | opus-5.5 xhigh | 1 | failed (incomplete handoff), blocked | sweatshop/side/2026-10-24-1141 | 8m | 3.7M in (96% cached), 52k out | $2.184 | 0.518 |
