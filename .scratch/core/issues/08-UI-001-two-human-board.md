@@ -1,5 +1,5 @@
 # UI-001: Two-human game on a board
-Stage: to-implement
+Stage: implementing
 Blocked by: CORE-004, CORE-005
 Review: agent
 Difficulty: normal
