@@ -245,6 +245,9 @@ func parse_san(text: String) -> String:
 	var from_file := found.get_string(3)
 	var from_rank := found.get_string(4)
 	var to := found.get_string(5)
+	# A pawn capture always names its file, so a pawn SAN without one is a push.
+	if piece == "P" and from_file == "":
+		from_file = to[0]
 	var promotion := found.get_string(6).to_lower()
 	var named := ""
 	for move in moves:
