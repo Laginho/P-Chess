@@ -29,6 +29,16 @@ class Test extends RefCounted:
 		return ": " + message if message else ""
 
 
+# A script error aborts the test function without reaching an assert, so collect errors here.
+class ErrorLog extends Logger:
+	var errors: Array[String] = []
+
+	func _log_error(function: String, file: String, line: int, code: String, rationale: String,
+			_editor_notify: bool, error_type: int, _script_backtraces: Array[ScriptBacktrace]) -> void:
+		if error_type != ERROR_TYPE_WARNING:
+			errors.append("%s at %s:%d (%s)" % [rationale if rationale else code, file, line, function])
+
+
 static func find_tests(dir: String) -> PackedStringArray:
 	var files := PackedStringArray()
 	for f in DirAccess.get_files_at(dir):
@@ -48,6 +58,8 @@ func _initialize() -> void:
 		quit(1)
 		return
 
+	var log := ErrorLog.new()
+	OS.add_logger(log)
 	var passed := 0
 	var failed := 0
 	for path in find_tests(dir):
@@ -65,8 +77,10 @@ func _initialize() -> void:
 				print("FAIL %s: does not extend run.gd's Test" % path)
 				failed += 1
 				break
-			# shortcut: a runtime error inside a test aborts it silently and it still counts as PASS; hook a Logger when that bites.
+			log.errors.clear()
 			test.call(name)
+			for error in log.errors:
+				test.failures.append("script error: " + error)
 			if test.failures.is_empty():
 				print("PASS %s::%s" % [path, name])
 				passed += 1
