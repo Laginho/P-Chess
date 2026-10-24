@@ -22,13 +22,17 @@ static func distribution(policy: Dictionary, weights := {}, tau := DEFAULT_TAU,
 	for move in p:
 		if p[move] > p[top]:
 			top = move
+	if p[top] <= 0.0:
+		return {top: 1.0}  # no usable mass (all-zero policy or weights): the first move
 	var kept := {}
 	for move in p:
 		if move == top or p[move] >= tau:
 			kept[move] = p[move]
 	kept = _normalised(kept)
+	# Relative to the top move, so a small T cannot underflow every p to 0; T = 0 keeps the top.
+	var top_p: float = kept[top]
 	for move in kept:
-		kept[move] = pow(kept[move], 1.0 / temperature)
+		kept[move] = pow(kept[move] / top_p, 1.0 / temperature)
 	return _normalised(kept)
 
 
