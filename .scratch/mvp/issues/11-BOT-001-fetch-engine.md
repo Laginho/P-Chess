@@ -1,5 +1,5 @@
 # BOT-001: Engine fetch script
-Stage: to-implement
+Stage: blocked
 Blocked by: none
 Review: human
 Difficulty: normal
@@ -34,3 +34,5 @@ Difficulty: normal
 - None at a GDScript seam: the script is checked by the three runs above, recorded in the ticket.
 
 ## Comments
+
+- 2026-10-24 Review ended at blocked (exit 0); branch BOT-001 holds the review; left for a human
