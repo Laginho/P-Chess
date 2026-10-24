@@ -19,14 +19,14 @@ The first game against the bot (M3): a minimal setup picks colour and level, and
 1. A setup screen picks colour (white / black / random) and level (`maia-1100` … `maia-1900`); Start begins a game.
 2. After each human move, Maia plays a legal move picked by `bot/move_picker.gd` from Lc0's policy, with the default `τ` and `T` and every book weight 1.
 3. When Maia is white, it plays the first move.
-4. From the human's move to Maia's move on the board takes under 50 ms (median over a full game, logged at the end).
+4. Maia's latency, from the human's move to Maia's move on the board, is recorded for every move, and its median is printed at game end (`Maia: median … ms`). M3's target, a median under 50 ms, is product acceptance. It is read in the manual game from Verification: windowed, with no other sweatshop lane running. Until then the ticket closes with `Acceptance: pending`.
 5. The UI keeps drawing while Lc0 works; dragging stays smooth.
 6. When the engine is missing, the setup screen shows how to run `scripts/fetch-engine.ps1` instead of Start.
 7. `bot/maia_player.gd` picks only legal moves even if the policy holds an illegal one (tested with a fake policy, no Lc0).
 
 #### Verification
 
-    Manual: a full game against maia-1500 as each colour; read the logged median.
+    Manual: a full game against maia-1500 as each colour, windowed, with no other lane running; the logged median is under 50 ms (M3).
     godot --headless -s tests/run.gd
 
 ## Tests stage 2 writes (own commit, red)
@@ -47,10 +47,13 @@ The first game against the bot (M3): a minimal setup picks colour and level, and
   - Criterion 6 also covers a present engine with missing nets: only `maia-1100.pb.gz` is checked, since fetch-engine.ps1 installs all nine together.
   - The first move's latency includes loading the net (`isready`). It is one sample, and the median absorbs it.
   - Still open, not folded: the `PolicyTemperature` question for Bruno and the bridge's missing timeout (notes above).
-Gate evidence: C:/Users/Lage/AppData/Local/Temp/claude/D--Desktop-Projects-P-Chess--artifacts-build-lanes-core/91fd77af-f824-406e-9c71-96c73f334410/scratchpad/BOT-004-gate.json
-- Gate result for the receipt above: 92 passed, 0 failed, commit df80ca9.
+- Superseded gate evidence (first handoff): C:/Users/Lage/AppData/Local/Temp/claude/D--Desktop-Projects-P-Chess--artifacts-build-lanes-core/91fd77af-f824-406e-9c71-96c73f334410/scratchpad/BOT-004-gate.json
+- Gate result for that receipt: 92 passed, 0 failed, commit df80ca9.
 - 2026-10-24 Foreman: the driver parked this handoff as "missing Gate evidence receipt" only because the receipt line was written as a `- Gate evidence:` bullet with a trailing note, which the driver does not read (it wants the line to start with `Gate evidence: <path>`). The receipt exists and matches df80ca9 (exit 0). Ticket-only fix on this branch; the driver's park commit d44ea41 is reverted on the session so the review reads this branch's to-review.
 - 2026-10-24 Deferral accepted (Bruno, human; relayed by the supervising foreman session): criterion 4's latency measurement (Maia's median reply under 50 ms) is deferred until the machine is idle. His words: "deixa a parte do tempo de resposta pra depois, porque as lanes + outro projeto nesse mesmo pc vão causar bastante ruído. tem como deixar isso pra depois? aí a gente testa o tempo quando não estiver mais nada rodando". Why: three sweatshop lanes and another project share this PC, so the 74–106 ms the reopening review measured (and the 16–160 ms spread stage 2 saw) cannot separate the code from the load. Impact: release, not integration. c4 no longer blocks this ticket's review or its merge into the session; it becomes a pending manual check (measure the windowed median with nothing else running), carried by stage 3 as `Acceptance: pending` and a `Disclosure: deferred | release` line, and listed in the session PR. A change to Lc0's thread options in `engine/uci.gd`, or a proxy request to add that file, made only to meet c4 is no longer needed; work already done is reviewed as usual, not discarded.
+- 2026-10-24 ~17:00 Stage 2, after the reopen. The machine was saturated by the bot, mvp and side lanes running in parallel; PowerShell itself timed out on start-up. A probe drove `engine/uci.gd` directly, busy-polling every 0.2 ms (no frames, no rendering), with maia-1500, `go nodes 1` and 40 plies. Lc0 alone took: pause 0 s, median 813.5 ms (min 181) and 623.8 ms (min 152); pause 0.3 s, median 247.3 ms twice (min 13.0, max 964); pause 0.3 s with `Threads=1`, median 294.8 ms (min 70.6). Earlier the same path read 16–73 ms. So no measurement taken now can show that an Lc0 option meets 50 ms, or that none does. Asked the proxy.
+- Proxy decided (opus): criterion 4 keeps the 50 ms target as M3 product acceptance, measured in the manual game on an idle machine; the agent loop checks only that the per-move latency is recorded and its median logged; `engine/uci.gd` stays out of Primary files. Why: every measurement today (Lc0 alone 247–813 ms, against 16–73 ms earlier) is dominated by the parallel lanes, so neither a fix nor a contract-wrong stop can be shown now, and BOT-005 c5 already absorbs a slow Lc0. Folded in as the new criterion 4 and Verification line. No production or test change: `bot/maia_player.gd`'s `latencies_ms`, the end-of-game print in `ui/main.gd`, and the live test's one-latency-per-move check already meet it.
+- For stage 3 at close: `Acceptance: pending`, and `Disclosure: pending | release | Proxy decided above: M3's 50 ms median is unmeasured on an idle machine. Under parallel lanes the windowed app read 74.4 / 105.5 ms. If the idle manual game misses it, open a ticket with engine/uci.gd in Primary files to try Lc0 options (Threads, backend threads).`
 
 #### Review (2026-10-24)
 
