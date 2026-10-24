@@ -21,7 +21,7 @@ Source: <https://commons.wikimedia.org/wiki/Category:SVG_chess_pieces>. One Comm
 | bN.svg | <https://commons.wikimedia.org/wiki/File:Chess_ndt45.svg> |
 | bP.svg | <https://commons.wikimedia.org/wiki/File:Chess_pdt45.svg> |
 
-Status: reproduced without network in UI-001; replace with the Commons originals before release.
+Status: reproduced without network in UI-001; replace with the Commons originals before the session PR is integrated.
 
 ```
 Copyright (c) Colin M.L. Burnett

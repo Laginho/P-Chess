@@ -55,7 +55,7 @@ static func square_position(square: String, side: float, flipped: bool) -> Vecto
 func _ready() -> void:
 	for piece in "KQRBNPkqrbnp":
 		var image := Image.new()
-		# Rasterised once above any square size, then scaled down through mipmaps.
+		# Rasterised once at 180 px and scaled down through mipmaps; squares above that (a 4K window) upscale.
 		image.load_svg_from_string(FileAccess.get_file_as_string(
 				PIECES + ("w" if piece == piece.to_upper() else "b") + piece.to_upper() + ".svg"), 4.0)
 		image.generate_mipmaps()
