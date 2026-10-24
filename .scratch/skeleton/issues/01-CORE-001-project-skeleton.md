@@ -1,5 +1,5 @@
 # CORE-001: Project skeleton and test runner
-Stage: blocked
+Stage: to-review
 Blocked by: none
 Review: agent
 Difficulty: normal
@@ -42,3 +42,4 @@ An empty Godot 4.7 project with the spec's test runner (§11): `godot --headless
 - 2026-10-24 Bruno decided: stage 2 lineup switched from haiku-5.5 to opus-5.5 high after two failed attempts (no ticket-flow run, no commit); start clean.
 
 - 2026-10-24 Stage stopped (incomplete handoff): Invalid committed handoff: CORE-001: missing Gate evidence receipt. See D:\Desktop\Projects\P-Chess\.artifacts-build\lanes\skeleton\.scratch\run-log\CORE-001-implement-20261024-013853.txt.runtime.json and run-log/recovery.txt; inspect the saved work before retrying.
+- 2026-10-24 Foreman: the handoff was valid (gate green 8/8, receipt for 835a659 present). The driver's Field parser missed the receipt because the line was written as a bullet (`- Gate evidence:`). Moved it to its own line on `core-001` (ticket-only commit, so the receipt stays valid) and restored `to-review`.
