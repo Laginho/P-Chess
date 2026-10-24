@@ -1,5 +1,5 @@
 # BOT-003: Move picker and time-pressure panic
-Stage: to-implement
+Stage: to-review
 Blocked by: CORE-001
 Review: agent
 Difficulty: hard
@@ -42,8 +42,14 @@ Difficulty: hard
   - Callers: none yet. BOT-004 and OPEN-002 will call `pick`.
   - Gate: 24 passed, 0 failed, exit 0 on 7318aee.
 - Proxy decided (opus): run gate-evidence.ps1 via the Bash tool as "powershell -NoProfile -File ..." (allowlisted as Bash(powershell:*); powershell.exe and the PowerShell tool are not), log/receipt in the session scratchpad; if that too is refused, hand off to-review without a receipt (option A), never a hand-made receipt — CORE-001 stages 2 and 3 produced receipts with this exact form.
+- 2026-10-24 Stage 2, reopen 1 (opus-5.5) on `bot-003`, fast-forwarded to the session tip d1dcdd1. Review 2's five items, two cycles:
+  - Cycle 3 (eea557a red, 348ae38 green): blocking 1 and the zero-mass part of non-blocking 5. Red: at `T = 0.001` `distribution()` came out all zero and `pick()` drew `c` 100 times out of 100; `T = 0`, an all-zero policy and all-zero weights also gave zero mass. Fix: `p^(1/T)` is taken on `p / p_top`, so the top move stays at 1 and nothing underflows to an all-zero distribution; input with no positive mass returns the first move with all of it.
+  - Cycle 4 (66229f6, test only): blocking 2 and 3, non-blocking 4. Green on 348ae38, so each test was proven red by a production mutant, each failing only its own test: `pick()` dropping weights and τ (`c` drawn 420 times, `d` never), dropping weights (`d` never drawn), dropping τ (`c` drawn 457 times), `> τ` for `>= τ` (`b` cut from `{a:0.98, b:0.02}`), an extra discarded `randf()` (RNG state differs from a reference advanced once).
+  - Non-blocking 5, behaviour now defined and tested: `T = 0` keeps only the top move (the limit of `p^(1/T)`); all-zero policy or weights give the first move all the mass, not the policy's top move, since §6.3 weights are `1 + (B − 1)·f(d) ≥ 1` and cannot be zero. Not guarded: a NaN weight or policy entry still gives NaN mass, and a negative `T` is undefined. Neither can come from Maia's softmax, §6.3 or the settings defaults; UI-005 owns the `T` setting's range.
+  - Callers: none outside the tests (`git grep move_picker`). The change creates two degenerate inputs: `p_top = 0`, which only an input with no positive mass reaches and the early return covers, and `1/T = inf` at `T = 0` (tested). Spec §3.3 needs no edit: scaling before renormalising does not change the result.
+  - Gate: 29 passed, 0 failed, exit 0 on 66229f6. The stage-3 receipt this line replaces (`c08c5649-…\scratchpad\BOT-003-review-gate.json`, 8cb80e4) is superseded.
 
-Gate evidence: C:\Users\Lage\AppData\Local\Temp\claude\D--Desktop-Projects-P-Chess--artifacts-build-lanes-bot\c08c5649-0123-4dfd-9261-b61f041df001\scratchpad\BOT-003-review-gate.json
+Gate evidence: C:\Users\Lage\AppData\Local\Temp\claude\D--Desktop-Projects-P-Chess--artifacts-build-lanes-bot\a130588f-7fbc-4fbb-ba34-d34eceb8e27e\scratchpad\BOT-003-reopen1-gate.json
 
 #### Resolution (2026-10-24)
 
