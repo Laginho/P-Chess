@@ -1,5 +1,5 @@
 # BOT-002: UCI bridge and Maia's policy
-Stage: to-implement
+Stage: implementing
 Blocked by: CORE-001, CORE-003, BOT-001
 Review: agent
 Difficulty: hard
