@@ -100,6 +100,37 @@ func test_degenerate_policies():
 	assert_true(MovePicker.pick({"a": 0.0, "b": 0.0}, rng) in ["a", "b"])
 
 
+# Spec §3.4, on a 1+0 clock (60,000 ms, so 10% is 6,000 ms).
+
+func test_panic_leaves_t_and_tau_unchanged_down_to_ten_percent():
+	_assert_panic(MovePicker.panic(1.0, 0.02, "high", 30000, 60000), 1.0, 0.02)
+	_assert_panic(MovePicker.panic(1.0, 0.02, "high", 6000, 60000), 1.0, 0.02)
+	_assert_panic(MovePicker.panic(1.4, 0.03, "low", 6000, 60000), 1.4, 0.03)
+
+
+func test_panic_reaches_the_intensity_targets_at_zero():
+	_assert_panic(MovePicker.panic(1.0, 0.02, "low", 0, 60000), 1.3, 0.01)
+	_assert_panic(MovePicker.panic(1.0, 0.02, "medium", 0, 60000), 1.7, 0.005)
+	_assert_panic(MovePicker.panic(1.0, 0.02, "high", 0, 60000), 2.2, 0.002)
+	# A clock overrun below 0 stays at the targets.
+	_assert_panic(MovePicker.panic(1.0, 0.02, "high", -500, 60000), 2.2, 0.002)
+
+
+func test_panic_moves_linearly_in_between():
+	_assert_panic(MovePicker.panic(1.0, 0.02, "medium", 3000, 60000), 1.35, 0.0125)
+	_assert_panic(MovePicker.panic(1.0, 0.02, "high", 1500, 60000), 1.9, 0.0065)
+
+
+func test_panic_off_leaves_t_and_tau_unchanged():
+	_assert_panic(MovePicker.panic(1.0, 0.02, "off", 0, 60000), 1.0, 0.02)
+	_assert_panic(MovePicker.panic(1.4, 0.03, "off", 0, 60000), 1.4, 0.03)
+
+
+func _assert_panic(actual: Dictionary, temperature: float, tau: float) -> void:
+	assert_true(is_equal_approx(actual.get("temperature", NAN), temperature) and is_equal_approx(actual.get("tau", NAN), tau),
+			"got %s, expected T %s and tau %s" % [actual, temperature, tau])
+
+
 func _draws(policy: Dictionary, rng_seed: int) -> Array:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = rng_seed
