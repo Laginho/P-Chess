@@ -16,6 +16,9 @@ var rng := RandomNumberGenerator.new()
 # The game's core/clock.gd and its control ("3+2"); without a clock Maia answers at once.
 var clock
 var control := ""
+# The Maia level ("maia-1500"): with control, it picks the think-time bucket of time_table.
+var level := ""
+var time_table := TimeModel.load_table(TimeModel.TABLE)
 # From think() to Lc0's answer, one entry per move; the think time comes after.
 var latencies_ms := []
 
@@ -70,9 +73,10 @@ func _on_policy(policy: Dictionary) -> void:
 	latencies_ms.append(compute_ms)
 	if clock:
 		# Maia's clock runs through Lc0's time and the wait alike: it can flag.
-		var delay := TimeModel.delay(clock.left(_game.board.side_to_move) / 1000.0,
-				clock.increment / 1000.0, Clock.CONTROLS[control][0] / 1000.0, _game.moves.size() / 2,
-				top_p, legal.size(), rng)
+		var left: float = clock.left(_game.board.side_to_move) / 1000.0
+		var start: float = Clock.CONTROLS[control][0] / 1000.0
+		var delay := TimeModel.delay(left, clock.increment / 1000.0, start, _game.moves.size() / 2,
+				top_p, legal.size(), rng, TimeModel.bucket(time_table, control, level, left / start, top_p))
 		var wait := TimeModel.wait(delay, compute_ms / 1000.0)
 		if wait > 0.0:
 			await Engine.get_main_loop().create_timer(wait).timeout
