@@ -289,7 +289,7 @@ and exits with a non-zero code when a test fails.
   - The Windows build is exported with the export templates and uploaded as an artifact (code only, without the engine).
 - **`v*` tags:** the same build plus `fetch-engine` output is zipped and attached to a GitHub release.
   - The zip ships Lc0 and the Maia nets unmodified, with their `COPYING` files, and `THIRD_PARTY.md` links the exact upstream source tags. That is required because both are GPL-3.
-- `.gitignore`: `engine/`, `.godot/`, `build/`.
+- `.gitignore`: `engine/lc0/`, `engine/weights/`, `.godot/`, `build/` (`engine/uci.gd` is committed, §2).
 
 ## 13. Build order
 
