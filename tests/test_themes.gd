@@ -14,7 +14,7 @@ class Warnings extends Logger:
 func test_lists_both_roots_and_only_complete_piece_sets():
 	var loader = ThemeLoader.new("res://tests/fixtures/themes/builtin", "res://tests/fixtures/themes/user")
 	var boards: Dictionary = loader.list_themes("boards")
-	assert_eq(boards.blue, "res://tests/fixtures/themes/builtin/boards/blue")
+	assert_eq(boards.blue, "res://tests/fixtures/themes/user/boards/blue")
 	assert_eq(boards.custom, "res://tests/fixtures/themes/user/boards/custom")
 	assert_eq(loader.list_themes("pieces"), {"complete": "res://tests/fixtures/themes/builtin/pieces/complete"})
 	assert_eq(loader.list_themes("sounds"), {"quiet": "res://tests/fixtures/themes/builtin/sounds/quiet"})
@@ -24,8 +24,8 @@ func test_lists_both_roots_and_only_complete_piece_sets():
 func test_board_colours_or_texture_and_malformed_fallback_with_warning():
 	var loader = ThemeLoader.new("res://tests/fixtures/themes/builtin", "res://tests/fixtures/themes/user")
 	var blue: Dictionary = loader.load_board("blue")
-	assert_eq(blue.light, Color("#ffffff"))
-	assert_eq(blue.dark, Color("#0000ff"))
+	assert_eq(blue.light, Color("#123456"))
+	assert_eq(blue.dark, Color("#654321"))
 	assert_eq(blue.texture, null)
 	var textured: Dictionary = loader.load_board("textured")
 	assert_true(textured.texture is Texture2D)
@@ -39,3 +39,14 @@ func test_board_colours_or_texture_and_malformed_fallback_with_warning():
 		assert_eq(board.texture, null, name)
 	assert_eq(warnings.messages.size(), 4)
 	OS.remove_logger(warnings)
+
+
+func test_missing_sound_event_is_silent_and_other_events_still_load():
+	var loader = ThemeLoader.new("res://tests/fixtures/themes/builtin", "res://tests/fixtures/themes/user")
+	var sounds: Dictionary = loader.load_sounds("quiet")
+	assert_eq(sounds.size(), 8)
+	assert_true(not sounds.has("capture"))
+	for event in ["move", "castle", "check", "promote", "premove", "low_time", "game_start", "game_end"]:
+		assert_true(sounds.get(event) is AudioStreamOggVorbis, event)
+		assert_true(sounds[event].get_length() > 0, event)
+	assert_eq(loader.load_sounds("unknown"), {})
