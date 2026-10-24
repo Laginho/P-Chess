@@ -1,0 +1,3 @@
+| When | ID | Round | Implementer | Reviewer | Label | Finding | Why | Discovery | Origin | Review miss | Review churn |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 2026-10-24 03:05 | CORE-005 | 1 | opus-5.5 high | opus-5.5 xhigh | S2-explícito/código | parse_san read a pawn SAN without a departure file as a capture (`d5` after 1.e4 d5 returned e4d5; en-passant `d6` returned e5d6) instead of an error | Judged by gpt-6-astra medium (reviewer is Opus): criterion 3 says illegal or ambiguous SAN returns an error, and the documented missing-x tolerance does not cover a pawn capture without its file | ticket-review | CORE-005 95a9bd3 (reviewed handoff 4340774) | no | no |
