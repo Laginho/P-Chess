@@ -33,3 +33,5 @@ Maia spends human-like time on its moves, from its own clock (§4). This ticket 
 - `tests/test_time_model.gd`: base formula with noise off, the noise median, both overrides, both clamps, and the compute-time charge. Red because `bot/time_model.gd` does not exist.
 
 ## Comments
+
+- 2026-10-24 From BOT-004's close (a note, not a criterion): `top_p` in c1 and c4 is Lc0's `P:` for the top move, printed at Lc0's default `PolicyTemperature` 1.359. That flattens Maia's raw policy, so `top_p > 0.9` fires less often than §4.1 may assume. Bruno's question, open in BOT-007 ## Comments; this ticket takes `top_p` as given and does not wait on the answer. History: BOT-002 Resolution, BOT-004 ## Comments.

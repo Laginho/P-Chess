@@ -1,5 +1,5 @@
 # BOT-004: Play a game against Maia
-Stage: to-review
+Stage: done
 Blocked by: UI-001, BOT-002, BOT-003
 Review: agent
 Difficulty: normal
@@ -56,6 +56,8 @@ The first game against the bot (M3): a minimal setup picks colour and level, and
 - For stage 3 at close: `Acceptance: pending`, and `Disclosure: pending | release | Proxy decided above: M3's 50 ms median is unmeasured on an idle machine. Under parallel lanes the windowed app read 74.4 / 105.5 ms. If the idle manual game misses it, open a ticket with engine/uci.gd in Primary files to try Lc0 options (Threads, backend threads).`
 Gate evidence: C:/Users/Lage/AppData/Local/Temp/claude/D--Desktop-Projects-P-Chess--artifacts-build-lanes-core/76fbfae4-b3b8-4f9c-bea4-d468cf32a9da/scratchpad/BOT-004-gate.json
 - Gate result for that receipt: 92 passed, 0 failed, commit 22a3628 (production identical to df80ca9). The live test printed `maia-1500 median 44.3 ms over 30 moves`.
+- 2026-10-24 Stage 3, at close: the two BOT-002 notes at the top would be left on a closed ticket. Asked the proxy where they go.
+- Proxy decided (opus): PolicyTemperature stays Bruno's question, carried by notes on BOT-007 (the calibration must use the game's value, and Bruno must approve before it runs) and BOT-005 (c1/c4 read `top_p`). The missing Lc0-stop detection goes to a new ticket, BOT-008, with `engine/uci.gd` in Primary files. Why: no open ticket owns `engine/uci.gd`, so a note on BOT-005 would repeat the BOT-002 → BOT-004 hop that just left it unfolded, and a `release` defect needs work someone schedules, not a comment.
 
 #### Review (2026-10-24)
 
@@ -80,3 +82,24 @@ Examined: `BoardView.play()`, whose first caller this is (`play` → `_commit` �
 Left for stage 2:
 
 - BLOCKING, criterion 4: bring the app's median under 50 ms with a human-like pause between moves, measured windowed, and record the numbers under Comments. Stage 2's note puts the cost in Lc0's thread options in `engine/uci.gd`, which is outside Primary files: before touching it, ask the proxy to add it. If no option gets the median under 50 ms on this machine, that is the contract-wrong stop: `Stage: blocked` with the measurements, for stage 1 to rewrite criterion 4.
+
+#### Resolution (2026-10-24)
+
+Verdict: Approve
+
+Stage 3 re-review (opus-5.5): the ❌ item and the diff since the first review. That diff (77e32c5, 5be817f, 096e2a5) touches only this ticket, so the Standards and Spec axes were not rerun.
+
+- Criterion 4, as rewritten by the first `Proxy decided` line: ✅ `MaiaPlayer._on_policy` appends one latency per move, from `think()` (called by `_next_turn` right after the human's move) to `move_ready`, which `board_view.play` handles synchronously. `main._on_move_played` prints `Maia: median … ms from your move to its move, over N moves` when the game ends, and Maia's last move is counted because the append comes before the emit. The live test checks one latency per move over 30 plies. The 50 ms target is product acceptance, pending below. Criteria 1–3 and 5–7 stand from the first review; no production has changed since.
+- Rules: after the rebase, test-only 2d53dc7 and e45643d alternate with production-only 0917a9b (formerly 28eac17, 9e4f50a, 0f202f9). Metadata commits touch only this ticket, and only Primary files changed.
+- Rebase onto the session: at four steps the ticket file conflicted with Bruno's deferral line (3777aad). I kept both sides each time, so each rebased commit differs from its original by that line alone. Production is identical to 22a3628, the receipt's commit. Merged as 34e432c.
+- Red-green: stage 2's red commit 2d53dc7 (`bot/maia_player.gd` missing) and the harness fix's mutation proof (deleting the latency append: expected 30, got 0), both under Comments.
+- Gate: the receipt above is reused, since production has not changed: exit 0, log hash matches, `92 passed, 0 failed`; the live test printed `maia-1500 median 44.3 ms over 30 moves`. Not rerun.
+- `Proxy decided` lines: two, both (opus): criterion 4's rewrite, and where BOT-002's two notes go at this close. Both are under Comments.
+- The previous pass missed nothing that this one found.
+- Not examined: the manual game from Verification (pending), the exported build.
+- Follow-ups created at this close: BOT-008 (`.scratch/core/issues/31-BOT-008-lc0-stops.md`), plus notes under `## Comments` of BOT-005 and BOT-007.
+
+Acceptance: pending | M3's 50 ms windowed median, read in a manual game against maia-1500 as each colour with no other lane running (Verification). So far, under parallel lanes, the windowed app read 74.4 and 105.5 ms (Review above), stage 2's windowed run 47.1 ms, and the gate's headless live test 44.3 ms.
+Disclosure: deferred | release | Criterion 4 rewritten by `Proxy decided (opus)`; Bruno accepted deferring the latency check until the machine is idle ("Deferral accepted" under Comments). The 50 ms median is unmeasured on an idle machine. If the idle manual game misses it, open a ticket with engine/uci.gd in Primary files to try Lc0 options (Threads, backend threads).
+Disclosure: pending | release | PolicyTemperature, Bruno's question from BOT-002 (12-BOT-002-uci-bridge.md Resolution), unanswered: Lc0 v0.32.1 defaults to 1.359, not 1, and engine/uci.gd keeps it, so `P:` is flatter than Maia's raw policy. §3.3's τ/T (c2), §4.1's 0.9 premove check (BOT-005 c4) and BOT-007's calibration (c5) read it. Open in BOT-007 ## Comments (Review: human, before the download) and BOT-005 ## Comments.
+Disclosure: deferred | release | `Proxy decided (opus)`, see ## Comments: engine/uci.gd does not notice Lc0 exiting or rejecting a net, so Maia never moves and `available` stays true. Outside c1–c7; not a regression (BOT-004 is the bridge's first caller). Open follow-up: BOT-008 (.scratch/core/issues/31-BOT-008-lc0-stops.md).
