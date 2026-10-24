@@ -1,5 +1,5 @@
 # CORE-006: PGN read and write
-Stage: implementing
+Stage: to-review
 Blocked by: CORE-005
 Review: agent
 Difficulty: normal
@@ -81,3 +81,7 @@ Examined:
 - Not examined: real Lichess or chess.com export files at scale, and parse time on a large repertoire.
 
 Gate: the stage-2 receipt above names 51d6412: exit 0, 48 passed, 0 failed. 28e4117 changed only the ticket. Review changed no code.
+
+- 2026-10-24 Stage 2 after the reopen (opus-5.5). Test aaf360a adds three tests in `tests/test_pgn.gd`; at that commit the gate gave 48 passed, 3 failed, each failing for the reason the review gave: `comment_before` missing (got null), header values decoded as C escapes (`\n` became a newline, `\t` a tab), and clocks truncated (297534 → 297500, 180050 → 180000, 1 → 0, 3723999 → 3723900). Code afae5ef, in `core/pgn.gd` only: a comment that opens a variation is kept on that variation's first move as `comment_before` (`""` on every other move; documented in the module header), and a variation that closes with no move drops it instead of passing it to the next move. Tag values decode only `\` and `\"`, in one left-to-right regex pass. Clocks are written to the millisecond with trailing zeros dropped (`0:04:57.534`, `0:03:00.05`, `0:04:57.5`). Green: 51 passed, 0 failed. Callers: none outside the tests. Still left out on purpose (no criterion asks for them): the writer skips comments, NAGs and variations, and `0-0` castling with zeros is rejected.
+
+Gate evidence: C:\Users\Lage\AppData\Local\Temp\claude\D--Desktop-Projects-P-Chess--artifacts-build-lanes-side\3c329b14-8b90-4f42-9831-e6281840b09d\scratchpad\CORE-006-gate.json
