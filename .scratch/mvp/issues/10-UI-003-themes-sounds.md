@@ -1,5 +1,5 @@
 # UI-003: Themes and sounds
-Stage: to-review
+Stage: done
 Blocked by: UI-001
 Review: human
 Difficulty: normal
@@ -103,3 +103,94 @@ in this ticket's manual Verification; no default was selected on his behalf.
 Disclosure: pending | release | [CI-002](29-CI-002-windows-export.md) must include
 raw theme JSON, SVG, OGG and board image files when packaging the Windows build;
 the format and export requirement are documented in `docs/THIRD_PARTY.md`.
+
+#### Resolution (2026-10-24)
+
+Verdict: Approve
+
+Stage 3 reviewed `git diff 12ea73e...83c1791`, including all seven commits,
+with independent Standards and Spec reviewers. No production or test fix was
+needed. Implementation approval does not complete the listening acceptance.
+
+Standards: 0 findings. Changed files stay within Primary files. The three cycles
+keep tests separate from production: `381d908` / `e8b943d`, `1ba717e` / `aa17ce3`,
+and `77cdbe1` / `68e4c4c`; `83c1791` is ticket metadata only. No actionable baseline
+smell, unrelated refactor or unnecessary abstraction was found.
+
+Spec: 0 implementation findings. The loader, board integration and audio playback
+meet the written criteria, with the explicitly temporary default preserved.
+
+Criteria:
+
+1. Passed: all three kinds are discovered from built-in and user roots. Missing
+   roots are safe; user names override bundled names. Fixtures cover both roots.
+2. Passed: colour pairs and a decoded board texture load. Invalid JSON, invalid
+   colours, missing textures and unknown themes warn and return brown.
+3. Passed: discovery requires all twelve named SVG files. The incomplete fixture
+   is excluded; all twelve default piece textures decode in the scene smoke.
+4. Passed: all nine event names load as OGG streams. The fixture with no capture
+   clip loads eight events; `SoundPlayer.play` ignores absent or unknown events.
+5. Passed: scene checks cover move, capture, castle, check, promotion, game start
+   and game end. En passant, both castlings, underpromotion, capture-promotion
+   with check and Fool's mate work; illegal and finished-game moves stay silent.
+   Premove and low-time callers remain UI-007 and CLOCK-001 work as specified.
+6. Passed: the bundled sound folders are exactly `sfx`, `nes`, `piano` and
+   `futuristic`. Review independently compared all 36 local Git blob hashes with
+   the cached upstream tree for revision `81e2d1bca7a0c97ba3a980f2c51fcff67bfef7ed`;
+   all match the source aliases documented in THIRD_PARTY.md. No `standard` set.
+7. Passed: THIRD_PARTY.md names Lichess / Enigmahack, AGPL-3.0-or-later and the
+   pinned source link. The upstream [COPYING.md](https://github.com/lichess-org/lila/blob/master/COPYING.md)
+   also identifies these four sets and their author/licence; the pinned page
+   could not be fetched anew during review.
+8. Passed for the current provisional behavior: `SoundPlayer.theme_name` is
+   `sfx`. Bruno's listening review and final default choice remain pending.
+
+Examined: `ThemeLoader.list_themes/load_board/load_pieces/load_sounds/load_texture`;
+`BoardView._ready`, programmatic play, drag/drop and promotion callbacks through
+`_commit`; `PromotionPicker.open`; `Main._ready/_on_move_played`; game-over and
+SAN/check generation; sound switching and player cleanup. Failure paths include
+missing roots/themes/events, incomplete pieces, malformed boards and missing
+textures. Cross-feature checks include the unchanged `move_played(san)` contract,
+SAN history, result labels, material balance, flipping and promotion rendering.
+Not manually examined: audible quality, rendered appearance or a Windows export.
+
+Verification: the existing gate receipt was validated with `Assert-GateEvidence`,
+including its tested commit, bound command, log SHA-256 and `ExitCode: 0` footer.
+It records **81 passed, 0 failed** on `68e4c4c`; only ticket metadata changed
+afterward, so that receipt remains valid and is reused. Review independently
+reran the existing scene smoke against the production code: exit 0,
+`SMOKE FAILURES: []`, all 36 clips decoded and theme switching worked. Godot
+reported sandbox log/certificate startup errors before the smoke logger, with
+no application script errors. A redundant full-suite attempt by the Spec
+reviewer hit sandbox write denial in the unchanged runner's `user://` fixtures
+and was stopped; it supplies no replacement gate result. `git diff --check`
+passed.
+
+Red-green proof: the recorded first red log fails loading the absent production
+loader, **78 passed, 1 failed**, before `e8b943d` makes it green. The board cycle
+records **1 passed, 1 failed** without `load_board`, then **2 passed, 0 failed**.
+The sound red log records **2 passed, 1 failed** on missing `load_sounds`, followed
+by the green **81 passed, 0 failed** bound gate. The temporary harness correction
+is disclosed in Stage 2 above; committed tests call production code.
+
+Integration: rebase onto `sweatshop/mvp/2026-10-24-1310` was already up to date.
+Merged `ui-003` into that session with `--no-ff` as `5bdb108`; production is
+unchanged from the tested commit. This resolution, `Stage: done` and its ledger
+entry are committed together on the session. `Review: human` remains visible
+for the eventual session PR. No push or PR is part of this session-stage handoff.
+
+Proxy decided lines: none. No contract change or unresolved implementation
+defect was found.
+
+Acceptance: pending | Bruno must listen to all four sets and name the final
+default in the session's human review. Automated checks establish decoding and
+playback requests; they do not establish audible quality or exported appearance.
+
+Disclosure: pending | release | Bruno's listening/default decision remains a
+release condition under criterion 8 and this ticket's manual Verification;
+`sfx` remains the contract's provisional default.
+
+Disclosure: pending | release | [CI-002](29-CI-002-windows-export.md) remains open
+for Windows packaging and manual launch; its export must include raw JSON, SVG,
+OGG and board images as documented in THIRD_PARTY.md. The exported themes have
+not been validated by this review.
