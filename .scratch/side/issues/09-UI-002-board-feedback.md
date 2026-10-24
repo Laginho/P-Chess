@@ -1,5 +1,5 @@
 # UI-002: Board feedback and promotion
-Stage: implementing
+Stage: to-review
 Blocked by: UI-001
 Review: agent
 Difficulty: normal
@@ -32,3 +32,10 @@ The board feels like Lichess (§8.4): moves slide, the last move and a checked k
 - `tests/test_material.gd`: material difference for the start position, after an exchange, and after a promotion. Red because the function does not exist.
 
 ## Comments
+
+- Stage 2 (2026-10-24): the pure function is `ui/main.gd`'s static `material_balance(board)` → `{"diff", "w", "b"}`; `material` would shadow `CanvasItem.material`, a parse error. Red at 91aca8c: `Static function "material_balance()" not found in base "res://ui/main.gd"`. Green at e20b658: 56 passed, 0 failed (51 before + 5 new).
+- Criterion 1: the only non-dragged path is the new `BoardView.play(move)`, which nothing in a two-human game calls yet (the bot will). `slide_seconds` (default 0.12) and `show_targets` are `@export`s. Only the moving piece slides; a castling rook jumps (`shortcut:` comment in `_commit`).
+- Criteria 1–4 have no automated test (none named in the ticket). A throwaway headless script driving `ui/main.tscn` (not committed) checked: drag e2e4 holds `["e2e3", "e2e4"]` and does not slide; `play("d7d5")` slides and clears after 0.3 s; `slide_seconds = 0` is instant; the e7–e8 drop opens the picker with 4 buttons, cancel leaves the pawn on e7, picking n plays `e7e8n`; after exd5 the white label reads `♟ +1`. The manual two-human check of the ticket's Verification is still owed.
+- Callers read: `_legal_move` (removed) had only `_drop`; `main.gd` is the only user of `BoardView`; `test_board_view.gd` uses only the unchanged static mapping.
+
+Gate evidence: C:\Users\Lage\AppData\Local\Temp\claude\D--Desktop-Projects-P-Chess--artifacts-build-lanes-side\0678b999-a13e-4fe3-8c72-db673ccd0e5f\scratchpad\UI-002-gate.json
