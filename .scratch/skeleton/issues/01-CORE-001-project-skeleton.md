@@ -1,5 +1,5 @@
 # CORE-001: Project skeleton and test runner
-Stage: to-review
+Stage: reviewing
 Blocked by: none
 Review: agent
 Difficulty: normal
@@ -40,6 +40,13 @@ An empty Godot 4.7 project with the spec's test runner (§11): `godot --headless
 
 - 2026-10-24 Stage stopped (incomplete handoff): Stage left uncommitted work; saved for recovery. See D:\Desktop\Projects\P-Chess\.artifacts-build\lanes\skeleton\.scratch\run-log\CORE-001-implement-20261024-013543.txt.runtime.json and run-log/recovery.txt; inspect the saved work before retrying.
 - 2026-10-24 Bruno decided: stage 2 lineup switched from haiku-5.5 to opus-5.5 high after two failed attempts (no ticket-flow run, no commit); start clean.
+- 2026-10-24 Stage 2 (opus-5.5): started clean on branch `core-001`; the recovery refs from the earlier attempts were not used. Two red/green cycles:
+  - Cycle 1 (6d54410 red, f652d2a green): runner, assert helpers, `--` dir argument, `.gitignore`. Red: `tests/run.gd` did not exist (Godot: "Can't load script").
+  - Cycle 2 (20b16cb red, 835a659 green): mutation testing showed that a test hitting a script error was printed as PASS and the run exited 0, because a script error aborts the test function before any assert runs. That breaks criterion 2. An `OS.add_logger` logger (Godot 4.5+ `Logger`) now turns each error raised during a test into a failure. Red: `test_script_error_in_a_test_fails_it` failed with exit code 0 and "1 passed, 0 failed".
+  - Mutants checked by hand and killed: `quit(0)` always (2 tests fail), `assert_eq` ignoring non-array values (2 tests fail).
+  - Design notes: test scripts `extends "res://tests/run.gd".Test`, which needs no `class_name` and so no import cache on a fresh checkout. `assert_eq(actual, expected)` compares types first, because `==` across mismatched types is a script error in Godot 4. A script error in the runner's own `_initialize` would skip `quit()` and hang Godot, which is why the comparison is guarded.
+  - Verification: `run.gd -- tests/fixtures/failing` exits 1 with `FAIL ...test_fail.gd::test_fails_on_purpose: expected 5, got 4`. `git check-ignore engine/uci.gd engine/lc0/lc0.exe` prints only `engine/lc0/lc0.exe`. Gate: 8 passed, 0 failed, exit 0.
+Gate evidence: C:\Users\Lage\AppData\Local\Temp\claude\D--Desktop-Projects-P-Chess--artifacts-build-lanes-skeleton\db00fb50-93bf-49ae-909b-91a63bf953b3\scratchpad\CORE-001-gate.json
 
 - 2026-10-24 Stage stopped (incomplete handoff): Invalid committed handoff: CORE-001: missing Gate evidence receipt. See D:\Desktop\Projects\P-Chess\.artifacts-build\lanes\skeleton\.scratch\run-log\CORE-001-implement-20261024-013853.txt.runtime.json and run-log/recovery.txt; inspect the saved work before retrying.
 - 2026-10-24 Foreman: the handoff was valid (gate green 8/8, receipt for 835a659 present). The driver's Field parser missed the receipt because the line was written as a bullet (`- Gate evidence:`). Moved it to its own line on `core-001` (ticket-only commit, so the receipt stays valid) and restored `to-review`.
