@@ -1,5 +1,5 @@
 # UI-004: Setup, game end, rematch and hotkeys
-Stage: to-review
+Stage: reviewing
 Blocked by: CLOCK-001
 Review: agent
 Difficulty: normal
@@ -47,5 +47,7 @@ Proxy decided (opus): `ui/move_list.gd` joins Primary files, scoped to a new `re
   - Criteria 4 and 6 meet in focus mode: the Esc hint is not hidden there, because criterion 4 requires the first Esc to show it and it is the only warning before a resign. Everything persistent other than the board and the clocks is hidden.
   - With `AUTO_CLAIM` on (criterion 5), a threefold ends the game the moment it occurs, so the Claim draw button is wired but never enabled in practice until UI-005 makes auto-claim a setting.
   - Not tested: dropping Maia's stale reply after a rematch mid-think (needs a live window and lc0). The manual checks under Verification are still to do.
+
+Proxy decided (opus): in focus mode the Esc hint stays and the game-end result shows; criterion 2 failed in focus mode only because result_label was in _set_focus's list, fixed in review by removing it — focus mode hides the persistent panels during play (move list, material, Claim draw); criteria 2 and 4 have no focus exception, the result label is empty during play so criterion 6 holds, and hiding either message drops a required output (the only warning before a resign, the result and its reason).
 
 Gate evidence: C:\Users\Lage\AppData\Local\Temp\claude\D--Desktop-Projects-P-Chess--artifacts-build-lanes-core\89007498-bd40-4bd5-b41b-c5c0fa99dc87\scratchpad\UI-004-gate.json

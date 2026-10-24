@@ -173,8 +173,9 @@ func _set_flipped(flipped: bool) -> void:
 
 func _set_focus(on: bool) -> void:
 	focus = on
-	# The Esc hint stays out of this list: it is the only warning before a resign.
-	for node in [move_list, result_label, white_material, black_material, claim_draw]:
+	# The Esc hint and the result stay out of this list: criteria 4 and 2 show them when they apply,
+	# and the result is empty during play.
+	for node in [move_list, white_material, black_material, claim_draw]:
 		node.visible = not on
 
 
