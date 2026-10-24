@@ -1,5 +1,5 @@
 # CORE-003: Legal move generation and perft
-Stage: to-implement
+Stage: to-review
 Blocked by: CORE-002
 Review: agent
 Difficulty: hard
@@ -30,3 +30,11 @@ Full legal move generation in `core/board.gd` (castling, en passant, promotion, 
 - `tests/test_perft.gd`: the perft counts above and the make/unmake round-trip. Red because there is no move generator.
 
 ## Comments
+
+- 2026-10-24 Stage 2, two red/green cycles:
+  - Cycle 1, criteria 1–6: red on bf75670 (`legal_moves`/`in_check` do not exist; 12 passed, 6 failed), green on 1402a05 (18 passed, 0 failed). Perft matched every CPW count on the first green run.
+  - Cycle 2, beyond the criteria: red on ae1a88a (18 passed, 3 failed), green on a84b928 (21 passed, 0 failed). make_move records the en-passant square only when a legal capture exists, as Lichess and python-chess write FEN. Otherwise the position key after a double push differs from the same position reached another way, and CORE-004's repetition counts would be off by one. Also, a side without a king is never in check, and a pawn on its last rank has no moves. Both boards are ones `from_fen` accepts (CORE-002 left king count and pawn ranks to movegen); before the guards, the first gave wrong moves and the second indexed past the board.
+- API for CORE-004/005, UI and BOT: `legal_moves()` returns UCI strings (`e2e4`, `e7e8q`, castling as the king's move `e1g1`), the form BOT-002's bridge speaks. `make_move(uci)` mutates and does not check legality: a caller holding outside input checks `legal_moves()` first. `copy()` returns an independent board (through `from_fen(to_fen())`; the whole suite runs in about 13 s). `in_check()` is for the side to move. No unmake: criterion 4 is met by copy-make. Perft itself lives in the test, not in board.gd.
+- Callers: none outside the tests. `from_fen`, `to_fen` and `piece_at` are unchanged. `copy()` calls `from_fen`, which accepts every FEN `make_move` can produce: the en-passant square is on the right rank for the side to move, and the counters stay in range.
+
+Gate evidence: C:\Users\Lage\AppData\Local\Temp\claude\D--Desktop-Projects-P-Chess--artifacts-build-lanes-core\440af560-54d3-4332-b034-77458e5e0acf\scratchpad\CORE-003-gate.json
