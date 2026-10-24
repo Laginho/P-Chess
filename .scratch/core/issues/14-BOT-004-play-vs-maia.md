@@ -34,3 +34,7 @@ The first game against the bot (M3): a minimal setup picks colour and level, and
 - `tests/test_maia_player.gd`: with a fake bridge returning a fixed policy and a seeded RNG, Maia's move is legal and repeatable, and an illegal policy entry is ignored. Red because `bot/maia_player.gd` does not exist.
 
 ## Comments
+
+- 2026-10-24 From the BOT-002 review (a note, not a criterion until stage 1 folds it in):
+  - Question for Bruno: Lc0 v0.32.1's default `PolicyTemperature` is not 1. `engine/uci.gd` leaves it at that default, so the `P:` it returns is flatter than Maia's raw policy. c2's τ/T (§3.3), the 0.9 premove check (§4.1) and BOT-007's calibration all read `P:`. Pick one value, and if it is not Lc0's default, set it in the bridge. BOT-007 must use the same value.
+  - `engine/uci.gd` has no timeout and does not notice Lc0 exiting. A bad `WeightsFile` path or a crash leaves requests queued forever, with `available` still true, so Maia would never move and c6 would not catch it.
