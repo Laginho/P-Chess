@@ -2,15 +2,16 @@ extends Control
 
 # A game against Maia (BOT-004): the setup screen, the board, the clocks (CLOCK-001), the move list
 # and the result, then the hotkeys around it (UI-004, §9.2): Space rematch, Esc Esc resign, F11 focus.
+# The settings screen (UI-005, §10) sits on top, and each setting applies the moment it changes.
 
 const Game = preload("res://core/game.gd")
 const Clock = preload("res://core/clock.gd")
 const SoundPlayer = preload("res://ui/sound_player.gd")
 const UCI = preload("res://engine/uci.gd")
 const MaiaPlayer = preload("res://bot/maia_player.gd")
+const Settings = preload("res://core/settings.gd")
+const SettingsScreen = preload("res://ui/settings.tscn")
 
-# shortcut: a constant, until UI-005 makes "auto-claim threefold" a setting.
-const AUTO_CLAIM := true
 const WINNERS := {"1-0": "White wins", "0-1": "Black wins", "1/2-1/2": "Draw"}
 
 var sound_player := SoundPlayer.new()
@@ -22,6 +23,10 @@ var human := "w"
 var clock
 # The current game's settings from the setup screen, colour as actually played.
 var settings := {}
+# The player's settings (§10), applied as they change.
+var preferences := Settings.new()
+# Their screen, over everything else; hidden in focus mode.
+var settings_screen := SettingsScreen.instantiate()
 var resign_key := ResignKey.new(Time.get_ticks_msec)
 # Only the board and the clocks show (§8.7).
 var focus := false
@@ -103,6 +108,11 @@ func _ready() -> void:
 		board_view.game.claim_draw()
 		_show_result())
 	setup.started.connect(_start)
+	settings_screen.store = preferences
+	add_child(settings_screen)
+	preferences.changed.connect(_apply)
+	for key in Settings.DEFAULTS:
+		_apply(key, preferences.get_value(key))
 	if not uci.start():
 		setup.show_missing(uci.error)
 	elif not FileAccess.file_exists(MaiaPlayer.net_path(setup.LEVELS[0])):
@@ -141,7 +151,7 @@ func _start(new_settings: Dictionary) -> void:
 	uci.set_level(MaiaPlayer.net_path(settings.level))
 	_stale_replies = _replies_owed
 	board_view.game = Game.new()
-	board_view.game.auto_claim = AUTO_CLAIM
+	board_view.game.auto_claim = preferences.get_value("auto_claim")
 	resign_key = ResignKey.new(Time.get_ticks_msec)
 	move_list.reset()
 	for label in [result_label, white_material, black_material]:
@@ -157,6 +167,31 @@ func _start(new_settings: Dictionary) -> void:
 	_set_flipped(human == "b")
 	sound_player.play("game_start")
 	_next_turn()
+
+
+# One setting to whatever reads it; the next move, sound or game picks it up.
+func _apply(key: String, value) -> void:
+	match key:
+		"legal_dots":
+			board_view.show_targets = value
+		"animation_ms":
+			board_view.slide_seconds = value / 1000.0
+		"board_theme":
+			board_view.set_board_theme(value)
+		"piece_theme":
+			board_view.set_piece_theme(value)
+		"sound_theme":
+			sound_player.select_theme(value)
+		"volume":
+			AudioServer.set_bus_volume_db(0, linear_to_db(value / 100.0))
+		"tau":
+			maia.tau = value
+		"temperature":
+			maia.temperature = value
+		"panic":
+			maia.panic = value
+		"auto_claim":
+			board_view.game.auto_claim = value
 
 
 func _set_flipped(flipped: bool) -> void:
@@ -175,7 +210,7 @@ func _set_focus(on: bool) -> void:
 	focus = on
 	# The Esc hint and the result stay out of this list: criteria 4 and 2 show them when they apply,
 	# and the result is empty during play.
-	for node in [move_list, white_material, black_material, claim_draw]:
+	for node in [move_list, white_material, black_material, claim_draw, settings_screen]:
 		node.visible = not on
 
 
@@ -227,7 +262,7 @@ func _next_turn() -> void:
 	board_view.mouse_filter = MOUSE_FILTER_IGNORE if maia_to_move else MOUSE_FILTER_STOP
 	if maia_to_move:
 		_replies_owed += 1
-		maia.think(game)
+		maia.think(game, clock.left(game.board.side_to_move), Clock.CONTROLS[settings.control][0])
 
 
 static func _captured(roles: String, glyphs: Dictionary) -> String:

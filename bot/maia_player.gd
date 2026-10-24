@@ -12,10 +12,16 @@ const UCI = preload("res://engine/uci.gd")
 var rng := RandomNumberGenerator.new()
 # From think() to move_ready, one entry per move.
 var latencies_ms := []
+# The picker's cut and temperature (§3.3) and the panic intensity (§3.4), from the settings.
+var tau := MovePicker.DEFAULT_TAU
+var temperature := MovePicker.DEFAULT_TEMPERATURE
+var panic := "medium"
 
 var _bridge
 var _game
 var _asked_usec := 0
+# T and tau for the move being thought, panic applied.
+var _picker := {}
 
 
 func _init(bridge) -> void:
@@ -30,10 +36,14 @@ static func net_path(level: String) -> String:
 			.path_join("weights/%s.pb.gz" % level)
 
 
-# move_ready follows once the bridge answers.
-func think(game) -> void:
+# move_ready follows once the bridge answers. Maia's clock, in ms, drives the panic; a start_time of
+# 0 means no clock and no panic.
+func think(game, time_left := 0, start_time := 0) -> void:
 	_game = game
 	_asked_usec = Time.get_ticks_usec()
+	_picker = {"temperature": temperature, "tau": tau}
+	if start_time > 0:
+		_picker = MovePicker.panic(temperature, tau, panic, time_left, start_time)
 	# shortcut: every game starts from the initial position; keep the start FEN in Game when one does not.
 	_bridge.request_policy(Game.START, game.moves)
 
@@ -57,6 +67,6 @@ func _on_policy(policy: Dictionary) -> void:
 		# Nothing legal to sample from: any legal move beats Maia never answering.
 		for move in legal:
 			usable[move] = 1.0
-	var move := MovePicker.pick(usable, rng)
+	var move := MovePicker.pick(usable, rng, {}, _picker.tau, _picker.temperature)
 	latencies_ms.append((Time.get_ticks_usec() - _asked_usec) / 1000.0)
 	move_ready.emit(move)
