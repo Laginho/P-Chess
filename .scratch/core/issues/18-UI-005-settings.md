@@ -1,5 +1,5 @@
 # UI-005: Settings store and screen
-Stage: to-review
+Stage: reviewing
 Blocked by: UI-004
 Review: agent
 Difficulty: normal

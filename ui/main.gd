@@ -25,6 +25,8 @@ var clock
 var settings := {}
 # The player's settings (§10), applied as they change.
 var preferences := Settings.new()
+# Their screen, over everything else; hidden in focus mode.
+var settings_screen := SettingsScreen.instantiate()
 var resign_key := ResignKey.new(Time.get_ticks_msec)
 # Only the board and the clocks show (§8.7).
 var focus := false
@@ -106,9 +108,8 @@ func _ready() -> void:
 		board_view.game.claim_draw()
 		_show_result())
 	setup.started.connect(_start)
-	var screen := SettingsScreen.instantiate()
-	screen.store = preferences
-	add_child(screen)
+	settings_screen.store = preferences
+	add_child(settings_screen)
 	preferences.changed.connect(_apply)
 	for key in Settings.DEFAULTS:
 		_apply(key, preferences.get_value(key))
@@ -209,7 +210,7 @@ func _set_focus(on: bool) -> void:
 	focus = on
 	# The Esc hint and the result stay out of this list: criteria 4 and 2 show them when they apply,
 	# and the result is empty during play.
-	for node in [move_list, white_material, black_material, claim_draw]:
+	for node in [move_list, white_material, black_material, claim_draw, settings_screen]:
 		node.visible = not on
 
 
