@@ -174,16 +174,26 @@ func make_move(move: String) -> void:
 			castling = castling.replace(right, "")
 	if castling == "":
 		castling = "-"
-	en_passant = _name((from + to) / 2) if pawn and absi(to - from) == 16 else "-"
 	halfmove_clock = 0 if pawn or capture else halfmove_clock + 1
 	if not white:
 		fullmove_number += 1
 	side_to_move = "b" if white else "w"
+	# Only when the capture is legal, as Lichess and python-chess write FEN: otherwise the position
+	# key would differ from the same position reached without a double push.
+	en_passant = "-"
+	if pawn and absi(to - from) == 16:
+		var king := squares.find("k" if white else "K")
+		for taker: int in [to - 1, to + 1]:
+			if taker / 8 == to / 8 and squares[taker] == ("p" if white else "P") \
+					and _king_safe_after(taker, (from + to) / 2, king, not white, to):
+				en_passant = _name((from + to) / 2)
 
 
 func _add_pawn_moves(moves: PackedStringArray, from: int, white: bool, king: int) -> void:
 	var step := 8 if white else -8
 	var to := from + step
+	if to < 0 or to > 63:
+		return
 	var promotes := to / 8 == (7 if white else 0)
 	if squares[to] == "":
 		_add(moves, from, to, white, king, promotes)
@@ -233,6 +243,17 @@ func _add_castling(moves: PackedStringArray, king: int, white: bool) -> void:
 # Appends from-to (as all four promotions when it promotes) unless it leaves the mover's king
 # attacked. victim is the square of a pawn taken en passant.
 func _add(moves: PackedStringArray, from: int, to: int, white: bool, king: int, promotes: bool, victim := -1) -> void:
+	if not _king_safe_after(from, to, king, white, victim):
+		return
+	var uci := _name(from) + _name(to)
+	if promotes:
+		for piece in "qrbn":
+			moves.append(uci + piece)
+	else:
+		moves.append(uci)
+
+
+func _king_safe_after(from: int, to: int, king: int, white: bool, victim := -1) -> bool:
 	var moved := squares[from]
 	var taken := squares[to]
 	var victim_piece := ""
@@ -246,18 +267,13 @@ func _add(moves: PackedStringArray, from: int, to: int, white: bool, king: int, 
 	squares[to] = taken
 	if victim >= 0:
 		squares[victim] = victim_piece
-	if not safe:
-		return
-	var uci := _name(from) + _name(to)
-	if promotes:
-		for piece in "qrbn":
-			moves.append(uci + piece)
-	else:
-		moves.append(uci)
+	return safe
 
 
 # Pins do not matter here: a pinned piece still attacks.
 func _attacked(square: int, by_white: bool) -> bool:
+	if square < 0:
+		return false  # a side without a king, which from_fen accepts
 	var file := square % 8
 	var rank := square / 8
 	var pawn := "P" if by_white else "p"
