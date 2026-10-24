@@ -1,11 +1,13 @@
 # BOT-006: Time-model table
-Stage: to-implement
+Stage: implementing
 Blocked by: BOT-005
 Review: agent
 Difficulty: normal
 
 - Primary files:
   - bot/time_model.gd
+  - bot/maia_player.gd (scope: a `level` var; loads `data/time_model.json` once; passes the game's bucket to `TimeModel.delay`)
+  - ui/main.gd (scope: `_start` sets `maia.level = level`, one line next to `maia.control`)
   - New: tests/fixtures/time_model_small.json
   - tests/test_time_model.gd
 
@@ -20,6 +22,7 @@ Maia's think time comes from `data/time_model.json` when it exists (§4.1), and 
 3. A missing file or a missing bucket uses the BOT-005 formula.
 4. A malformed file logs a warning and uses the formula; it never crashes.
 5. With a fixed seed, the median of 10,000 samples from one bucket is within ±5% of that bucket's median.
+6. In a game, Maia's delay comes from the bucket for the game's control and level when the table holds it; tested in `tests/test_time_model.gd` with the fixture table.
 
 #### Verification
 
@@ -30,3 +33,5 @@ Maia's think time comes from `data/time_model.json` when it exists (§4.1), and 
 - `tests/test_time_model.gd`: bucket lookup at bin edges, the sample median, missing-bucket and malformed-file fallback, using the fixture table. Red because the table loader does not exist.
 
 ## Comments
+
+- Proxy decided (opus): option B — bot/maia_player.gd (level var, load the table once, pass the bucket) and ui/main.gd (one line in _start: maia.level = level) join Primary files, plus c6 "in a game, Maia's delay comes from the game's bucket" — "What to build" and M8 need the table loaded in the game, BOT-007 cannot do it, and the main.gd line lands in the conflict BOT-005 already disclosed. Conditions: time_model.gd stays pure (static loader, lookup, sampler); an empty `level` misses the lookup, so BOT-005's wiring tests stay unchanged; the wiring is proven by a mutant; the `ui/main.gd` line is its own commit. For stage 3: `Disclosure: pending | integration | ui/main.gd _start: BOT-005's maia.clock/maia.control plus BOT-006's maia.level conflict with the core lane's _start(new_settings); resolve as maia.clock = clock, maia.control = settings.control, maia.level = settings.level`
