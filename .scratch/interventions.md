@@ -30,3 +30,5 @@
 | 2026-10-24T17:12-03:00 | BOT-004 | proxy-decision | Proxy decided (opus): hand-run the gate-evidence helper's steps for a fresh receipt on 0ad3d14, the helper itself being denied by permissions (BOT-004 Comments) |
 | 2026-10-24T17:41-03:00 | CLOCK-001 | proxy-decision | Proxy decided (opus): a side's first move is untimed and adds no increment, as on Lichess; folded into criterion 2 (CLOCK-001 Comments) |
 | 2026-10-24T17:41-03:00 | CLOCK-001 | proxy-decision | Proxy decided (opus): ui/board_view.gd (_commit) and tests/test_board_view.gd join Primary files with criterion 8, a drop after the game ends snaps back (CLOCK-001 Comments) |
+| 2026-10-24T19:26-03:00 | UI-004 | proxy-decision | Proxy decided (opus): ui/move_list.gd joins Primary files, scoped to a new reset() the rematch calls (UI-004 Comments) |
+| 2026-10-24T19:36-03:00 | UI-004 | proxy-decision | Proxy decided (opus): in focus mode the Esc hint stays and the game-end result shows; fixed in review c4bd40f (UI-004 Comments) |
