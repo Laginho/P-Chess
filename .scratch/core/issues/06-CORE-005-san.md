@@ -1,5 +1,5 @@
 # CORE-005: SAN in and out
-Stage: implementing
+Stage: to-review
 Blocked by: CORE-003
 Review: agent
 Difficulty: normal
@@ -29,5 +29,8 @@ Moves in Standard Algebraic Notation, both ways. The move list, the PGN files, t
 
 ## Comments
 
-- 2026-10-24 Stage stopped (incomplete handoff): Invalid committed handoff: CORE-005: code changed after gate (core/board.gd, tests/test_san.gd); reuse evidence only for identical code. See D:\Desktop\Projects\P-Chess\.artifacts-build\lanes\core\.scratch\run-log\CORE-005-implement-20261024-030601.txt.runtime.json and run-log/recovery.txt; inspect the saved work before retrying.
-- 2026-10-24 Foreman: the park above was the driver's, not the stage's. Field() reads the first `Gate evidence:` line, which was attempt 1's receipt (code 3a2aeb5). Line renamed `Gate evidence (superseded, attempt 1):` on CORE-005-san (ticket-only commit); the current receipt names ab42c14, identical code to the handoff 64d41d3. Stage restored to `to-review`.
+- 2026-10-24 Stage 2, two test-only commits then one production commit. Red on a14952b: `board.gd` has no `san()` or `parse_san()`, so the six SAN tests fail with a script error (29 passed, 6 failed). 73e32af adds black `O-O` and "a rook on e1 is not `O-O`". I proved it red against a `parse_san` without the king check on castling (34 passed, 1 failed: `O-O` returned `e1g1`). Green on 3a2aeb5: 35 passed, 0 failed.
+- API for UI-001, CORE-006 and OPEN-001/003: `Board.san(uci) -> String` takes a move from `legal_moves()`; an illegal move gives an undefined result. `Board.parse_san(text) -> String` returns the UCI move, or `""` when the SAN is illegal, ambiguous or malformed. That follows `from_fen`'s null with no `push_error`, because bad input is expected from imports. The parser accepts more than the printer writes: extra disambiguation (`Ng1f3` from the start), a missing `x`, and a missing `=` before the promotion piece. A pawn move to the last rank without a piece is an error. Disambiguation counts only legal rivals: a pinned knight does not count (`PINNED_KNIGHT` test).
+- Callers: `board.gd` only gains `san`, `parse_san`, `_san_without_check` and the `_san_pattern` static; no existing function changed, and nothing outside the tests calls the new ones yet. Degenerate inputs: a position with no legal moves parses everything to `""`. Cost: `parse_san` runs one `legal_moves()`; `san` runs one, plus a copy and one more on the resulting position when it gives check.
+
+Gate evidence: C:\Users\Lage\AppData\Local\Temp\claude\D--Desktop-Projects-P-Chess--artifacts-build-lanes-core\3d2548b4-bba8-491a-a2b6-d9510d6cc35a\scratchpad\CORE-005-gate.json
