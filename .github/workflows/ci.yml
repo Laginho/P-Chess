@@ -24,3 +24,52 @@ jobs:
 
       - name: Run tests
         run: godot --headless -s tests/run.gd
+
+  windows-export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - name: Install Godot 4.7.2 and matching export templates
+        shell: bash
+        run: |
+          curl --fail --location --retry 3 \
+            --output "$RUNNER_TEMP/godot.zip" \
+            https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip
+          echo "cadd3204e728a35d3f13adb7fd0d7902636b79f6b95c40c265eb73b6c35329e4  $RUNNER_TEMP/godot.zip" | sha256sum --check
+          unzip -q "$RUNNER_TEMP/godot.zip" -d "$RUNNER_TEMP/godot"
+          sudo install -m 755 "$RUNNER_TEMP/godot/Godot_v4.7.2-stable_linux.x86_64" /usr/local/bin/godot
+
+          curl --fail --location --retry 3 \
+            --output "$RUNNER_TEMP/templates.tpz" \
+            https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_export_templates.tpz
+          echo "f298490b8d44d934be425a5a65a51bf15f422428b229a06a6e11d9ffea248011  $RUNNER_TEMP/templates.tpz" | sha256sum --check
+          unzip -q "$RUNNER_TEMP/templates.tpz" 'templates/windows_release_x86_64.exe' -d "$RUNNER_TEMP"
+          mkdir -p "$HOME/.local/share/godot/export_templates/4.7.2.stable"
+          mv "$RUNNER_TEMP/templates/windows_release_x86_64.exe" \
+            "$HOME/.local/share/godot/export_templates/4.7.2.stable/"
+
+      - name: Preserve raw theme assets
+        shell: bash
+        run: |
+          # ThemeLoader reads SVG, JSON and OGG bytes directly, without imported resources.
+          # Set Keep File before the first import; an include filter alone remaps SVG/OGG.
+          while IFS= read -r -d '' asset; do
+            printf '[remap]\nimporter="keep"\n' > "$asset.import"
+          done < <(find themes -type f ! -name '*.import' ! -name '.*' -print0)
+
+      - name: Import project
+        run: godot --headless --editor --import
+
+      - name: Export Windows build
+        run: |
+          mkdir -p build/windows
+          godot --headless --export-release "Windows Desktop" build/windows/P-Chess.exe
+
+      - name: Upload Windows build
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: P-Chess-windows-x86_64
+          path: build/windows/
+          if-no-files-found: error
