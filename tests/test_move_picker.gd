@@ -30,6 +30,23 @@ func test_temperature_is_p_to_the_one_over_t_then_renormalised():
 	_assert_dist(MovePicker.distribution(policy, {}, 0.02, 0.5), {"a": 0.36 / 0.52, "b": 0.16 / 0.52})
 
 
+func test_small_temperature_does_not_underflow():
+	# At T = 0.001 every p^1000 underflows to 0, yet a outweighs b by (0.4 / 0.35)^1000.
+	var policy := {"a": 0.4, "b": 0.35, "c": 0.25}
+	_assert_dist(MovePicker.distribution(policy, {}, 0.02, 0.001), {"a": 1.0, "b": 0.0, "c": 0.0})
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7
+	var moves := []
+	for i in 100:
+		moves.append(MovePicker.pick(policy, rng, {}, 0.02, 0.001))
+	assert_eq(moves.count("a"), 100, "drew %s" % [moves.slice(0, 5)])
+
+
+func test_zero_temperature_keeps_only_the_top_move():
+	# The limit of p^(1/T) as T falls to 0.
+	_assert_dist(MovePicker.distribution({"a": 0.4, "b": 0.35, "c": 0.25}, {}, 0.02, 0.0), {"a": 1.0, "b": 0.0, "c": 0.0})
+
+
 func test_weighted_book_move_survives_the_cut():
 	var policy := {"a": 0.6, "b": 0.395, "c": 0.005}
 	var dist: Dictionary = MovePicker.distribution(policy, {"c": 20.0}, 0.02)
@@ -98,6 +115,9 @@ func test_degenerate_policies():
 	assert_eq(MovePicker.distribution({}), {})
 	# All zero (no usable policy): still one of its moves, not NaN.
 	assert_true(MovePicker.pick({"a": 0.0, "b": 0.0}, rng) in ["a", "b"])
+	# No usable mass (all-zero policy or all-zero weights): the first move gets all of it.
+	_assert_dist(MovePicker.distribution({"a": 0.0, "b": 0.0}), {"a": 1.0})
+	_assert_dist(MovePicker.distribution({"a": 0.6, "b": 0.4}, {"a": 0.0, "b": 0.0}), {"a": 1.0})
 
 
 # Spec §3.4, on a 1+0 clock (60,000 ms, so 10% is 6,000 ms).
