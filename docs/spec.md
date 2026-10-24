@@ -60,7 +60,7 @@ Defaults: `τ = 2%`, `T = 1.0`. Both are settings.
 ### 3.4 Time-pressure panic
 
 - When Maia's clock is under 10% of the starting time, `T` rises and `τ` falls linearly, reaching `T_max` and `τ_min` at 0 s.
-- Intensity setting: off / low / medium / high, mapped to `(T_max, τ_min)` = (1, τ), (1.3, 1%), (1.7, 0.5%), (2.2, 0.2%). These are initial values, to be tuned by playing.
+- Intensity setting: off / low / medium / high. Off leaves `T` and `τ` unchanged; the others map to `(T_max, τ_min)` = (1.3, 1%), (1.7, 0.5%), (2.2, 0.2%). These are initial values, to be tuned by playing.
 
 ## 4. Bot think time
 
