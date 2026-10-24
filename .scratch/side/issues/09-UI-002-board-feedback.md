@@ -1,5 +1,5 @@
 # UI-002: Board feedback and promotion
-Stage: to-implement
+Stage: implementing
 Blocked by: UI-001
 Review: agent
 Difficulty: normal
