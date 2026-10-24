@@ -4,11 +4,9 @@ extends Control
 # Always square and centred in the control, so it scales with the window.
 
 signal move_played(san: String)
+signal sound_requested(event: String)
 
-const LIGHT := Color("#f0d9b5")
-const DARK := Color("#b58863")
-# shortcut: read as raw SVG, so the Windows export (CI-002) must ship *.svg as non-resource files.
-const PIECES := "res://themes/pieces/cburnett/"
+const ThemeLoader = preload("res://ui/theme_loader.gd")
 const SNAP_BACK_SECONDS := 0.15
 const LAST_MOVE := Color(0.61, 0.78, 0, 0.41)
 const CHECK := Color(1, 0, 0, 0.6)
@@ -18,6 +16,10 @@ const TARGET := Color(0.08, 0.33, 0.12, 0.5)
 @export var slide_seconds := 0.12
 # Dots on the held piece's empty targets, rings on its captures.
 @export var show_targets := true
+@export var board_theme := "brown"
+@export var piece_theme := "cburnett"
+
+var _board_style := {"light": ThemeLoader.BROWN_LIGHT, "dark": ThemeLoader.BROWN_DARK, "texture": null}
 
 var game:
 	set(value):
@@ -74,17 +76,24 @@ static func square_position(square: String, side: float, flipped: bool) -> Vecto
 
 
 func _ready() -> void:
-	for piece in "KQRBNPkqrbnp":
-		var image := Image.new()
-		# Rasterised once at 180 px and scaled down through mipmaps; squares above that (a 4K window) upscale.
-		image.load_svg_from_string(FileAccess.get_file_as_string(
-				PIECES + ("w" if piece == piece.to_upper() else "b") + piece.to_upper() + ".svg"), 4.0)
-		image.generate_mipmaps()
-		_textures[piece] = ImageTexture.create_from_image(image)
+	set_board_theme(board_theme)
+	set_piece_theme(piece_theme)
 	texture_filter = TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	resized.connect(queue_redraw)
 	_picker.picked.connect(func(piece: String) -> void: _commit(_promoting + piece, false))
 	_picker.cancelled.connect(_end_snap_back)
+
+
+func set_board_theme(name: String) -> void:
+	board_theme = name
+	_board_style = ThemeLoader.new().load_board(name)
+	queue_redraw()
+
+
+func set_piece_theme(name: String) -> void:
+	piece_theme = name
+	_textures = ThemeLoader.new().load_pieces(name)
+	queue_redraw()
 
 
 # A move not dragged on the board (the bot's, a premove); false when it is illegal.
@@ -102,10 +111,13 @@ func _draw() -> void:
 	var checked := ""
 	if game and game.board.in_check():
 		checked = "K" if game.board.side_to_move == "w" else "k"
+	if _board_style.texture:
+		draw_texture_rect(_board_style.texture, Rect2(_corner(), Vector2.ONE * side), false)
 	for i in 64:
 		var square: String = "abcdefgh"[i % 8] + str(i / 8 + 1)
 		var at := _corner() + square_position(square, side, flipped)
-		draw_rect(Rect2(at, cell), LIGHT if _is_light(square) else DARK)
+		if not _board_style.texture:
+			draw_rect(Rect2(at, cell), _board_style.light if _is_light(square) else _board_style.dark)
 		if last and square in [last.substr(0, 2), last.substr(2, 2)]:
 			draw_rect(Rect2(at, cell), LAST_MOVE)
 		var piece: String = game.board.piece_at(square) if game else ""
@@ -139,15 +151,15 @@ func _draw_coordinates(cell: float) -> void:
 		var bottom := _corner() + Vector2(i, 7) * cell
 		var file := square_at(Vector2(i + 0.5, 7.5) * cell, _side(), flipped)
 		draw_string(font, bottom + Vector2(0, cell - pad), file[0], HORIZONTAL_ALIGNMENT_RIGHT,
-				cell - pad, font_size, DARK if _is_light(file) else LIGHT)
+				cell - pad, font_size, _board_style.dark if _is_light(file) else _board_style.light)
 		var left := _corner() + Vector2(0, i) * cell
 		var rank := square_at(Vector2(0.5, i + 0.5) * cell, _side(), flipped)
 		draw_string(font, left + Vector2(pad, pad + font.get_ascent(font_size)), rank[1],
-				HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, DARK if _is_light(rank) else LIGHT)
+				HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, _board_style.dark if _is_light(rank) else _board_style.light)
 
 
 func _draw_piece(piece: String, at: Vector2, cell: Vector2) -> void:
-	if piece:
+	if piece and _textures.get(piece):
 		draw_texture_rect(_textures[piece], Rect2(at, cell), false)
 
 
@@ -215,6 +227,11 @@ func _commit(move: String, slide: bool) -> void:
 		_slide.tween_property(self, "_slide_pos", _centre(_slide_to), slide_seconds)
 		_slide.tween_callback(_end_slide)
 	queue_redraw()
+	sound_requested.emit("castle" if san.begins_with("O-O") else "capture" if "x" in san else "move")
+	if "=" in san:
+		sound_requested.emit("promote")
+	if game.board.in_check():
+		sound_requested.emit("check")
 	move_played.emit(san)
 
 

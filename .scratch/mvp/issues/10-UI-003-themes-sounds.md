@@ -1,5 +1,5 @@
 # UI-003: Themes and sounds
-Stage: to-implement
+Stage: to-review
 Blocked by: UI-001
 Review: human
 Difficulty: normal
@@ -39,3 +39,67 @@ Board, piece and sound themes as folders (§8.6), built in under `res://themes/`
 - `tests/test_themes.gd`: the loader on fixture folders: a valid board, a malformed board, a complete and an incomplete piece set, a sound set with one file missing. Red because `ui/theme_loader.gd` does not exist.
 
 ## Comments
+
+### Stage 2 (2026-10-24)
+
+- Implemented on `ui-003`, based on session `sweatshop/mvp/2026-10-24-1310`.
+  Dependency UI-001 is done. Changes stay inside Primary files.
+- `ThemeLoader` discovers built-in and user folders, with user names taking
+  precedence. Board themes use `light`/`dark` HTML colours or a relative `texture`
+  path. Invalid boards warn and fall back to brown. Only complete twelve-file
+  piece sets are listed. Missing sound events are omitted and remain silent.
+- The board applies board and piece themes via `set_board_theme` and
+  `set_piece_theme`. `SoundPlayer.select_theme` replaces the loaded set, and
+  `play(event)` safely ignores absent events. Independent audio players allow
+  capture, promotion and check clips to overlap.
+- The four sound sets come from Lichess revision
+  `81e2d1bca7a0c97ba3a980f2c51fcff67bfef7ed`. All 36 bundled audio files were
+  compared with the upstream Git blob hashes and matched. Upstream
+  `Checkmate.ogg` is a symlink to `Check.ogg`; the local `game_end.ogg` contains
+  the target audio bytes. Other event aliases and AGPL attribution are documented
+  in [THIRD_PARTY.md](../../../docs/THIRD_PARTY.md). No `standard` set was added.
+- Callers examined before tests: `BoardView._ready` initializes rendering;
+  `play`, legal drops and promotion-picker callbacks enter `_commit`;
+  `Main._on_move_played` consumes `move_played` for the SAN list, result and
+  material balance. That signal and its SAN argument are unchanged. Existing
+  board-mapping and material tests remain green. Core game code is unchanged.
+- Boundaries checked: missing roots, duplicate user theme names, incomplete
+  piece sets, invalid JSON/colours, unknown themes, missing textures, missing
+  sound events, illegal moves, finished games, en passant, both castlings,
+  promotion, underpromotion and capture-promotion with check.
+- Test-first history (each test commit is separate from production):
+  - `381d908` red: missing loader, 78 passed / 1 failed. `e8b943d` green:
+    79 passed / 0 failed.
+  - `1ba717e` red: missing `load_board`, focused 1 passed / 1 failed.
+    `aa17ce3` green: focused 2 passed / 0 failed.
+  - `77cdbe1` red: missing `load_sounds`, focused 2 passed / 1 failed.
+    `68e4c4c` green: focused 3 passed / 0 failed, final gate 81 passed / 0 failed.
+  - The first temporary focused harness did not collect script errors; it was
+    corrected to use the existing runner's `ErrorLog` before recording the
+    second red cycle. The committed test harness was unchanged.
+- Scene smoke on the production code: instantiated `ui/main.tscn`; verified
+  start audio, ordinary moves, captures, en passant, both castlings, queen and
+  knight promotion, capture-promotion with check, Fool's mate result label and
+  end audio. Illegal moves and moves after mate emit no sounds. Switched through
+  all four sets, decoded every event and checked its audio player starts;
+  selecting an unknown set remains silent. Loaded all twelve default and fixture
+  piece textures. No script errors. Local evidence:
+  `C:\Users\Lage\AppData\Local\Temp\UI-003-smoke.log` (temporary harness alongside it).
+- Gate on committed code `68e4c4c85d2ff5f7188fbd6382d86bc5e9e57df5`:
+  `godot --headless -s tests/run.gd`, exit 0, **81 passed, 0 failed**.
+  Log SHA-256: `8AB06680CC0703088C43D57A6E825F98DA7149FCA425DCBD3832E48326A02BED`.
+  `git diff --check` passed; no generated imports or unrelated files were added.
+
+Gate evidence: C:\Users\Lage\AppData\Local\Temp\UI-003-stage2-20261024-gate.json
+
+Acceptance: pending | Bruno still needs to listen to the four sets and name the
+default (criteria 8 and manual Verification). `sfx` remains the temporary default.
+Headless scene checks establish decoding and playback requests, not listening
+quality or visual inspection of an exported build.
+
+Disclosure: pending | release | Bruno's listening/default choice remains open
+in this ticket's manual Verification; no default was selected on his behalf.
+
+Disclosure: pending | release | [CI-002](29-CI-002-windows-export.md) must include
+raw theme JSON, SVG, OGG and board image files when packaging the Windows build;
+the format and export requirement are documented in `docs/THIRD_PARTY.md`.
