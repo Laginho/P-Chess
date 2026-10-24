@@ -42,3 +42,11 @@
 | 2026-10-24 14:04 | CI-002 | implement | gpt-6.1-sol high | 1 | to-review | sweatshop/mvp/2026-10-24-1310 | 12m | 3.4M in (97% cached), 21k out | $1.096 | 1.307 |
 | 2026-10-24 14:09 | CI-002 | review | gpt-6.1-sol xhigh | 1 | review ended at blocked (exit 0) | sweatshop/mvp/2026-10-24-1310 | 5m | 1.8M in (90% cached), 13k out | $0.842 | 1.566 |
 | 2026-10-24 14:16 | BOT-001 | review | opus-5.5 xhigh | 1 | failed (incomplete handoff), blocked | sweatshop/mvp/2026-10-24-1310 | 5m | 2.7M in (95% cached), 31k out | $1.439 | 0.792 |
+| 2026-10-24 15:47 | BOT-002 | implement | opus-5.5 xhigh | 2 | to-review | sweatshop/core/2026-10-24-1535 | 12m | 7.7M in (97% cached), 52k out | $3.938 | 0.526 |
+| 2026-10-24 15:56 | BOT-002 | review | opus-5.5 xhigh | 2 | merged | sweatshop/core/2026-10-24-1535 | 9m | 2.7M in (95% cached), 47k out | $1.677 | 0.784 |
+| 2026-10-24 16:10 | BOT-004 | implement | opus-5.5 high | 1 | failed (incomplete handoff), blocked | sweatshop/core/2026-10-24-1535 | 14m | 4.5M in (98% cached), 38k out | $2.439 | 0.822 |
+| 2026-10-24 16:28 | BOT-004 | review | opus-5.5 xhigh | 1 | reopened | sweatshop/core/2026-10-24-1535 | 15m | 4.5M in (96% cached), 52k out | $2.397 | 0.000 |
+| 2026-10-24 16:53 | BOT-004 | implement | opus-5.5 high | 1 | to-review | sweatshop/core/2026-10-24-1535 | 23m | 3.4M in (96% cached), 33k out | $2.144 | 0.860 |
+| 2026-10-24 17:12 | BOT-004 | review | opus-5.5 xhigh | 1 | merged | sweatshop/core/2026-10-24-1535 | 19m | 11.3M in (98% cached), 86k out | $5.646 | 0.536 |
+| 2026-10-24 17:41 | CLOCK-001 | implement | opus-5.5 high | 1 | to-review | sweatshop/core/2026-10-24-1535 | 29m | 5.9M in (97% cached), 47k out | $3.211 | 1.059 |
+| 2026-10-24 17:55 | CLOCK-001 | review | opus-5.5 xhigh | 1 | merged | sweatshop/core/2026-10-24-1535 | 13m | 6.4M in (96% cached), 72k out | $3.435 | 0.791 |
