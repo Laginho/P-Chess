@@ -1,5 +1,5 @@
 # CORE-002: Position and FEN
-Stage: implementing
+Stage: to-review
 Blocked by: CORE-001
 Review: agent
 Difficulty: normal
@@ -28,3 +28,7 @@ Difficulty: normal
 - `tests/test_fen.gd`: round-trip of the six FENs, the invalid cases and the position key. Red because `core/board.gd` does not exist.
 
 ## Comments
+
+- 2026-10-24 Stage 2: red on 8ccc45f (`test_fen.gd` fails to load, `core/board.gd` missing; 8 passed, 1 failed), green on 443b1bf (12 passed, 0 failed, exit 0). API for CORE-003 on: `Board.from_fen(fen)` returns the board or `null` (no `push_error`, so bad input never counts as a script error), `to_fen()`, `position_key()`, `piece_at("e4")`, public `side_to_move` / `castling` / `en_passant` / `halfmove_clock` / `fullmove_number`, and `squares` (64, a1 = 0, FEN letter or ""). No callers yet: the file is new. Beyond criterion 3 the parser also rejects a castling field out of `KQkq` order or repeated, an en-passant square on the wrong rank for the side to move, a negative halfmove clock, fullmove 0, and anything but exactly six fields. It does not check king count or piece legality; that is movegen's ground (CORE-003).
+
+Gate evidence: C:\Users\Lage\AppData\Local\Temp\claude\D--Desktop-Projects-P-Chess--artifacts-build-lanes-core\4e9483fb-7d4c-4415-8015-5b70d1a1fc01\scratchpad\CORE-002-gate.json
