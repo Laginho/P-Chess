@@ -86,6 +86,28 @@ func test_seeded_draws_match_the_final_distribution():
 			assert_true(absf(freq - dist[move]) <= 0.02, "T=%s %s: drawn %.4f, expected %.4f" % [t, move, freq, dist[move]])
 
 
+func test_pick_samples_after_the_book_weight_and_the_cut():
+	# Weighted: a .55, b .4, c .045, d .1 (total 1.095), so tau = 6% cuts c (4.1%) and keeps d (9.1%).
+	# Unweighted, d (0.5%) is cut; at the default tau, c (4.1%) is kept.
+	var policy := {"a": 0.55, "b": 0.4, "c": 0.045, "d": 0.005}
+	var expected := {"a": 55.0 / 105.0, "b": 40.0 / 105.0, "d": 10.0 / 105.0}
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 2024
+	var counts := {}
+	for i in 10000:
+		var move: String = MovePicker.pick(policy, rng, {"d": 20.0}, 0.06)
+		counts[move] = counts.get(move, 0) + 1
+	assert_true(not counts.has("c"), "drew the cut move c %d times" % counts.get("c", 0))
+	for move in expected:
+		var freq: float = counts.get(move, 0) / 10000.0
+		assert_true(absf(freq - expected[move]) <= 0.02, "%s: drawn %.4f, expected %.4f" % [move, freq, expected[move]])
+
+
+func test_a_move_at_exactly_tau_is_kept():
+	# Only a move below tau is cut: 2% at the default 2% stays.
+	_assert_dist(MovePicker.distribution({"a": 0.98, "b": 0.02}), {"a": 0.98, "b": 0.02})
+
+
 func test_defaults_are_two_percent_and_t_one():
 	assert_eq(MovePicker.DEFAULT_TAU, 0.02)
 	assert_eq(MovePicker.DEFAULT_TEMPERATURE, 1.0)
@@ -107,6 +129,16 @@ func test_same_seed_gives_the_same_moves_whatever_the_global_rng():
 	var second := _draws(policy, 7)
 	assert_eq(second, first)
 	assert_true(_draws(policy, 8) != first, "another seed gives other moves")
+
+
+func test_pick_draws_once_from_the_rng():
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 99
+	var reference := RandomNumberGenerator.new()
+	reference.seed = 99
+	reference.randf()
+	MovePicker.pick({"a": 0.5, "b": 0.3, "c": 0.2}, rng)
+	assert_eq(rng.state, reference.state)
 
 
 func test_degenerate_policies():
