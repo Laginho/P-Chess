@@ -1,5 +1,5 @@
 # BOT-001: Engine fetch script
-Stage: blocked
+Stage: to-review
 Blocked by: none
 Review: human
 Difficulty: normal
@@ -19,7 +19,7 @@ Difficulty: normal
 3. Every file's SHA-256 is checked against a hash pinned in the script; on a mismatch the file is deleted and the script exits non-zero.
 4. Files already present with the right hash are not downloaded again.
 5. A `-Root <dir>` parameter sets the target folder (default: the repo root).
-6. Pin SHA-256 hashes computed from the actual official release downloads and record the release tags, asset names, URLs, and hashes in the verification evidence. Compare against any upstream-published digest where available. Compare these artifacts with Bruno's existing `engine/` copies when those copies are available. If unavailable, record the comparison as pending: stage 2 may hand off to human review after the other acceptance checks pass, but integration requires Bruno either to confirm the comparison or explicitly accept the recorded upstream artifacts as the baseline.
+6. The pinned SHA-256 hashes are taken from the official GitHub release downloads, recorded with the release tags, asset names and URLs in the verification evidence (Bruno's decision, 2026-10-24; he has no local copies). The Lc0 zip hash matches GitHub's published release-asset digest; the Maia v1.0 release publishes no digests, so its nine hashes are computed from the official downloads.
 7. `docs/THIRD_PARTY.md` names Lc0 and Maia, their GPL-3 licence and the exact upstream tags.
 
 #### Verification
@@ -106,3 +106,7 @@ Verdict: Needs your call: Criterion 6 requires Bruno to confirm the historical-c
 Acceptance: pending | Implementation review passes with 0 Standards findings and 0 Spec defects; criterion 6's human integration condition remains unresolved. Reviewed commit: `422758cb8d26930ed1d2e120b8e7f54ac26f486a`.
 
 Disclosure: pending | integration | Criterion 6 and this Resolution: Bruno must explicitly accept the recorded upstream baseline or confirm comparison with his historical copies. The implementation stays on `BOT-001`; no session merge or completion ledger entry is made.
+
+- 2026-10-24 Bruno decided (human, relayed to the foreman): "Aceito os arquivos oficiais do GitHub como referência dos hashes; não tenho cópias locais. Registre isso no BOT-001 no lugar do critério 6." Folded into criterion 6 in place of the comparison with his copies. This answers the Needs-your-call verdict above and the integration condition of the proxy decision and Disclosures; no code changed. Stage restored to `to-review` for re-review.
+
+Disclosure: decision | integration | Resolved 2026-10-24: Bruno accepted the official GitHub release artifacts as the hash baseline (criterion 6).
