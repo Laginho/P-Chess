@@ -80,6 +80,7 @@ func _start(colour: String, level: String, control: String) -> void:
 	clock = Clock.new(control, Time.get_ticks_msec)
 	maia.clock = clock
 	maia.control = control
+	maia.level = level
 	clock.flagged.connect(_on_flagged)
 	clock.low_time.connect(func(side: String) -> void:
 		if side == human:
