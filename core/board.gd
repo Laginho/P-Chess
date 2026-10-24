@@ -149,6 +149,32 @@ func in_check() -> bool:
 	return _attacked(squares.find("K" if white else "k"), not white)
 
 
+# The side ("w" or "b") cannot mate by any legal sequence, as scalachess's InsufficientMatingMaterial
+# for one colour: a lone king; one knight against nothing but queens; or bishops, when the opponent
+# has no knight or pawn and no two bishops on the board stand on opposite colours.
+func cannot_mate(side: String) -> bool:
+	var own := ""
+	var theirs := ""
+	var bishop_colours := {}
+	for square in 64:
+		var piece := squares[square].to_lower()
+		if piece == "" or piece == "k":
+			continue
+		if piece == "b":
+			bishop_colours[(square % 8 + square / 8) % 2] = true
+		if _is_white(squares[square]) == (side == "w"):
+			own += piece
+		else:
+			theirs += piece
+	if own == "":
+		return true
+	if own == "n":
+		return theirs.replace("q", "") == ""
+	if own.replace("b", "") == "":
+		return bishop_colours.size() < 2 and not ("n" in theirs or "p" in theirs)
+	return false
+
+
 # Plays a move from legal_moves(). No legality check: callers holding outside input (the UI,
 # an engine) check it against legal_moves() first.
 func make_move(move: String) -> void:
