@@ -1,5 +1,5 @@
 # UI-002: Board feedback and promotion
-Stage: blocked
+Stage: done
 Blocked by: UI-001
 Review: agent
 Difficulty: normal
@@ -38,7 +38,7 @@ The board feels like Lichess (§8.4): moves slide, the last move and a checked k
 - Criteria 1–4 have no automated test (none named in the ticket). A throwaway headless script driving `ui/main.tscn` (not committed) checked: drag e2e4 holds `["e2e3", "e2e4"]` and does not slide; `play("d7d5")` slides and clears after 0.3 s; `slide_seconds = 0` is instant; the e7–e8 drop opens the picker with 4 buttons, cancel leaves the pawn on e7, picking n plays `e7e8n`; after exd5 the white label reads `♟ +1`. The manual two-human check of the ticket's Verification is still owed.
 - Callers read: `_legal_move` (removed) had only `_drop`; `main.gd` is the only user of `BoardView`; `test_board_view.gd` uses only the unchanged static mapping.
 
-Gate evidence: C:\Users\Lage\AppData\Local\Temp\claude\D--Desktop-Projects-P-Chess--artifacts-build-lanes-side\0678b999-a13e-4fe3-8c72-db673ccd0e5f\scratchpad\UI-002-gate.json
+Gate evidence (superseded, stage 2 on e20b658): C:\Users\Lage\AppData\Local\Temp\claude\D--Desktop-Projects-P-Chess--artifacts-build-lanes-side\0678b999-a13e-4fe3-8c72-db673ccd0e5f\scratchpad\UI-002-gate.json
 
 #### Resolution (2026-10-24)
 
@@ -90,3 +90,6 @@ Disclosure: pending | release | the manual two-human check in the ticket's Verif
 Disclosure: deferred | none | the latent `BoardView.play()` while a piece is held or the picker is open (Examined, above). No caller in this session. Routed to the open tickets BOT-004 and UI-007, under their ## Comments.
 
 - 2026-10-24 Stage stopped (incomplete handoff): Invalid committed handoff: UI-002: code changed after gate (.scratch/core/issues/14-BOT-004-play-vs-maia.md, .scratch/core/issues/20-UI-007-premoves.md); reuse evidence only for identical code. See D:\Desktop\Projects\P-Chess\.artifacts-build\lanes\side\.scratch\run-log\UI-002-review-20261024-121543.txt.runtime.json and run-log/recovery.txt; inspect the saved work before retrying.
+- 2026-10-24 Foreman: the review approved and merged this ticket. The driver parked it only because the review then added notes to BOT-004 and UI-007 (play() race, board_view.gd in BOT-004's allowed files), which made the stage-2 receipt stale. Keeping those notes: I reran the gate through gate-evidence.ps1 on the session at f50034e (56 passed, 0 failed) and restored Stage: done.
+
+Gate evidence: D:\Desktop\Projects\P-Chess\.artifacts-build\gate-evidence\UI-002-side-gate.json
