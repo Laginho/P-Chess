@@ -20,7 +20,7 @@ static var _token := RegEx.create_from_string(
 static var _suffix := RegEx.create_from_string(r"^(.*?)([!?]*)$")
 # PGN escapes only \\ and \" in a tag value.
 static var _escape := RegEx.create_from_string(r"\\(.)")
-static var _clock :=RegEx.create_from_string(r"\[%clk\s+(\d+):(\d+):(\d+)(?:\.(\d+))?\]")
+static var _clock := RegEx.create_from_string(r"\[%clk\s+(\d+):(\d+):(\d+)(?:\.(\d+))?\]")
 
 
 # Every game of a PGN text: {games, error}. On the first error, games is empty and error names
