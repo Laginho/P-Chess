@@ -1,5 +1,5 @@
 # CORE-006: PGN read and write
-Stage: to-implement
+Stage: implementing
 Blocked by: CORE-005
 Review: agent
 Difficulty: normal
