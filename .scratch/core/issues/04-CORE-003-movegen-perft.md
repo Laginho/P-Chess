@@ -1,5 +1,5 @@
 # CORE-003: Legal move generation and perft
-Stage: to-implement
+Stage: implementing
 Blocked by: CORE-002
 Review: agent
 Difficulty: hard
