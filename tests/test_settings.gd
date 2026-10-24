@@ -81,7 +81,10 @@ func test_a_corrupt_file_gives_the_defaults():
 	var file := FileAccess.open(_fresh(), FileAccess.WRITE)
 	file.store_string("[settings\nvolume = = ][ not a config file")
 	file.close()
+	# ConfigFile logs its own parse error, which the runner would count as a failure.
+	Engine.print_error_messages = false
 	var settings = Settings.new(PATH)
+	Engine.print_error_messages = true
 	assert_eq(settings.get_value("volume"), 100)
 	assert_eq(settings.get_value("panic"), "medium")
 	assert_true(settings.set_value("volume", 50), "and still saves over it")

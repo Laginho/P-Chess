@@ -32,3 +32,5 @@ Settings live in `user://settings.cfg` and are edited on a settings screen (§10
 - `tests/test_settings.gd`: defaults with no file, save and reload, a corrupt value falling back. Red because `core/settings.gd` does not exist.
 
 ## Comments
+
+- Stage 2, harness fix: after 298b272 every assert of `test_a_corrupt_file_gives_the_defaults` held, but ConfigFile logs its own parse error for a corrupt file and the runner counts any logged error as a failure. The test now turns `Engine.print_error_messages` off around that one load. Red again by mutation: a store that sets volume 0 on a failed load fails it (`expected 100, got 0`), with three other tests.
