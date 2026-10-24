@@ -1,5 +1,5 @@
 # CLOCK-001: Clocks and flag
-Stage: implementing
+Stage: to-review
 Blocked by: BOT-004
 Review: agent
 Difficulty: normal
@@ -44,3 +44,6 @@ Real clocks for both sides in the three time controls (§5), with the flag endin
 - Proxy decided (opus): the increment is added after every timed move of a side; a side's first move is untimed (criterion 4) and adds no increment, as on Lichess (in 3+2 both clocks read 3:00 when White's clock starts) — criterion 4 and §5 make the first move untimed like Lichess, and an increment on it is 2 s free; folded into criterion 2.
 - For HIST-002 (not edited on this branch): its criterion 2 computes time spent as clock before − clock after + increment, which shows 2 s for a side's first move in 3+2 under the rule above. Proxy's draft for stage 1 to apply on the base: "2. The move list shows the time spent on every move for both sides: the clock before the move, minus the clock after it, plus the increment; a side's first move is untimed and shows 0 s (a pure function, tested)."
 - Proxy decided (opus): ui/board_view.gd (scope: _commit) and tests/test_board_view.gd join Primary files with a new criterion 8; _commit returns early, snapping the piece back, when game.play(move) is false — the flag is the first way a game ends while a piece is held, and _commit ignored play()'s false return and still emitted sounds and move_played, which put a phantom SAN in the move list; the guard also covers a promotion picked after a flag.
+- Stage 2: core/game.gd needed no change; Game.flag (CORE-004) already applies the rule, and main connects Clock.flagged to it. Red→green: test_clock.gd failed to load without core/clock.gd (92c2e75), 9/9 pass at e3ccac4; the board-view test emitted ["move", "e4"] after the flag (dd90948), passes at d1910f1. A headless smoke run of ui/main.tscn showed the three controls in setup and a 1+0 flag ending the game "0-1, time" with White's clock at 0:00.0. Manual checks in Verification (a real 1+0 loss, a win on time against Maia) not run. A move landing after the time ran out (at most a frame late) flags in Clock.moved, but the move itself stays on the board; if that move was mate, the mate stands.
+
+Gate evidence: D:\Desktop\Projects\P-Chess\.artifacts-build\gate-evidence\CLOCK-001-core-gate.json
