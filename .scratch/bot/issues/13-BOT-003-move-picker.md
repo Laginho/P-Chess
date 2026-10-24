@@ -1,5 +1,5 @@
 # BOT-003: Move picker and time-pressure panic
-Stage: to-review
+Stage: reviewing
 Blocked by: CORE-001
 Review: agent
 Difficulty: hard
