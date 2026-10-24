@@ -1,5 +1,87 @@
 # Third-party assets
 
+## Engine: Leela Chess Zero (Lc0)
+
+`scripts/fetch-engine.ps1` downloads the unmodified Windows CPU dnnl archive
+`lc0-v0.32.1-windows-cpu-dnnl.zip` from the official
+[Lc0 v0.32.1 release](https://github.com/LeelaChessZero/lc0/releases/tag/v0.32.1).
+Exact source tag: [v0.32.1](https://github.com/LeelaChessZero/lc0/tree/v0.32.1).
+Lc0 is licensed under [GPL-3.0](https://github.com/LeelaChessZero/lc0/blob/v0.32.1/COPYING).
+The archive's SHA-256 is
+`b9cfcfbd3dabffbfd452f6e8e087c22273721bef48eba19640b6d92006c142f5`,
+matching GitHub's published release-asset digest.
+
+The script retains the archive and extracts all its files into `engine/lc0/`,
+including `COPYING`, the bundled network `791556.pb.gz`, and the DNNL/mimalloc
+licence and attribution files. Each extracted file also has a pinned SHA-256.
+Preserve these notices when packaging the engine.
+
+## Networks: Maia-1
+
+`engine/weights/maia-1100.pb.gz` through `maia-1900.pb.gz` are unmodified networks
+from the official [Maia v1.0 release](https://github.com/CSSLab/maia-chess/releases/tag/v1.0)
+by the Maia team (CSSLab). Exact source tag:
+[v1.0](https://github.com/CSSLab/maia-chess/tree/v1.0).
+Licence: [GPL-3.0](https://github.com/CSSLab/maia-chess/blob/v1.0/LICENSE).
+The nine SHA-256 values pinned in `scripts/fetch-engine.ps1` were computed from
+the official release downloads on 2026-10-24; this release publishes no asset
+digests. The release packaging task (CI-003) must include Maia's licence text
+alongside the networks and preserve the exact source links above.
+
+Run `powershell -NoProfile -File scripts/fetch-engine.ps1` from a checkout, or
+pass `-Root <dir>` to install under another folder. The default root is the
+checkout containing the script, independent of the current working directory.
+Verified cached files are reused. A checksum mismatch deletes the affected file
+and exits non-zero; rerun to restore it. A failed download is also removed.
+
+## Sounds: Lichess / Enigmahack
+
+`themes/sounds/` bundles exactly `sfx`, `nes`, `piano` and `futuristic`, credited by
+[Lichess's COPYING.md](https://github.com/lichess-org/lila/blob/81e2d1bca7a0c97ba3a980f2c51fcff67bfef7ed/COPYING.md)
+to [Enigmahack](https://github.com/Enigmahack) under
+[AGPL-3.0-or-later](https://www.gnu.org/licenses/agpl-3.0.html).
+Source: [lila/public/sound at revision 81e2d1b](https://github.com/lichess-org/lila/tree/81e2d1bca7a0c97ba3a980f2c51fcff67bfef7ed/public/sound).
+The OGG bytes are unchanged; only filenames are adapted to the game's events.
+The `standard` set is not bundled.
+
+| Local event file | Original file in each set |
+|---|---|
+| move.ogg | Move.ogg |
+| capture.ogg | Capture.ogg |
+| castle.ogg | Move.ogg |
+| check.ogg | Check.ogg |
+| promote.ogg | Check.ogg |
+| premove.ogg | Move.ogg |
+| low_time.ogg | LowTime.ogg |
+| game_start.ogg | GenericNotify.ogg |
+| game_end.ogg | Check.ogg (the target of the upstream Checkmate.ogg symlink) |
+
+Lichess has no separate castle, promote or premove OGG in these sets; the mapping
+above reuses each set's own clips. The sound fixtures in
+`tests/fixtures/themes/builtin/sounds/quiet/` are copies of `sfx/Move.ogg` under
+the same licence. Their capture event is deliberately absent.
+
+### Folder theme format (UI-003)
+
+Themes live under `res://themes/<kind>/<name>/` or `user://themes/<kind>/<name>/`.
+User folders override bundled names. Board `theme.json` uses either
+`{"light":"#f0d9b5","dark":"#b58863"}` or `{"texture":"board.png"}`; texture
+paths are relative to that theme's folder and cover the entire board. A malformed
+board falls back to brown with a warning. Piece folders need all twelve SVGs
+`wK.svg` through `bP.svg`. Sound filenames are the local event names above;
+missing events are silent. The temporary default is `sfx`, pending Bruno's review.
+
+`ThemeLoader.list_themes(kind)` returns name-to-folder mappings for `boards`,
+`pieces` and `sounds`. `load_board(name)`, `load_pieces(name)` and
+`load_sounds(name)` return the drawing data, FEN-letter textures and event streams.
+The board exposes `set_board_theme(name)` and `set_piece_theme(name)`;
+`SoundPlayer.select_theme(name)` switches audio sets, and `play(event)` also
+accepts `premove` and `low_time` for their later callers.
+
+These files are read at runtime, including user themes, without an editor import
+cache. Windows exports (CI-002) must include the raw theme `.json`, `.svg`, `.ogg`
+and any board image files. This extends the existing raw piece SVG export rule.
+
 ## Pieces: cburnett
 
 `themes/pieces/cburnett/` (`wK.svg` … `bP.svg`): chess pieces by Colin M.L. Burnett ([User:Cburnett](https://commons.wikimedia.org/wiki/User:Cburnett)), from Wikimedia Commons, under the BSD-3-Clause licence below.
