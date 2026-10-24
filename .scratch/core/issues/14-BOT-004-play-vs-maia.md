@@ -1,5 +1,5 @@
 # BOT-004: Play a game against Maia
-Stage: to-implement
+Stage: implementing
 Blocked by: UI-001, BOT-002, BOT-003
 Review: agent
 Difficulty: normal
