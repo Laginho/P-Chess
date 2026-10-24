@@ -1,5 +1,5 @@
 # BOT-005: Maia's think time (fallback formula)
-Stage: implementing
+Stage: to-review
 Blocked by: BOT-003, CLOCK-001
 Review: agent
 Difficulty: hard
@@ -40,3 +40,12 @@ Maia spends human-like time on its moves, from its own clock (§4). This ticket 
 - 2026-10-24 Stage 2: `bot/maia_player.gd` cannot reach the game's clock (only `ui/main.gd` owns it, built in `_start`), and `core/clock.gd` does not keep the starting time, so Maia also needs the control to read `Clock.CONTROLS[control][0]`. Asked the proxy whether `ui/main.gd` may join Primary files.
 - Proxy decided (opus): ui/main.gd joins Primary files (scope: _start hands Maia the game's clock and control; _show_result's latency print says what it measures); core/clock.gd and tests/test_maia_player.gd stay out — main.gd is the only owner of the clock, so criteria 1, 4 and 6 cannot be met without it, and Maia needs the control string anyway for BOT-006's table, which §4.1 keys by time control. Conditions: the wait arithmetic stays pure in `bot/time_model.gd`; `latencies_ms` keeps measuring think() → Lc0's answer, so BOT-004's pending 50 ms acceptance stays measurable; the `ui/main.gd` lines go in their own commit. For stage 3: `Disclosure: pending | integration | ui/main.gd overlaps the core lane (UI-004, UI-005, UI-007, BOT-008, HIST-001, HIST-002); expect a 3-line conflict in _start/_show_result at the second session merge.`
 - 2026-10-24 Note for stage 1 to put on UI-004 (from the proxy, not a BOT-005 criterion): Maia can now sit on a timer for seconds. If a rematch starts while it waits (Esc Esc, then Space), its old move can fire into the new game, and with colours swapped `play` could accept it as the human's move. Cheapest guard, in `bot/maia_player.gd`: when the timer fires, emit only if `_game` and its move count are unchanged since `think()`. Today nothing restarts a game, so there is no exposure yet.
+- 2026-10-24 Stage 2 done. Commits: 0b82b10 test-only (red), d44c20b `bot/` production, 3be61c2 `ui/main.gd` (own commit, per the proxy).
+  - Red at 0b82b10: `Preload file "res://bot/time_model.gd" does not exist`, test_time_model.gd fails to load; 102 passed, 1 failed. Green at 3be61c2: 112 passed, 0 failed (102 + 10 new).
+  - Two wiring tests pass trivially on the old code, which answers at once, so each was proved red by mutating `bot/maia_player.gd` and restoring it: top_p never read → `test_a_premove_reads_maia_s_own_clock_and_the_starting_time` fails; legal count fixed at 2 → `test_maia_moves_once_lc0_answers_when_lc0_took_longer_than_the_delay` fails; White's clock read for Black → the premove test fails; no wait → `test_with_time_to_think_maia_does_not_answer_at_once` fails (expected [], got ["e2e4"]). Each run: 111 passed, 1 failed.
+  - My readings, not proxy decisions: `moves_played` is Maia's own moves so far (`game.moves.size() / 2`, right for either colour). `top_p` is the highest probability among the legal policy entries, 0 when none is legal (scale 1.6). With under 0.05 s on Maia's clock the clamp's upper bound wins, overrides included, so Maia never waits past its own flag (c2 and c3 cannot both hold there; tested). Without a clock Maia answers at once, which keeps `tests/test_maia_player.gd` and the live Lc0 test unchanged.
+  - Maia's first move is untimed (CLOCK-001), but it still waits the formula's delay: about 6 s at 3+2's start, not charged.
+  - `latencies_ms` still measures think() to Lc0's answer (gate live test: `maia-1500 median 14.2 ms over 30 moves`). The end-of-game print now says so.
+  - `test_with_time_to_think_maia_does_not_answer_at_once` leaves a SceneTree timer pending when the runner quits; the gate log shows no error or leak warning from it.
+  - Not done: the manual 3+2 game from Verification (headless session).
+Gate evidence: C:/Users/Lage/AppData/Local/Temp/claude/D--Desktop-Projects-P-Chess--artifacts-build-lanes-bot/ad96159a-6fc3-4fee-8c77-07fec4cb801f/scratchpad/BOT-005-gate.json
