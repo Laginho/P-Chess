@@ -43,6 +43,18 @@ func test_variations_nest_under_the_move_they_replace():
 	assert_eq(_field(alapin[1].variations[0], "uci"), ["g8f6", "e4e5"])
 
 
+func test_a_comment_opening_a_variation_is_kept_on_its_first_move():
+	var parsed := Pgn.parse("1. e4 e5 ({Better is} 1... c5 {Sicilian}) 2. Nf3 *")
+	assert_eq(parsed.error, "")
+	var game: Dictionary = parsed.games[0]
+	var first: Dictionary = game.moves[1].variations[0][0]
+	assert_eq(first.get("comment_before"), "Better is")
+	assert_eq(first.comment, "Sicilian")
+	assert_eq(game.comment, "")
+	assert_eq(_field(game.moves, "comment"), ["", "", ""])
+	assert_eq(_field(game.moves, "comment_before"), ["", "", ""])
+
+
 func test_every_game_of_a_file_is_returned():
 	var parsed := _read("several.pgn")
 	assert_eq(parsed.error, "")
@@ -82,6 +94,25 @@ func test_written_game_reads_back_with_the_same_headers_moves_and_clocks():
 	assert_eq(_field(game.moves, "uci"), uci)
 	assert_eq(_field(game.moves, "clock_ms"), clocks)
 	assert_eq(game.result, "0-1")
+
+
+func test_header_backslashes_read_back_unchanged():
+	# PGN escapes only \\ and \"; a C-style \n or \t must stay two characters.
+	var headers := {"Event": "C:\\new\\test", "White": "a\\tb", "Black": "q\\\"x\\", "Site": "\\a\\b\\f\\v\\'\\?\\r"}
+	var parsed: Dictionary = Pgn.parse(Pgn.write({"headers": headers, "moves": [], "result": "*"}))
+	assert_eq(parsed.error, "")
+	assert_eq(parsed.games[0].headers, headers)
+
+
+func test_clocks_read_back_to_the_millisecond():
+	var uci := ["e2e4", "e7e5", "g1f3", "b8c6", "f1b5", "a7a6"]
+	var clocks := [297534, 180050, 300000, 297500, 1, 3723999]
+	var moves := []
+	for i in uci.size():
+		moves.append({"uci": uci[i], "clock_ms": clocks[i]})
+	var parsed: Dictionary = Pgn.parse(Pgn.write({"headers": {}, "moves": moves, "result": "*"}))
+	assert_eq(parsed.error, "")
+	assert_eq(_field(parsed.games[0].moves, "clock_ms"), clocks)
 
 
 func test_an_illegal_move_is_an_error_naming_the_game_and_move_number():
