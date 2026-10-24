@@ -33,3 +33,5 @@
 | 2026-10-24T19:26-03:00 | BOT-005 | proxy-decision | Proxy decided (opus): ui/main.gd joins Primary files (scope _start hands Maia the clock and control, _show_result's latency print), own commit (BOT-005 Comments, 0b82b10) |
 | 2026-10-24T19:56-03:00 | BOT-006 | proxy-decision | Proxy decided (opus): option B, bot/maia_player.gd and one ui/main.gd line join Primary files plus c6 "in a game, Maia's delay comes from the game's bucket" (BOT-006 Comments, 4b33e29) |
 | 2026-10-24T20:00-03:00 | BOT-006 | automatic-recovery | Foreman: driver parked a valid to-review handoff as "missing Gate evidence receipt" because the line was a `- Gate evidence:` bullet; ticket-only fix c26ff79 on bot-006 (2568cca after rebase), park commit aea0df6 reverted on the session in 359a2ab, driver relaunched |
+| 2026-10-24T19:26-03:00 | UI-004 | proxy-decision | Proxy decided (opus): ui/move_list.gd joins Primary files, scoped to a new reset() the rematch calls (UI-004 Comments) |
+| 2026-10-24T19:36-03:00 | UI-004 | proxy-decision | Proxy decided (opus): in focus mode the Esc hint stays and the game-end result shows; fixed in review c4bd40f (UI-004 Comments) |

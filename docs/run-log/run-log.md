@@ -54,3 +54,8 @@
 | 2026-10-24 19:50 | BOT-005 | review | opus-5.5 xhigh | 1 | merged | sweatshop/bot/2026-10-24-1914 | 18m | 4.3M in (96% cached), 69k out | $2.471 | 0.506 |
 | 2026-10-24 19:59 | BOT-006 | implement | opus-5.5 high | 1 | failed (incomplete handoff), blocked | sweatshop/bot/2026-10-24-1914 | 9m | 3.7M in (96% cached), 43k out | $2.578 | 0.787 |
 | 2026-10-24 20:08 | BOT-006 | review | opus-5.5 xhigh | 1 | merged | sweatshop/bot/2026-10-24-1914 | 7m | 4.3M in (97% cached), 43k out | $2.111 | 0.504 |
+| 2026-10-24 19:21 | UI-004 | implement | opus-5.5 high | 1 | failed (exit 0), will retry | sweatshop/core/2026-10-24-1911 | 7m | 3.2M in (96% cached), 29k out | $2.123 | 0.529 |
+| 2026-10-24 19:26 | UI-004 | implement | opus-5.5 high | 2 | to-review | sweatshop/core/2026-10-24-1911 | 5m | 2.9M in (98% cached), 14k out | $1.409 | 0.781 |
+| 2026-10-24 19:36 | UI-004 | review | opus-5.5 xhigh | 2 | merged | sweatshop/core/2026-10-24-1911 | 10m | 5.0M in (94% cached), 62k out | $2.944 | 1.053 |
+| 2026-10-24 19:55 | UI-005 | implement | opus-5.5 high | 1 | to-review | sweatshop/core/2026-10-24-1911 | 18m | 4.5M in (98% cached), 34k out | $2.391 | 0.515 |
+| 2026-10-24 20:10 | UI-005 | review | opus-5.5 xhigh | 1 | merged | sweatshop/core/2026-10-24-1911 | 15m | 6.8M in (96% cached), 94k out | $3.666 | 0.529 |
