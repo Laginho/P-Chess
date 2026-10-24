@@ -1,0 +1,12 @@
+{
+	"clock_bins": [0.0, 0.15, 0.5, 1.0],
+	"top_p_bins": [0.0, 0.3, 0.6, 1.0],
+	"buckets": [
+		{"control": "3+2", "level": "maia-1500", "clock_bin": 0, "top_p_bin": 0, "median": 1.0, "log_sigma": 0.4},
+		{"control": "3+2", "level": "maia-1500", "clock_bin": 1, "top_p_bin": 0, "median": 2.0, "log_sigma": 0.4},
+		{"control": "3+2", "level": "maia-1500", "clock_bin": 1, "top_p_bin": 1, "median": 3.0, "log_sigma": 0.4},
+		{"control": "3+2", "level": "maia-1500", "clock_bin": 2, "top_p_bin": 1, "median": 0.001, "log_sigma": 0.0},
+		{"control": "3+2", "level": "maia-1500", "clock_bin": 2, "top_p_bin": 2, "median": 4.0, "log_sigma": 0.5},
+		{"control": "1+0", "level": "maia-1100", "clock_bin": 0, "top_p_bin": 2, "median": 0.5, "log_sigma": 0.3}
+	]
+}
