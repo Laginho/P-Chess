@@ -1,5 +1,5 @@
 # BOT-003: Move picker and time-pressure panic
-Stage: to-review
+Stage: done
 Blocked by: CORE-001
 Review: agent
 Difficulty: hard
@@ -111,3 +111,42 @@ Left for stage 2, in this order:
 - BLOCKING 3: pin the τ boundary. `{a:0.98, b:0.02}` keeps `b` at the default τ.
 - NON-BLOCKING 4 (fix if cheap), tests/test_move_picker.gd:85: seed reproducibility and frequencies don't prove exactly one random draw; an extra discarded `randf()` passes every test. Assert the RNG state against a reference generator advanced exactly once.
 - NON-BLOCKING 5 (fix if cheap), bot/move_picker.gd:65: all-zero weights give zero-mass output, a NaN weight propagates NaN, and `T = 0` gives zero mass. None has a defined validation, fallback or test. The documented book weights exclude zero and NaN, so either define the behaviour or guard it.
+
+#### Resolution (2026-10-24), re-review after reopen 1
+
+Verdict: Approve
+
+Stage 3 (opus-5.5), re-review of Review 2's items and the diff 263983d..7bfb5b0. The Standards and Spec axes ran as separate sub-agents; neither found anything. No fix in review.
+
+Review 2's items:
+
+1. ✅ BLOCKING 1. `p^(1/T)` is taken on `p / p_top` (bot/move_picker.gd:33–35), so the top move stays at 1 and no `T` can zero the whole distribution; scaling before renormalising leaves every other `T` unchanged. `top` is still the maximum of `kept`, which holds it and is renormalised by a positive total. `test_small_temperature_does_not_underflow` has Review 2's `{a:0.4, b:0.35, c:0.25}` at `T = 0.001`: distribution `{a:1}` and 100 of 100 draws `a`.
+2. ✅ BLOCKING 2. `test_pick_samples_after_the_book_weight_and_the_cut` samples 10,000 times through `pick()` with `d ×20` and `τ = 6%`: `d` (0.5% raw) is drawn, `c` (4.1% after weighting) never.
+3. ✅ BLOCKING 3. `test_a_move_at_exactly_tau_is_kept`: `{a:0.98, b:0.02}` keeps `b` at the default `τ`.
+4. ✅ NON-BLOCKING 4. `test_pick_draws_once_from_the_rng` compares the RNG state with a reference advanced once.
+5. ✅ NON-BLOCKING 5. `T = 0` keeps only the top move; an all-zero policy or all-zero weights give the first move all the mass (early return, bot/move_picker.gd:25–26). Both tested. NaN and negative `T` stay unguarded, as stage 2 wrote: Review 2 itself notes the book weights exclude NaN, and UI-005 criterion 5 makes an out-of-range setting fall back to its default. No finding.
+
+Criteria 1–7: ✅, as in the first Resolution and Review 2; nothing in the diff weakens them.
+
+Red-green, checked by me in a scratch worktree, not only read from stage 2:
+- Cycle 3: eea557a (tests, old code) gives 23 passed, 3 failed: `test_small_temperature_does_not_underflow` (`a` got 0.0, drew `c` every time), `test_zero_temperature_keeps_only_the_top_move`, `test_degenerate_policies`. Green at 348ae38.
+- Cycle 4 (test only, green on arrival), against mutants of 66229f6: `>= τ` → `> τ` fails only `test_a_move_at_exactly_tau_is_kept` (28/1); `pick()` passing `{}` and `DEFAULT_TAU` fails only `test_pick_samples_after_the_book_weight_and_the_cut` (`c` drawn 420 times, `d` never; 28/1). The extra-`randf()` mutant I took from stage 2's record.
+
+Test-first: `diff --stat` on every commit since the reopen. eea557a is the test plus the ticket, 348ae38 is `bot/move_picker.gd` only, 66229f6 is the test only, 7bfb5b0 is the ticket only. Every code file is in Primary files.
+
+Examined:
+- Callers: none outside the tests (`git grep move_picker`). BOT-004 will call `pick` with the defaults.
+- Failure paths the change creates: `p_top = 0` (only input with no positive mass, early return), `1 / T = inf` at `T = 0` (`pow(1, inf) = 1`, `pow(x < 1, inf) = 0`), a tie for the top (both ratios 1, tie kept). All fine.
+- Spec §3.3 still describes the result exactly; no doc went stale.
+- Not examined: wall-clock cost per move (BOT-004's 50 ms budget).
+
+Rebase: none needed; `bot-003` descends from the session tip d1dcdd1. The merge 589eb2a has the same `bot/` and `tests/` tree as the tested 66229f6.
+
+Gate: `godot --headless -s tests/run.gd` on 66229f6 gave 29 passed, 0 failed, exit 0. Receipt in the Gate evidence line above; I checked its log hash and counts. Reused: no production changed after it.
+
+Proxy decided lines: one, (opus), on running `gate-evidence.ps1` through the Bash tool. Process only; this round's receipt came from the real helper.
+
+Acceptance: pending | M3 ("a full game against Maia; latency under 50 ms") needs BOT-001, BOT-002 and BOT-004; this ticket's own criteria pass 29/29 on 66229f6 (receipt above)
+
+Disclosure: decision | none | spec §3.4 "off" now reads as criterion 6 (8cb80e4); the old text differed only when the `T` setting is not 1
+Disclosure: decision | none | Proxy decided (opus) on how to run the gate helper; process only, no contract change
