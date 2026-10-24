@@ -1,5 +1,5 @@
 # BOT-001: Engine fetch script
-Stage: to-review
+Stage: blocked
 Blocked by: none
 Review: human
 Difficulty: normal
@@ -76,3 +76,33 @@ Acceptance: pending | Command-line behavior passes the checks above; comparison 
 - Human review must retain the criterion-6 integration condition. This handoff does not confirm equivalence with Bruno's unavailable historical copies.
 
 Gate evidence: C:/Users/Lage/AppData/Local/Temp/P-Chess-BOT-001-evidence-20261024/gate.json
+
+#### Resolution (2026-10-24)
+Verdict: Needs your call: Criterion 6 requires Bruno to confirm the historical-copy comparison or explicitly accept the recorded official upstream artifacts before integration.
+
+- Reviewed `7c904638a6d9b023d4d75446fb08f960965a2101...422758cb8d26930ed1d2e120b8e7f54ac26f486a`, including every commit's file separation. The implementation is limited to the two Primary files; the remaining changes are this ticket's metadata. The ticket explicitly exempts persistent GDScript tests in favor of command-line red/green verification. No production or test changes were authored during review.
+
+##### Standards
+
+- No findings. The implementation follows the documented scope, uses small named checksum/download functions, and documents usage and provenance. No baseline code smell warrants a finding. The independent Standards reviewer inspected PowerShell 5.1 parsing, the failure logs, and the successful gate receipt.
+
+##### Spec
+
+- No implementation defects or unasked scope creep. Criteria 1-5 and 7 pass: Windows PowerShell 5.1 compatibility; the exact official Lc0 and Maia asset versions and installation paths; pinned checksums with deletion and nonzero exit on mismatch; cache reuse; default/custom roots; and attribution. The independent Spec reviewer hashed all 20 installed files against their pins and confirmed that the archive's ten entries exactly match the extracted-file manifest.
+- Criterion 6's provenance and stage-2 handoff requirements pass; its explicit human integration condition is pending. Bruno's historical copies remain unavailable at `D:/Desktop/Projects/P-Chess/engine/`. The fresh downloads in this lane are not historical reference copies. No confirmation of equivalence or explicit acceptance of the replacement baseline has been received.
+- Independently checked the [official Lc0 release-asset digest](https://github.com/LeelaChessZero/lc0/releases/expanded_assets/v0.32.1): it matches the pinned ZIP SHA-256. The [Maia v1.0 asset listing](https://github.com/CSSLab/maia-chess/releases/expanded_assets/v1.0) names all nine networks and publishes no digests. Exact-tag licence texts match the attributions. Maia checksum provenance also relies on the recorded stage-2 official-download evidence.
+
+##### Verification and review coverage
+
+- Revalidated the existing gate receipt: exit 0, matching log SHA-256, tested production commit `01e0eb601e2b90657d48e12d9506611251a836a6` is an ancestor of HEAD, and only this ticket changed afterward. Gate result remains **81 passed, 0 failed**. Reused this evidence because production is unchanged.
+- Independently parsed and ran the cached installation in Windows PowerShell **5.1.19041.6456**: exit 0, zero downloads, all 20 installed files retained their sizes and modification timestamps. `git diff --check` passed.
+- Red/green evidence reviewed: the pre-implementation invocation fails because the script is missing; the implemented script passes clean installation and repeated cached execution. Corrupt net, ZIP and executable runs fail and delete the affected file; missing executable restoration succeeds offline. Reviewed the external HTTP wrapper and its correction to propagate the child exit status; corrupt and interrupted responses fail and remove their output.
+- Callers and interactions examined: manual setup, `docs/spec.md` sections 3.1/12, and CI-003's planned release invocation and licence packaging. Failure/boundary paths examined: empty target; default root independent of working directory; absolute/relative roots with spaces; valid cache; corrupt cached/downloaded assets; interrupted transfer; and missing extracted files. Live UCI/gameplay and clean-machine release acceptance are outside this ticket and were not run. Historical-copy equivalence remains unverified.
+- The existing stage-2 `Proxy decided (gpt-6-astra high, fallback)` contract change was explicitly reviewed: it permits implementation/review with upstream hashes while reserving baseline acceptance to Bruno. That integration condition is preserved.
+
+- 2026-10-24 Proxy escalated (gpt-6-astra high, fallback): Criterion 6 explicitly requires Bruno's decision before integration; the proxy cannot waive it. Upstream hashes and passing tests do not establish equivalence with unavailable historical copies, and a bare ticket ID is not explicit baseline acceptance. Record this review as blocked on `BOT-001`; do not merge, close, or add a ledger entry.
+- Human question: Do you explicitly accept the official Lc0 v0.32.1 and Maia v1.0 artifacts, with the hashes recorded above, as the baseline for integration (recommended), or should integration wait for comparison with your historical copies?
+
+Acceptance: pending | Implementation review passes with 0 Standards findings and 0 Spec defects; criterion 6's human integration condition remains unresolved. Reviewed commit: `422758cb8d26930ed1d2e120b8e7f54ac26f486a`.
+
+Disclosure: pending | integration | Criterion 6 and this Resolution: Bruno must explicitly accept the recorded upstream baseline or confirm comparison with his historical copies. The implementation stays on `BOT-001`; no session merge or completion ledger entry is made.
