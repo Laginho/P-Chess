@@ -40,3 +40,30 @@ Difficulty: normal
 - Pre-implementation verification: the ticket's first PowerShell command fails because `scripts/fetch-engine.ps1` does not exist (exit -196608). Log: `C:/Users/Lage/AppData/Local/Temp/P-Chess-BOT-001-evidence-20261024/red-missing-script.txt`. The ticket explicitly exempts GDScript tests; verification uses its public command-line seam. No existing function is changed. Future callers are manual setup and CI-003's release job; inspected `docs/spec.md` §§3.1/12 and CI-003. Relevant boundaries: empty target, paths with spaces, valid cached assets, corrupt cached/downloaded assets, missing extracted files and download failure.
 
 Disclosure: decision | integration | Criterion 6 and the proxy decision above: Bruno must compare his reference copies or explicitly accept the recorded official upstream artifacts as the baseline before integration.
+
+#### Stage 2 verification (2026-10-24)
+
+- Implemented only the two Primary files. No persistent test files are added, as this ticket specifies command-line verification instead of a GDScript test seam.
+- Windows PowerShell 5.1.19041.6456 parses and executes the script. The initial default-parameter expression failed when `-Root` was omitted; computing the default inside the script body fixes it. The final clean default-root run from a different working directory downloaded all ten assets, extracted all ten ZIP entries, and exited 0. `-Root` also passed with an absolute and relative path containing spaces.
+- Repeat run: exit 0, no `Downloading:` lines, and all 20 installed files retained their modification timestamps. This run passed inside the network-restricted sandbox.
+- Flip one byte of `maia-1100.pb.gz`: exit 1, SHA-256 mismatch reported, corrupt file deleted. Additional checks independently corrupted the cached ZIP and extracted `lc0.exe`: each exited 1 and deleted the affected file. A following run restored the missing executable from the verified ZIP without downloading.
+- At the HTTP boundary, an external wrapper supplied a corrupt response, then an interrupted response after writing partial bytes: each exited 1 and removed the output. The wrapper initially failed to propagate its child script's exit status; adding `exit $LASTEXITCODE` fixed the external harness, with no production change.
+- Ten separately downloaded official reference assets match the final installed assets byte for byte by SHA-256. The ZIP hash also matches GitHub's release-asset `digest`; Maia v1.0 publishes no digests, so those nine hashes are computed values.
+- Logs and external HTTP wrapper: `C:/Users/Lage/AppData/Local/Temp/P-Chess-BOT-001-evidence-20261024/` (`red-missing-script.txt`, `red-default-root.txt`, `green-download.txt`, `green-default-root-download.txt`, `green-repeat.txt`, `green-relative-root.txt`, `green-tamper-net.txt`, `green-tamper-*.txt`, `green-restore-exe.txt`, `green-bad-response.txt`, `green-interrupted-response.txt`, `official-assets.json`). Downloads under this checkout's ignored `engine/` are the newly fetched upstream artifacts, not Bruno's unavailable historical copies.
+
+Provenance: [Lc0 v0.32.1](https://github.com/LeelaChessZero/lc0/releases/tag/v0.32.1), asset URL prefix `https://github.com/LeelaChessZero/lc0/releases/download/v0.32.1/`; [Maia v1.0](https://github.com/CSSLab/maia-chess/releases/tag/v1.0), asset URL prefix `https://github.com/CSSLab/maia-chess/releases/download/v1.0/`. Append the asset name below to its release's prefix. The script also pins hashes for every extracted ZIP entry, preserving upstream bytes and bundled licence notices.
+
+| Official release asset | Computed SHA-256 |
+|---|---|
+| lc0-v0.32.1-windows-cpu-dnnl.zip | b9cfcfbd3dabffbfd452f6e8e087c22273721bef48eba19640b6d92006c142f5 |
+| maia-1100.pb.gz | e1cf1cd0c96b8a4fa6a275f4b9fd54ed1ffebf9fe44641b9fceded310e9619c4 |
+| maia-1200.pb.gz | ead4ba953f233ae732999ebc1e2b675378148527ebcfad2f0acbc5e4c224d98e |
+| maia-1300.pb.gz | 36195f87bf4761834baa0bf87472b18509a7261a9d7d6f1a8443261369a733f2 |
+| maia-1400.pb.gz | d5353ea6766356dad2d28920c6692f37a5f30963767f1a3105d33b4d0af011e8 |
+| maia-1500.pb.gz | 35ab6f20421d59e1df3b17c5a5016947af4c6761368ef84044a9a9c7619a9a00 |
+| maia-1600.pb.gz | d2c9e5948581acf4b9fc0b1e720c5dc0fe64ce80cfc4a239d3f8a42e1176c876 |
+| maia-1700.pb.gz | d277eacd792d340a30abb464dc65127254e65cac57abca17facc469889b96478 |
+| maia-1800.pb.gz | 0031ad7c4256b1fd09fbebd28418d644d68b26cd2a45df4967ccf5c7ec9c4965 |
+| maia-1900.pb.gz | e2f565f42d7cd9f122557e6dc4eb84e5bbaedceda1d404dc485d3611c7c97a12 |
+
+Acceptance: pending | Command-line behavior passes the checks above; comparison with Bruno's historical copies remains an integration condition under criterion 6.

@@ -1,5 +1,39 @@
 # Third-party assets
 
+## Engine: Leela Chess Zero (Lc0)
+
+`scripts/fetch-engine.ps1` downloads the unmodified Windows CPU dnnl archive
+`lc0-v0.32.1-windows-cpu-dnnl.zip` from the official
+[Lc0 v0.32.1 release](https://github.com/LeelaChessZero/lc0/releases/tag/v0.32.1).
+Exact source tag: [v0.32.1](https://github.com/LeelaChessZero/lc0/tree/v0.32.1).
+Lc0 is licensed under [GPL-3.0](https://github.com/LeelaChessZero/lc0/blob/v0.32.1/COPYING).
+The archive's SHA-256 is
+`b9cfcfbd3dabffbfd452f6e8e087c22273721bef48eba19640b6d92006c142f5`,
+matching GitHub's published release-asset digest.
+
+The script retains the archive and extracts all its files into `engine/lc0/`,
+including `COPYING`, the bundled network `791556.pb.gz`, and the DNNL/mimalloc
+licence and attribution files. Each extracted file also has a pinned SHA-256.
+Preserve these notices when packaging the engine.
+
+## Networks: Maia-1
+
+`engine/weights/maia-1100.pb.gz` through `maia-1900.pb.gz` are unmodified networks
+from the official [Maia v1.0 release](https://github.com/CSSLab/maia-chess/releases/tag/v1.0)
+by the Maia team (CSSLab). Exact source tag:
+[v1.0](https://github.com/CSSLab/maia-chess/tree/v1.0).
+Licence: [GPL-3.0](https://github.com/CSSLab/maia-chess/blob/v1.0/LICENSE).
+The nine SHA-256 values pinned in `scripts/fetch-engine.ps1` were computed from
+the official release downloads on 2026-10-24; this release publishes no asset
+digests. The release packaging task (CI-003) must include Maia's licence text
+alongside the networks and preserve the exact source links above.
+
+Run `powershell -NoProfile -File scripts/fetch-engine.ps1` from a checkout, or
+pass `-Root <dir>` to install under another folder. The default root is the
+checkout containing the script, independent of the current working directory.
+Verified cached files are reused. A checksum mismatch deletes the affected file
+and exits non-zero; rerun to restore it. A failed download is also removed.
+
 ## Sounds: Lichess / Enigmahack
 
 `themes/sounds/` bundles exactly `sfx`, `nes`, `piano` and `futuristic`, credited by
