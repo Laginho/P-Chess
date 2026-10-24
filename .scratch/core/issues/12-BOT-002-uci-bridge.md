@@ -1,5 +1,5 @@
 # BOT-002: UCI bridge and Maia's policy
-Stage: to-review
+Stage: done
 Blocked by: CORE-001, CORE-003, BOT-001
 Review: agent
 Difficulty: hard
@@ -112,3 +112,42 @@ Difficulty: hard
 - For stage 3: the quoted attempt-2 `Disclosure: pending | integration` (rebuilt fixture, Lc0 never ran) is resolved by the recording and the live c7 above. These still stand, routed to BOT-004 `## Comments`: the PolicyTemperature question (now confirmed at 1.359) and the deferred no-timeout / Lc0-exit finding. Not run: the Linux CI path, where c7 skips because there is no `engine/`.
 
 Gate evidence: C:\Users\Lage\AppData\Local\Temp\claude\D--Desktop-Projects-P-Chess--artifacts-build-lanes-core\3c405e5c-bfb0-4400-a2e3-e5b469e2bea5\scratchpad\BOT-002-gate.json
+
+#### Resolution (2026-10-24)
+
+Verdict: Approve
+
+Stage 3 (opus-5.5), attempt 3. The Standards and Spec axes ran as separate sub-agents; I also read the whole diff myself. Spec: nothing missing, nothing out of scope. Standards: two judgement calls, both kept — the `[lines, reply, board]` step array (Data Clump, private to `_queue`/`_send`, kept by the attempt-2 review too) and `RegEx.create_from_string` on every `parse_policy` call, where `board.gd` compiles once (one call per policy, so no cost worth a change). No code changes in review.
+
+Acceptance: passed | the gate log in the receipt above (86 passed, 0 failed, c7 ran live against Lc0 v0.32.1 with maia-1100 and maia-1900, no SKIP); `tests/fixtures/lc0_verbose.txt` is recorded from that Lc0, its header listing the UCI lines.
+Disclosure: decision | none | Proxy decided (opus), attempt 2, see ## Comments: build on a fixture rebuilt from the v0.32.1 format. Superseded: attempt 3 replaced it with a recording and ran c7 live, so the quoted attempt-2 `pending | integration` disclosure is resolved. Its conditions still hold in the code: castling normalised only from the mover's king onto the mover's rook, both spellings tested, a rook's `e1h1` left alone, `P:` read by its field, the `node` line skipped, live keys = legal moves and sum ≈ 1.
+Disclosure: decision | none | Proxy decided (opus), attempt 3, see ## Comments: how to invoke `gate-evidence.ps1` from this lane. Process only; the receipt is real (hash checked below), the contract unchanged.
+Disclosure: pending | release | PolicyTemperature, open in BOT-004 `## Comments` (.scratch/core/issues/14-BOT-004-play-vs-maia.md) for Bruno: the recording confirms Lc0 v0.32.1's default is 1.359, not 1, so the `P:` the bridge returns is flatter than Maia's raw policy. §3.3's τ/T, §4.1's 0.9 premove check and BOT-007 all read it.
+Disclosure: deferred | release | No timeout and no detection of Lc0 exiting: a bad `WeightsFile` or a crash leaves the queue waiting forever with `available` true. Outside c1–c7; open in BOT-004 `## Comments`, whose c5/c6 are where it shows.
+
+Criteria:
+
+1. ✅ `start()` uses `OS.execute_with_pipe` and is a no-op once `available`; queues `uci`→`uciok`, then `setoption name VerboseMoveStats value true`. Two static reader threads block on stdout/stderr; the main thread only swaps `_lines` under the mutex in `poll()`. Ran live in c7.
+2. ✅ `set_level` queues `ucinewgame`, `setoption name WeightsFile value …`, `isready` and holds the queue until `readyok`; `new_game()` sends `ucinewgame`. Ran live in c7 (two level switches).
+3. ✅ `request_policy` sends `position fen <fen>[ moves …]` and `go nodes 1`; `poll()` collects `info string` lines only while awaiting `bestmove`, then emits `policy_ready(parse_policy(...))` on the polling thread. Live c7: keys = legal moves, sum ≈ 1.
+4. ✅ `parse_policy(lines, board)` is static and pure; `test_parser_reads_every_legal_move_from_lc0_output` runs it on the recorded fixture with no process (keys = legal moves, sum ≈ 1, Bxe6 11.86%, O-O 6.62%, O-O-O 26.39%).
+5. ✅ `test_engine_lookup_takes_the_first_folder_holding_lc0` and `test_missing_engine_reports_unavailable_naming_the_fetch_script`. `search_dirs()` = the executable's folder, plus `res://` globalised under `editor`.
+6. ✅ `NOTIFICATION_PREDELETE` → `stop()` → `OS.kill(pid)`, joins both readers. c7 asserts the pid is gone after `free()`, live. At app exit this needs the node in the tree (BOT-004, per the API note above).
+7. ✅ Gate log: `PASS res://tests/test_uci.gd::test_switching_from_maia_1100_to_1900_changes_the_policy`, live; the skip path prints `SKIP … run scripts/fetch-engine.ps1` where `engine/` is absent.
+
+Test-first, `diff --stat` of every commit since the session tip c99686f:
+- 3acbffc: `tests/test_uci.gd`, `tests/fixtures/lc0_verbose.txt` and the ticket only (red: 81 passed, 1 failed, `res://engine/uci.gd` missing).
+- 6d2ec51: `engine/uci.gd` only (green: 86 passed, 0 failed). The static `_read` change from 6fa31c3 has its own red/green in the live c7 (`Object is locked` at `free()`, then pass).
+- 4177a67: the ticket only.
+- 5143b81: the `--no-ff` merge into the session.
+All three code files are in Primary files.
+
+Examined:
+- Callers: none yet. Planned: BOT-004 (tree, `start`, `set_level`, `request_policy`), CI-002 c5 (missing-engine message), BOT-007 (reads `P:`). `Board` is only read (`from_fen`, `make_move`, `legal_moves`, `piece_at`, `side_to_move`); its move strings match `MOVE_LINE` (promotion `e7e8q`, castling `e1g1`).
+- Failure paths: missing engine (tested); `execute_with_pipe` failing (`error` set); pipes breaking (readers return); Lc0 exiting or never replying (deferred above); a FEN `Board.from_fen` rejects (null board, as `Game.new`, the CORE-004 deferral); no legal moves (`{}`); empty move list (no ` moves`).
+- Re-entrancy: a `policy_ready` handler calling `request_policy` is safe — `_awaiting` is cleared and the policy parsed before the emit, so the trailing `_send()` does nothing.
+- Threads: `_lines` is shared by reference with the static readers and guarded by the mutex; `stdio` is read on a worker and written on the main thread, now exercised live.
+- Cross-feature: PolicyTemperature (disclosure above). `set_level` hands the path to Lc0 as given; c7 passes an absolute path, and a relative one would resolve against Lc0's working directory — BOT-004 should pass absolute, as c7 does.
+- Not examined: the Linux CI run (c7 skips there by design); an exported build's lookup next to the executable (unit-tested through `engine_path` only; CI-002 covers the export); Lc0 on a bad `WeightsFile`; `go nodes 1` on a single-legal-move position.
+
+Gate: the stage-2 receipt above still holds — code 6d2ec51, exit 0, log hash `FFECB0DA…3662` rechecked, 86 passed, 0 failed. Only this ticket changed after 6d2ec51, and the ticket branch already sat on the session tip, so no rebase and no rerun.
