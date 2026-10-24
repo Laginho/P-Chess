@@ -1,5 +1,5 @@
 # CORE-005: SAN in and out
-Stage: blocked
+Stage: to-review
 Blocked by: CORE-003
 Review: agent
 Difficulty: normal
@@ -30,3 +30,4 @@ Moves in Standard Algebraic Notation, both ways. The move list, the PGN files, t
 ## Comments
 
 - 2026-10-24 Stage stopped (incomplete handoff): Invalid committed handoff: CORE-005: code changed after gate (core/board.gd, tests/test_san.gd); reuse evidence only for identical code. See D:\Desktop\Projects\P-Chess\.artifacts-build\lanes\core\.scratch\run-log\CORE-005-implement-20261024-030601.txt.runtime.json and run-log/recovery.txt; inspect the saved work before retrying.
+- 2026-10-24 Foreman: the park above was the driver's, not the stage's. Field() reads the first `Gate evidence:` line, which was attempt 1's receipt (code 3a2aeb5). Line renamed `Gate evidence (superseded, attempt 1):` on CORE-005-san (ticket-only commit); the current receipt names ab42c14, identical code to the handoff 64d41d3. Stage restored to `to-review`.
