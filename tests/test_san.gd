@@ -121,6 +121,21 @@ func test_illegal_or_ambiguous_san_is_an_error():
 	])
 
 
+# SAN writes every pawn capture with its departure file (FIDE Laws, Appendix C),
+# so a pawn move without one names the pawn on the destination file.
+func test_pawn_san_without_a_file_is_not_a_capture():
+	var center := "rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2"
+	_check_parse([
+		[center, "d5", ""],
+		[center, "xd5", ""],
+		[center, "exd5", "e4d5"],
+		[center, "ed5", "e4d5"],
+		["rnbqkbnr/pppp1ppp/8/4p3/3P4/8/PPP1PPPP/RNBQKBNR w KQkq - 0 2", "e5", ""],
+		["4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1", "d6", ""],
+		["4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1", "exd6", "e5d6"],
+	])
+
+
 func test_every_printed_move_of_the_perft_positions_parses_back():
 	for fen in PERFT_POSITIONS:
 		var board = Board.from_fen(fen)
