@@ -1,5 +1,5 @@
 # UI-003: Themes and sounds
-Stage: to-implement
+Stage: implementing
 Blocked by: UI-001
 Review: human
 Difficulty: normal
