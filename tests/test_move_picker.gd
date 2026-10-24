@@ -141,6 +141,19 @@ func test_pick_draws_once_from_the_rng():
 	assert_eq(rng.state, reference.state)
 
 
+func test_a_draw_of_exactly_one_picks_a_move_with_mass():
+	# randf() can return 1.0, and from this state it does. At T = 0.000001 only a has mass,
+	# so falling through the cumulative sum to the last key (c) would pick a 0% move.
+	var reference := RandomNumberGenerator.new()
+	reference.seed = 1
+	reference.state = -6990051623618564479
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 1
+	rng.state = reference.state
+	assert_eq(reference.randf(), 1.0, "precondition: the next draw is exactly 1.0")
+	assert_eq(MovePicker.pick({"a": 0.4, "b": 0.35, "c": 0.25}, rng, {}, 0.02, 0.000001), "a")
+
+
 func test_degenerate_policies():
 	var rng := RandomNumberGenerator.new()
 	assert_eq(MovePicker.pick({}, rng), "")

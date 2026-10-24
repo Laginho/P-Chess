@@ -1,5 +1,5 @@
 # BOT-003: Move picker and time-pressure panic
-Stage: to-implement
+Stage: implementing
 Blocked by: CORE-001
 Review: agent
 Difficulty: hard
