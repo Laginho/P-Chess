@@ -1,5 +1,5 @@
 # BOT-003: Move picker and time-pressure panic
-Stage: done
+Stage: to-implement
 Blocked by: CORE-001
 Review: agent
 Difficulty: hard
@@ -150,3 +150,20 @@ Acceptance: pending | M3 ("a full game against Maia; latency under 50 ms") needs
 
 Disclosure: decision | none | spec §3.4 "off" now reads as criterion 6 (8cb80e4); the old text differed only when the `T` setting is not 1
 Disclosure: decision | none | Proxy decided (opus) on how to run the gate helper; process only, no contract change
+
+#### Review 3 (2026-10-24), independent: gpt-6.1-sol xhigh via codex exec on PR #2 head 2337b40
+
+Verdict: Reopen — criterion 1 (pick() can return a zero-probability move when randf() returns exactly 1.0)
+
+Requested by Bruno; he approved the reopen. Findings 1–4 of Review 2 were confirmed fixed and pinned by mutants. Finding 5 is partly fixed: the NaN case is non-blocking and stays deferred.
+
+Criteria:
+
+1. ❌ The sample can land on a move with zero mass. Godot 4.7's `randf()` range includes 1.0. With policy `{a:0.4, b:0.35, c:0.25}` and `T = 0.000001`, the distribution is `{a:1, b:0, c:0}`. After `rng.seed = 1` and `rng.state = -6990051623618564479`, the next `randf()` is exactly 1.0 (the foreman reproduced this on Godot 4.7.2). In `pick()` (bot/move_picker.gd:48–50), `r -= dist[m]` never goes below 0, the loop never breaks, and it returns the last key, `"c"`, instead of `"a"`. The same fall-through happens whenever float rounding leaves the cumulative sum just under `r`.
+2. ✅ 3. ✅ 4. ✅ 5. ✅ 6. ✅ 7. ✅
+
+Left for stage 2:
+
+- BLOCKING: fix the endpoint handling so `pick()` never returns a key with zero probability. For example, fall back to the last key with positive probability, or compare correctly at the boundary. Pin it with a deterministic regression test that uses the seed and state above.
+
+Reopen diagnosis: earlier review miss of an implementation defect. The fall-through has been in `pick()` since 6322ec2 (stage 2, round 1). Neither Opus stage 3 nor the first independent review caught it. It is not a contract gap: criterion 1 already says "sample one move" from the final distribution. It is not review churn either: the Review-2 rework changed only the temperature step, which turns this endpoint case into a zero-mass move. The second independent review (head 2337b40) is the consolidated review of the affected paths; it read the whole picker and raised only this finding. Next action: stage 2 on the hard model fixes the sampling endpoint and adds the seeded regression test; the NaN deferral stays as recorded.
