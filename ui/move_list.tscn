@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://ui/move_list.gd" id="1"]
+
+[node name="MoveList" type="RichTextLabel"]
+size_flags_vertical = 3
+focus_mode = 0
+scroll_following = true
+script = ExtResource("1")
