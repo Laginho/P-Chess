@@ -1,5 +1,5 @@
 # BOT-004: Play a game against Maia
-Stage: to-review
+Stage: to-implement
 Blocked by: UI-001, BOT-002, BOT-003
 Review: agent
 Difficulty: normal
@@ -51,3 +51,27 @@ Gate evidence: C:/Users/Lage/AppData/Local/Temp/claude/D--Desktop-Projects-P-Che
 - Gate result for the receipt above: 92 passed, 0 failed, commit df80ca9.
 - 2026-10-24 Foreman: the driver parked this handoff as "missing Gate evidence receipt" only because the receipt line was written as a `- Gate evidence:` bullet with a trailing note, which the driver does not read (it wants the line to start with `Gate evidence: <path>`). The receipt exists and matches df80ca9 (exit 0). Ticket-only fix on this branch; the driver's park commit d44ea41 is reverted on the session so the review reads this branch's to-review.
 - 2026-10-24 Deferral accepted (Bruno, human; relayed by the supervising foreman session): criterion 4's latency measurement (Maia's median reply under 50 ms) is deferred until the machine is idle. His words: "deixa a parte do tempo de resposta pra depois, porque as lanes + outro projeto nesse mesmo pc vão causar bastante ruído. tem como deixar isso pra depois? aí a gente testa o tempo quando não estiver mais nada rodando". Why: three sweatshop lanes and another project share this PC, so the 74–106 ms the reopening review measured (and the 16–160 ms spread stage 2 saw) cannot separate the code from the load. Impact: release, not integration. c4 no longer blocks this ticket's review or its merge into the session; it becomes a pending manual check (measure the windowed median with nothing else running), carried by stage 3 as `Acceptance: pending` and a `Disclosure: deferred | release` line, and listed in the session PR. A change to Lc0's thread options in `engine/uci.gd`, or a proxy request to add that file, made only to meet c4 is no longer needed; work already done is reviewed as usual, not discarded.
+
+#### Review (2026-10-24)
+
+Verdict: Reopen — criterion 4: in the real app the median from the human's move to Maia's is 74–106 ms, not under 50
+
+Stage 3 (opus-5.5). The Standards and Spec axes ran as separate sub-agents; neither found anything. I read the whole diff, rebased the branch onto the session (no conflict; production identical to the tested df80ca9; the receipt holds: exit 0, log hash matches, 92 passed, 0 failed), reran the gate (92 passed, 0 failed; the live test printed 33.5 ms) and played the real `ui/main.tscn` windowed against maia-1500.
+
+Criteria:
+
+1. ✅ `ui/setup.gd`: White / Black / Random and maia-1100 … maia-1900 (1500 preselected); Start emits `started`, and `main._start` begins the game.
+2. ✅ `MovePicker.pick(usable, rng)` with the default τ and T and no weights, so every weight is 1; `usable` is Lc0's policy cut to the legal moves.
+3. ✅ `_start` ends in `_next_turn`: with the human on black, white is to move and is not the human, so Maia thinks at once. The board flips for black.
+4. ❌ The median is logged at game end (`Maia: median … ms`), but it does not stay under 50 ms in the app. A probe ran `ui/main.tscn` windowed (`godot --path . -s <probe> -- w|b`): it calls `main._start(human, "maia-1500")`, plays a random legal move through `board_view.play()` 0.3 s after each of Maia's moves, and prints `maia.latencies_ms` at game end. Human white: median 74.4 ms over 19 moves (25.6–349.7 ms; the first, 15.5 s, includes the net load). Human black: median 105.5 ms over 16 moves (29.3–266.0 ms). The same code headless, moves back to back, gave 33.5 ms; stage 2's windowed run, a random mover with no pause, gave 47.1 ms. The pause is what a human adds, and it makes Maia slower. Why is not measured: one guess is that Lc0's CPU backend threads go idle between moves and pay to wake up, another that they contend with Godot's rendering.
+5. ✅ By construction: `engine/uci.gd` reads Lc0 on worker threads and `poll()` never waits; `uci` is in the tree, so `_process` polls every frame. Not measured: drag smoothness. No drag happens during Maia's turn anyway, since the board ignores input then.
+6. ✅ When `uci.start()` fails, the setup shows `uci.error` and the fetch command in place of Start; missing nets (maia-1100 checked) do the same. Read, not run.
+7. ✅ `test_an_illegal_policy_entry_is_never_played` and `test_a_policy_without_a_legal_move_still_gets_a_legal_move`, on a fake bridge.
+
+Rules: test-only commits (28eac17, 9e4f50a) alternate with the production-only one (0f202f9); ticket metadata stays out of production commits. Only Primary files are touched. 9e4f50a's harness fix is recorded under Comments with its mutation proof.
+
+Examined: `BoardView.play()`, whose first caller this is (`play` → `_commit` → `move_played` → `_next_turn` gives the board its input back after Maia's move); UI-002's note on a held piece or open picker meeting `play()` (the board ignores input while Maia is to move, so neither can happen); `tests/test_material.gd`, which preloads `ui/main.gd` (green); the order of `isready` and the first `request_policy` at Start; `move_picker.pick`'s defaults; the game ending on either side's move. Not examined: a hand-played game (the manual check in Verification), the exported build, Lc0 dying mid-game (the bridge note above, not a criterion).
+
+Left for stage 2:
+
+- BLOCKING, criterion 4: bring the app's median under 50 ms with a human-like pause between moves, measured windowed, and record the numbers under Comments. Stage 2's note puts the cost in Lc0's thread options in `engine/uci.gd`, which is outside Primary files: before touching it, ask the proxy to add it. If no option gets the median under 50 ms on this machine, that is the contract-wrong stop: `Stage: blocked` with the measurements, for stage 1 to rewrite criterion 4.
