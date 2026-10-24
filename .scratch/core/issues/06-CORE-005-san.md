@@ -1,5 +1,5 @@
 # CORE-005: SAN in and out
-Stage: implementing
+Stage: to-review
 Blocked by: CORE-003
 Review: agent
 Difficulty: normal
@@ -72,3 +72,7 @@ Examined:
 - Not examined: Godot versions other than the local 4.x the gate ran on.
 
 Gate: the stage-2 receipt above still holds for 3a2aeb5 (exit 0, 35 passed, 0 failed). Review changed no code.
+
+- 2026-10-24 Stage 2 after the reopen, criterion 3 only. ffdbcef is test-only: `test_pawn_san_without_a_file_is_not_a_capture` holds the review's four inputs, plus `exd5`, `ed5` and en-passant `exd6` as legal controls. Red on ffdbcef: 35 passed, 1 failed, with exactly `d5`, `xd5`, `e5` and `d6` returning a capture. ab42c14 is production-only (`core/board.gd`): a pawn SAN with no departure file takes the destination file as its file. Green: 36 passed, 0 failed, perft round trip included. Callers: only the pawn path of `parse_san` changed, and nothing outside the tests calls it yet.
+
+Gate evidence: C:\Users\Lage\AppData\Local\Temp\claude\D--Desktop-Projects-P-Chess--artifacts-build-lanes-core\824e77af-a531-4df1-a539-71afff241766\scratchpad\CORE-005-gate.json
