@@ -33,9 +33,17 @@ layout_mode = 2
 custom_minimum_size = Vector2(240, 0)
 layout_mode = 2
 
+[node name="BlackMaterial" type="Label" parent="Layout/Side"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+
 [node name="Result" type="Label" parent="Layout/Side"]
 layout_mode = 2
 autowrap_mode = 3
 
 [node name="MoveList" parent="Layout/Side" instance=ExtResource("3")]
 layout_mode = 2
+
+[node name="WhiteMaterial" type="Label" parent="Layout/Side"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20

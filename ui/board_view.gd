@@ -10,6 +10,14 @@ const DARK := Color("#b58863")
 # shortcut: read as raw SVG, so the Windows export (CI-002) must ship *.svg as non-resource files.
 const PIECES := "res://themes/pieces/cburnett/"
 const SNAP_BACK_SECONDS := 0.15
+const LAST_MOVE := Color(0.61, 0.78, 0, 0.41)
+const CHECK := Color(1, 0, 0, 0.6)
+const TARGET := Color(0.08, 0.33, 0.12, 0.5)
+
+# How long a move that was not dragged (the bot's, a premove) slides; 0 is instant.
+@export var slide_seconds := 0.12
+# Dots on the held piece's empty targets, rings on its captures.
+@export var show_targets := true
 
 var game:
 	set(value):
@@ -31,6 +39,19 @@ var _drag_pos := Vector2.ZERO:
 		_drag_pos = value
 		queue_redraw()
 var _snapping := false
+# The held piece's legal moves, UCI.
+var _held_moves := PackedStringArray()
+# The sliding piece's destination; "" when nothing slides.
+var _slide_to := ""
+var _slide_pos := Vector2.ZERO:
+	set(value):
+		_slide_pos = value
+		queue_redraw()
+var _slide: Tween
+# From and to of the promotion waiting on the picker.
+var _promoting := ""
+
+@onready var _picker = $PromotionPicker
 
 
 # The square under a point measured from the board's top-left corner; "" off the board.
@@ -62,18 +83,49 @@ func _ready() -> void:
 		_textures[piece] = ImageTexture.create_from_image(image)
 	texture_filter = TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	resized.connect(queue_redraw)
+	_picker.picked.connect(func(piece: String) -> void: _commit(_promoting + piece, false))
+	_picker.cancelled.connect(_end_snap_back)
+
+
+# A move not dragged on the board (the bot's, a premove); false when it is illegal.
+func play(move: String) -> bool:
+	if game.is_over() or not move in game.board.legal_moves():
+		return false
+	_commit(move, true)
+	return true
 
 
 func _draw() -> void:
 	var side := _side()
 	var cell := Vector2.ONE * side / 8
+	var last: String = game.moves[-1] if game and game.moves else ""
+	var checked := ""
+	if game and game.board.in_check():
+		checked = "K" if game.board.side_to_move == "w" else "k"
 	for i in 64:
 		var square: String = "abcdefgh"[i % 8] + str(i / 8 + 1)
 		var at := _corner() + square_position(square, side, flipped)
 		draw_rect(Rect2(at, cell), LIGHT if _is_light(square) else DARK)
-		if game and square != _drag_from:
-			_draw_piece(game.board.piece_at(square), at, cell)
+		if last and square in [last.substr(0, 2), last.substr(2, 2)]:
+			draw_rect(Rect2(at, cell), LAST_MOVE)
+		var piece: String = game.board.piece_at(square) if game else ""
+		if checked and piece == checked:
+			draw_circle(at + cell / 2, cell.x / 2, CHECK)
+		if square != _drag_from and square != _slide_to:
+			_draw_piece(piece, at, cell)
 	_draw_coordinates(cell.x)
+	if show_targets:
+		for move in _held_moves:
+			# A promotion is four moves to one square: mark it once.
+			if move.length() == 5 and move[4] != "q":
+				continue
+			var to := move.substr(2, 2)
+			if game.board.piece_at(to):
+				draw_arc(_centre(to), cell.x * 0.45, 0, TAU, 48, TARGET, cell.x * 0.08)
+			else:
+				draw_circle(_centre(to), cell.x * 0.15, TARGET)
+	if _slide_to:
+		_draw_piece(game.board.piece_at(_slide_to), _slide_pos - cell / 2, cell)
 	if _drag_from:
 		_draw_piece(game.board.piece_at(_drag_from), _drag_pos - cell / 2, cell)
 
@@ -116,38 +168,67 @@ func _pick_up(point: Vector2) -> void:
 	var square := square_at(point - _corner(), _side(), flipped)
 	var piece: String = game.board.piece_at(square) if square else ""
 	if piece and (piece == piece.to_upper()) == (game.board.side_to_move == "w"):
+		_end_slide()
 		_drag_from = square
 		_drag_pos = point
+		for move in game.board.legal_moves():
+			if move.begins_with(square):
+				_held_moves.append(move)
 
 
 func _drop(point: Vector2) -> void:
 	var to := square_at(point - _corner(), _side(), flipped)
-	var move := _legal_move(_drag_from + to) if to else ""
-	if move:
-		var san: String = game.board.san(move)
-		game.play(move)
-		_drag_from = ""
-		queue_redraw()
-		move_played.emit(san)
-		return
-	_snapping = true
-	var tween := create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tween.tween_property(self, "_drag_pos", _centre(_drag_from), SNAP_BACK_SECONDS)
-	tween.tween_callback(_end_snap_back)
+	var moves := PackedStringArray()
+	for move in _held_moves:
+		if to and move.substr(2, 2) == to:
+			moves.append(move)
+	_held_moves.clear()
+	if moves.size() > 1:
+		_open_picker(to)
+	elif moves:
+		_commit(moves[0], false)
+	else:
+		_snapping = true
+		var tween := create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		tween.tween_property(self, "_drag_pos", _centre(_drag_from), SNAP_BACK_SECONDS)
+		tween.tween_callback(_end_snap_back)
+
+
+# The pawn waits on the promotion square; the picker covers the board until it is answered.
+func _open_picker(to: String) -> void:
+	_promoting = _drag_from + to
+	_drag_pos = _centre(to)
+	var at := square_position(to, _side(), flipped)
+	_picker.open(_textures, game.board.side_to_move == "w", _corner() + at, _side() / 8, at.y < _side() / 2)
+
+
+# shortcut: only the moving piece slides, a castling rook jumps; slide it too if it looks wrong.
+func _commit(move: String, slide: bool) -> void:
+	var san: String = game.board.san(move)
+	game.play(move)
+	_drag_from = ""
+	if slide and slide_seconds > 0:
+		_end_slide()
+		_slide_to = move.substr(2, 2)
+		_slide_pos = _centre(move.substr(0, 2))
+		_slide = create_tween()
+		_slide.tween_property(self, "_slide_pos", _centre(_slide_to), slide_seconds)
+		_slide.tween_callback(_end_slide)
+	queue_redraw()
+	move_played.emit(san)
+
+
+func _end_slide() -> void:
+	if _slide:
+		_slide.kill()
+	_slide_to = ""
+	queue_redraw()
 
 
 func _end_snap_back() -> void:
 	_snapping = false
 	_drag_from = ""
 	queue_redraw()
-
-
-# shortcut: a promotion always becomes a queen; UI-002 brings the promotion picker.
-func _legal_move(from_to: String) -> String:
-	for move in game.board.legal_moves():
-		if move.begins_with(from_to) and (move.length() == 4 or move[4] == "q"):
-			return move
-	return ""
 
 
 func _side() -> float:
