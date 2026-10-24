@@ -13,3 +13,9 @@ The five default triage roles, each label equal to its name. See `docs/agents/tr
 ### Domain docs
 
 Single-context: one `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+
+## Bindings do fluxo (skill `ticket-flow`)
+
+- Gate: `godot --headless -s tests/run.gd`
+- Base branch: `main`
+- Models: stage 2 gpt-6.1-sol high, hard gpt-6.1-sol xhigh, stage 3 gpt-6.1-sol xhigh
