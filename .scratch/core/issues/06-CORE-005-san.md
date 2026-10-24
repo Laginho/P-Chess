@@ -1,5 +1,5 @@
 # CORE-005: SAN in and out
-Stage: to-review
+Stage: done
 Blocked by: CORE-003
 Review: agent
 Difficulty: normal
@@ -75,4 +75,49 @@ Gate: the stage-2 receipt above still holds for 3a2aeb5 (exit 0, 35 passed, 0 fa
 
 - 2026-10-24 Stage 2 after the reopen, criterion 3 only. ffdbcef is test-only: `test_pawn_san_without_a_file_is_not_a_capture` holds the review's four inputs, plus `exd5`, `ed5` and en-passant `exd6` as legal controls. Red on ffdbcef: 35 passed, 1 failed, with exactly `d5`, `xd5`, `e5` and `d6` returning a capture. ab42c14 is production-only (`core/board.gd`): a pawn SAN with no departure file takes the destination file as its file. Green: 36 passed, 0 failed, perft round trip included. Callers: only the pawn path of `parse_san` changed, and nothing outside the tests calls it yet.
 
-Gate evidence: C:\Users\Lage\AppData\Local\Temp\claude\D--Desktop-Projects-P-Chess--artifacts-build-lanes-core\824e77af-a531-4df1-a539-71afff241766\scratchpad\CORE-005-gate.json
+Gate evidence (superseded, before the rebase onto the session): C:\Users\Lage\AppData\Local\Temp\claude\D--Desktop-Projects-P-Chess--artifacts-build-lanes-core\824e77af-a531-4df1-a539-71afff241766\scratchpad\CORE-005-gate.json
+
+- 2026-10-24 Stage stopped (incomplete handoff): Invalid committed handoff: CORE-005: code changed after gate (core/board.gd, tests/test_san.gd); reuse evidence only for identical code. See D:\Desktop\Projects\P-Chess\.artifacts-build\lanes\core\.scratch\run-log\CORE-005-implement-20261024-030601.txt.runtime.json and run-log/recovery.txt; inspect the saved work before retrying.
+- 2026-10-24 Foreman: the park above was the driver's, not the stage's. Field() reads the first `Gate evidence:` line, which was attempt 1's receipt (code 3a2aeb5). Line renamed `Gate evidence (superseded, attempt 1):` on CORE-005-san (ticket-only commit); the current receipt names ab42c14, identical code to the handoff 64d41d3. Stage restored to `to-review`.
+
+Gate evidence: C:\Users\Lage\AppData\Local\Temp\claude\D--Desktop-Projects-P-Chess--artifacts-build-lanes-core\3401a819-3bb7-4e82-b946-46a159bd1731\scratchpad\CORE-005-gate.json
+
+#### Resolution (2026-10-24)
+
+Verdict: Approve
+
+Stage 3 (opus-5.5), re-review after the reopen. I checked the ❌ item and the diff since the review, 146eb39..4847248 after the rebase. The Standards and Spec axes ran as separate sub-agents, and neither found anything. I also read the diff myself and ran `parse_san` in Godot on the review's inputs and the edge cases below. I made no code changes in review.
+
+Criteria:
+
+1. ✅ Unchanged since the first review: `test_moves_print_as_san`. The printer was not touched.
+2. ✅ Unchanged since the first review: `test_disambiguation_uses_file_then_rank_then_both`.
+3. ✅ Was ❌. `test_pawn_san_without_a_file_is_not_a_capture` makes `d5`, `xd5`, `e5` and en-passant `d6` from the review return `""`, while `exd5`, `ed5` and `exd6` stay legal. The fix is in `core/board.gd:248-250`: a pawn SAN with no departure file takes the destination file as its file. The other parts of the criterion (trailing marks, ambiguity, illegal moves) still pass in `test_illegal_or_ambiguous_san_is_an_error`.
+4. ✅ `test_every_printed_move_of_the_perft_positions_parses_back` is green. The printer writes a pawn push as the bare target square, so the push comes from the target's file, and it writes every pawn capture with its file, which the fix leaves alone.
+
+Red-green, from stage 2 and checked here: red on ffdbcef (rebased as 091f233), 35 passed and 1 failed, with exactly the four review inputs returning a capture. The first review saw the same four captures when it ran `parse_san` in Godot. Green on ab42c14 (rebased as 228d468): 36 passed, 0 failed.
+
+Test-first: I checked `diff --stat` on every commit since the review:
+- 091f233: `tests/test_san.gd` and the Stage line (red).
+- 228d468: `core/board.gd` only.
+- c97eea1, 4847248: the ticket only.
+
+All code files are in Primary files.
+
+Examined:
+- Callers: only the pawn path of `parse_san` changed. Nothing outside the tests calls `parse_san` yet. `san()` and `_san_without_check` are unchanged.
+- Edge cases, run in Godot:
+  - Black: `d4` → `""` and `exd4`/`ed4` → `e5d4` when only the e-pawn reaches d4; `e4` → `e5e4`.
+  - Promotion: `exd8=Q` → `e7d8q`.
+  - A rank-only pawn hint: `4d5` → `d4d5`. `4xd5`, an e4 pawn capture written without its file, is now `""`; before the fix it returned `e4d5`.
+  - A stray `x` on a pawn push from the right file, `dxd5` or `xd5` with a d4 pawn and an empty d5, still returns the push `d4d5`. The regex makes `x` optional for every piece, so a stray `x` is ignored the same way a missing one is. The named file and destination are the move's own. This sits in the tolerance category the first review accepted, so it is not a finding.
+- Rebase: the session gained BOT-002 (`engine/uci.gd`, `tests/test_uci.gd`, a fixture) after the branch was cut, with no overlap with `core/board.gd` or `tests/test_san.gd`. The rebase conflicted only on this ticket's metadata. I kept the branch's text and added back the session's park and foreman comments above. The stage-2 receipt was for ab42c14, which does not have BOT-002's code, so I reran the gate on the rebased tip.
+- Not examined: Godot versions other than the local 4.7.2.
+
+Gate: rerun on the rebased tip 4847248, exit 0, 41 passed, 0 failed (36 from before plus BOT-002's tests). Log hash `DD36B0F2…A13A`. The `--no-ff` merge 5da503a has the same tree as 4847248.
+
+Proxy decided lines: none.
+
+Acceptance: passed | gate 41/41 on 4847248 (receipt above): SAN in and out with disambiguation, `+` and `#`, as in docs/spec.md:282. The SAN move list in the side panel (docs/spec.md:213) belongs to UI-001.
+
+Disclosure: decision | none | stage-2 decision, see ## Comments (API): `parse_san` returns `""` on bad input with no `push_error`, and it accepts more than the printer writes: extra disambiguation, a missing or stray `x`, a missing `=`, and `Kg1` for `O-O`. These tolerances have no dedicated test (review note above); I checked the pawn cases in Godot for this review. The importers (CORE-006, OPEN-001/003) inherit them.
