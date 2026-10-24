@@ -12,3 +12,4 @@
 | 2026-10-24T03:50-03:00 | UI-001 | proxy-decision | Proxy decided (opus): reproduce the 12 cburnett SVGs from known path data, labelled in docs/THIRD_PARTY.md, Acceptance pending integration (UI-001 ticket Comments, 80564e0) |
 | 2026-10-24T04:20-03:00 | BOT-002 | human-rescue | Bruno approved (relayed by the coordinating foreman) reverting BOT-002 merge 8a8cf74 on the core session (dce636a) so PR #3 could merge without its Needs your call; BOT-002 blocked behind BOT-001 |
 | 2026-10-24T04:30-03:00 | - | routine-approval | Bruno approved merging core session PR #3; merged by the coordinating foreman (d63bae0) |
+| 2026-10-24T11:59-03:00 | BOT-003 | routine-approval | Bruno approved reopening BOT-003 ("sim", relayed by launching session) after an independent gpt-6.1-sol xhigh review of PR #2 said do not merge; reopen commit d1dcdd1 |
