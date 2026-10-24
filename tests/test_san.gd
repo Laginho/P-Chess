@@ -81,6 +81,7 @@ func test_san_parses_back_to_the_move():
 		[EN_PASSANT, "exd6", "e5d6"],
 		[CASTLES, "O-O", "e1g1"],
 		[CASTLES, "O-O-O", "e1c1"],
+		[CASTLES.replace(" w ", " b "), "O-O", "e8g8"],
 		[PROMOTION, "e8=N", "e7e8n"],
 		[CAPTURE_PROMOTION, "exd8=Q+", "e7d8q"],
 		[THREE_QUEENS, "Qa1d4", "a1d4"],
@@ -108,6 +109,8 @@ func test_illegal_or_ambiguous_san_is_an_error():
 		[START, "Nf6", ""],
 		[START, "Ke2", ""],
 		[START, "O-O", ""],
+		# Re1-g1 is not castling.
+		["4k3/8/8/8/8/8/7K/4R3 w - - 0 1", "O-O", ""],
 		[START, "", ""],
 		[START, "hello", ""],
 		[PROMOTION, "e8", ""],
