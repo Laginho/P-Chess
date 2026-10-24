@@ -3,6 +3,8 @@
 [ext_resource type="Script" path="res://ui/main.gd" id="1"]
 [ext_resource type="PackedScene" path="res://ui/board_view.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://ui/move_list.tscn" id="3"]
+[ext_resource type="PackedScene" path="res://ui/setup.tscn" id="4"]
+[ext_resource type="PackedScene" path="res://ui/clock.tscn" id="5"]
 
 [node name="Main" type="Control"]
 layout_mode = 3
@@ -33,6 +35,10 @@ layout_mode = 2
 custom_minimum_size = Vector2(240, 0)
 layout_mode = 2
 
+[node name="BlackClock" parent="Layout/Side" instance=ExtResource("5")]
+layout_mode = 2
+side = "b"
+
 [node name="BlackMaterial" type="Label" parent="Layout/Side"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
@@ -47,3 +53,9 @@ layout_mode = 2
 [node name="WhiteMaterial" type="Label" parent="Layout/Side"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
+
+[node name="WhiteClock" parent="Layout/Side" instance=ExtResource("5")]
+layout_mode = 2
+
+[node name="Setup" parent="." instance=ExtResource("4")]
+layout_mode = 1

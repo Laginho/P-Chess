@@ -217,7 +217,10 @@ func _open_picker(to: String) -> void:
 # shortcut: only the moving piece slides, a castling rook jumps; slide it too if it looks wrong.
 func _commit(move: String, slide: bool) -> void:
 	var san: String = game.board.san(move)
-	game.play(move)
+	# The game ended (a flag) while the piece was held or the promotion picker was open.
+	if not game.play(move):
+		_end_snap_back()
+		return
 	_drag_from = ""
 	if slide and slide_seconds > 0:
 		_end_slide()
