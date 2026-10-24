@@ -37,3 +37,7 @@ Premoves in three styles (§8.2): off, Lichess (one premove) and Chess.com (a qu
 - `tests/test_premove.gd`: queueing on the ghost position, Lichess replacement, execution order, drop on illegal, cancel, the 0.1 s charge with a fake clock. Red because `ui/premove_queue.gd` does not exist.
 
 ## Comments
+
+- 2026-10-24 From the UI-002 review (a note, not a criterion until stage 1 folds it in):
+  - `BoardView.play()` (Maia's move) does not handle a piece the human is holding, or a promotion picker that is open. `_commit` clears `_drag_from` but leaves `_held_moves` behind. The next drop can then play a move from an earlier position, and an open picker commits an illegal promotion. Criterion 2 makes exactly this state normal, since the human holds pieces while Maia is to move. If BOT-004 has not already fixed it, this ticket must. Details are in UI-002's Resolution.
+  - Pressing F or resizing the window while the promotion picker is open leaves its buttons where they were. This is cosmetic, and picking still plays the right move.
