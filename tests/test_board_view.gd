@@ -38,6 +38,31 @@ func test_square_to_top_left_corner():
 	assert_eq(BoardView.square_position("e2", 480, true), Vector2(180, 60))
 
 
+func _mouse(pressed: bool, at: Vector2) -> InputEventMouseButton:
+	var event := InputEventMouseButton.new()
+	event.button_index = MOUSE_BUTTON_LEFT
+	event.pressed = pressed
+	event.position = at
+	return event
+
+
+# CLOCK-001: a flag is the first way a game ends while a piece is held.
+func test_a_piece_held_when_the_game_ends_snaps_back_without_a_move():
+	var board = BoardView.new()
+	board.size = Vector2(800, 800)
+	board.game = preload("res://core/game.gd").new()
+	var emitted := []
+	board.move_played.connect(func(san): emitted.append(san))
+	board.sound_requested.connect(func(event): emitted.append(event))
+	board._gui_input(_mouse(true, Vector2(450, 650)))
+	board.game.flag("w")
+	board._gui_input(_mouse(false, Vector2(450, 450)))
+	assert_eq(emitted, [], "no move, no sound")
+	assert_eq(board.game.moves, PackedStringArray())
+	assert_eq(board._drag_from, "", "the piece is no longer held")
+	board.free()
+
+
 func test_every_square_centre_maps_back_to_its_square():
 	for side in [800.0, 480.0]:
 		for flipped in [false, true]:
