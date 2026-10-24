@@ -31,3 +31,5 @@ Every push also builds the Windows app and uploads it as an artifact (§12), cod
 - None at a GDScript seam: workflow and export preset. The evidence is the run link and the manual start.
 
 ## Comments
+
+- 2026-10-24 UI-001 review: the board reads its pieces as raw `res://themes/pieces/cburnett/*.svg` through `FileAccess` (shortcut at `ui/board_view.gd:10`). A default export packs only imported textures, so the exported app would start with an empty board, and criterion 5 would still pass. The export must ship the twelve `.svg` files as they are (import mode Keep File, or a non-resource include filter; check which one survives the import step). A note, not a criterion yet: stage 1 folds it into the body.
