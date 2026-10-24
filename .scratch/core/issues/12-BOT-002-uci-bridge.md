@@ -1,6 +1,6 @@
 # BOT-002: UCI bridge and Maia's policy
 Stage: blocked
-Blocked by: CORE-001, CORE-003
+Blocked by: CORE-001, CORE-003, BOT-001
 Review: agent
 Difficulty: hard
 
@@ -98,3 +98,4 @@ Red-green, from stage 2 and checked here: red at 860d6fd, because `res://engine/
 Gate: the stage-2 receipt above (6fa31c3, exit 0, log hash checked: `806F24B1…0CC3`) still holds. The ticket branch already sat on the session tip, and only this ticket changed after 6fa31c3. Result: 34 passed, 0 failed. One of the 34 is the c7 test, which prints SKIP and returns.
 
 - 2026-10-24 Stage stopped (incomplete handoff): Invalid committed handoff: BOT-002: code changed after gate (.scratch/core/issues/14-BOT-004-play-vs-maia.md); reuse evidence only for identical code. See D:\Desktop\Projects\P-Chess\.artifacts-build\lanes\core\.scratch\run-log\BOT-002-review-20261024-032435.txt.runtime.json and run-log/recovery.txt; inspect the saved work before retrying.
+- 2026-10-24 Foreman: merge 8a8cf74 reverted on the session (Bruno approved via the coordinating foreman: "de resto, aceito todas as recomendações"; the recommendation was to revert BOT-002 now and redo it after BOT-001). Reason: Verdict Needs your call (fixture rebuilt, not recorded; Lc0 never ran) kept the session PR from merging under the agent-only rule. BOT-001 added to `Blocked by`: the fixture and the integration test need `engine/`. The work is kept: merge 8a8cf74 in history and the local branch `BOT-002-uci-bridge` (6fa31c3). Redo after BOT-001 lands; Bruno picks `PolicyTemperature` then (question in BOT-004's Comments). Because the merge was reverted, merging the old branch again brings nothing back: start from a revert of this revert, or cherry-pick 860d6fd and 6fa31c3 onto a fresh branch.
