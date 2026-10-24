@@ -5,6 +5,8 @@ extends RefCounted
 
 const DEFAULT_TAU := 0.02
 const DEFAULT_TEMPERATURE := 1.0
+# Panic intensity -> [T_max, tau_min] (spec §3.4); "off" leaves T and tau alone.
+const PANIC := {"low": [1.3, 0.01], "medium": [1.7, 0.005], "high": [2.2, 0.002]}
 
 
 # Book weight, renormalise; cut below tau keeping the top move, renormalise; p^(1/T), renormalise.
@@ -42,6 +44,17 @@ static func pick(policy: Dictionary, rng: RandomNumberGenerator, weights := {}, 
 		if r < 0.0:
 			break
 	return move
+
+
+# T and tau under time pressure: unchanged down to 10% of the starting time, then linear
+# to T_max and tau_min at 0. Both times in the same unit.
+static func panic(temperature: float, tau: float, intensity: String, time_left: float,
+		start_time: float) -> Dictionary:
+	if intensity == "off":
+		return {"temperature": temperature, "tau": tau}
+	var target: Array = PANIC[intensity]
+	var s := clampf(1.0 - time_left / (0.1 * start_time), 0.0, 1.0)
+	return {"temperature": lerpf(temperature, target[0], s), "tau": lerpf(tau, target[1], s)}
 
 
 # All zero (or empty) has no distribution to keep, so it is returned as is.
