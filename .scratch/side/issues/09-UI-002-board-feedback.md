@@ -1,5 +1,5 @@
 # UI-002: Board feedback and promotion
-Stage: done
+Stage: blocked
 Blocked by: UI-001
 Review: agent
 Difficulty: normal
@@ -88,3 +88,5 @@ Acceptance: pending | manual two-human game per the ticket's Verification. Evide
 
 Disclosure: pending | release | the manual two-human check in the ticket's Verification has not been run by a person. Stage 2's headless script covered criteria 1–4 (## Comments).
 Disclosure: deferred | none | the latent `BoardView.play()` while a piece is held or the picker is open (Examined, above). No caller in this session. Routed to the open tickets BOT-004 and UI-007, under their ## Comments.
+
+- 2026-10-24 Stage stopped (incomplete handoff): Invalid committed handoff: UI-002: code changed after gate (.scratch/core/issues/14-BOT-004-play-vs-maia.md, .scratch/core/issues/20-UI-007-premoves.md); reuse evidence only for identical code. See D:\Desktop\Projects\P-Chess\.artifacts-build\lanes\side\.scratch\run-log\UI-002-review-20261024-121543.txt.runtime.json and run-log/recovery.txt; inspect the saved work before retrying.
