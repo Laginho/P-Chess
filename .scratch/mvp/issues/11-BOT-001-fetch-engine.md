@@ -1,5 +1,5 @@
 # BOT-001: Engine fetch script
-Stage: implementing
+Stage: to-review
 Blocked by: none
 Review: human
 Difficulty: normal
@@ -67,3 +67,12 @@ Provenance: [Lc0 v0.32.1](https://github.com/LeelaChessZero/lc0/releases/tag/v0.
 | maia-1900.pb.gz | e2f565f42d7cd9f122557e6dc4eb84e5bbaedceda1d404dc485d3611c7c97a12 |
 
 Acceptance: pending | Command-line behavior passes the checks above; comparison with Bruno's historical copies remains an integration condition under criterion 6.
+
+#### Stage 2 handoff (2026-10-24)
+
+- Production commit: `01e0eb601e2b90657d48e12d9506611251a836a6`. The bound gate `godot --headless -s tests/run.gd` passed: **81 passed, 0 failed**, exit 0. Only the expected malformed-theme fixture warnings were emitted; no `ERROR`, `SCRIPT ERROR` or `FAIL` lines occurred in the successful gate's stderr.
+- The first sandboxed gate could not write Godot's `user://` runner fixtures and stalled. Its process tree was stopped and logs preserved as `gate-sandbox.stdout` / `gate-sandbox.stderr` in the evidence directory. The same command then passed with access to Godot's user-data directory; no source changes were needed.
+- Final diff is limited to the two Primary files and this ticket; `git diff --check` passed. Downloaded engine assets remain ignored. No test-only commit is required by this ticket's explicit verification exemption.
+- Human review must retain the criterion-6 integration condition. This handoff does not confirm equivalence with Bruno's unavailable historical copies.
+
+Gate evidence: C:/Users/Lage/AppData/Local/Temp/P-Chess-BOT-001-evidence-20261024/gate.json
