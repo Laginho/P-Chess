@@ -3,6 +3,9 @@ extends Control
 # Two humans, one window (UI-001): the board, the move list and the result.
 
 const Game = preload("res://core/game.gd")
+const SoundPlayer = preload("res://ui/sound_player.gd")
+
+var sound_player := SoundPlayer.new()
 
 # Lichess order and values (§8.4).
 const VALUES := {"q": 9, "r": 5, "b": 3, "n": 3, "p": 1}
@@ -30,8 +33,12 @@ static func material_balance(board) -> Dictionary:
 
 func _ready() -> void:
 	get_window().min_size = Vector2i(800, 600)
+	sound_player.name = "Sounds"
+	add_child(sound_player)
 	board_view.game = Game.new()
 	board_view.move_played.connect(_on_move_played)
+	board_view.sound_requested.connect(sound_player.play)
+	sound_player.play("game_start")
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
@@ -46,6 +53,7 @@ func _on_move_played(san: String) -> void:
 	move_list.add(san)
 	if board_view.game.is_over():
 		result_label.text = "%s, %s" % [board_view.game.result, board_view.game.reason]
+		sound_player.play("game_end")
 	var balance := material_balance(board_view.game.board)
 	white_material.text = _captured(balance.w, BLACK_GLYPHS) + _lead(balance.diff)
 	black_material.text = _captured(balance.b, WHITE_GLYPHS) + _lead(-balance.diff)

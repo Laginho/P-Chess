@@ -2,6 +2,7 @@ extends RefCounted
 
 const BROWN_LIGHT := Color("#f0d9b5")
 const BROWN_DARK := Color("#b58863")
+const SOUND_EVENTS := ["move", "capture", "castle", "check", "promote", "premove", "low_time", "game_start", "game_end"]
 
 # Folder themes (§8.6). User themes with the same name override bundled ones.
 var _roots: Array[String]
@@ -51,6 +52,35 @@ func load_board(name: String) -> Dictionary:
 					return {"light": Color(data.light), "dark": Color(data.dark), "texture": null}
 	push_warning("Invalid board theme '%s'; using brown." % name)
 	return {"light": BROWN_LIGHT, "dark": BROWN_DARK, "texture": null}
+
+
+# Missing files intentionally leave individual events silent.
+func load_sounds(name: String) -> Dictionary:
+	var streams := {}
+	var folder: String = list_themes("sounds").get(name, "")
+	if not folder:
+		return streams
+	for event in SOUND_EVENTS:
+		var path := folder.path_join(event + ".ogg")
+		if FileAccess.file_exists(path):
+			var stream := AudioStreamOggVorbis.load_from_file(path)
+			if stream:
+				streams[event] = stream
+	return streams
+
+
+func load_pieces(name: String) -> Dictionary:
+	var sets := list_themes("pieces")
+	var folder: String = sets.get(name, "")
+	if not folder:
+		push_warning("Incomplete or missing piece theme '%s'; using cburnett." % name)
+		folder = sets.get("cburnett", "")
+	var textures := {}
+	if folder:
+		for piece in "KQRBNPkqrbnp":
+			var file := ("w" if piece == piece.to_upper() else "b") + piece.to_upper() + ".svg"
+			textures[piece] = load_texture(folder.path_join(file), 4.0)
+	return textures
 
 
 # Load raw files so themes also work in user://, without the editor's import cache.
