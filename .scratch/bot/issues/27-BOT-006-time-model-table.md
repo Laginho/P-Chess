@@ -1,5 +1,5 @@
 # BOT-006: Time-model table
-Stage: blocked
+Stage: to-implement
 Blocked by: BOT-005
 Review: agent
 Difficulty: normal
@@ -30,5 +30,3 @@ Maia's think time comes from `data/time_model.json` when it exists (§4.1), and 
 - `tests/test_time_model.gd`: bucket lookup at bin edges, the sample median, missing-bucket and malformed-file fallback, using the fixture table. Red because the table loader does not exist.
 
 ## Comments
-
-- 2026-10-24 Stage stopped (incomplete handoff): Invalid committed handoff: BOT-006: missing Gate evidence receipt. See D:\Desktop\Projects\P-Chess\.artifacts-build\lanes\bot\.scratch\run-log\BOT-006-implement-20261024-195047.txt.runtime.json and run-log/recovery.txt; inspect the saved work before retrying.
