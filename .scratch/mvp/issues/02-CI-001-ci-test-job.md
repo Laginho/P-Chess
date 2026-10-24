@@ -1,5 +1,5 @@
 # CI-001: CI test job
-Stage: to-review
+Stage: done
 Blocked by: CORE-001
 Review: human
 Difficulty: normal
@@ -43,3 +43,32 @@ Every push runs the test suite on GitHub Actions (§12), so a red test shows on 
 Gate evidence: C:\Users\Lage\AppData\Local\Temp\P-Chess-CI-001\final-gate.json
 
 Acceptance: passed | [final Linux push run](https://github.com/Laginho/P-Chess/actions/runs/40110593945) and the local gate both passed 78/78 on `3e56a02`.
+
+#### Resolution (2026-10-24)
+
+Verdict: Approve
+
+Stage 3 reviewed `git diff e5dd8dc...1183fa6`, including every implementation commit. No production fix was needed.
+
+Standards: the independent Standards reviewer found no documented-standard violations or baseline smells. The workflow is simple and scoped to the sole Primary file. Commits `9260bec` and `1183fa6` contain only ticket metadata; `9c938b4` and `3e56a02` contain only the workflow. The ticket explicitly exempts new unit tests, so no test-first violation applies.
+
+Spec: the independent Spec reviewer found no missing requirements, incorrect implementation, or scope creep. Windows exports and releases remain the separate CI-002 and CI-003 contracts.
+
+Criteria:
+
+1. Passed: `on: push` has no branch or path filter. The verified Actions run was triggered by a push to `ci-001`.
+2. Passed: the job uses `ubuntu-latest`, the official pinned Godot 4.7.2 Linux x86_64 release, and exactly `godot --headless -s tests/run.gd`. The official release API confirms the archive URL and SHA-256 `cadd3204e728a35d3f13adb7fd0d7902636b79f6b95c40c265eb73b6c35329e4`; the Actions log confirms the checksum and Godot version.
+3. Passed: the test command runs directly under the logged `/usr/bin/bash -e {0}`, with no error suppression or `continue-on-error`. Existing runner tests cover failed assertions, unloadable scripts and runtime errors through child Godot processes. Review also ran `godot --headless -s tests/run.gd -- tests/fixtures/failing`: `0 passed, 1 failed`, exit 1 as expected.
+4. Passed: the fresh Ubuntu checkout passed without downloading lc0 or weights. No currently discovered test or preload chain requires lc0, so no applicable test needs a new skip condition.
+
+Examined: push-to-checkout-to-install-to-run flow; official Godot archive and checksum; checkout v7.0.1's official Node 24 declaration; direct command failure propagation; `tests/run.gd`, `tests/test_runner.gd` and their failing fixture; test discovery and current engine dependencies. No GDScript function or caller changed. Not exercised: a deliberately failing hosted Actions run, future lc0 integration tests, or the later Windows export/release workflows.
+
+Verification: independently fetched [Actions run 40110593945](https://github.com/Laginho/P-Chess/actions/runs/40110593945) and job `120921299344`. The push run completed successfully on `3e56a0260009f05b8814cd8d91e6bc7d3c96063b`; its Ubuntu log contains 78 PASS lines and `78 passed, 0 failed`. The existing local gate receipt records the same tested commit, bound command and exit 0; its log hash and exit-status footer were verified with `Assert-GateEvidence`. Only this ticket and its ledger changed after the tested production, so the green receipt is reused. `git diff --check` passed.
+
+Red-green proof: new GDScript tests are expressly exempt for this workflow-only ticket. The workflow was absent at the session base; the real pushed workflow supplies its integration proof, and the existing failing fixture supplies the local negative-path check.
+
+Integration: rebasing onto `sweatshop/mvp/2026-10-24-1310` was already up to date. Merged `ci-001` into that session with `--no-ff` as `869468f`; no production changed during review or integration. This resolution, `Stage: done` and the ledger entry are committed together on the session. `Review: human` remains visible for the eventual session PR, as required by ticket-flow.
+
+Proxy decided lines: none. No contract change, pending product check or unresolved defect was found.
+
+Acceptance: passed | independently verified Ubuntu push run and unchanged-production local gate, both 78 passed, 0 failed; expected failing fixture exited 1.
