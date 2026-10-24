@@ -81,3 +81,32 @@ func test_reports_whether_the_side_to_move_is_in_check():
 	assert_eq(Board.from_fen("4k3/3P4/8/8/8/8/8/4K3 b - - 0 1").in_check(), true, "white pawn")
 	assert_eq(Board.from_fen("4k3/8/8/8/8/8/3p4/4K3 w - - 0 1").in_check(), true, "black pawn")
 	assert_eq(Board.from_fen("4k3/8/8/8/8/8/4p3/4K3 w - - 0 1").in_check(), false, "a pawn does not attack ahead")
+
+
+# As Lichess and python-chess write FEN, so the position key after a double push matches the same
+# position reached otherwise (repetition, §7).
+func test_en_passant_square_is_recorded_only_when_the_capture_is_legal():
+	var after_double_push := {
+		[START, "e2e4"]: "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+		["4k3/8/8/8/3p4/8/4P3/4K3 w - - 0 1", "e2e4"]: "4k3/8/8/8/3pP3/8/8/4K3 b - e3 0 1",
+		# dxe3 would open the rank to the king
+		["8/8/8/8/k2p3R/8/4P3/4K3 w - - 0 1", "e2e4"]: "8/8/8/8/k2pP2R/8/8/4K3 b - - 0 1",
+		# the a6 pawn is not beside h5
+		["4k3/7p/P7/8/8/8/8/4K3 b - - 0 1", "h7h5"]: "4k3/8/P7/7p/8/8/8/4K3 w - - 0 2",
+	}
+	for start_and_move in after_double_push:
+		var board = Board.from_fen(start_and_move[0])
+		board.make_move(start_and_move[1])
+		assert_eq(board.to_fen(), after_double_push[start_and_move], start_and_move[0])
+
+
+# from_fen accepts positions chess never reaches; move generation must still hold on them.
+func test_a_side_without_a_king_is_never_in_check():
+	var board = Board.from_fen("7k/8/8/8/3R4/8/8/7r w - - 0 1")
+	assert_eq(board.legal_moves().size(), 14)
+	assert_eq(board.in_check(), false)
+
+
+func test_a_pawn_on_its_last_rank_has_no_moves():
+	assert_eq(Board.from_fen("P6k/8/8/8/8/8/8/K7 w - - 0 1").legal_moves().size(), 3, "white pawn on a8")
+	assert_eq(Board.from_fen("k7/8/8/8/8/8/8/K6p b - - 0 1").legal_moves().size(), 3, "black pawn on h1")
