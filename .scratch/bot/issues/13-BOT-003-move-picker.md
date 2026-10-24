@@ -1,5 +1,5 @@
 # BOT-003: Move picker and time-pressure panic
-Stage: done
+Stage: to-implement
 Blocked by: CORE-001
 Review: agent
 Difficulty: hard
@@ -85,3 +85,23 @@ Acceptance: pending | M3 ("a full game against Maia; latency under 50 ms") needs
 
 Disclosure: decision | none | spec §3.4 "off" now reads as criterion 6 (8cb80e4); the old text differed only when the `T` setting is not 1
 Disclosure: decision | none | Proxy decided (opus) on how to run the gate helper; process only, no contract change
+
+#### Review 2 (2026-10-24), independent: gpt-6.1-sol xhigh via codex exec on PR #2 head 263983d
+
+Verdict: Reopen — criteria 1 and 2 (temperature underflow at small T; a pick() that ignores weights and τ, and the τ boundary, go undetected)
+
+Requested by Bruno; he approved the reopen. Gate 24/24 green on 263983d. The docs/spec.md:63 edit (8cb80e4) was judged justified and stays.
+
+Criteria:
+
+1. ❌ The temperature step underflows. With policy `{a:0.4, b:0.35, c:0.25}` and `T = 0.001`, every `p^(1/T)` becomes 0, so `pick()` always returns `c`, though the distribution should overwhelmingly favour `a` (bot/move_picker.gd:31). No documented minimum T excludes this. The cut's "below τ" boundary is also unpinned: for `{a:0.98, b:0.02}`, `b` must survive the default `τ = 0.02`, but changing `>=` to `>` still passes every test (tests/test_move_picker.gd:75).
+2. ❌ Pinned through `distribution()` only. Every sampling test uses empty book weights and the default τ (tests/test_move_picker.gd:63). A mutant where `pick()` ignores its weights and τ arguments passes all 16 picker tests, so a 0.5% book move weighted ×20 could stay unsampleable unnoticed.
+3. ✅ 4. ✅ 5. ✅ 6. ✅ 7. ✅ (see finding 4)
+
+Left for stage 2, in this order:
+
+- BLOCKING 1: make the temperature step numerically stable (for example, log space, or dividing by the max before exponentiating). Add a regression test with the T = 0.001 case above.
+- BLOCKING 2: pin criteria 1 and 2 through `pick()`: sampling tests with non-empty book weights and a non-default τ.
+- BLOCKING 3: pin the τ boundary. `{a:0.98, b:0.02}` keeps `b` at the default τ.
+- NON-BLOCKING 4 (fix if cheap), tests/test_move_picker.gd:85: seed reproducibility and frequencies don't prove exactly one random draw; an extra discarded `randf()` passes every test. Assert the RNG state against a reference generator advanced exactly once.
+- NON-BLOCKING 5 (fix if cheap), bot/move_picker.gd:65: all-zero weights give zero-mass output, a NaN weight propagates NaN, and `T = 0` gives zero mass. None has a defined validation, fallback or test. The documented book weights exclude zero and NaN, so either define the behaviour or guard it.
