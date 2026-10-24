@@ -1,5 +1,5 @@
 # BOT-004: Play a game against Maia
-Stage: to-implement
+Stage: to-review
 Blocked by: UI-001, BOT-002, BOT-003
 Review: agent
 Difficulty: normal
@@ -54,6 +54,8 @@ The first game against the bot (M3): a minimal setup picks colour and level, and
 - 2026-10-24 ~17:00 Stage 2, after the reopen. The machine was saturated by the bot, mvp and side lanes running in parallel; PowerShell itself timed out on start-up. A probe drove `engine/uci.gd` directly, busy-polling every 0.2 ms (no frames, no rendering), with maia-1500, `go nodes 1` and 40 plies. Lc0 alone took: pause 0 s, median 813.5 ms (min 181) and 623.8 ms (min 152); pause 0.3 s, median 247.3 ms twice (min 13.0, max 964); pause 0.3 s with `Threads=1`, median 294.8 ms (min 70.6). Earlier the same path read 16–73 ms. So no measurement taken now can show that an Lc0 option meets 50 ms, or that none does. Asked the proxy.
 - Proxy decided (opus): criterion 4 keeps the 50 ms target as M3 product acceptance, measured in the manual game on an idle machine; the agent loop checks only that the per-move latency is recorded and its median logged; `engine/uci.gd` stays out of Primary files. Why: every measurement today (Lc0 alone 247–813 ms, against 16–73 ms earlier) is dominated by the parallel lanes, so neither a fix nor a contract-wrong stop can be shown now, and BOT-005 c5 already absorbs a slow Lc0. Folded in as the new criterion 4 and Verification line. No production or test change: `bot/maia_player.gd`'s `latencies_ms`, the end-of-game print in `ui/main.gd`, and the live test's one-latency-per-move check already meet it.
 - For stage 3 at close: `Acceptance: pending`, and `Disclosure: pending | release | Proxy decided above: M3's 50 ms median is unmeasured on an idle machine. Under parallel lanes the windowed app read 74.4 / 105.5 ms. If the idle manual game misses it, open a ticket with engine/uci.gd in Primary files to try Lc0 options (Threads, backend threads).`
+Gate evidence: C:/Users/Lage/AppData/Local/Temp/claude/D--Desktop-Projects-P-Chess--artifacts-build-lanes-core/76fbfae4-b3b8-4f9c-bea4-d468cf32a9da/scratchpad/BOT-004-gate.json
+- Gate result for that receipt: 92 passed, 0 failed, commit 22a3628 (production identical to df80ca9). The live test printed `maia-1500 median 44.3 ms over 30 moves`.
 
 #### Review (2026-10-24)
 
