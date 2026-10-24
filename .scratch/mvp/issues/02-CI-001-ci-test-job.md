@@ -1,5 +1,5 @@
 # CI-001: CI test job
-Stage: to-implement
+Stage: implementing
 Blocked by: CORE-001
 Review: human
 Difficulty: normal
@@ -28,3 +28,5 @@ Every push runs the test suite on GitHub Actions (§12), so a red test shows on 
 - None at a GDScript seam: a workflow file has no unit test. The evidence is the link to the green run on the ticket branch.
 
 ## Comments
+
+- 2026-10-24 Stage 2: CORE-001 is done on the session base. No unit-test commit is required by this ticket; verification is the pushed workflow run plus the local gate. The existing tests use explicit script paths and do not require lc0 or an import cache.
