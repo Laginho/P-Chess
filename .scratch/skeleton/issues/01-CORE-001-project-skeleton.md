@@ -1,5 +1,5 @@
 # CORE-001: Project skeleton and test runner
-Stage: to-implement
+Stage: blocked
 Blocked by: none
 Review: agent
 Difficulty: normal
@@ -37,3 +37,5 @@ An empty Godot 4.7 project with the spec's test runner (§11): `godot --headless
 ## Comments
 
 - 2026-10-24 Attempt 1 failed: exit 0. Log tail: `CORE-001` is the project skeleton ticket: `.scratch/skeleton/issues/01-CORE-001-project-skeleton.md`, stage `to-implement`, no blockers. /  / It asks for: / - An empty Godot 4.7 project (`project.godot`). / - A test runner, `tests/run.gd` and `tests/test_runner.gd`, that runs `test_*` methods and exits non-zero on failure. It needs `assert_true` and `assert_eq` helpers that print file, test name, expected and actual. / - A `-- <dir>` argument so `tests/fixtures/failing` can be run on its own. The default run must skip `tests/fixtures/`. / - A `.gitignore` that drops `engine/` and adds `engine/lc0/`, `engine/weights/`, `.godot/`, `build/`. /  / Gate: `godot --headless -s tests/run.gd`. /  / Do you want me to implement it directly, or run it through the `ticket-flow` skill? The repo's bindings for `ticket-flow` name gpt-6.1-sol models for stages 2 and 3, which I can't run, so I'd need your go-ahead to use a different model for those stages.
+
+- 2026-10-24 Stage stopped (incomplete handoff): Stage left uncommitted work; saved for recovery. See D:\Desktop\Projects\P-Chess\.artifacts-build\lanes\skeleton\.scratch\run-log\CORE-001-implement-20261024-013543.txt.runtime.json and run-log/recovery.txt; inspect the saved work before retrying.
