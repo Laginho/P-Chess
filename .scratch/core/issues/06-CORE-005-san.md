@@ -1,5 +1,5 @@
 # CORE-005: SAN in and out
-Stage: to-review
+Stage: implementing
 Blocked by: CORE-003
 Review: agent
 Difficulty: normal
