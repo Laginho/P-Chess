@@ -293,17 +293,19 @@ and exits with a non-zero code when a test fails.
 
 ## 13. Build order
 
-| # | Milestone | Done when |
-|---|---|---|
-| M1 | Core rules, test runner, CI test job | Perft and rule tests pass in CI |
-| M2 | Board view: drag, animation, promotion, highlights, sounds, themes | A two-human game plays smoothly in one window |
-| M3 | UCI bridge and Maia move picker | A full game against Maia; latency under 50 ms |
-| M4 | Clocks, fallback time model, game end, rematch, hotkeys, focus mode | A 1+0 game ends by flag, mate or draw correctly |
-| M5 | Premoves (3 styles), click-click, auto-queen, arrows, settings screen | Every setting works and persists |
-| M6 | History, stats, review screen | Badges and times are correct on saved games |
-| M7 | Opening catalog picker, saved selections, book weight, repertoire import and check | Maia follows the chosen lines and drifts off them |
-| M8 | Time-model calibration from Lichess data | `time_model.json` loaded; delays feel human |
-| M9 | Windows export and release workflow | A tag produces a downloadable zip that runs |
+| # | Milestone | Done when | Tickets |
+|---|---|---|---|
+| M1 | Core rules, test runner, CI test job | Perft and rule tests pass in CI | CORE-001, CI-001, CORE-002, CORE-003, CORE-004, CORE-005, CORE-006 |
+| M2 | Board view: drag, animation, promotion, highlights, sounds, themes | A two-human game plays smoothly in one window | UI-001, UI-002, UI-003 |
+| M3 | UCI bridge and Maia move picker | A full game against Maia; latency under 50 ms | BOT-001, BOT-002, BOT-003, BOT-004 |
+| M4 | Clocks, fallback time model, game end, rematch, hotkeys, focus mode | A 1+0 game ends by flag, mate or draw correctly | CLOCK-001, BOT-005, UI-004 |
+| M5 | Premoves (3 styles), click-click, auto-queen, arrows, settings screen | Every setting works and persists | UI-005, UI-006, UI-007 |
+| M6 | History, stats, review screen | Badges and times are correct on saved games | HIST-001, HIST-002 |
+| M7 | Opening catalog picker, saved selections, book weight, repertoire import and check | Maia follows the chosen lines and drifts off them | OPEN-001, OPEN-002, OPEN-003, OPEN-004 |
+| M8 | Time-model calibration from Lichess data | `time_model.json` loaded; delays feel human | BOT-006, BOT-007 |
+| M9 | Windows export and release workflow | A tag produces a downloadable zip that runs | CI-002, CI-003 |
+
+Tickets live in `.scratch/mvp/issues/`.
 
 The GitHub repo is created before M1's CI job, and **only after Bruno confirms** it.
 
