@@ -1,5 +1,5 @@
 # BOT-003: Move picker and time-pressure panic
-Stage: to-review
+Stage: done
 Blocked by: CORE-001
 Review: agent
 Difficulty: hard
@@ -171,3 +171,38 @@ Left for stage 2:
 - BLOCKING: fix the endpoint handling so `pick()` never returns a key with zero probability. For example, fall back to the last key with positive probability, or compare correctly at the boundary. Pin it with a deterministic regression test that uses the seed and state above.
 
 Reopen diagnosis: earlier review miss of an implementation defect. The fall-through has been in `pick()` since 6322ec2 (stage 2, round 1). Neither Opus stage 3 nor the first independent review caught it. It is not a contract gap: criterion 1 already says "sample one move" from the final distribution. It is not review churn either: the Review-2 rework changed only the temperature step, which turns this endpoint case into a zero-mass move. The second independent review (head 2337b40) is the consolidated review of the affected paths; it read the whole picker and raised only this finding. Next action: stage 2 on the hard model fixes the sampling endpoint and adds the seeded regression test; the NaN deferral stays as recorded.
+
+#### Resolution (2026-10-24), re-review after reopen 2
+
+Verdict: Approve
+
+Stage 3 (opus-5.5), re-review of Review 3's item and the diff 3489479..32990e8. The Standards and Spec axes ran as separate sub-agents; neither found anything. No fix in review.
+
+Review 3's item:
+
+1. ✅ BLOCKING. `pick()` skips keys with `dist[m] <= 0.0` in the cumulative loop (bot/move_picker.gd:46–48), so a draw of 1.0, or a sum left short by rounding, ends on the last key with mass. For a draw below 1.0 the pick is unchanged: a zero-mass key subtracts nothing, so the loop could never break on it. A non-empty distribution always has a key with mass (the top move's ratio is 1 before renormalising, and the early return is `{top: 1.0}`); the empty policy still gives `""`. RNG use is unchanged: one `randf()`. `test_a_draw_of_exactly_one_picks_a_move_with_mass` uses Review 3's seed and state, and its precondition asserts the reference draw is exactly 1.0, so it cannot pass vacuously.
+
+Criteria 1–7: ✅, as in the earlier Resolutions; the diff only touches the sampling loop.
+
+Red-green, checked by me in a scratch worktree, not only read from stage 2:
+- Cycle 5: a1bac01 (test, old code) gives 77 passed, 1 failed: `test_a_draw_of_exactly_one_picks_a_move_with_mass: expected "a", got "c"` (the precondition held). Green at 77451eb (78 passed, receipt below).
+
+Test-first: `diff --stat` on every commit since the reopen. a1bac01 is the test plus the ticket, 77451eb is `bot/move_picker.gd` only, 32990e8 is the ticket only. Every code file is in Primary files.
+
+Examined:
+- Callers: none outside the tests (`git grep move_picker`).
+- Failure paths the change creates: none new. NaN mass is not `<= 0` and is not skipped; it stays deferred, as Review 3 recorded.
+- Spec §3.3 still describes the result; no doc went stale.
+- Not examined: wall-clock cost per move (BOT-004's 50 ms budget).
+
+Rebase: none needed; `bot-003` descends from the session tip 3489479. The merge 220d4d7 differs from the tested 77451eb only in this ticket file.
+
+Gate: `godot --headless -s tests/run.gd` on 77451eb gave 78 passed, 0 failed, exit 0. Receipt in the Gate evidence line above; I checked its log hash (C75F3BFB…7700) and counts. Reused: no production changed after it.
+
+Proxy decided lines: one, (opus), on running `gate-evidence.ps1` through the Bash tool. Process only; this round's receipt came from the real helper.
+
+Acceptance: pending | M3 ("a full game against Maia; latency under 50 ms") needs BOT-001, BOT-002 and BOT-004; this ticket's own criteria pass, 78/78 on 77451eb (receipt above)
+
+Disclosure: decision | none | spec §3.4 "off" now reads as criterion 6 (8cb80e4); the old text differed only when the `T` setting is not 1
+Disclosure: decision | none | Proxy decided (opus) on how to run the gate helper; process only, no contract change
+Disclosure: deferred | none | NaN policy or weight entries still give NaN mass; Review 2 and Review 3 accepted the deferral (Bruno approved both reopens), as neither Maia's softmax nor §6.3 weights can produce NaN
