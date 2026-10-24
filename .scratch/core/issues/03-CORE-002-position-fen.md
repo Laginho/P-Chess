@@ -1,5 +1,5 @@
 # CORE-002: Position and FEN
-Stage: to-implement
+Stage: implementing
 Blocked by: CORE-001
 Review: agent
 Difficulty: normal
