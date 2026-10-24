@@ -13,6 +13,10 @@ const KING_STEPS := [[1, 0], [0, 1], [-1, 0], [0, -1], [1, 1], [-1, 1], [-1, -1]
 # The king and rook squares each castling right depends on.
 const CASTLING_SQUARES := {"K": [4, 7], "Q": [4, 0], "k": [60, 63], "q": [60, 56]}
 
+# 1 castling, 2 piece, 3 from file, 4 from rank, 5 target square, 6 promotion piece.
+static var _san_pattern := RegEx.create_from_string(
+		"^(?:(O-O-O|O-O)|([NBRQK])?([a-h])?([1-8])?x?([a-h][1-8])(?:=?([NBRQ]))?)[+#!?]*$")
+
 # Index = rank * 8 + file, a1 = 0; "" is an empty square.
 var squares := PackedStringArray()
 var side_to_move := "w"
@@ -213,6 +217,79 @@ func make_move(move: String) -> void:
 			if taker / 8 == to / 8 and squares[taker] == ("p" if white else "P") \
 					and _king_safe_after(taker, (from + to) / 2, king, not white, to):
 				en_passant = _name((from + to) / 2)
+
+
+# SAN of a move from legal_moves(): "Nbd2", "exd8=Q+", "O-O", "Qh4#".
+func san(move: String) -> String:
+	var text := _san_without_check(move, legal_moves())
+	var after = copy()
+	after.make_move(move)
+	if after.in_check():
+		text += "#" if after.legal_moves().is_empty() else "+"
+	return text
+
+
+# The legal move a SAN names, in UCI form; "" when it is illegal, ambiguous or not SAN.
+# Trailing + # ! ? are ignored; extra disambiguation and a missing "x" are tolerated.
+func parse_san(text: String) -> String:
+	var found := _san_pattern.search(text)
+	if found == null:
+		return ""
+	var moves := legal_moves()
+	if found.get_string(1) != "":
+		var home := "e1" if side_to_move == "w" else "e8"
+		var castle := home + ("g" if found.get_string(1) == "O-O" else "c") + home[1]
+		# A rook on e1 can also play e1g1.
+		return castle if castle in moves and squares[_index(castle, 0)].to_upper() == "K" else ""
+	var piece := found.get_string(2) if found.get_string(2) != "" else "P"
+	var from_file := found.get_string(3)
+	var from_rank := found.get_string(4)
+	var to := found.get_string(5)
+	# A pawn capture always names its file, so a pawn SAN without one is a push.
+	if piece == "P" and from_file == "":
+		from_file = to[0]
+	var promotion := found.get_string(6).to_lower()
+	var named := ""
+	for move in moves:
+		if squares[_index(move, 0)].to_upper() != piece or move.substr(2, 2) != to \
+				or move.substr(4) != promotion or (from_file != "" and move[0] != from_file) \
+				or (from_rank != "" and move[1] != from_rank):
+			continue
+		if named != "":
+			return ""
+		named = move
+	return named
+
+
+func _san_without_check(move: String, moves: PackedStringArray) -> String:
+	var from := _index(move, 0)
+	var to := move.substr(2, 2)
+	var piece := squares[from].to_upper()
+	if piece == "K" and absi(_index(move, 2) - from) == 2:
+		return "O-O" if move[2] == "g" else "O-O-O"
+	var capture := "x" if squares[_index(move, 2)] != "" or (piece == "P" and move[0] != move[2]) else ""
+	if piece == "P":
+		var promotion := "=" + move[4].to_upper() if move.length() == 5 else ""
+		return (move[0] + capture if capture else "") + to + promotion
+	# Other pieces of the same kind that can legally reach the same square.
+	var same_file := false
+	var same_rank := false
+	var rivals := false
+	for other in moves:
+		if other.substr(2, 2) == to and other[0] + other[1] != move[0] + move[1] \
+				and squares[_index(other, 0)] == squares[from]:
+			rivals = true
+			same_file = same_file or other[0] == move[0]
+			same_rank = same_rank or other[1] == move[1]
+	var from_hint := ""
+	if rivals:
+		if not same_file:
+			from_hint = move[0]
+		elif not same_rank:
+			from_hint = move[1]
+		else:
+			from_hint = move.substr(0, 2)
+	return piece + from_hint + capture + to
 
 
 func _add_pawn_moves(moves: PackedStringArray, from: int, white: bool, king: int) -> void:
