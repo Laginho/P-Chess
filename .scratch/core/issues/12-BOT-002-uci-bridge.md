@@ -1,5 +1,5 @@
 # BOT-002: UCI bridge and Maia's policy
-Stage: done
+Stage: blocked
 Blocked by: CORE-001, CORE-003
 Review: agent
 Difficulty: hard
@@ -96,3 +96,5 @@ Examined:
 Red-green, from stage 2 and checked here: red at 860d6fd, because `res://engine/uci.gd` does not exist, so `test_uci.gd` fails to load (29 passed, 1 failed). Green at 6fa31c3 (34 passed, 0 failed). Removing the castling normalisation fails 2 tests.
 
 Gate: the stage-2 receipt above (6fa31c3, exit 0, log hash checked: `806F24B1…0CC3`) still holds. The ticket branch already sat on the session tip, and only this ticket changed after 6fa31c3. Result: 34 passed, 0 failed. One of the 34 is the c7 test, which prints SKIP and returns.
+
+- 2026-10-24 Stage stopped (incomplete handoff): Invalid committed handoff: BOT-002: code changed after gate (.scratch/core/issues/14-BOT-004-play-vs-maia.md); reuse evidence only for identical code. See D:\Desktop\Projects\P-Chess\.artifacts-build\lanes\core\.scratch\run-log\BOT-002-review-20261024-032435.txt.runtime.json and run-log/recovery.txt; inspect the saved work before retrying.
