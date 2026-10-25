@@ -7,6 +7,7 @@ extends "res://tests/run.gd".Test
 const Settings = preload("res://core/settings.gd")
 const Game = preload("res://core/game.gd")
 const MaiaPlayer = preload("res://bot/maia_player.gd")
+const ThemeLoader = preload("res://ui/theme_loader.gd")
 const PATH := "user://test_settings.cfg"
 
 
@@ -75,6 +76,26 @@ func test_a_bad_value_in_the_file_falls_back_to_its_default_and_keeps_the_rest()
 	assert_eq(settings.get_value("animation_ms"), 120)
 	assert_eq(settings.get_value("board_theme"), "brown")
 	assert_eq(settings.get_value("tau"), 0.05, "the good value stays")
+
+
+# The bundled themes are tracked, so this does not hang on what a checkout happens to hold: a
+# nonsense name can never exist, and `piano` always does.
+func test_a_saved_theme_that_no_longer_exists_falls_back_to_its_default():
+	var file := ConfigFile.new()
+	file.set_value("settings", "sound_theme", "deleted-or-misspelled")
+	file.set_value("settings", "board_theme", "deleted-or-misspelled")
+	file.set_value("settings", "piece_theme", "deleted-or-misspelled")
+	file.save(_fresh())
+	var settings = Settings.new(PATH)
+	assert_eq(settings.get_value("sound_theme"), "sfx")
+	assert_eq(settings.get_value("board_theme"), "brown")
+	assert_eq(settings.get_value("piece_theme"), "cburnett")
+	assert_eq(ThemeLoader.new().load_sounds(settings.get_value("sound_theme")).size(),
+			ThemeLoader.SOUND_EVENTS.size(), "the default sounds load, so nothing goes silent")
+	assert_true(not settings.set_value("sound_theme", "deleted-or-misspelled"))
+	file.set_value("settings", "sound_theme", "piano")
+	file.save(PATH)
+	assert_eq(Settings.new(PATH).get_value("sound_theme"), "piano", "a theme that exists is kept")
 
 
 func test_a_corrupt_file_gives_the_defaults():
