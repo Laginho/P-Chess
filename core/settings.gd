@@ -26,6 +26,7 @@ const DEFAULTS := {
 	"panic": "medium",
 	"book_intensity": "medium",
 	"auto_claim": true,
+	"check_repertoire": false,
 }
 # Inclusive bounds of the numeric settings.
 const RANGES := {"animation_ms": [0, 1000], "volume": [0, 100], "tau": [0.0, 0.2], "temperature": [0.1, 3.0]}
