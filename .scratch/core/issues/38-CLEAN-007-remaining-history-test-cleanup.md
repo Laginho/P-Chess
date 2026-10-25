@@ -1,5 +1,5 @@
 # CLEAN-007: Consider the shared History cleanup in the remaining scene-test harnesses
-Stage: implementing
+Stage: to-review
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -40,3 +40,8 @@ Each file gains `const HistoryStorage = preload("res://tests/history_storage.gd"
 - Proxy decided (opus): Status ready-for-agent, Stage to-implement, Blocked by none, Review agent, Difficulty normal — scope and validation settled; CLEAN-003 done.
 - Disclosure: decision | none | test-only harness refactor; the Proxy decided lines above record the scope.
 - 2026-10-25 Stage 2: replaced only the two inline `tree_exiting` cleanup loops with the existing `HistoryStorage.clean(folder)` and matching preload. The same isolated roots are captured; missing-directory handling and child-first removal remain in the unchanged helper. All `_session` callers still use the same setup, injections and assertions. `tests/test_badges.gd`, `tests/test_book.gd`, fixtures, runner and production are unchanged. No new or red test, per the explicit test-only refactor exception above.
+- Static verification: `git diff --check` passed; no added/removed `func test_` lines; `path_join("games"), folder]` occurs only in `tests/history_storage.gd`. Both main and this branch contain 258 textual test declarations, including five declarations inside runner fixture strings; the suite therefore runs 253 actual tests. No test body or runner changed.
+- Gate on test-only commit `b1fb2d568c2cadeceaa8ea93bcba07c2242f373f`: `godot --headless -s tests/run.gd`, Godot 4.7 stable, one foreground run, exit 0: **253 passed, 0 failed**, no SKIP, FAIL, script-error or parse-error lines. Existing malformed-theme/time-model fixtures emit warnings. Log: `C:\Users\bruno\AppData\Local\Temp\CLEAN-007-b1fb2d5-gate.log`; SHA-256 `B195C9030991E8688E0B6E3C8416EB9A0AD4951C58C7A0AE3A9D29B59ED5D50A`. No production changes after this run; this handoff changes only the ticket.
+
+Acceptance: passed | the gate and static verification above cover this test-only refactor; stage 3 review remains pending.
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\CLEAN-007-b1fb2d5-gate.json
