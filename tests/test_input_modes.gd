@@ -187,6 +187,50 @@ func _row_control(form, label: String):
 	return null
 
 
+func test_right_drag_draws_an_arrow_and_right_click_draws_a_circle():
+	for flipped in [false, true]:
+		var board = _board()
+		board.flipped = flipped
+		_mouse(board, true, "e2", MOUSE_BUTTON_RIGHT)
+		_mouse(board, false, "e4", MOUSE_BUTTON_RIGHT)
+		_mouse(board, true, "d5", MOUSE_BUTTON_RIGHT)
+		_mouse(board, false, "d5", MOUSE_BUTTON_RIGHT)
+		assert_eq(board.drawings, [PackedStringArray(["e2", "e4"]), PackedStringArray(["d5", "d5"])])
+		assert_eq(board.game.moves, PackedStringArray(), "drawing never plays a move")
+		board.free()
+
+
+func test_off_board_right_gestures_and_unmatched_releases_draw_nothing():
+	var board = _board()
+	_mouse(board, false, "e4", MOUSE_BUTTON_RIGHT)
+	_mouse(board, true, "", MOUSE_BUTTON_RIGHT)
+	_mouse(board, false, "e4", MOUSE_BUTTON_RIGHT)
+	_mouse(board, true, "e2", MOUSE_BUTTON_RIGHT)
+	_mouse(board, false, "", MOUSE_BUTTON_RIGHT)
+	assert_eq(board.drawings, [])
+	board.free()
+
+
+func test_left_press_clears_all_drawings_and_cancels_an_unfinished_one():
+	var board = _board()
+	board.click_click = true
+	_click(board, "e2")
+	_mouse(board, true, "a1", MOUSE_BUTTON_RIGHT)
+	_mouse(board, false, "h8", MOUSE_BUTTON_RIGHT)
+	_mouse(board, true, "b3", MOUSE_BUTTON_RIGHT)
+	_mouse(board, false, "b3", MOUSE_BUTTON_RIGHT)
+	_mouse(board, true, "e4")
+	assert_eq(board.drawings, [], "drawings clear on press, before release")
+	_mouse(board, false, "e4")
+	assert_eq(board.game.moves, PackedStringArray(["e2e4"]), "drawing preserves click selection")
+	_mouse(board, true, "a1", MOUSE_BUTTON_RIGHT)
+	_mouse(board, true, "d4")
+	_mouse(board, false, "d4")
+	_mouse(board, false, "h8", MOUSE_BUTTON_RIGHT)
+	assert_eq(board.drawings, [], "a cancelled gesture cannot restore a drawing")
+	board.free()
+
+
 func test_settings_screen_changes_reach_the_board_and_survive_reload():
 	DirAccess.remove_absolute(SETTINGS_PATH)
 	var preferences = Settings.new(SETTINGS_PATH)
