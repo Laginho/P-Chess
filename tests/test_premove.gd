@@ -3,6 +3,7 @@ extends "res://tests/run.gd".Test
 const PremoveQueue = preload("res://ui/premove_queue.gd")
 const Game = preload("res://core/game.gd")
 const Clock = preload("res://core/clock.gd")
+const MainScene = preload("res://ui/main.tscn")
 
 
 class FakeTime:
@@ -10,6 +11,87 @@ class FakeTime:
 
 	func ms() -> int:
 		return now
+
+
+# Only the external engine is replaced. Moves arrive explicitly through Main's Maia callback.
+class HeldEngine extends "res://engine/uci.gd":
+	var requests := []
+
+	func start(_dirs := PackedStringArray()) -> bool:
+		return true
+
+	func set_level(_net_path: String) -> void:
+		pass
+
+	func request_policy(_start: String, moves: PackedStringArray) -> void:
+		requests.append(moves.duplicate())
+
+
+func _session(time: FakeTime, colour := "w", control := "1+0"):
+	var main = MainScene.instantiate()
+	main.uci.free()
+	main.uci = HeldEngine.new()
+	main.maia = main.MaiaPlayer.new(main.uci)
+	main.preferences = main.Settings.new("res://tests/fixtures/no_ui007_settings.cfg")
+	Engine.get_main_loop().root.add_child(main)
+	main.board_view.slide_seconds = 0
+	main.sound_player.select_theme("__ui007_silent__")
+	main._start({"colour": colour, "level": "maia-1700", "control": control, "opening": "Free"})
+	main.clock = Clock.new(control, time.ms)
+	main.clock.flagged.connect(main._on_flagged)
+	main.maia.clock = main.clock
+	main.white_clock.clock = main.clock
+	main.black_clock.clock = main.clock
+	return main
+
+
+func _mouse(board, pressed: bool, square: String, button := MOUSE_BUTTON_LEFT, alt := false) -> void:
+	var side: float = minf(board.size.x, board.size.y)
+	var event := InputEventMouseButton.new()
+	event.button_index = button
+	event.pressed = pressed
+	event.alt_pressed = alt
+	event.position = (board.size - Vector2.ONE * side) / 2 + board.square_position(square, side, board.flipped) + Vector2.ONE * side / 16
+	board._gui_input(event)
+
+
+func _drag(board, from: String, to: String, alt := false) -> void:
+	_mouse(board, true, from)
+	_mouse(board, false, to, MOUSE_BUTTON_LEFT, alt)
+
+
+func test_main_queues_human_moves_and_executes_one_per_maia_reply():
+	var time := FakeTime.new()
+	var main = _session(time)
+	var board = main.board_view
+	var sounds := []
+	board.sound_requested.connect(func(event): sounds.append(event))
+	board.play("e2e4")
+	assert_eq(board.mouse_filter, Control.MOUSE_FILTER_STOP, "input stays available during Maia's turn")
+	_drag(board, "e7", "e5")
+	assert_eq(board.game.moves, PackedStringArray(["e2e4"]), "the human cannot move Maia's pieces")
+	_drag(board, "d2", "d4")
+	_drag(board, "d4", "d5")
+	_drag(board, "g1", "f3")
+	assert_eq(board.premoves.moves, PackedStringArray(["d2d4", "d4d5", "g1f3"]))
+	assert_eq(board.premoves.position(board.game.board).piece_at("d5"), "P")
+	assert_eq(board.game.moves, PackedStringArray(["e2e4"]))
+	main._on_maia_move("e7e5")
+	assert_eq(board.game.moves, PackedStringArray(["e2e4", "e7e5", "d2d4"]))
+	assert_eq(board.premoves.moves, PackedStringArray(["d4d5", "g1f3"]))
+	assert_eq(main.clock.left("w"), 59900)
+	assert_eq(sounds.count("premove"), 1)
+	assert_eq(main.uci.requests.size(), 2, "one request after each actual human move")
+	time.now += 2000
+	main._on_maia_move("e5d4")
+	assert_eq(board.game.moves, PackedStringArray(["e2e4", "e7e5", "d2d4", "e5d4"]))
+	assert_eq(board.premoves.moves, PackedStringArray())
+	assert_eq(main.clock.left("w"), 59900, "an illegal premove costs nothing")
+	assert_eq(main.clock.left("b"), 58000)
+	_drag(board, "g1", "f3")
+	assert_eq(board.game.moves[-1], "g1f3", "ordinary moves still work after a dropped queue")
+	assert_eq(sounds.count("premove"), 1)
+	main.free()
 
 
 func test_queued_moves_use_the_ghost_position_without_changing_the_game():
