@@ -110,6 +110,7 @@ func _ready() -> void:
 	# In the tree, so its _process reads Lc0 every frame without blocking the UI.
 	uci.name = "Engine"
 	add_child(uci)
+	uci.stopped.connect(_on_engine_stopped)
 	board_view.game = Game.new()
 	board_view.move_played.connect(_on_move_played)
 	board_view.sound_requested.connect(sound_player.play)
@@ -158,7 +159,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 
 
 func _start(new_settings: Dictionary) -> void:
-	if _starting:
+	if _starting or not uci.error.is_empty():
 		return
 	_starting = true
 	setup.hide()
@@ -187,6 +188,8 @@ func _start(new_settings: Dictionary) -> void:
 	if error.is_empty() and new_settings.opening == "Catalog":
 		error = setup.book.load_selection(new_settings.get("selection", ""))
 	_starting = false
+	if not uci.error.is_empty():
+		return
 	if not error.is_empty():
 		setup.show()
 		var status: Label = setup.get_node("Center/Form/Missing")
@@ -233,6 +236,20 @@ func _show_setup() -> void:
 	white_clock.clock = null
 	black_clock.clock = null
 	setup.show()
+
+
+# Abort without recording a chess result, and invalidate Maia's already scheduled moves.
+func _on_engine_stopped() -> void:
+	if clock:
+		clock.stop()
+	maia.clock = null
+	maia.begin_game(null)
+	board_view.cancel_premoves()
+	board_view.mouse_filter = MOUSE_FILTER_IGNORE
+	claim_draw.disabled = true
+	resign_key = ResignKey.new(Time.get_ticks_msec)
+	_show_setup()
+	setup.show_missing(uci.error)
 
 
 # One setting to whatever reads it; the next move, sound or game picks it up.
