@@ -49,6 +49,7 @@ func present(game, clocks: Array, settings: Dictionary, result_text: String,
 	var board = Board.from_fen(Pgn.START)
 	var times := move_times(clocks, settings.control)
 	var badges := Badges.evaluate(game.moves, catalog, repertoire, settings.colour, check_repertoire)
+	var exit_text := ""
 	var row: TreeItem
 	for i in game.moves.size():
 		if i % 2 == 0:
@@ -58,7 +59,12 @@ func present(game, clocks: Array, settings: Dictionary, result_text: String,
 		var text := _badge_text(badges[i])
 		row.set_text(i % 2 + 3, text)
 		row.set_tooltip_text(i % 2 + 3, text)
+		if badges[i].left_repertoire:
+			exit_text = "%d. %s: %s" % [i / 2 + 1, "White" if i % 2 == 0 else "Black", text]
 		board.make_move(game.moves[i])
+	# Keep expected moves readable even when a badge column is narrow.
+	$Margin/Content/RepertoireExit.text = exit_text
+	$Margin/Content/RepertoireExit.visible = not exit_text.is_empty()
 	_pgn = _game_pgn(game, clocks, settings)
 	_url = lichess_url(game)
 	show()

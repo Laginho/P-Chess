@@ -54,6 +54,11 @@ columns = 5
 column_titles_visible = true
 hide_root = true
 
+[node name="RepertoireExit" type="Label" parent="Margin/Content"]
+visible = false
+layout_mode = 2
+autowrap_mode = 3
+
 [node name="Actions" type="HBoxContainer" parent="Margin/Content"]
 layout_mode = 2
 theme_override_constants/separation = 12
