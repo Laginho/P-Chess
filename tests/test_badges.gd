@@ -3,6 +3,20 @@ extends "res://tests/run.gd".Test
 const Book = preload("res://bot/book.gd")
 const Game = preload("res://core/game.gd")
 const Repertoire = preload("res://bot/repertoire.gd")
+const Settings = preload("res://core/settings.gd")
+
+
+func _folder() -> String:
+	return "user://test_badges_%d" % Time.get_ticks_usec()
+
+
+func _clean(folder: String) -> void:
+	for subdir in [folder.path_join("games"), folder.path_join("openings"),
+			folder.path_join("repertoires"), folder]:
+		if DirAccess.dir_exists_absolute(subdir):
+			for file in DirAccess.get_files_at(subdir):
+				DirAccess.remove_absolute(subdir.path_join(file))
+			DirAccess.remove_absolute(subdir)
 
 
 func _badges():
@@ -87,3 +101,60 @@ func test_repertoire_uses_actual_black_side_and_transposed_positions():
 	result = badges.evaluate(game.moves, [], repertoire.lines, "b", true)
 	assert_eq(result.map(func(mark): return mark.repertoire), [false, true, false, true, false, true])
 	assert_eq(result.map(func(mark): return mark.left_repertoire), [false, false, false, false, false, false])
+
+
+func test_check_setting_is_off_by_default_persists_and_is_editable_on_settings_screen():
+	assert_true(Settings.DEFAULTS.has("check_repertoire"), "check-my-moves is a stored setting")
+	if not Settings.DEFAULTS.has("check_repertoire"):
+		return
+	var folder := _folder()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var path := folder.path_join("settings.cfg")
+	var store = Settings.new(path)
+	assert_eq(store.get_value("check_repertoire"), false)
+	var screen = load("res://ui/settings.tscn").instantiate()
+	screen.store = store
+	Engine.get_main_loop().root.add_child(screen)
+	var form = screen.get_node("Panel/Center/Box/Form")
+	var toggle: CheckBox
+	for i in form.get_child_count():
+		var child = form.get_child(i)
+		if child is Label and child.text == "Check my moves against my repertoire":
+			toggle = form.get_child(i + 1)
+	assert_true(toggle != null, "the setting is visible and editable")
+	if toggle != null:
+		assert_true(not toggle.button_pressed)
+		toggle.button_pressed = true
+		assert_eq(Settings.new(path).get_value("check_repertoire"), true)
+		assert_true(not store.set_value("check_repertoire", "yes"), "only booleans are accepted")
+	screen.free()
+	_clean(folder)
+
+
+func test_setup_selects_check_repertoire_in_every_mode_without_changing_free_or_catalog_colour():
+	var folder := _folder()
+	var setup = load("res://ui/setup.tscn").instantiate()
+	setup.book.selection_dir = folder.path_join("openings")
+	setup.repertoire.storage_dir = folder.path_join("repertoires")
+	assert_eq(setup.book.save_selection("Catalog"), "")
+	assert_eq(setup.repertoire.import_pgn("1. e4 e5 2. Nf3 *", "w", "Study"), "")
+	Engine.get_main_loop().root.add_child(setup)
+	var opening: OptionButton = setup.get_node("Center/Form/Opening")
+	var colour: OptionButton = setup.get_node("Center/Form/Colour")
+	var saved: OptionButton = setup.get_node("Center/Form/RepertoireControls/Saved")
+	var started := []
+	setup.started.connect(func(settings): started.append(settings))
+	for index in [0, 1, 2]:
+		colour.select(1)
+		opening.select(index)
+		opening.item_selected.emit(index)
+		assert_true(saved.is_visible_in_tree(), "a repertoire can be picked in " + setup.OPENINGS[index])
+		assert_eq(colour.disabled, index == 2, "only My repertoire fixes the initial colour")
+		setup.get_node("Center/Form/Start").pressed.emit()
+		assert_eq(started.size(), index + 1)
+		if started.size() == index + 1:
+			assert_eq(started[index].get("repertoire", ""), "Study")
+			assert_eq(started[index].colour, "w" if index == 2 else "b")
+			assert_eq(started[index].opening, setup.OPENINGS[index])
+	setup.free()
+	_clean(folder)
