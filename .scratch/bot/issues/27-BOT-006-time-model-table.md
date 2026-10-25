@@ -1,5 +1,5 @@
 # BOT-006: Time-model table
-Stage: to-review
+Stage: done
 Blocked by: BOT-005
 Review: agent
 Difficulty: normal
@@ -97,3 +97,27 @@ Left for stage 2:
 - NON-BLOCKING item (async timing coverage): not done, because it cannot stay inside `tests/test_time_model.gd`. `tests/run.gd` calls each test synchronously from `_initialize` and quits before any frame runs. A SceneTree timer never fires there, and a test that `await`s returns at its first await without its asserts. Covering the delayed move, the clock charge and a flag before the reply needs `tests/run.gd` to await coroutines and process frames. The flag path is also in `ui/main.gd` `_on_flagged` → `game.flag`, not in `maia_player`. Left for stage 3 to schedule as a follow-up (`CLEAN-*`/test-harness ticket).
 
 Gate evidence: C:/Users/Lage/AppData/Local/Temp/claude/D--Desktop-Projects-P-Chess--artifacts-build-lanes-bot/5386cdc1-e131-4f47-9845-17de633263bb/scratchpad/bot-006-gate-r2.json
+
+#### Resolution (2026-10-24), after Review 2
+
+Verdict: Approve
+
+Stage 3 re-review (opus-5.5), on the diff since the reopen (bc5e8d1..a6c8ea8). The Standards and Spec axes ran as separate sub-agents; neither found anything. Standards: no documented standard; the change follows the file's idioms. Spec: every number the loader reads goes through `_number()`, now finite-only; the four cases unquote `1e999` into the JSON text; the harness filter keeps the "exactly one loader warning" assert.
+
+Criteria: 4. ✅ now. An overflowing median, log-sigma, last clock edge or first top-p edge (`-1e999`) each give one loader warning and `{}`, so the formula is used. NaN cannot come from JSON, and `is_finite` would reject it too. 1, 2, 3, 5, 6 stay ✅ from Review 2; the diff touches none of their paths except the type check they all share.
+
+Test-first, `diff --stat` per commit: dcbc80c is the test and this ticket; c13300e is `bot/time_model.gd` only; 7e81d0e is `tests/test_time_model.gd` only (harness correction, re-proven red); a6c8ea8 is this ticket only.
+
+Red-green, checked by me: `bot/time_model.gd` from c13300e~1 on the tested tree gave 118 passed, 1 failed, all four overflow cases failing (table kept, `got ["Exponent too high"]` with no loader warning); restored, `git status` clean. Green: receipt above, commit 7e81d0e, exit 0, log hash re-computed and equal, 119 passed, 0 failed.
+
+Harness correction (7e81d0e): counting only warnings that name the table file is sound. Every loader warning goes through `_malformed(path, …)`, so it names the file. A loader giving zero or two warnings still fails, and the older 16 cases are held to the same count.
+
+Examined: `_number()` callers (`_edges`, `_bin_index` and the bucket check in `load_table`, nothing else); integer literals through `is_finite` (the gate's cases write bins like `"clock_bin": 2`, and `tests/run.gd` turns any script error into a failure, so none occurred); `tests/run.gd` calls each test synchronously in `_initialize` and quits before a frame, which confirms stage 2's reason for not doing the async item. Not examined: exported builds, a game with a real table (both as in the first resolution).
+
+Merge: the session tip was bc5e8d1, the reopen commit itself, so no rebase; merge 9ea5971 differs from the tested 7e81d0e only in this ticket, so the receipt stands.
+
+Proxy decided (opus), named for the session PR: option B (first resolution above). Unchanged by the reopen.
+
+Acceptance: pending | BOT-006 makes Maia read data/time_model.json, which does not exist until BOT-007 writes it; M8's "delays feel human" is checked there. Gate 119/0 at 7e81d0e, receipt above.
+Disclosure: pending | integration | ui/main.gd _start: BOT-005's maia.clock/maia.control plus BOT-006's maia.level conflict with the core lane's _start(new_settings); resolve as maia.clock = clock, maia.control = settings.control, maia.level = settings.level. From the proxy's decision; unchanged.
+Disclosure: deferred | none | Review 2's non-blocking item (async coverage: one delayed move arrives, the clock is charged max(delay, compute), a flag before the reply stops the move) needs `tests/run.gd` to await coroutines, outside Primary files. Open follow-up: `.scratch/bot/issues/33-CLEAN-001-async-think-time-tests.md`, blocked until the human approves its seam. Impact none: coverage only, and Review 2's probes found these paths working.
