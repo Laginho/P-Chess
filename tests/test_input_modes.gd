@@ -267,6 +267,13 @@ func test_settings_screen_changes_reach_the_board_and_survive_reload():
 	var history_folder := "user://test_input_modes_history_%d" % Time.get_ticks_usec()
 	var isolated_history = History.new(history_folder)
 	var main = MainScene.instantiate()
+	main.history = isolated_history
+	main.tree_exiting.connect(func():
+		for subdir in [history_folder.path_join("games"), history_folder]:
+			if DirAccess.dir_exists_absolute(subdir):
+				for file in DirAccess.get_files_at(subdir):
+					DirAccess.remove_absolute(subdir.path_join(file))
+				DirAccess.remove_absolute(subdir))
 	main.uci.free()
 	main.uci = NoEngine.new()
 	main.maia = main.MaiaPlayer.new(main.uci)
