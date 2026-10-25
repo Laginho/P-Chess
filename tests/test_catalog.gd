@@ -25,13 +25,16 @@ func test_every_committed_lichess_row_loads_with_san_moves_and_position_keys():
 func test_invalid_san_is_reported_and_skipped_without_losing_later_rows():
 	var book = Book.new()
 	book.load_tsv("eco\tname\tpgn\nC20\tKing's Pawn Game\t1. e4 e5\n"
-			+ "A00\tBad line\t1. e4 e5 2. Qh9\nA00\tAnother line\t1. d4\n", "sample")
+			+ "A00\tBad line\t1. e4 e5 2. Qh9\nA00\tAnother line\t1. d4\n"
+			+ "A00\tNo moves\t1.\n", "sample")
 	assert_eq(book.entries.size(), 2)
 	assert_eq(book.entries[0].moves, PackedStringArray(["e2e4", "e7e5"]))
 	assert_eq(book.entries[0].positions, PackedStringArray([START_KEY, E4_KEY, E5_KEY]))
 	assert_eq(book.entries[1].name, "Another line")
-	assert_eq(book.errors.size(), 1)
+	assert_eq(book.errors.size(), 2)
 	assert_true("sample:3" in book.errors[0] and "Qh9" in book.errors[0], "report source, row and move")
+	if book.errors.size() > 1:
+		assert_true("sample:5" in book.errors[1], "a row with no moves is also reported")
 
 
 func _sample():
