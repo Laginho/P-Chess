@@ -29,6 +29,8 @@ class HeldEngine extends "res://engine/uci.gd":
 
 func _session(time: FakeTime, colour := "w", control := "1+0"):
 	var main = MainScene.instantiate()
+	# Callable keeps a weak reference; keep temporary fake clocks alive with their scene.
+	main.set_meta("test_time", time)
 	main.uci.free()
 	main.uci = HeldEngine.new()
 	main.maia = main.MaiaPlayer.new(main.uci)
@@ -91,6 +93,96 @@ func test_main_queues_human_moves_and_executes_one_per_maia_reply():
 	_drag(board, "g1", "f3")
 	assert_eq(board.game.moves[-1], "g1f3", "ordinary moves still work after a dropped queue")
 	assert_eq(sounds.count("premove"), 1)
+	main.free()
+
+
+func test_right_click_cancels_the_queue_and_right_drag_still_draws():
+	var main = _session(FakeTime.new())
+	var board = main.board_view
+	board.play("e2e4")
+	_drag(board, "g1", "f3")
+	_drag(board, "f3", "g5")
+	_mouse(board, true, "e4", MOUSE_BUTTON_RIGHT)
+	assert_eq(board.premoves.moves, PackedStringArray(), "cancel on press")
+	_mouse(board, false, "e5", MOUSE_BUTTON_RIGHT)
+	assert_eq(board.drawings, [PackedStringArray(["e4", "e5"])])
+	_mouse(board, true, "c3", MOUSE_BUTTON_RIGHT)
+	_mouse(board, false, "c3", MOUSE_BUTTON_RIGHT)
+	assert_eq(board.drawings.size(), 2, "right click can still draw a circle")
+	main._on_maia_move("e7e5")
+	assert_eq(board.game.moves, PackedStringArray(["e2e4", "e7e5"]))
+	main.free()
+
+
+func test_black_premoves_include_first_move_cost_and_later_increment():
+	var main = _session(FakeTime.new(), "b", "3+2")
+	var board = main.board_view
+	assert_true(board.flipped)
+	board.click_click = true
+	for square in ["g8", "f6", "f6", "g4"]:
+		_mouse(board, true, square)
+		_mouse(board, false, square)
+	assert_eq(board.premoves.moves, PackedStringArray(["g8f6", "f6g4"]))
+	main._on_maia_move("e2e4")
+	assert_eq(board.game.moves, PackedStringArray(["e2e4", "g8f6"]))
+	assert_eq(main.clock.left("b"), 179900)
+	main._on_maia_move("d2d4")
+	assert_eq(board.game.moves, PackedStringArray(["e2e4", "g8f6", "d2d4", "f6g4"]))
+	assert_eq(main.clock.left("b"), 181800)
+	main.free()
+
+
+func test_a_premove_that_flags_is_not_played_and_discards_the_whole_queue():
+	var time := FakeTime.new()
+	var main = _session(time)
+	var board = main.board_view
+	var sounds := []
+	board.sound_requested.connect(func(event): sounds.append(event))
+	board.play("e2e4")
+	main._on_maia_move("e7e5")
+	time.now += 59950
+	_drag(board, "g1", "f3")
+	_drag(board, "h2", "h4")
+	_drag(board, "h4", "h5")
+	main._on_maia_move("b8c6")
+	assert_eq(board.game.moves, PackedStringArray(["e2e4", "e7e5", "g1f3", "b8c6"]))
+	assert_eq([board.game.result, board.game.reason], ["0-1", "time"])
+	assert_eq(main.clock.left("w"), 0)
+	assert_eq(board.premoves.moves, PackedStringArray())
+	assert_eq(sounds.count("premove"), 0)
+	main.free()
+
+
+func test_maia_checkmate_clears_premoves_and_rematch_keeps_no_ghosts():
+	var main = _session(FakeTime.new())
+	var board = main.board_view
+	_drag(board, "f2", "f3")
+	main._on_maia_move("e7e5")
+	_drag(board, "g2", "g4")
+	_drag(board, "h2", "h4")
+	main._on_maia_move("d8h4")
+	assert_eq([board.game.result, board.game.reason], ["0-1", "checkmate"])
+	assert_eq(board.premoves.moves, PackedStringArray())
+	main._start(main.rematch(main.settings))
+	_drag(board, "g8", "f6")
+	assert_eq(board.premoves.moves, PackedStringArray(["g8f6"]))
+	board.game = Game.new()
+	assert_eq(board.premoves.moves, PackedStringArray(), "the game setter clears ghosts")
+	main.free()
+
+
+func test_a_reply_cancels_an_unfinished_drag_before_running_the_due_premove():
+	var main = _session(FakeTime.new())
+	var board = main.board_view
+	board.play("e2e4")
+	_drag(board, "g1", "f3")
+	_mouse(board, true, "f3")
+	main._on_maia_move("e7e5")
+	_mouse(board, false, "g5")
+	assert_eq(board.game.moves, PackedStringArray(["e2e4", "e7e5", "g1f3"]))
+	assert_eq(board.premoves.moves, PackedStringArray(), "the stale release queues nothing")
+	_drag(board, "f3", "g5")
+	assert_eq(board.premoves.moves, PackedStringArray(["f3g5"]), "new input still works")
 	main.free()
 
 
