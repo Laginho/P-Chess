@@ -84,3 +84,58 @@ func test_checks_propagate_to_descendants_and_parents_show_partial_state():
 	book.set_checked(family, false)
 	assert_eq(book.selected_ids(), [])
 	assert_eq(book.check_state(family), 0)
+
+
+func _folder() -> String:
+	return "user://test_openings_%d" % Time.get_ticks_usec()
+
+
+func _remove_folder(folder: String) -> void:
+	if DirAccess.dir_exists_absolute(folder):
+		for file in DirAccess.get_files_at(folder):
+			DirAccess.remove_absolute(folder.path_join(file))
+		DirAccess.remove_absolute(folder)
+
+
+func test_named_selections_round_trip_and_can_be_replaced_or_empty():
+	var folder := _folder()
+	var book = _sample()
+	book.selection_dir = folder
+	assert_eq(book.selection_names(), [])
+	book.set_checked("Sicilian Defense: Najdorf Variation", true)
+	var selected: Array = book.selected_ids()
+	assert_eq(book.save_selection("Najdorf practice"), "")
+	assert_true(FileAccess.file_exists(folder.path_join("Najdorf practice.json")))
+	var restored = _sample()
+	restored.selection_dir = folder
+	assert_eq(restored.selection_names(), ["Najdorf practice"])
+	assert_eq(restored.load_selection("Najdorf practice"), "")
+	assert_eq(restored.selected_ids(), selected)
+	assert_eq(restored.check_state("Sicilian Defense"), 2)
+	restored.set_checked("Sicilian Defense", false)
+	assert_eq(restored.save_selection("Najdorf practice"), "")
+	assert_eq(book.load_selection("Najdorf practice"), "")
+	assert_eq(book.selected_ids(), [], "loading replaces the old selection, including with an empty one")
+	_remove_folder(folder)
+
+
+func test_selection_errors_preserve_checks_and_cannot_escape_the_selection_folder():
+	var folder := _folder()
+	var book = _sample()
+	book.selection_dir = folder
+	book.set_checked("King's Pawn Game", true)
+	var selected: Array = book.selected_ids()
+	for name in ["", "../escape", "a/b", "a\\b", ".", "..", "a:b", "trailing.", "CON", "NUL.json"]:
+		assert_true(not book.save_selection(name).is_empty(), "reject unsafe filename " + name)
+		assert_true(not book.load_selection(name).is_empty(), "refuse unsafe load " + name)
+	assert_true(not book.load_selection("missing").is_empty())
+	assert_eq(book.selected_ids(), selected)
+	assert_eq(book.save_selection("valid"), "")
+	for contents in ["not JSON", "[]", '{"version":1,"lines":["unknown"]}',
+			'{"version":1,"lines":[42]}', '{"version":2,"lines":[]}']:
+		var file := FileAccess.open(folder.path_join("broken.json"), FileAccess.WRITE)
+		file.store_string(contents)
+		file.close()
+		assert_true(not book.load_selection("broken").is_empty(), contents)
+		assert_eq(book.selected_ids(), selected, "failed load leaves current checks untouched")
+	_remove_folder(folder)
