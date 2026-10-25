@@ -1,9 +1,9 @@
 # BOT-007: Time-model calibration from Lichess data
-Stage: implementing
+Stage: to-review
 Blocked by: BOT-001, BOT-006
 Review: human
 Difficulty: normal
-Gate evidence: C:\Users\Lage\AppData\Local\Temp\BOT-007-aa5e1b1-gate-permitted.json
+Gate evidence: C:\Users\Lage\AppData\Local\Temp\BOT-007-history-gate.json
 
 - Primary files:
   - New: scripts/calibrate_time.py
@@ -115,3 +115,15 @@ Reviewed callers and cross-feature paths: `main` → capped zstd stream → `ext
 
 Acceptance: pending | Verification and this Resolution: real-data calibration and M8 remain outstanding; criterion 5 also needs the history-context repair.
 Disclosure: pending | integration | This Resolution, criterion 5: calibration policy bins differ from the game's because samples discard history; keep BOT-007 open until the implementation and regression are reviewed.
+
+#### Stage 2 reopened handoff (2026-10-25)
+
+- Repaired only criterion 5 from the preceding Resolution. `Sample` now retains the initial FEN and an immutable snapshot of all preceding UCI moves; extraction includes untimed moves and moves with missing clocks in that history. `lc0_policy` sends `position fen <initial FEN> moves <history>`, matching `engine/uci.gd::request_policy`, while retaining the current FEN for legal-move filtering. Empty history omits the `moves` suffix. No game code, dependency, filtering, timing or table-format changes.
+- Test-first proof: test-only commit `43656a5` ran **4 failed, 6 passed** before production changed; three history-sensitive UCI scenarios returned the wrong probability, and the empty-history scenario exposed the missing context fields. Production-only commit `18cf32e` then ran **10 passed** using Python 3.14.6, `-B -m pytest -p no:cacheprovider scripts/test_calibrate_time.py`. One existing upstream python-chess deprecation warning remains. The local fake UCI process verifies the expected position command through returned policy probabilities; cases cover opening context, missing clocks, custom initial FEN and empty history. The pre-existing full pipeline test still passes with a fake that replays FEN-plus-moves.
+- Real-engine smoke: separate fresh installed Lc0 v0.32.1 / maia-1500 processes evaluated fixture samples 0 and 2 through production `lc0_policy`: **0.4694** before `2.Nf3` and **0.3439** before `3.Bb5`, matching the history-preserving reference from the review. No network or generated calibration table was involved.
+- Fresh bound gate on committed code `18cf32e68d10c79a5c00ab4b2f5250cb311b04d6`: `godot --headless -s tests/run.gd` → **137 passed, 0 failed**, exit 0. `gate-evidence.ps1` captured the receipt above and `C:\Users\Lage\AppData\Local\Temp\BOT-007-history-gate.log`; SHA-256 `40F2D2325C8013758751AA03113B64BEE1C41256C730292DB5664C67D6038B46`. Logged warnings are from existing deliberate malformed-input tests. Only this tracker ticket changes after the tested code commit.
+- Final diff and whitespace check: scoped to the two Primary Python files and this ticket; no generated data, secrets or unrelated changes. Working branch remains `BOT-007`; no merge, push or stage-3 review performed. Independent review of this repair is next.
+
+Acceptance: pending | This reopened handoff: offline history-context repair passes; approved real-data calibration, generated production table validation and M8 human assessment remain outstanding.
+Disclosure: pending | integration | Previous Resolution criterion 5 is repaired by `18cf32e` with regression `43656a5`; independent stage-3 review must confirm the repair before integration.
+Disclosure: pending | release | Verification: real-data calibration and data/time_model.json remain pending Bruno's explicit chat approval for the planned download; no download was attempted.
