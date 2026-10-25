@@ -309,6 +309,30 @@ func test_queued_moves_use_the_ghost_position_without_changing_the_game():
 	assert_eq(game.moves, PackedStringArray(["e2e4"]))
 
 
+func test_ghost_moves_reject_king_captures_without_changing_the_accepted_prefix():
+	for human in ["w", "b"]:
+		var game = Game.new()
+		assert_true(game.play("e2e4"))
+		if human == "b":
+			assert_true(game.play("e7e5"))
+		var live_fen: String = game.board.to_fen()
+		var live_moves: PackedStringArray = game.moves.duplicate()
+		var queue = PremoveQueue.new(human)
+		var prefix := PackedStringArray(["f1c4", "d1h5", "h5f7"] if human == "w" else ["f8c5", "d8h4", "h4f2"])
+		for move in prefix:
+			assert_true(queue.enqueue(game.board, move), move)
+		var ghost_fen: String = queue.position(game.board).to_fen()
+		var capture := "f7e8" if human == "w" else "f2e1"
+		assert_true(not queue.enqueue(game.board, capture), "a premove cannot capture the opposing king: " + capture)
+		assert_eq(queue.moves, prefix, "rejecting a move preserves the accepted prefix")
+		var ghost = queue.position(game.board)
+		assert_eq(ghost.to_fen(), ghost_fen, "the rejected move leaves the ghost unchanged")
+		assert_eq(ghost.squares.count("K"), 1)
+		assert_eq(ghost.squares.count("k"), 1)
+		assert_eq(game.board.to_fen(), live_fen)
+		assert_eq(game.moves, live_moves)
+
+
 func test_styles_default_to_chess_com_and_lichess_replaces_from_the_live_position():
 	var game = Game.new()
 	game.play("e2e4")

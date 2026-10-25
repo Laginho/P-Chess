@@ -1,5 +1,5 @@
 # UI-007: Premoves
-Stage: to-implement
+Stage: implementing
 Blocked by: UI-005
 Review: agent
 Difficulty: hard
@@ -115,3 +115,7 @@ Acceptance: pending | The automated suite passes for its covered scenarios, but 
 Disclosure: decision | integration | Proxy decision under Comments: criterion-2 ghost validation must reject opposing-king captures before UI-007 can be approved or integrated; live execution is protected by revalidation.
 Disclosure: pending | integration | The criterion-2 finding remains scheduled on this reopened UI-007 ticket; stage 2 must add the regression test first and make a scoped repair on the preserved branch.
 Disclosure: pending | release | Manual visual/audio acceptance remains pending as recorded in the Stage 2 handoff.
+
+#### Stage 2 reopen work (2026-10-25)
+
+The remaining scope is the criterion-2 king-capture finding. The confirmed test seam remains the public PremoveQueue API in `tests/test_premove.gd`, backed by the real Game/Board. Before the red test, inspected `enqueue` (BoardView `_submit`), `input_position` (BoardView `_pick_up` through `_input_position`), `position` (BoardView `_draw` and queue projection), and `take` (Main's due-move execution). Repeated human turns can offer opposing-king captures through Board.legal_moves; rejecting an append must preserve the accepted prefix, both kings, and the live position/history. Both colours are covered. Due-move validation on the live board remains in scope for regression checks.
