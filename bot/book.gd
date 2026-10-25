@@ -9,6 +9,10 @@ const VOLUMES := ["a", "b", "c", "d", "e"]
 var entries: Array = []
 var errors: Array[String] = []
 var volume_counts := {}
+var roots: Array[String] = []
+# A node groups all rows under its name, including a row named after the family itself.
+var nodes := {}
+var _checked := {}
 var _prefixes := {}
 var _numbers := RegEx.create_from_string(r"\d+\.+\s*")
 
@@ -17,6 +21,9 @@ func load_catalog(folder := "res://data/openings") -> void:
 	entries.clear()
 	errors.clear()
 	volume_counts.clear()
+	roots.clear()
+	nodes.clear()
+	_checked.clear()
 	_prefixes.clear()
 	for volume in VOLUMES:
 		var path: String = folder.path_join(volume + ".tsv")
@@ -70,3 +77,66 @@ func load_tsv(text: String, source := "TSV") -> void:
 			continue
 		entries.append({"id": fields[0] + ":" + fields[2], "eco": fields[0],
 				"name": fields[1], "pgn": fields[2], "moves": moves, "positions": positions})
+		_add_name(entries.back())
+
+
+func _add_name(entry: Dictionary) -> void:
+	var labels: PackedStringArray = entry.name.replace(": ", ", ").split(", ", false)
+	var parent := ""
+	for index in labels.size():
+		var path: String = labels[index] if index == 0 else parent + (": " if index == 1 else ", ") + labels[index]
+		if not nodes.has(path):
+			nodes[path] = {"label": labels[index], "parent": parent, "children": [], "lines": []}
+			if parent.is_empty():
+				roots.append(path)
+			else:
+				nodes[parent].children.append(path)
+		nodes[path].lines.append(entry.id)
+		parent = path
+
+
+# Return visible paths in tree order. Full paths include ancestor labels, so searching a
+# family keeps its descendants, while a variation match brings its ancestors back into view.
+func search(query: String) -> Array[String]:
+	var visible := {}
+	for path in nodes:
+		if not query.to_lower() in path.to_lower():
+			continue
+		var ancestor: String = path
+		while not ancestor.is_empty():
+			visible[ancestor] = true
+			ancestor = nodes[ancestor].parent
+	var result: Array[String] = []
+	for path in nodes:
+		if visible.has(path):
+			result.append(path)
+	return result
+
+
+func set_checked(path: String, checked: bool) -> void:
+	if not nodes.has(path):
+		return
+	for id in nodes[path].lines:
+		if checked:
+			_checked[id] = true
+		else:
+			_checked.erase(id)
+
+
+# 0 unchecked, 1 checked, 2 partial (including the node's own line, if present).
+func check_state(path: String) -> int:
+	var count := 0
+	for id in nodes[path].lines:
+		if _checked.has(id):
+			count += 1
+	if count == 0:
+		return 0
+	return 1 if count == nodes[path].lines.size() else 2
+
+
+func selected_ids() -> Array[String]:
+	var ids: Array[String] = []
+	for entry in entries:
+		if _checked.has(entry.id):
+			ids.append(entry.id)
+	return ids
