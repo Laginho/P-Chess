@@ -7,6 +7,7 @@ const Game = preload("res://core/game.gd")
 const Settings = preload("res://core/settings.gd")
 const MainScene = preload("res://ui/main.tscn")
 const History = preload("res://core/history.gd")
+const HistoryStorage = preload("res://tests/history_storage.gd")
 const PROMOTION := "4k3/P7/8/8/8/8/8/4K3 w - - 0 1"
 const SETTINGS_PATH := "user://test_ui006_settings.cfg"
 
@@ -268,12 +269,7 @@ func test_settings_screen_changes_reach_the_board_and_survive_reload():
 	var isolated_history = History.new(history_folder)
 	var main = MainScene.instantiate()
 	main.history = isolated_history
-	main.tree_exiting.connect(func():
-		for subdir in [history_folder.path_join("games"), history_folder]:
-			if DirAccess.dir_exists_absolute(subdir):
-				for file in DirAccess.get_files_at(subdir):
-					DirAccess.remove_absolute(subdir.path_join(file))
-				DirAccess.remove_absolute(subdir))
+	main.tree_exiting.connect(func(): HistoryStorage.clean(history_folder))
 	main.uci.free()
 	main.uci = NoEngine.new()
 	main.maia = main.MaiaPlayer.new(main.uci)

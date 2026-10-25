@@ -6,6 +6,7 @@ const Game = preload("res://core/game.gd")
 const Pgn = preload("res://core/pgn.gd")
 const MainScene = preload("res://ui/main.tscn")
 const Clock = preload("res://core/clock.gd")
+const HistoryStorage = preload("res://tests/history_storage.gd")
 const SETTINGS := {"colour": "w", "level": "maia-1500", "control": "3+2", "opening": "Free"}
 
 
@@ -72,14 +73,6 @@ func _folder() -> String:
 	return "user://test_history_%d" % Time.get_ticks_usec()
 
 
-func _clean(folder: String) -> void:
-	for subdir in [folder.path_join("games"), folder]:
-		if DirAccess.dir_exists_absolute(subdir):
-			for file in DirAccess.get_files_at(subdir):
-				DirAccess.remove_absolute(subdir.path_join(file))
-			DirAccess.remove_absolute(subdir)
-
-
 func _seed_result_records(folder: String, corrupt) -> bool:
 	assert_eq(DirAccess.make_dir_recursive_absolute(folder), OK)
 	var stored := ConfigFile.new()
@@ -116,7 +109,7 @@ func test_save_recovers_corrupt_result_records_and_preserves_valid_stats():
 	for record in corrupt_records:
 		var folder := _folder()
 		if not _seed_result_records(folder, record):
-			_clean(folder)
+			HistoryStorage.clean(folder)
 			continue
 		var history = History.new(folder)
 		var game = Game.new()
@@ -129,14 +122,14 @@ func test_save_recovers_corrupt_result_records_and_preserves_valid_stats():
 		assert_eq(History.new(folder).stats("maia-1500", "3+2"),
 				{"wins": 0, "draws": 0, "losses": 1, "flag_wins": 0, "flag_losses": 0})
 		assert_eq(_games(folder).size(), 1)
-		_clean(folder)
+		HistoryStorage.clean(folder)
 
 
 func test_main_recovers_corrupt_stats_once_and_reports_them_in_the_review():
 	for record in [{"wins": 12}, 12]:
 		var folder := _folder()
 		if not _seed_result_records(folder, record):
-			_clean(folder)
+			HistoryStorage.clean(folder)
 			continue
 		var time := FakeTime.new()
 		var main = _session(folder, time)
@@ -157,7 +150,7 @@ func test_main_recovers_corrupt_stats_once_and_reports_them_in_the_review():
 		if games.size() == 1:
 			assert_eq(games[0].result, "0-1")
 		main.free()
-		_clean(folder)
+		HistoryStorage.clean(folder)
 
 
 func test_finished_game_saves_one_pgn_with_headers_moves_and_exact_clocks():
@@ -179,7 +172,7 @@ func test_finished_game_saves_one_pgn_with_headers_moves_and_exact_clocks():
 		assert_eq(saved.result, "0-1")
 		assert_eq(saved.moves.map(func(move): return move.uci), ["f2f3", "e7e5", "g2g4", "d8h4"])
 		assert_eq(saved.moves.map(func(move): return move.clock_ms), [180000, 180000, 179534, 181001])
-	_clean(folder)
+	HistoryStorage.clean(folder)
 
 
 func test_stats_survive_reload_and_separate_level_control_and_human_colour():
@@ -210,7 +203,7 @@ func test_stats_survive_reload_and_separate_level_control_and_human_colour():
 	assert_eq(reloaded.stats("maia-1700", "1+0"), {"wins": 1, "draws": 0, "losses": 0, "flag_wins": 0, "flag_losses": 0})
 	assert_eq(reloaded.stats("maia-1500", "1+0"), {"wins": 0, "draws": 0, "losses": 0, "flag_wins": 0, "flag_losses": 0})
 	assert_eq(DirAccess.get_files_at(folder.path_join("games")).size(), 5, "rapid saves never overwrite a PGN")
-	_clean(folder)
+	HistoryStorage.clean(folder)
 
 
 func test_main_saves_mate_once_with_final_increment_and_resets_history_on_rematch():
@@ -244,7 +237,7 @@ func test_main_saves_mate_once_with_final_increment_and_resets_history_on_rematc
 		assert_eq(rematches[0].headers.White, "Maia 1500")
 	assert_eq(History.new(folder).stats("maia-1500", "3+2").losses, 2)
 	main.free()
-	_clean(folder)
+	HistoryStorage.clean(folder)
 
 
 func test_headers_use_actual_level_colour_control_and_only_a_known_opening():
@@ -261,7 +254,7 @@ func test_headers_use_actual_level_colour_control_and_only_a_known_opening():
 		assert_eq(parsed.games[0].headers, {"White": "Maia 1900", "Black": "You",
 				"TimeControl": {"1+0": "60+0", "3+2": "180+2", "5+0": "300+0"}[control],
 				"Result": "0-1", "Termination": "Normal", "Opening": "Bird Opening"})
-	_clean(folder)
+	HistoryStorage.clean(folder)
 
 
 func test_main_saves_a_clock_flag_once_and_keeps_move_time_snapshots():
@@ -282,7 +275,7 @@ func test_main_saves_a_clock_flag_once_and_keeps_move_time_snapshots():
 	assert_eq(History.new(folder).stats("maia-1500", "3+2"),
 			{"wins": 0, "draws": 0, "losses": 1, "flag_wins": 0, "flag_losses": 1})
 	main.free()
-	_clean(folder)
+	HistoryStorage.clean(folder)
 
 
 func test_main_saves_a_claimed_draw_once():
@@ -302,7 +295,7 @@ func test_main_saves_a_claimed_draw_once():
 		assert_eq(games[0].moves.size(), 8)
 	assert_eq(History.new(folder).stats("maia-1500", "3+2").draws, 1)
 	main.free()
-	_clean(folder)
+	HistoryStorage.clean(folder)
 
 
 func test_main_records_first_and_later_premoves_after_exactly_one_charge():
@@ -324,7 +317,7 @@ func test_main_records_first_and_later_premoves_after_exactly_one_charge():
 		assert_eq(games[0].moves.map(func(move): return move.clock_ms), [180000, 179900, 182000, 181800])
 	assert_eq(History.new(folder).stats("maia-1500", "3+2").flag_wins, 1)
 	main.free()
-	_clean(folder)
+	HistoryStorage.clean(folder)
 
 
 func test_main_waits_for_the_last_snapshot_when_move_accounting_emits_a_flag():
@@ -350,7 +343,7 @@ func test_main_waits_for_the_last_snapshot_when_move_accounting_emits_a_flag():
 					"terminal-move precedence is preserved")
 		assert_eq(main.history.error, "")
 		main.free()
-		_clean(folder)
+		HistoryStorage.clean(folder)
 
 
 func test_main_reports_failed_game_and_stats_writes_in_the_result_ui():
@@ -372,4 +365,4 @@ func test_main_reports_failed_game_and_stats_writes_in_the_result_ui():
 		assert_true(main.result_label.text.contains("Space for a rematch"), "the game remains usable")
 		main.free()
 		DirAccess.remove_absolute(folder.path_join(blocked))
-		_clean(folder)
+		HistoryStorage.clean(folder)
