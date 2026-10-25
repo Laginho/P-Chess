@@ -1,5 +1,5 @@
 # UI-005: Settings store and screen
-Stage: implementing
+Stage: to-review
 Blocked by: UI-004
 Review: agent
 Difficulty: normal
@@ -97,3 +97,13 @@ What is left: a saved theme whose folder does not exist falls back to its defaul
 Note for stage 2: the block quoted above is the previous review's record, kept for history; the live fields are the ones below it. Write the new receipt as `Gate evidence: <path>` at the very start of its own line, with no list dash and nothing after the path: the installed driver misses a `- Gate evidence:` line (fix pending in Agent-Skills#4).
 
 Verdict: Reopen — criterion 5: a saved theme that no longer exists is kept, and the sounds go silent instead of falling back to sfx
+
+#### Stage 2 after the reopen (2026-10-24)
+
+- The ticket branch had been merged into the session (0fb6137), so it was fast-forwarded to the session tip a8c019f before this work.
+- Cycle: a869f56 red, `test_a_saved_theme_that_no_longer_exists_falls_back_to_its_default` failed 5 asserts (`expected "sfx", got "deleted-or-misspelled"`, the same for brown and cburnett, `expected 9, got 0` sounds loaded, and the missing theme accepted by `set_value`); 0b95f19 green. Gate: 116 passed, 0 failed (115 before, plus 1 new).
+- Fix: `Settings.valid` accepts a theme name only if `ThemeLoader.new().list_themes(<kind>)` lists it (bundled `res://themes` or `user://themes`), so a load falls back to the default and `set_value` refuses the name. The empty-name check this replaces is covered, since no folder has an empty name.
+- Checkout independence: the test leans only on tracked folders. A nonsense name can never exist, so its fallback cannot pass because a folder happens to be missing; the bundled `piano` set is tracked and the test checks it is kept, so the fallback cannot pass by rejecting every theme; and the nine `sfx` sounds are tracked, so the "default sounds load" assert fails if they are not there.
+- `core/settings.gd` now preloads `ui/theme_loader.gd` (a plain RefCounted with no UI nodes), a core-to-ui dependency. The screen's theme lists already come from the same loader, so every name it offers passes.
+
+Gate evidence: C:/Users/Lage/AppData/Local/Temp/claude/D--Desktop-Projects-P-Chess--artifacts-build-lanes-core/7c51381b-503c-4c7e-a0ab-29c06332bfd3/scratchpad/UI-005-reopen-gate.json
