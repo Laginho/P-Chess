@@ -1,5 +1,5 @@
 # CLEAN-001: Async coverage for Maia's delayed move
-Stage: to-implement
+Stage: implementing
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -8,6 +8,7 @@ Difficulty: normal
 - Primary files:
   - tests/run.gd (scope: run a `test_*` method that awaits to its end)
   - tests/test_time_model.gd (scope: the timing integration tests around `_moves_at_once`)
+  - tests/test_runner.gd (scope: one child-run case whose test_* awaits a SceneTree timer, then fails an assert)
 
 #### What to build
 
@@ -29,8 +30,10 @@ non-blocking item.
 ## Tests stage 2 writes (own commit, red)
 
 - `tests/test_time_model.gd`: a delayed move arriving once after the wait, and the clock charge. Red against today's runner, because it never resumes a test after its first await. Review 2's probes say Maia already does this, so once the runner awaits these may be green from the start; say so instead of forcing a red.
+- `tests/test_runner.gd`: a child run of a case whose `test_*` awaits a SceneTree timer and then fails an assert exits non-zero with "0 passed, 1 failed". Red against today's runner, which prints PASS at the first await and quits before the timer fires (child prints "1 passed, 0 failed", exit 0).
 
 ## Comments
 
 - Written by BOT-006 stage 3 (2026-10-24, opus-5.5), not by stage 1. It is blocked until the human approves the seam (changing the test runner) and the criteria; then set `Stage: to-implement`. Open question from Review 2: "a flag before the pending reply stops the move". That path is in `ui/main.gd` `_on_flagged` → `game.flag`, not in `maia_player`, and CLOCK-002 (core lane) covers a move dropped after the flag. Add it here, with `ui/main.gd` in Primary files, or leave it to CLOCK-002?
 - 2026-10-25 Stage 1 (human, Bruno): approved the runner seam (`tests/run.gd` awaits each `test_*` method, e.g. `await test.call(name)`) and criteria 1-3 as written. Open question answered: flag-before-reply stays out of this ticket; it belongs to [CLEAN-005](../../core/issues/36-CLEAN-005-maia-move-after-flag.md), which owns `ui/main.gd`'s Maia arrival order. `ui/main.gd` is not a primary file here. [CLEAN-006](../../core/issues/37-CLEAN-006-main-rematch-lifecycle-tests.md) is blocked by this ticket for the runner change.
+- Proxy decided (2026-10-25, stage 2): add tests/test_runner.gd to Primary files (scope: one child-run case whose test awaits a SceneTree timer and then fails an assert) and prove criterion 1 there — the runner's self-tests and their `_run`/`_case` helpers already live there (CORE-001, UI-004 precedent), and test_time_model.gd alone would pass vacuously against today's runner.

@@ -165,6 +165,57 @@ func test_a_premove_reads_maia_s_own_clock_and_the_starting_time():
 	assert_eq(_moves_at_once(game, {"e7e5": 0.99, "c7c5": 0.01}, 60, clock), ["e7e5"])
 
 
+# A sure 0.3 s delay against Lc0's 0.1 s, on a real-time clock: Maia's move after the full wait.
+const DELAY_MS := 300
+const COMPUTE_MS := 100
+
+
+# Follows Maia's move through its wait, a guard past it, and charges White's clock on arrival, as the
+# game does. Returns the moves at think()'s return, all moves after the guard, and their arrival times.
+func _delayed_move() -> Dictionary:
+	var table := {"clock_bins": [0.0, 2.0], "top_p_bins": [0.0, 1.0],
+			"buckets": {"3+2/maia-1500/0/0": {"median": DELAY_MS / 1000.0, "log_sigma": 0.0}}}
+	var bridge := SlowBridge.new()
+	bridge.policy = {"e2e4": 0.5, "d2d4": 0.5}
+	bridge.compute_ms = COMPUTE_MS
+	# Held here until the guard ends: Maia must outlive its own wait.
+	var maia = MaiaPlayer.new(bridge)
+	var clock = Clock.new("3+2", Time.get_ticks_msec)
+	maia.clock = clock
+	maia.control = "3+2"
+	maia.level = "maia-1500"
+	maia.time_table = table
+	clock.moved("w")
+	clock.moved("b")  # Both first moves are untimed: White's clock runs from here, at 180 s.
+	var asked := Time.get_ticks_msec()
+	var moves := []
+	var arrivals := []
+	maia.move_ready.connect(func(move):
+		moves.append(move)
+		arrivals.append(Time.get_ticks_msec() - asked)
+		clock.moved("w"))
+	maia.think(Game.new())
+	var at_once := moves.duplicate()
+	await Engine.get_main_loop().create_timer(DELAY_MS * 3 / 1000.0).timeout
+	return {"at_once": at_once, "moves": moves, "arrivals": arrivals,
+			"charged": 180000 + clock.increment - clock.left("w")}
+
+
+func test_a_delay_longer_than_lc0_s_compute_brings_one_move_after_the_wait():
+	var run := await _delayed_move()
+	assert_eq(run.at_once, [], "nothing before the wait")
+	assert_eq(run.moves.size(), 1, "exactly one move: %s" % [run.moves])
+	assert_true(run.arrivals.size() == 1 and run.arrivals[0] >= DELAY_MS,
+			"arrived after %s ms, the delay is %d" % [run.arrivals, DELAY_MS])
+
+
+func test_maia_s_clock_is_charged_the_delay_when_it_outlasts_lc0():
+	var run := await _delayed_move()
+	# max(0.3 s, 0.1 s); a timer resolves on a frame, so allow a few frames past it.
+	assert_true(run.charged >= DELAY_MS and run.charged < DELAY_MS + 100,
+			"charged %d ms, max(delay, compute) is %d" % [run.charged, DELAY_MS])
+
+
 func _median(table: Dictionary, control: String, level: String, clock_fraction: float, top_p: float):
 	return TimeModel.bucket(table, control, level, clock_fraction, top_p).get("median")
 
