@@ -1,5 +1,5 @@
 # UI-005: Settings store and screen
-Stage: to-review
+Stage: done
 Blocked by: UI-004
 Review: agent
 Difficulty: normal
@@ -107,3 +107,32 @@ Verdict: Reopen — criterion 5: a saved theme that no longer exists is kept, an
 - `core/settings.gd` now preloads `ui/theme_loader.gd` (a plain RefCounted with no UI nodes), a core-to-ui dependency. The screen's theme lists already come from the same loader, so every name it offers passes.
 
 Gate evidence: C:/Users/Lage/AppData/Local/Temp/claude/D--Desktop-Projects-P-Chess--artifacts-build-lanes-core/7c51381b-503c-4c7e-a0ab-29c06332bfd3/scratchpad/UI-005-reopen-gate.json
+
+#### Resolution (2026-10-24, re-review)
+
+Verdict: Approve
+
+Stage 3 (opus-5.5), re-review of the ❌ item and the diff since the reopen (a8c019f..ec13578). The Standards and Spec reviews ran as separate sub-agents. The Spec review found nothing. The Standards review called the core→ui preload a hard breach of spec §2; that section lists folders and states no dependency rule, so I record it below as a note, not a finding.
+
+Examined: every caller of `Settings.valid`. `_init` runs it once per key on load, and `set_value` runs it on every change. The screen (`ui/settings.gd`) builds its Board, Pieces and Sounds lists from the same `ThemeLoader.list_themes`, so every name it offers passes, and a `user://themes` set passes too, because the loader scans both roots. A non-String theme still fails the type check before any folder scan. `list_themes("pieces")` lists only complete sets, so an incomplete set now falls back to cburnett in the store as well; before, `load_pieces` already did that with a warning. No other test or caller saves a theme name: `test_session.gd` calls `board.set_piece_theme("cburnett")` directly. `main._apply` is unchanged. Not examined: the manual restart check, and an exported build (the folder scan of `res://themes` is the one the loaders already rely on).
+
+Criteria:
+
+5. ✅ A saved board, pieces or sounds name with no folder now reads as brown, cburnett or sfx, and `set_value` refuses it (`test_a_saved_theme_that_no_longer_exists_falls_back_to_its_default`). The nine sfx sounds load after the fallback, so nothing goes silent. A tracked set (`piano`) is kept, so the fallback does not pass by rejecting every theme. The test uses only tracked folders (`git ls-files themes`: boards/brown, pieces/cburnett, sounds/sfx, nes, piano and futuristic), so a different checkout cannot change its result. The previous verdicts on criteria 1–4 stand. The diff does not touch them, and their tests pass.
+
+Rules: a869f56 touches only `tests/test_settings.gd` and the ticket, 0b95f19 only `core/settings.gd`, and ec13578 only the ticket. Both files are in Primary files. The branch sat on the session tip a8c019f, so no rebase was needed. Merged as bd5783f.
+
+Red-green: I reran the suite myself in a throwaway worktree at a869f56: `115 passed, 1 failed`, with the new test failing on five asserts (`expected "sfx", got "deleted-or-misspelled"`, the same for brown and cburnett, `expected 9, got 0` sounds, and the refused `set_value`). Green on 0b95f19: exit 0, `116 passed, 0 failed`, from the receipt in the `Gate evidence:` line above. Production code has not changed since that commit, so I reused the receipt rather than rerunning the gate.
+
+Not findings (no criterion and no regression), noted only:
+- `core/settings.gd` now preloads `ui/theme_loader.gd`, which makes core depend on ui. The loader is a plain RefCounted with no nodes, and no documented rule forbids this. If the layers are ever separated, the loader moves to core.
+- `valid` scans the theme folders on every check. That is three scans at start and one for each theme change, so it costs nothing that matters.
+- The `## Comments` line from stage 2 ("A theme only has to be a non-empty name") and the first Resolution's matching Disclosure describe the old rule. They stay as history, and the Disclosure below replaces them.
+
+`Proxy decided` lines: none.
+
+Acceptance: pending | nobody has yet changed each setting, restarted the app and checked that it stuck. Evidence so far: gate 116/116 on 0b95f19, the reproduced red on a869f56, and the first review's screenshots and mutation check (quoted block above).
+Disclosure: decision | none | stage 2's own judgement, without a proxy (## Comments): the ranges are animation 0–1000 ms, volume 0–100%, τ 0–20% and T 0.1–3.0, and a theme name must match a folder that `ThemeLoader.list_themes` finds (bundled or `user://themes`). The spec leaves all of these open.
+Disclosure: decision | none | `MaiaPlayer.think(game, time_left := 0, start_time := 0)` now takes Maia's clock in ms so that panic can apply; the old one-argument calls keep their behaviour (## Comments).
+Disclosure: decision | none | `core/settings.gd` depends on `ui/theme_loader.gd` (stage 2 after the reopen; note above).
+Disclosure: pending | release | the manual Verification check (change each setting, restart, see it stuck) has not been run by a person.
