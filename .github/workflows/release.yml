@@ -1,0 +1,94 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - name: Install Godot 4.7.2 and matching export template
+        run: |
+          $downloads = @{
+            'Godot_v4.7.2-stable_win64.exe.zip' = '731980f9608d61333e5baf54a2ef17210acc7a538446c0cb9969f002aca1e953'
+            'Godot_v4.7.2-stable_export_templates.tpz' = 'f298490b8d44d934be425a5a65a51bf15f422428b229a06a6e11d9ffea248011'
+          }
+          foreach ($file in $downloads.GetEnumerator()) {
+            $path = Join-Path $env:RUNNER_TEMP $file.Key
+            Invoke-WebRequest "https://github.com/godotengine/godot/releases/download/4.7.2-stable/$($file.Key)" -OutFile $path
+            if ((Get-FileHash $path -Algorithm SHA256).Hash -ne $file.Value) {
+              throw "SHA-256 mismatch: $($file.Key)"
+            }
+          }
+          Expand-Archive "$env:RUNNER_TEMP/Godot_v4.7.2-stable_win64.exe.zip" "$env:RUNNER_TEMP/godot"
+          "GODOT=$env:RUNNER_TEMP/godot/Godot_v4.7.2-stable_win64_console.exe" >> $env:GITHUB_ENV
+
+          $templates = "$env:APPDATA/Godot/export_templates/4.7.2.stable"
+          New-Item -ItemType Directory -Force $templates | Out-Null
+          $archive = [IO.Compression.ZipFile]::OpenRead("$env:RUNNER_TEMP/Godot_v4.7.2-stable_export_templates.tpz")
+          try {
+            [IO.Compression.ZipFileExtensions]::ExtractToFile(
+              $archive.GetEntry('templates/windows_release_x86_64.exe'), "$templates/windows_release_x86_64.exe")
+          } finally {
+            $archive.Dispose()
+          }
+
+      - name: Preserve raw theme assets
+        run: |
+          # ThemeLoader reads SVG, JSON and OGG bytes directly, without imported resources.
+          Get-ChildItem themes -Recurse -File | Where-Object { $_.Extension -ne '.import' -and -not $_.Name.StartsWith('.') } | ForEach-Object {
+            Set-Content -LiteralPath "$($_.FullName).import" -Value "[remap]`nimporter=`"keep`"" -Encoding utf8NoBOM
+          }
+
+      - name: Import project
+        run: |
+          & $env:GODOT --headless --editor --import
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Export Windows build
+        run: |
+          New-Item -ItemType Directory -Force build/windows | Out-Null
+          & $env:GODOT --headless --export-release 'Windows Desktop' build/windows/P-Chess.exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Fetch verified engine and Maia networks
+        run: ./scripts/fetch-engine.ps1 -Root "$env:GITHUB_WORKSPACE/build/windows"
+
+      - name: Include licences and source links
+        run: |
+          $licence = 'build/windows/engine/weights/COPYING'
+          Invoke-WebRequest https://raw.githubusercontent.com/CSSLab/maia-chess/v1.0/LICENSE -OutFile $licence
+          if ((Get-FileHash $licence -Algorithm SHA256).Hash -ne '3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986') {
+            throw 'SHA-256 mismatch: Maia COPYING'
+          }
+          Copy-Item docs/THIRD_PARTY.md build/windows/THIRD_PARTY.md
+
+      - name: Verify package and zip
+        run: |
+          $required = @('P-Chess.exe', 'P-Chess.pck', 'THIRD_PARTY.md', 'engine/lc0/lc0.exe', 'engine/lc0/COPYING', 'engine/weights/COPYING')
+          $required += 11..19 | ForEach-Object { "engine/weights/maia-$($_ * 100).pb.gz" }
+          foreach ($file in $required) {
+            if (-not (Test-Path -LiteralPath "build/windows/$file" -PathType Leaf)) {
+              throw "Release package is missing $file"
+            }
+          }
+          Compress-Archive -Path build/windows/* -DestinationPath "$env:RUNNER_TEMP/P-Chess-windows-x86_64.zip"
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$env:RELEASE_TAG" "$env:RUNNER_TEMP/P-Chess-windows-x86_64.zip" --verify-tag --title "$env:RELEASE_TAG" --notes-file docs/THIRD_PARTY.md
