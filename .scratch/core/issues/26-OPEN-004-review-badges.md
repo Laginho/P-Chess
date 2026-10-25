@@ -1,5 +1,5 @@
 # OPEN-004: Review badges and repertoire check
-Stage: to-implement
+Stage: implementing
 Blocked by: HIST-002, OPEN-003
 Review: agent
 Difficulty: normal
@@ -33,3 +33,5 @@ The review marks where the game was in book and how your moves matched your repe
 - `tests/test_badges.gd`: Book badges up to the exit, Repertoire / Left repertoire with the expected moves, and no badges with the setting off. Red because `bot/badges.gd` does not exist.
 
 ## Comments
+
+- Stage 2 caller inspection: `ui/main.gd` is the caller of `review.present` and owns game start, rematches, settings and the setup catalog/repertoire. Existing review/export/time and setup colour/error behavior must remain intact. The new pure seam takes UCI moves and book paths; boundaries include empty games/books, unchecked lines, first exit and later transpositions back into the catalog. Tests live in `tests/test_badges.gd` as contracted.
