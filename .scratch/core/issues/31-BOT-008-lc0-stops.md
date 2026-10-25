@@ -1,5 +1,5 @@
 # BOT-008: Say so when Lc0 stops
-Stage: to-review
+Stage: done
 Blocked by: BOT-004
 Review: agent
 Difficulty: normal
@@ -46,3 +46,18 @@ Gate evidence: C:\Users\Lage\AppData\Local\Temp\BOT-008-54f3b88-gate.json
 Acceptance: pending | Scene verification above establishes the real scene's error/setup behavior headlessly for both failure modes; interactive visual inspection of the Task Manager scenario remains pending.
 Disclosure: decision | none | Proxy clarification above: explicit Lc0 stdout `error ` is fatal even after `readyok`, preventing fallback policy from an unverified net. PolicyTemperature remains unchanged, and no general timeout is introduced.
 Disclosure: pending | release | Interactive visual inspection from Verification remains pending; both real-process failure cases and the resulting scene state passed automated headless verification above.
+
+#### Resolution (2026-10-25)
+Verdict: Approve
+
+- Decision: independently reviewed `90ec41a...65f42f5` on Standards and Spec axes; both reported zero findings. No review-authored production changes or contract edits. Rebase was already current; merged without conflicts into `sweatshop/core/2026-10-25-0159` as `33dbaff`.
+- Standards: scope is limited to the three Primary files and this ticket. Every implementation cycle separates its test-only and production-only commits; no unrelated refactoring, generated artifacts or actionable code smells found. Final `git diff --check` passed.
+- Criterion 1: passed. `poll()` checks process death before consuming buffered replies; cleanup clears commands, reply state, policy buffers, threads and pid before emitting once. Restart works without replaying abandoned requests; intentional shutdown emits no `stopped`.
+- Criterion 2: passed. Explicit stdout `error ` is fatal even after `readyok`; cleanup preserves its diagnostic and returns before processing a fallback policy. The missing-net test calls `set_level` then `request_policy` against the installed Lc0.
+- Criterion 3: passed by code inspection and independent headless scene checks. The handler stops/detaches clocks, invalidates Maia's pending moves, cancels board interaction and premoves, disables draw claims, hides review and replaces Start with the bridge error. Starting again after failure is rejected, including after the catalog await. No chess result or history entry is fabricated.
+- Criterion 4: passed live, without skips. Both committed cases check exactly one signal within 10 s and no abandoned/failed policy; repeated polling and teardown do not duplicate the signal.
+- Examined callers and interactions: bridge `start`, `set_level`, `request_policy`, `poll`, `stop` and destruction; Main `_ready`, `_start` and its catalog await, `_next_turn`, setup/rematch/resign/result/history paths; Maia FIFO policies, generation checks and delayed timers; board drag/promotion/premove cancellation; core/display clocks and setup error persistence across opening changes. Interactive Task Manager verification and exported-build inspection were not performed.
+- Red/green evidence reviewed: `cea3f3f` failed for the absent `stopped` signal (**229 passed, 1 failed**); production `ef4c5e2` passed **6 focused UCI tests**. Test-only `fd69bd4` failed on the actual missing-net fallback (**6 passed, 1 failed**); production `54f3b88` passed **7 focused UCI tests**. Inspected both original red logs and all five commit stats.
+- Gate: official `Assert-GateEvidence` verified receipt command, exit status, log hash, tested commit and production equality against both review HEAD and merge `33dbaff`. Reused the unchanged-code receipt for `54f3b88`: `godot --headless -s tests/run.gd`, exit **0**, **231 passed, 0 failed**, all **7 UCI tests live**, no skips. No gate rerun was needed.
+- Independent scene verification: reran the existing temporary `BOT-008-ui-smoke.gd`, `BOT-008-ui-net-smoke.gd` and `BOT-008-late-smoke.gd` with `godot --headless --path . -s <script>`. Both real-process scene cases reported zero failures; the scheduled Maia move was invalidated after `stopped`. The restricted environment printed Godot log-file/certificate-store startup errors; all scene assertions passed and no script errors occurred.
+- Proxy decisions reviewed: the original `Proxy decided (opus)` from BOT-004 created this scoped follow-up and avoided a general reply timeout; `Proxy decided (gpt-6-astra high, fallback)` clarified fatal explicit errors after actual Lc0 fallback evidence. Implementation follows both; PolicyTemperature remains at the existing shared default. The decision and pending release acceptance disclosures above remain in force.
