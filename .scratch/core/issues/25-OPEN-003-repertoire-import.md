@@ -41,3 +41,5 @@ Proxy decided (gpt-6-astra high, fallback): Add narrowly scoped Main repertoire 
 Disclosure: decision | none | OPEN-003 Comments, proxy scope/colour amendment: adds the existing Main lifecycle seam and scene tests, preserves shared-catalog history and swapped-colour rematches; no migration or additional release condition.
 
 - Stage-2 harness correction: `Bh6` is legal after `1. d4 d5`; the illegal-move sample now uses `Bh5`. The correction is a separate test-only commit; the missing-import API red proof still applies, and the corrected test is rerun against the committed parser before restoring persistence implementation.
+
+- Stage-2 scene-harness correction: probe Setup rather than an unready Main, whose dynamically allocated review/settings screens are not parented until `_ready`. Verify weighting by emitted production moves (a policy/cut that chooses e5 only with the imported weights), rather than inspecting Maia's pending request internals. Re-proved red against the pre-integration Main before restoring the implementation.

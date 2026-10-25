@@ -213,14 +213,14 @@ func _session(folder: String):
 
 
 func test_main_uses_repertoire_for_maia_catalog_for_history_and_preserves_rematches_and_modes():
-	var main = load("res://ui/main.tscn").instantiate()
-	var supported := main.get_node("Setup").get("repertoire") != null
-	main.free()
+	var setup_probe = load("res://ui/setup.tscn").instantiate()
+	var supported := setup_probe.get("repertoire") != null
+	setup_probe.free()
 	if not supported:
 		assert_true(false, "repertoire lifecycle exists")
 		return
 	var folder := _folder()
-	main = _session(folder)
+	var main = _session(folder)
 	var setup = main.setup
 	var opening: OptionButton = setup.get_node("Center/Form/Opening")
 	opening.select(2)
@@ -232,11 +232,12 @@ func test_main_uses_repertoire_for_maia_catalog_for_history_and_preserves_rematc
 	assert_true(main.maia.target_id.begins_with("repertoire:"))
 	assert_true(main.history.book == setup.book, "history retains catalog recognition")
 	main.maia.clock = null
+	main.maia.book_intensity = "strong"
+	main.maia.tau = 0.5
 	assert_true(main.board_view.play("e2e4"))
 	assert_eq(main.uci.requests[-1], PackedStringArray(["e2e4"]))
-	assert_true(main.maia._pending[-1].weights.e7e5 > 1.0, "book applied before policy sampling")
-	assert_eq(main.maia._pending[-1].weights.d7d5, 1.0)
-	main.uci.policy_ready.emit({"e7e5": 1.0})
+	# With strong book weights e5 survives the 50% cut; without them only d5 survives.
+	main.uci.policy_ready.emit({"e7e5": 0.1, "d7d5": 0.9})
 	assert_eq(main.board_view.game.moves, PackedStringArray(["e2e4", "e7e5"]))
 	var first_target: String = main.maia.target_id
 	main.board_view.game.resign("w")
