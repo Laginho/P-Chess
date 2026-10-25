@@ -14,6 +14,8 @@ var storage_dir := "user://repertoires"
 
 func names() -> Array[String]:
 	var saved: Array[String] = []
+	if not DirAccess.dir_exists_absolute(storage_dir):
+		return saved
 	for file in DirAccess.get_files_at(storage_dir):
 		if file.ends_with(".json") and Book._valid_name(file.trim_suffix(".json")):
 			saved.append(file.trim_suffix(".json"))
