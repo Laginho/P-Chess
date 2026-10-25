@@ -132,6 +132,34 @@ func test_save_recovers_corrupt_result_records_and_preserves_valid_stats():
 		_clean(folder)
 
 
+func test_main_recovers_corrupt_stats_once_and_reports_them_in_the_review():
+	for record in [{"wins": 12}, 12]:
+		var folder := _folder()
+		if not _seed_result_records(folder, record):
+			_clean(folder)
+			continue
+		var time := FakeTime.new()
+		var main = _session(folder, time)
+		_key(main, KEY_ESCAPE)
+		_key(main, KEY_ESCAPE)
+		main._show_result()
+		assert_true(main.board_view.game.is_over())
+		assert_true(main.history.error.contains("Corrupt"), "corrupt stats are reported after saving")
+		assert_true(main.result_label.text.contains("History: " + main.history.error))
+		assert_true(main.result_label.text.contains("Space for a rematch"))
+		var review = main.get_node("Review")
+		assert_true(review.visible, "review still opens after corrupt history is recovered")
+		assert_true(review.get_node("Margin/Content/Result").text.contains("History: " + main.history.error),
+				"the visible review reports the corruption")
+		_assert_recovered_result_records(folder)
+		var games := _games(folder)
+		assert_eq(games.size(), 1, "repeated results do not duplicate saves during recovery")
+		if games.size() == 1:
+			assert_eq(games[0].result, "0-1")
+		main.free()
+		_clean(folder)
+
+
 func test_finished_game_saves_one_pgn_with_headers_moves_and_exact_clocks():
 	var folder := _folder()
 	var history = History.new(folder)
