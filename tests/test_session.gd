@@ -146,6 +146,13 @@ func test_a_rematch_drops_the_piece_held_when_the_game_ended():
 
 func _session(waits):
 	var main = MainScene.instantiate()
+	var folder := "user://test_session_history_%d" % Time.get_ticks_usec()
+	main.history = load("res://core/history.gd").new(folder)
+	main.tree_exiting.connect(func():
+		for subdir in [folder.path_join("games"), folder]:
+			for file in DirAccess.get_files_at(subdir):
+				DirAccess.remove_absolute(subdir.path_join(file))
+			DirAccess.remove_absolute(subdir))
 	main.uci.free()
 	main.uci = HeldBridge.new()
 	main.maia = Main.MaiaPlayer.new(main.uci, waits.start)
