@@ -235,7 +235,7 @@ func test_setup_lists_saved_selections_and_emits_catalog_choice_while_free_stays
 	Engine.get_main_loop().root.add_child(setup)
 	var modes: OptionButton = setup.get_node("Center/Form/Opening")
 	assert_true(not modes.is_item_disabled(1), "Catalog is enabled")
-	assert_true(modes.is_item_disabled(2), "repertoire still belongs to OPEN-003")
+	assert_true(not modes.is_item_disabled(2), "My repertoire is enabled")
 	var settings: Array = []
 	setup.started.connect(func(choice): settings.append(choice))
 	setup.get_node("Center/Form/Start").pressed.emit()

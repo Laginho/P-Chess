@@ -12,6 +12,7 @@ Difficulty: normal
   - ui/main.gd (OPEN-003 lifecycle only: load the saved repertoire before starting play, route its book to Maia in My repertoire mode, preserve the shared catalog for history recognition, and handle actual game colours, rematches, mode changes and load failures)
   - New: tests/test_repertoire.gd
   - New: tests/fixtures/pgn/repertoire_*.pgn
+  - tests/test_catalog.gd (only migrate the temporary My repertoire-disabled assertion in test_setup_lists_saved_selections_and_emits_catalog_choice_while_free_stays_compatible to expect the mode enabled; preserve all other assertions)
 
 #### What to build
 
@@ -43,3 +44,9 @@ Disclosure: decision | none | OPEN-003 Comments, proxy scope/colour amendment: a
 - Stage-2 harness correction: `Bh6` is legal after `1. d4 d5`; the illegal-move sample now uses `Bh5`. The correction is a separate test-only commit; the missing-import API red proof still applies, and the corrected test is rerun against the committed parser before restoring persistence implementation.
 
 - Stage-2 scene-harness correction: probe Setup rather than an unready Main, whose dynamically allocated review/settings screens are not parented until `_ready`. Verify weighting by emitted production moves (a policy/cut that chooses e5 only with the imported weights), rather than inspecting Maia's pending request internals. Re-proved red against the pre-integration Main before restoring the implementation.
+
+Proxy decided (gpt-6-astra high, fallback): Update only the temporary My repertoire-disabled assertion in test_catalog.gd to expect the mode enabled — OPEN-003 now implements the feature that the OPEN-001 assertion explicitly deferred; preserve every Catalog/Free assertion.
+
+Disclosure: decision | none | OPEN-003 Comments, legacy setup assertion migration: replaces OPEN-001's temporary disabled-mode expectation with the now-implemented My repertoire behavior; all Catalog/Free assertions remain unchanged. No additional integration or release condition.
+
+- First complete gate: `216 passed, 1 failed`, exit 1. The sole failure was the OPEN-001 temporary assertion `repertoire still belongs to OPEN-003`, now migrated as approved above. No production failure or script error was reported. The complete gate is rerun after the test-only migration.
