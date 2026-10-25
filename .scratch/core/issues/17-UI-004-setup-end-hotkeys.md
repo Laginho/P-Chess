@@ -1,5 +1,5 @@
 # UI-004: Setup, game end, rematch and hotkeys
-Stage: to-implement
+Stage: to-review
 Blocked by: CLOCK-001
 Review: agent
 Difficulty: normal
@@ -11,6 +11,9 @@ Difficulty: normal
   - ui/move_list.gd (reset only)
   - ui/board_view.gd (scope: the `game` setter clears the held piece, its targets, the pending promotion, the open picker and the slide and snap-back tweens)
   - New: tests/test_session.gd
+  - bot/maia_player.gd (request-local state, generation invalidation, stale guards before policy processing and after the wait, injectable wait completion)
+  - tests/run.gd (defer test execution until the root enters the tree)
+  - tests/test_runner.gd (runner lifecycle and existing failure reporting)
 
 #### What to build
 
@@ -20,7 +23,7 @@ The full game loop of §9.1 and §9.2: the complete setup screen, a clear game-e
 
 1. The setup screen picks colour (white / black / random), time control, Maia level and opening mode. Only Free is enabled until the opening tickets land.
 2. At game end the result and its reason are shown (checkmate, stalemate, time, resignation, 50-move, repetition, insufficient material).
-3. `Space` after the game starts a rematch with the same settings and the colours swapped (from the colours actually played, also after random). During a game `Space` does nothing.
+3. `Space` after the game starts a rematch with the same settings and the colours swapped (from the colours actually played, also after random). During a game `Space` does nothing. A rematch invalidates all previous-game Maia requests: old policies are discarded before sampling or scheduling a delay, and already waiting replies are discarded before emitting a move. The current reply plays exactly once regardless of completion order, including after two rematches when an old move becomes legal again.
 4. The first `Esc` shows a hint; a second `Esc` within 2 s resigns. After 2 s the hint goes away and the next press starts over.
 5. A Claim draw button is enabled only when CORE-004 reports a threefold claim; auto-claim is on (a constant until UI-005 makes it a setting). Maia never claims.
 6. `F11` toggles focus mode: only the board and the clocks are visible.
@@ -35,6 +38,8 @@ The full game loop of §9.1 and §9.2: the complete setup screen, a clear game-e
 ## Tests stage 2 writes (own commit, red)
 
 - `tests/test_session.gd`: rematch swaps colours and keeps settings; the double-`Esc` window at 1.9 s and 2.1 s with a fake clock. Red because the session logic does not exist.
+- Reopen integration seam: real `ui/main.tscn` in the headless tree, a fake UCI bridge and manually completed timer signals. Drive Esc/Space through Main and assert the current game's moves for an old policy arriving after rematch, reversed wait completion and two rematches with a legal stale move. Red because Main matches replies by arrival order and Maia shares request state across games.
+- `tests/test_runner.gd`: tests can add a node to the active tree and receive `_ready`; existing subprocess cases still prove assertion, script-load and runtime failures exit nonzero. Red because tests currently run inside `_initialize`.
 
 ## Comments
 
@@ -159,3 +164,22 @@ Reopen diagnosis: new defect at integration, not an earlier review miss of UI-00
 Note for stage 2: the block quoted above is the previous review's record, kept for history; the live fields are the ones below it. Write the new receipt as `Gate evidence: <path>` at the very start of its own line, with no list dash and nothing after the path. A stage 3 that adds notes to other tickets after the gate makes the driver park a valid approval; put such notes before the gate commit.
 
 Verdict: Reopen — criterion 3: Maia's out-of-order late replies after a rematch are matched by arrival order, so the current reply is dropped and a stale move is played
+
+Proxy decided (gpt-6-astra high, fallback): add `bot/maia_player.gd` for request snapshots, generation cancellation and stale guards, plus narrowly scoped runner support for real Main lifecycle tests — UCI policies remain FIFO, but Maia's waits can complete out of order, so cancellation belongs before and after that wait. Preserve `policy_ready(policy)` and `move_ready(move)`; retain cancelled FIFO snapshots until their policies arrive. Scope and criterion 3 were updated above from this read-only proxy decision.
+
+#### Stage 2 after the integration reopen (2026-10-25)
+
+- Implementation: `Main._start` calls `MaiaPlayer.begin_game` before assigning the new game. Maia snapshots each request's generation, game, ply, timestamp, picker and clock/settings context before invoking the bridge, matches FIFO policies before awaiting, and checks validity before sampling and after the wait. Cancelled FIFO entries remain queued until their own policies arrive. Main's arrival counters are removed; both signal signatures and the bridge protocol are preserved. Standalone `think` callers automatically start a generation when their game changes.
+- Callers and boundaries examined: Main is the only production `think` caller and `move_ready` listener; existing Maia, settings and time-model tests also call `think`, including synchronous bridges and the no-clock path. `begin_game` invalidates requests even when a new game starts on the human's turn. Empty pending queues, ended games and changed plies are rejected. The full gate covers existing picker/panic settings, time-model calibration, clocks and live Lc0 behavior.
+- Runner cycle: test-only b6ceb92 was red with `8 passed, 1 failed` in the focused runner suite (the new node was neither inside the tree nor ready). Runner-only 6075057 defers execution from `_initialize`; green `9 passed, 0 failed`, including the existing assertion, script-load and runtime-error subprocess cases. No generic async runner support was needed.
+- Reply cycle: test-only 2b2222a was red with `9 passed, 1 failed` in the focused suite because the injectable wait-completion constructor seam did not exist. Production-only 6b5d3a4 passed the real Main reversed-completion regression (`17 passed, 0 failed` focused). The later test-only commits 8d688bd and 9af1609 add the queued-policy/two-rematch boundaries, silence fixture audio and update the off-tree fixture comment/anchors. Those cases also have mutation-based red proof below.
+- Behavioral red proof on the committed tests: removing only the pre-policy guard gave `18 passed, 1 failed`; an old policy scheduled a wait, added a latency sample and displaced the current reply. Removing only the post-wait guard gave `17 passed, 2 failed`; the new game gained stale `e7e5`, and after two rematches a stale legal `d2d4` played as the human. Both mutations were restored before the gate. These tests exercise production Maia's actual `await`, with manually emitted timeout signals and the real Main Esc/Space path; they do not copy cancellation logic or depend on a window or elapsed time.
+- Validation: committed code 9af1609, `godot --headless -s tests/run.gd`, exit 0, `137 passed, 0 failed`, no skipped tests or script errors. The live Maia test played 30 plies through Lc0 (median 16.2 ms, diagnostic only). Expected malformed-table warnings remain from the existing time-model tests. Final diff and per-commit file separation reviewed; only the approved Primary files and this ticket changed.
+- Environment: the initial unprivileged full-suite attempt could not write `user://` fixtures and was stopped. The focused red/green runs and the successful gate used the normal writable user-data environment. This did not require any repository workaround.
+
+Acceptance: pending | criterion 3's integration regression is covered by the three committed real Main tests above. The original visual/manual Verification checks (including F11 and claiming a threefold with auto-claim off) remain pending; stage 2 does not approve its own implementation.
+Disclosure: decision | none | read-only proxy decision above (gpt-6-astra high, fallback) expands Primary files and criterion 3 for generation cancellation and the minimal active-tree test seam; no saved data, settings or external signal/protocol change.
+Disclosure: pending | release | original manual product acceptance remains pending as recorded above. The prior "stale reply has no test" disclosure is superseded by the committed deterministic regression tests; a live-window rematch while Lc0 thinks was not performed.
+Disclosure: deferred | none | the earlier missing committed Main promotion-picker/snap-back lifecycle tests still have their open destination in `.scratch/core/issues/32-CLOCK-002-move-after-flag.md`; this runner now supports that in-tree seam, but this reopen only addresses Maia reply cancellation.
+
+Gate evidence: C:\Users\Lage\AppData\Local\Temp\p-chess-ui004-20261025\UI-004-9af1609-gate.json

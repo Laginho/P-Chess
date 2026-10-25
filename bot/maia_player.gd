@@ -28,15 +28,17 @@ var panic := "medium"
 
 var _bridge
 var _game
-var _asked_usec := 0
-# T and tau for the move being thought, panic applied.
-var _picker := {}
+var _generation := 0
+# Policies arrive FIFO, but each policy's wait may finish in a different order.
+var _pending := []
+var _wait_for_timeout: Callable
 
 
-func _init(bridge) -> void:
+func _init(bridge, wait_for_timeout := Callable()) -> void:
 	rng.randomize()
 	_bridge = bridge
 	_bridge.policy_ready.connect(_on_policy)
+	_wait_for_timeout = wait_for_timeout if wait_for_timeout.is_valid() else _timer_timeout
 
 
 # engine/weights/<level>.pb.gz next to the engine found by the bridge.
@@ -45,14 +47,24 @@ static func net_path(level: String) -> String:
 			.path_join("weights/%s.pb.gz" % level)
 
 
-# move_ready follows once the bridge answers. Maia's clock, in ms, drives the panic; a start_time of
-# 0 means no clock and no panic.
-func think(game, time_left := 0, start_time := 0) -> void:
+# Invalidate policies and waits even when the new game starts with the human's turn. Keep pending
+# snapshots: each obsolete entry must still consume its own eventual FIFO policy reply.
+func begin_game(game) -> void:
+	_generation += 1
 	_game = game
-	_asked_usec = Time.get_ticks_usec()
-	_picker = {"temperature": temperature, "tau": tau}
+
+
+# move_ready follows once the bridge answers. Maia's clock, in ms, drives the panic; a start_time of
+# 0 means no clock and no panic. Snapshot before requesting: a bridge can answer synchronously.
+func think(game, time_left := 0, start_time := 0) -> void:
+	if game != _game:
+		begin_game(game)
+	var picker := {"temperature": temperature, "tau": tau}
 	if start_time > 0:
-		_picker = MovePicker.panic(temperature, tau, panic, time_left, start_time)
+		picker = MovePicker.panic(temperature, tau, panic, time_left, start_time)
+	_pending.append({"generation": _generation, "game": game, "ply": game.moves.size(),
+			"asked_usec": Time.get_ticks_usec(), "picker": picker, "clock": clock,
+			"control": control, "level": level, "time_table": time_table})
 	# shortcut: every game starts from the initial position; keep the start FEN in Game when one does not.
 	_bridge.request_policy(Game.START, game.moves)
 
@@ -67,7 +79,13 @@ func median_ms() -> float:
 
 
 func _on_policy(policy: Dictionary) -> void:
-	var legal: PackedStringArray = _game.board.legal_moves()
+	if _pending.is_empty():
+		return
+	var request: Dictionary = _pending.pop_front()
+	if not _is_current(request):
+		return
+	var game = request.game
+	var legal: PackedStringArray = game.board.legal_moves()
 	var usable := {}
 	var top_p := 0.0
 	for move in policy:
@@ -78,16 +96,29 @@ func _on_policy(policy: Dictionary) -> void:
 		# Nothing legal to sample from: any legal move beats Maia never answering.
 		for move in legal:
 			usable[move] = 1.0
-	var move := MovePicker.pick(usable, rng, {}, _picker.tau, _picker.temperature)
-	var compute_ms := (Time.get_ticks_usec() - _asked_usec) / 1000.0
+	var move := MovePicker.pick(usable, rng, {}, request.picker.tau, request.picker.temperature)
+	var compute_ms: float = (Time.get_ticks_usec() - request.asked_usec) / 1000.0
 	latencies_ms.append(compute_ms)
-	if clock:
+	var request_clock = request.clock
+	if request_clock:
 		# Maia's clock runs through Lc0's time and the wait alike: it can flag.
-		var left: float = clock.left(_game.board.side_to_move) / 1000.0
-		var start: float = Clock.CONTROLS[control][0] / 1000.0
-		var delay := TimeModel.delay(left, clock.increment / 1000.0, start, _game.moves.size() / 2,
-				top_p, legal.size(), rng, TimeModel.bucket(time_table, control, level, left / start, top_p))
+		var left: float = request_clock.left(game.board.side_to_move) / 1000.0
+		var start: float = Clock.CONTROLS[request.control][0] / 1000.0
+		var bucket := TimeModel.bucket(request.time_table, request.control, request.level, left / start, top_p)
+		var delay := TimeModel.delay(left, request_clock.increment / 1000.0, start, game.moves.size() / 2,
+				top_p, legal.size(), rng, bucket)
 		var wait := TimeModel.wait(delay, compute_ms / 1000.0)
 		if wait > 0.0:
-			await Engine.get_main_loop().create_timer(wait).timeout
-	move_ready.emit(move)
+			await _wait_for_timeout.call(wait)
+	if _is_current(request):
+		move_ready.emit(move)
+
+
+func _is_current(request: Dictionary) -> bool:
+	return request.generation == _generation and request.game == _game \
+			and not request.game.is_over() and request.game.moves.size() == request.ply
+
+
+# Injectable timer completion: tests emit a signal explicitly instead of sleeping.
+func _timer_timeout(seconds: float) -> Signal:
+	return Engine.get_main_loop().create_timer(seconds).timeout
