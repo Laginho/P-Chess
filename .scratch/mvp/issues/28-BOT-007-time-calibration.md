@@ -32,11 +32,17 @@ An offline script that measures how humans at 1100–1900 spend time in bullet a
     After Bruno approves the download: python scripts/calibrate_time.py --url <dump> --max-bytes <limit>
     godot --headless -s tests/run.gd
 
+Offline tests establish script behavior before download approval. The real `data/time_model.json` is generated only after Bruno approves the planned download in chat. Until then, real calibration and M8 product acceptance remain pending; fixture output must not be committed as calibrated data.
+
 ## Tests stage 2 writes (own commit, red)
 
 - `scripts/test_calibrate_time.py`: think times from `%clk` with increment, the time-control and rating filters, and bucket assignment on the fixture PGN. Red because the script does not exist.
+- `scripts/test_calibrate_time.py`: CLI plan and explicit download opt-in at `main(argv)`, fixture-to-table execution with a mocked HTTP boundary, seeded bounded reservoir sampling, and `lc0_policy` through a local fake UCI process. No network. Red for missing CLI, sampling, or engine-boundary behavior.
 
 ## Comments
+
+- Proxy decided (gpt-6-astra high, fallback): Approve CLI, reservoir and local UCI-fake tests in the existing Primary test file, with real calibration pending Bruno's download approval — they verify existing criteria without expanding production scope or authorizing a download.
+- 2026-10-25 Coverage chronology: CLI/engine/sampling implementation already existed uncommitted before the proxy approved these additional seams. It was preserved outside the repository and the committed production restored before committing the additional tests. Their subsequent red/green evidence verifies behavior, but is not evidence that those tests preceded initial authoring. Separate real-Lc0 smoke on the fixture evaluated 8 moves with maia-1100/1500/1900, top P 0.1968–0.4014, producing 6 buckets at a demonstration-only minimum of 1; no fixture table was committed.
 
 - 2026-10-25 Streaming test harness correction: truncating a tiny single-block zstd frame produces no decompressed text, so the original assertion that earlier games survived was invalid. The fixture stream now flushes a complete block before truncating a later block in that same frame. The byte-cap assertion is re-proven red with the production LimitedReader cap disabled, then green with the cap restored.
 

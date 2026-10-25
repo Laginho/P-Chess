@@ -2,6 +2,9 @@ from pathlib import Path
 from dataclasses import replace
 import io
 import math
+import subprocess
+import sys
+import json
 
 import pytest
 
@@ -84,3 +87,96 @@ def test_fixture_extraction_from_a_capped_zstandard_stream():
     with pgn_stream(source, len(prefix)) as pgn:
         assert list(extract_samples(pgn))
     assert source.tell() == len(prefix)
+
+
+def test_cli_plans_then_calibrates_offline_fixture_with_local_uci_process(tmp_path, monkeypatch, capsys):
+    import calibrate_time as calibration
+
+    def forbidden_network(*args, **kwargs):
+        pytest.fail("A plan must not open the network")
+
+    monkeypatch.setattr(calibration, "urlopen", forbidden_network)
+    args = ["--url", "https://example.invalid/month.pgn.zst", "--max-bytes", "2000000000"]
+    assert calibration.main(args) == 0
+    assert "2,000,000,000" in capsys.readouterr().out
+
+    import zstandard
+    compressed = zstandard.ZstdCompressor().compress(FIXTURE.read_bytes())
+
+    class Response(io.BytesIO):
+        status = 206
+        headers = {"Content-Range": f"bytes 0-{len(compressed) - 1}/9999999"}
+        consumed = 0
+
+        def read(self, size=-1):
+            result = super().read(size)
+            self.consumed += len(result)
+            return result
+
+    response = Response(compressed + b"past the permitted prefix")
+
+    def fixture_response(request, timeout):
+        assert request.get_header("Range") == f"bytes=0-{len(compressed) - 1}"
+        assert request.full_url == "https://example.invalid/month.pgn.zst"
+        return response
+
+    monkeypatch.setattr(calibration, "urlopen", fixture_response)
+    weights = tmp_path / "Maia weights"
+    weights.mkdir()
+    for rating in range(1100, 1901, 100):
+        (weights / f"maia-{rating}.pb.gz").touch()
+    engine = tmp_path / "lc0.exe"
+    engine.touch()
+    transcript = tmp_path / "uci.txt"
+    fake = tmp_path / "fake_lc0.py"
+    fake.write_text('''
+import sys
+from pathlib import Path
+import chess
+board = chess.Board()
+for line in sys.stdin:
+    command = line.strip()
+    with Path(sys.argv[1]).open('a', encoding='utf-8') as log:
+        log.write(command + '\\n')
+    if command == 'uci':
+        print('uciok', flush=True)
+    elif command == 'isready':
+        print('readyok', flush=True)
+    elif command.startswith('position fen '):
+        board = chess.Board(command[len('position fen '):])
+    elif command == 'go nodes 1':
+        move = next(iter(board.legal_moves)).uci()
+        print('info string a1a8  (1) N: 1 (P: 99.00%)', flush=True)
+        print(f'info string {move}  (1) N: 1 (P: 40.00%)', flush=True)
+        print(f'bestmove {move}', flush=True)
+    elif command == 'quit':
+        break
+''', encoding="utf-8")
+    real_popen = subprocess.Popen
+
+    def fake_lc0(command, **kwargs):
+        assert command == [str(engine)]
+        return real_popen([sys.executable, "-u", str(fake), str(transcript)], **kwargs)
+
+    monkeypatch.setattr(calibration.subprocess, "Popen", fake_lc0)
+    output = tmp_path / "data/time_model.json"
+    args = ["--url", "https://example.invalid/month.pgn.zst", "--max-bytes", str(len(compressed)),
+            "--engine", str(engine), "--weights", str(weights), "--output", str(output),
+            "--min-samples", "1"]
+    # The approved flag here executes only local fixture I/O: no download occurs.
+    assert calibration.main(args + ["--download-approved"]) == 0
+    assert response.consumed == len(compressed)
+    table = json.loads(output.read_text(encoding="utf-8"))
+    assert len(table["buckets"]) == 5
+    assert all(b["clock_bin"] == 2 and b["top_p_bin"] == 1 for b in table["buckets"])
+    assert next(b["median"] for b in table["buckets"]
+                if b["control"] == "3+2" and b["level"] == "maia-1500") == 3
+    commands = transcript.read_text(encoding="utf-8").splitlines()
+    assert commands[:2] == ["uci", "setoption name VerboseMoveStats value true"]
+    nets = [command.rsplit("maia-", 1)[1] for command in commands
+            if command.startswith("setoption name WeightsFile value ")]
+    assert nets == ["1100.pb.gz", "1500.pb.gz", "1900.pb.gz"]
+    assert commands.count("isready") == 3
+    assert commands.count("go nodes 1") == 8
+    assert not any("PolicyTemperature" in command for command in commands)
+    assert commands[-1] == "quit"
