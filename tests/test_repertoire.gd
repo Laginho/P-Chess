@@ -76,3 +76,43 @@ func test_import_persists_colour_and_invalid_pgn_never_creates_or_replaces_a_sav
 	assert_true(not repertoire.load_saved("Missing").is_empty())
 	assert_eq(repertoire.lines, loaded.lines, "failed load preserves valid in-memory data")
 	_clean(folder)
+
+
+func test_repertoire_book_uses_existing_targets_weights_and_actual_maia_side():
+	var repertoire = _repertoire()
+	if repertoire == null:
+		return
+	assert_eq(repertoire.parse(FileAccess.get_file_as_string(STUDY), "w"), "")
+	var book = Book.new()
+	assert_true(book.has_method("load_repertoire"), "book accepts imported root-to-leaf paths")
+	if not book.has_method("load_repertoire"):
+		return
+	book.load_tsv("eco\tname\tpgn\nA00\tCatalog only\t1. d4 d5\n")
+	book.set_checked("Catalog only", true)
+	book.load_repertoire(repertoire.lines, "b")
+	assert_eq(book.entries.size(), 4, "replaces catalog")
+	assert_eq(book.selected_ids().size(), 4)
+	var counts := {}
+	for line in repertoire.lines:
+		counts[line.id] = 10 if line.moves[1] == "c7c5" else 0
+	var rng := RandomNumberGenerator.new()
+	var target: String = book.begin_game(counts, rng, "b")
+	assert_true(not target.is_empty())
+	var board = Board.from_fen(Book.START)
+	board.make_move("e2e4")
+	for intensity in {"weak": [5.0, 2.0], "medium": [20.0, 5.0], "strong": [100.0, 15.0]}:
+		var weights: Dictionary = book.weights(board, 1, intensity)
+		assert_eq(weights.e7e5, Book.INTENSITIES[intensity][0])
+		assert_eq(weights.c7c5, Book.INTENSITIES[intensity][1])
+		assert_eq(weights.d7d5, 1.0, "catalog doesn't leak into repertoire")
+	assert_eq(book.weights(board, 11).e7e5, 10.5)
+	for weight in book.weights(board, 16).values():
+		assert_eq(weight, 1.0)
+	assert_eq(book.begin_game({}, rng, "w"), "", "eligibility is actual Maia side")
+	book.load_repertoire(repertoire.lines, "w")
+	assert_true(not book.begin_game({}, rng, "w").is_empty(), "swapped rematch")
+	assert_eq(book.weights(Board.from_fen(Book.START), 0).e2e4, 20.0)
+	assert_eq(repertoire.colour, "w", "book preparation doesn't rewrite saved human colour")
+	book.load_repertoire([], "w")
+	assert_eq(book.begin_game({}, rng, "w"), "", "empty book clears previous continuations")
+	assert_eq(book.opening_name(PackedStringArray(["d2d4", "d7d5"])), "")
