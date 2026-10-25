@@ -1,5 +1,5 @@
 # CLEAN-006: Preserve real-Main rematch interaction lifecycle coverage
-Stage: to-implement
+Stage: implementing
 Status: ready-for-agent
 Blocked by: CLEAN-001
 Review: agent
