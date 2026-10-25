@@ -1,5 +1,5 @@
 # CLEAN-006: Preserve real-Main rematch interaction lifecycle coverage
-Stage: to-review
+Stage: done
 Status: ready-for-agent
 Blocked by: CLEAN-001
 Review: agent
@@ -38,3 +38,17 @@ Commit the real-Main lifecycle regression coverage owed by [UI-004](17-UI-004-se
 - Green: gate exit 0, `251 passed, 0 failed` on a1f433a (248 before plus the 3 new tests). The log shows Godot attributing later backtraces of expected `push_warning`s to the timer test's resumed frame; base logs show the same artefact on `_run` after CLEAN-001's timer test, and warnings are not collected as errors.
 - Callers examined: the `game` setter (Main `_start`, `_ready`, tests), `_cancel_interaction` (`cancel_premoves`, `_commit`, `premove_style`), Main `_show_result` (flag, resign, terminal moves). Not examined: the app in a window, by a person.
 Gate evidence: C:\Users\bruno\AppData\Local\Claude-Data\claude_pzs8sxrjxfjjc\side-session-notes\local_ea9dedf1-afd3-427a-be68-f9943a87cc6f\clean-006-gate.json
+
+#### Resolution (2026-10-25)
+
+Verdict: Approve
+
+- Reviewer: opus-5.5, stage 3. Rebased onto main at 4b39a70 (after CLEAN-004) with no conflicts. Merged as PR https://github.com/Laginho/P-Chess/pull/16 (6e51ddb). The review is posted as a PR comment.
+- Files: `tests/test_session.gd` only (test-only, no production change).
+- Criteria 1–3 ✅ by the three tests named in Stage 2's comment.
+- Criterion 4 ✅ This settles the reading stage 2 left open. On Main's real path, `_snap` is killed in two places: the `game` setter and `_show_result` → `cancel_premoves` → `_cancel_interaction`. Removing `_snap.kill()` from only one site still leaves the tween killed, so it is an equivalent mutant on this path. "Removal of `_snap.kill()`" means both sites, and the two-site proof satisfies the criterion. The off-tree board tests still cover the setter on its own.
+- Red proof: I reproduced the two-site `_snap.kill()` mutant here, giving `252 passed, 1 failed`, and only `test_a_main_rematch_kills_the_old_snap_back` fails (`expected "e7", got ""`). The mutant for criteria 1–2 is cited from stage 2's log `clean-006-mutant-no-reset-no-end-cleanup.log` (244/7) and was not rerun here.
+- Gate: on 43a70e6, exit 0, `253 passed, 0 failed`, 4 skipped (no lc0). The three new tests appear as PASS. CI passed on PR 16. Review receipt: C:\Users\bruno\AppData\Local\Claude-Data\claude_pzs8sxrjxfjjc\side-session-notes\local_ea9dedf1-afd3-427a-be68-f9943a87cc6f\clean-006-review-gate.json. It supersedes the stage-2 receipt above, which was taken on pre-rebase a1f433a.
+- What I examined: the `game` setter, `_cancel_interaction` and its callers (`cancel_premoves`, `_commit`), Main `_show_result`, and CLEAN-001's awaiting runner. I did not examine the app in a window.
+- No Proxy decided lines. No contract change.
+- Acceptance: passed | review receipt above, PR https://github.com/Laginho/P-Chess/pull/16
