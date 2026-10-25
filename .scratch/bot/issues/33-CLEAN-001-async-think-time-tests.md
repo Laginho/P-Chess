@@ -1,5 +1,5 @@
 # CLEAN-001: Async coverage for Maia's delayed move
-Stage: to-review
+Stage: done
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -44,3 +44,24 @@ non-blocking item.
   - Green on ec87f34: 244 passed, 0 failed, exit 0 (baseline main 241 passed).
 
 Gate evidence: C:\Users\bruno\AppData\Local\Claude-Data\claude_pzs8sxrjxfjjc\side-session-notes\local_ea9dedf1-afd3-427a-be68-f9943a87cc6f\clean-001-gate.json
+
+#### Resolution (2026-10-25)
+
+Verdict: Approve
+
+Stage 3 (opus-5.5), review of PR #14 (`4e0a1b1` test, `24a5b7f` fix, `a94aa1a` test harness fix, `b613dd8` handoff; rebased cleanly from `aa1cd8f`/`8b82d38`/`ec87f34`/`02607b5` onto `22b2326`). Review comment: https://github.com/Laginho/P-Chess/pull/14#issuecomment-6400486238
+
+- Criterion 1 ✅ `tests/run.gd` awaits `test.call(name)`. `test_runner.gd::test_an_assert_after_an_await_counts` runs a child case that fails after a SceneTree timer and expects exit ≠ 0 and "0 passed, 1 failed". It was red before the fix (child printed "1 passed, 0 failed", exit 0; suite 243 passed, 1 failed on `aa1cd8f`) and is green after it.
+- Criterion 2 ✅ `test_time_model.gd::test_a_delay_longer_than_lc0_s_compute_brings_one_move_after_the_wait`: a 300 ms delay against Lc0's 100 ms gives exactly one move within a 900 ms guard, arriving ≥ 280 ms. Two mutants of `bot/maia_player.gd` fail it (not committed; logs in stage 2's comment): skipping the wait (arrival at 104 ms) and a double emit (two moves).
+- Criterion 3 ✅ `test_maia_s_clock_is_charged_the_delay_when_it_outlasts_lc0`: the charge is within 300 ± 40 ms. The no-wait mutant charges 104 ms and fails it.
+- Test-first: `4e0a1b1` and `a94aa1a` touch only tests and the ticket, `24a5b7f` only `tests/run.gd`, `b613dd8` only the ticket. Primary files respected. `tests/test_runner.gd` is in scope through the stage-2 `Proxy decided` line below.
+- Examined: every `test_*` in `tests/` as callers of the runner change. None awaits today (the `await` hit in `test_badges.gd` is a message string), and `await` on a non-coroutine returns at once, so existing tests keep their frame behaviour. `_run` was already `call_deferred`, so becoming a coroutine is safe. Docs: spec §11 does not describe the call mechanism, so nothing is stale. Not examined: the timing bounds on a saturated machine (they allow 1–2 frames at 60 Hz). Five isolated stage-2 runs, this review's run and Ubuntu CI were all green.
+- Gate-log note: the expected `push_warning` of `test_a_malformed_table_warns_and_is_empty` prints Godot backtraces carrying stale coroutine frames from `_delayed_move`. This is cosmetic and also appears in stage 2's log.
+- Proxy decided lines: one (stage 2, 2026-10-25), adding `tests/test_runner.gd` to Primary files to prove criterion 1. Reviewed and agreed: the runner's self-tests and helpers live there, and the time-model tests alone passed vacuously against the old runner.
+- Finding (non-blocking): no per-test timeout. A `test_*` that awaits a signal that never fires now hangs the run until CI's `timeout-minutes: 15` stops it. Destination: [CLEAN-008](../../core/issues/39-CLEAN-008-runner-per-test-timeout.md).
+- Gate: rebased head `b613dd8` passed 248, failed 0, exit 0 (main's 245 + 3 new). CI `test` passed on the PR. PR #14 merged as `86f41a3` with no other change on `main` in between, so the merged tree equals `b613dd8`.
+
+Acceptance: passed | headless gate 248/0 and CI on PR #14; the change is test infrastructure only
+Disclosure: decision | none | stage-2 Proxy decided line added tests/test_runner.gd to Primary files; agreed in review (PR #14 comment)
+Disclosure: deferred | none | no per-test timeout in tests/run.gd, bounded by CI's 15-minute job timeout; open in [CLEAN-008](../../core/issues/39-CLEAN-008-runner-per-test-timeout.md)
+Gate evidence: C:\Users\bruno\AppData\Local\Claude-Data\claude_pzs8sxrjxfjjc\side-session-notes\local_ea9dedf1-afd3-427a-be68-f9943a87cc6f\clean-001-review-gate.json
