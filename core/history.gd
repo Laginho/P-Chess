@@ -75,7 +75,7 @@ func save(game, clocks: Array, settings: Dictionary, opening_name := "", target_
 		if game.reason == "time":
 			counts["flag_wins" if won else "flag_losses"] += 1
 	_results.set_value(settings.level, settings.control, counts)
-	var practiced: int = _results.get_value("practice", target_id, 0)
+	var practiced: int = practice_counts().get(target_id, 0)
 	if not target_id.is_empty():
 		_results.set_value("practice", target_id, practiced + 1)
 	status = _results.save(_root.path_join("stats.cfg"))
