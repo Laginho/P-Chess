@@ -1,5 +1,5 @@
 # UI-007: Premoves
-Stage: to-review
+Stage: to-implement
 Blocked by: UI-005
 Review: agent
 Difficulty: hard
@@ -75,3 +75,43 @@ Gate evidence: C:\Users\Lage\AppData\Local\Temp\UI-007-stage2-gate.json
 
 Acceptance: pending | The automated 1+0 scene scenario queues three moves, executes one, then drops the remaining queue after Maia captures the pawn required by the next move (`test_main_queues_human_moves_and_executes_one_per_maia_reply`). A person has not yet played the manual Verification game or checked the ghost rendering and premove audio.
 Disclosure: pending | release | Manual visual/audio acceptance remains as described above; headless tests validate input, move order, signals, settings, clock boundaries and promotion interruption, but do not judge appearance or sound quality.
+
+- Proxy decided (gpt-6-astra high, fallback): reopen UI-007 for criterion 2; queued moves must not capture the opposing king in the specified ghost position — unknown Maia replies are handled by execution-time revalidation and do not excuse accepting an invalid move against the current ghost.
+
+#### Resolution (2026-10-25)
+
+Verdict: Reopen — criterion 2 accepts an opposing-king capture in the ghost position (`e2e4`, then queued `f1c4`, `d1h5`, `h5f7`, `f7e8`).
+
+Stage 3 reviewed `b206a36300d0de13f81ee4cae2208e3e906c4597...62443c6` against the session branch, with independent Standards and Spec sub-agents. The implementation remains on `UI-007`; it is not integrated into the session. No production or test changes were authored during review. Only the criterion-2 finding below remains for stage 2.
+
+Examined: the complete diff and every commit's file statistics; queue projection, style changes and execution; Board copying, legal-move generation and repeated human turns; BoardView drag/drop, click-click, promotion/Alt, picker interruption, right-click cancellation, annotations and animation cleanup; Main's move callbacks and synchronous premove signal recursion; clock first moves, increments, fixed charges and flag callbacks; Maia replies; settings persistence/application; result and rematch cleanup. No interactive visual/audio acceptance, exported-build check or real mouse-gesture assessment was performed.
+
+##### Standards
+
+No documented-standard violations or material baseline smells found. All production/test changes stay within Primary files. All six red/green cycles separate test-only commits from production-only commits; the first test commit also carries permitted ticket metadata. The 17 tests use production queue, BoardView, Main, settings and clock behavior. No unrelated refactoring was found.
+
+##### Spec
+
+One finding: criterion 2 requires checking a new move against the current ghost position, but `ui/premove_queue.gd:20-23,59-67` forces repeated human turns and trusts `Board.legal_moves()`. The generator assumes ordinary alternating play and checks the moving king's safety; it can therefore offer a capture of the opposing king on these projected positions. `BoardView._draw` renders that invalid ghost. The actual game remains protected by `take()` rechecking legality on the live board. No other missing numbered requirement or scope creep was found.
+
+Criteria:
+
+1. ✅ Off / Lichess / Chess.com are validated and persisted; Chess.com is the default and the settings screen applies changes immediately.
+2. ❌ Ghost validation accepts an opposing-king capture. Reproduction: create the initial Game, play `e2e4`, then enqueue `f1c4`, `d1h5`, `h5f7`, `f7e8` for White. Every enqueue returns `true`; the ghost has `Q` on e8 and zero black kings. The live board retains one black king and only `e2e4` in its move history. Preserve the accepted prefix and both kings when rejecting the invalid append. Add a production-backed regression in the existing `tests/test_premove.gd` seam, then repair within the current Primary files; keep due-move revalidation intact.
+3. ✅ Lichess replaces its single entry from the live input position; Chess.com preserves ordered queued moves.
+4. ✅ Main executes one legal due move synchronously, charges the fixed 100 ms before the usual increment/flag decision and emits the premove sound; the next entry waits for another Maia reply. First-move increment behavior is preserved.
+5. ✅ An illegal due move drops itself and the rest of the queue without a premove charge or execution.
+6. ✅ Right press clears the queue, including through the promotion overlay, while right-drag arrows and right-click circles remain available.
+7. ✅ Premove promotions honor the shared auto-queen policy, including "only on premoves" and Alt/picker underpromotion.
+8. ✅ The queue is a pure RefCounted component and its tests run headless. The new criterion-2 edge needs additional coverage.
+
+Reproduction command: `godot --headless --log-file build/ui007-review-probe.log -s build/ui007-review-probe.gd`. The ignored probe calls the production Game and PremoveQueue; its output is `enqueue ...: true` for all four entries, `ghost e8=Q`, `ghost black kings=0`, `live black kings=1`, `live moves=["e2e4"]`. The command exits 0 because it is an observational probe, not an assertion-based regression test. It also emits the environment's root-certificate-store startup error, unrelated to the queue result. The reproduction above is retained here so it can be repeated without the local probe file.
+
+Gate: verified the existing receipt with the installed `Assert-GateEvidence` helper: the bound command on `e6d776b31ee796dc5788fad43908a4e99d637366` exited 0 with **169 passed, 0 failed**; the log SHA-256 and exit marker match, the tested commit exists, and only ticket metadata follows it. The retained suite does not cover this ghost-position boundary. Every test/production commit pair and the final diff were inspected; `git diff --check` passes. No gate rerun was needed for this metadata-only review.
+
+Proxy review: the actual `(gpt-6-astra high, fallback)` answer above confirms criterion 2 applies independently of criterion 5. Unknown future Maia replies do not change the enqueue-time reference position. No criterion text or Primary files were changed.
+
+Acceptance: pending | The automated suite passes for its covered scenarios, but the criterion-2 failure above must be corrected and reviewed. The manual 1+0 game, ghost appearance and audio acceptance from Verification also remain pending.
+Disclosure: decision | integration | Proxy decision under Comments: criterion-2 ghost validation must reject opposing-king captures before UI-007 can be approved or integrated; live execution is protected by revalidation.
+Disclosure: pending | integration | The criterion-2 finding remains scheduled on this reopened UI-007 ticket; stage 2 must add the regression test first and make a scoped repair on the preserved branch.
+Disclosure: pending | release | Manual visual/audio acceptance remains pending as recorded in the Stage 2 handoff.
