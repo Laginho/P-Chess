@@ -1,5 +1,6 @@
 from pathlib import Path
 from dataclasses import replace
+import io
 import math
 
 import pytest
@@ -61,3 +62,21 @@ def test_buckets_match_game_edges_and_omit_sparse_groups():
         assert bucket["median"] == 0.05
         assert bucket["log_sigma"] == 0
     assert build_table([], lambda sample: 0.6)["buckets"] == []
+
+
+def test_fixture_extraction_from_a_capped_zstandard_stream():
+    import zstandard
+    from calibrate_time import pgn_stream
+
+    compressed = zstandard.ZstdCompressor().compress(FIXTURE.read_bytes())
+    source = io.BytesIO(compressed + b"must not be read")
+    with pgn_stream(source, len(compressed)) as pgn:
+        assert len(list(extract_samples(pgn))) == 8
+    assert source.tell() == len(compressed)
+
+    # A cap can cut a zstd frame and a PGN game. Earlier data stays usable.
+    prefix = compressed[:-10]
+    source = io.BytesIO(prefix + b"must not be read")
+    with pgn_stream(source, len(prefix)) as pgn:
+        assert list(extract_samples(pgn))
+    assert source.tell() == len(prefix)
