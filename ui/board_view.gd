@@ -18,6 +18,7 @@ const TARGET := Color(0.08, 0.33, 0.12, 0.5)
 @export var show_targets := true
 @export var board_theme := "brown"
 @export var piece_theme := "cburnett"
+@export var click_click := false
 
 var _board_style := {"light": ThemeLoader.BROWN_LIGHT, "dark": ThemeLoader.BROWN_DARK, "texture": null}
 
@@ -44,6 +45,10 @@ var flipped := false:
 var _textures := {}
 # The held piece's square; "" when nothing is held.
 var _drag_from := ""
+# A piece selected by a completed click stays on its square until the next click.
+var _selected := ""
+var _press_pos := Vector2.ZERO
+var _dragged := false
 # The held piece's centre, in control coordinates.
 var _drag_pos := Vector2.ZERO:
 	set(value):
@@ -175,11 +180,25 @@ func _draw_piece(piece: String, at: Vector2, cell: Vector2) -> void:
 
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if _snapping or _promoting:
+			return
 		if event.pressed:
-			_pick_up(event.position)
+			if _selected:
+				_drag_from = _selected
+				_selected = ""
+				_drop(event.position, true)
+			else:
+				_pick_up(event.position)
 		elif _drag_from and not _snapping:
-			_drop(event.position)
+			var to := square_at(event.position - _corner(), _side(), flipped)
+			if click_click and not _dragged and to == _drag_from:
+				_selected = _drag_from
+				_drag_from = ""
+				queue_redraw()
+			else:
+				_drop(event.position)
 	elif event is InputEventMouseMotion and _drag_from and not _snapping:
+		_dragged = _dragged or event.position.distance_to(_press_pos) >= 8
 		_drag_pos = event.position
 
 
@@ -193,12 +212,14 @@ func _pick_up(point: Vector2) -> void:
 		_end_slide()
 		_drag_from = square
 		_drag_pos = point
+		_press_pos = point
+		_dragged = false
 		for move in game.board.legal_moves():
 			if move.begins_with(square):
 				_held_moves.append(move)
 
 
-func _drop(point: Vector2) -> void:
+func _drop(point: Vector2, clicked := false) -> void:
 	var to := square_at(point - _corner(), _side(), flipped)
 	var moves := PackedStringArray()
 	for move in _held_moves:
@@ -208,7 +229,9 @@ func _drop(point: Vector2) -> void:
 	if moves.size() > 1:
 		_open_picker(to)
 	elif moves:
-		_commit(moves[0], false)
+		_commit(moves[0], clicked)
+	elif clicked:
+		_end_snap_back()
 	else:
 		_snapping = true
 		_snap = create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
@@ -232,6 +255,9 @@ func _commit(move: String, slide: bool) -> void:
 		_end_snap_back()
 		return
 	_drag_from = ""
+	_selected = ""
+	_held_moves.clear()
+	_promoting = ""
 	if slide and slide_seconds > 0:
 		_end_slide()
 		_slide_to = move.substr(2, 2)
@@ -258,6 +284,9 @@ func _end_slide() -> void:
 func _end_snap_back() -> void:
 	_snapping = false
 	_drag_from = ""
+	_selected = ""
+	_held_moves.clear()
+	_promoting = ""
 	queue_redraw()
 
 
