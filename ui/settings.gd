@@ -17,6 +17,7 @@ var store
 func _ready() -> void:
 	$Open.pressed.connect(func() -> void: _panel.visible = not _panel.visible)
 	$Panel/Center/Box/Close.pressed.connect(_panel.hide)
+	_choice("premove_style", "Premove style", Settings.CHOICES.premove_style)
 	_check("click_click", "Click-click moves")
 	_choice("auto_queen", "Auto-queen", Settings.CHOICES.auto_queen)
 	_check("legal_dots", "Legal-move dots")
