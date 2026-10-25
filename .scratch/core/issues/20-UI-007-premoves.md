@@ -1,5 +1,5 @@
 # UI-007: Premoves
-Stage: to-review
+Stage: done
 Blocked by: UI-005
 Review: agent
 Difficulty: hard
@@ -142,3 +142,30 @@ The bound gate ran once through `gate-evidence.ps1` on committed, clean producti
 Acceptance: pending | Automated regressions and the full gate pass. Independent stage-3 re-review of the criterion-2 repair remains; the original manual 1+0 game, ghost appearance and premove audio checks have not been performed.
 Disclosure: pending | integration | The reopened criterion-2 finding now has a tested correction in `8427406` and `e9c1b16`; independent stage-3 review must confirm it before session integration.
 Disclosure: pending | release | The original manual visual/audio acceptance remains pending; this scoped repair does not assess rendering or sound quality.
+
+#### Resolution (2026-10-25, re-review)
+
+Verdict: Approve
+
+Independent Standards and Spec sub-agents reviewed `284f717...678c408`, the reopened criterion-2 finding and every subsequent commit. Both returned no findings. This review authored no production or test changes. The branch was rebased without conflicts onto session `b206a36`; the resulting production and test files are identical to the reviewed versions. Merged `UI-007` into `sweatshop/core/2026-10-25-0159` without squash as `ce7205d`.
+
+Examined: both queue entry points (`enqueue` and `position`), repeated-human-turn Board move generation, both-colour king captures, accepted-prefix and live-board/history preservation, reprojection after Maia's king enters a queued destination, BoardView's null-projection drawing/input paths, Lichess replacement and the unchanged live legality check in `take`/Main. No additional miss in previously reviewed code was identified. Interactive visual/audio acceptance, exported builds and real mouse-gesture feel remain unexamined.
+
+##### Standards
+
+No documented-standard violations or material baseline smells. Both repair cycles preserve test/production separation: `cbbc577` (tests plus permitted ticket metadata) then `8427406` (production only), followed by `97164d6` (tests only) then `e9c1b16` (production only); `678c408` is ticket metadata only. Their rebased equivalents are `6c0b22c`, `d4d288a`, `b61f49d`, `d656b28` and `8682dd0`. Production remains within `ui/premove_queue.gd`, and tests within the approved `tests/test_premove.gd` seam. No unrelated refactoring.
+
+##### Spec
+
+2. ✅ The ghost rejects a king capture before changing the accepted queue. The regression covers the original White sequence and its Black counterpart, retaining both kings and the live game/history. Reprojection also returns null if Maia's king enters a later queued destination; BoardView safely displays the live board and declines further invalid ghost input. A valid due move still executes through `take`, independently of an invalid later preview. Criteria 1 and 3–8 retain the passing results of the first review; the unchanged live legality check still drops an illegal due move and its tail.
+
+Red/green: inspected the retained focused logs and committed regressions. The enqueue regression failed for both colours before `8427406` (**17 passed, 1 failed**) and passed after it (**18 passed, 0 failed**). The reprojection regression then failed before `e9c1b16` (**18 passed, 1 failed**) and passed after it (**19 passed, 0 failed**). Both regressions exercise the real PremoveQueue/Game/Board.
+
+Gate: validated the current `Gate evidence:` receipt using the installed `Assert-GateEvidence` helper before and after rebase. The bound command `godot --headless -s tests/run.gd`, on `e9c1b1667ddc7ab694b7ff765afc13bb9f301742`, exited 0 with **171 passed, 0 failed**. The log hash and exit marker match; the tested commit exists. Only tracker metadata differs from that tested code, and the merge has the same tree as rebased `UI-007`. The green gate is reused because no production or tests changed. `git diff --check` passes.
+
+Proxy review: the existing `(gpt-6-astra high, fallback)` decision requiring criterion-2 king preservation is satisfied by the reviewed repair. No new proxy decision or contract change. The earlier integration holds are resolved by this approval and merge.
+
+Acceptance: pending | Automated acceptance and the criterion-2 re-review pass. The manual 1+0 game, ghost appearance and premove audio checks remain as recorded in the original Verification/handoff.
+Disclosure: decision | none | The existing proxy requirement to preserve both kings in ghost positions is implemented and independently approved; its prior integration condition is resolved.
+Disclosure: pending | release | Manual visual/audio acceptance remains pending as described above.
+Disclosure: deferred | none | [CLEAN-002](33-CLEAN-002-promotion-picker-layout.md) tracks the inherited UI-002 cosmetic picker-layout issue on flip/resize. It is outside UI-007's numbered criteria, predates this change and no longer relies on a note in a closed ticket.
