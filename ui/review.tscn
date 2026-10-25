@@ -61,11 +61,19 @@ theme_override_constants/separation = 12
 [node name="CopyPgn" type="Button" parent="Margin/Content/Actions"]
 layout_mode = 2
 size_flags_horizontal = 3
-focus_mode = 0
 text = "Copy PGN"
 
 [node name="Lichess" type="Button" parent="Margin/Content/Actions"]
 layout_mode = 2
 size_flags_horizontal = 3
-focus_mode = 0
 text = "Open in Lichess"
+
+[node name="Rematch" type="Button" parent="Margin/Content/Actions"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Rematch (Space)"
+
+[node name="Setup" type="Button" parent="Margin/Content/Actions"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Back to setup"

@@ -1,7 +1,8 @@
 extends Control
 
 # A game against Maia (BOT-004): the setup screen, the board, the clocks (CLOCK-001), the move list
-# and the result, then the hotkeys around it (UI-004, §9.2): Space rematch, Esc Esc resign, F11 focus.
+# and the post-game review (HIST-002), then the hotkeys (UI-004, §9.2): Space rematch,
+# Esc Esc resign, F11 focus.
 # The settings screen (UI-005, §10) sits on top, and each setting applies the moment it changes.
 
 const Game = preload("res://core/game.gd")
@@ -118,6 +119,8 @@ func _ready() -> void:
 	settings_screen.store = preferences
 	add_child(settings_screen)
 	add_child(review)
+	review.rematch_requested.connect(func(): _start(rematch(settings)))
+	review.setup_requested.connect(_show_setup)
 	preferences.changed.connect(_apply)
 	for key in Settings.DEFAULTS:
 		_apply(key, preferences.get_value(key))
@@ -183,6 +186,14 @@ func _start(new_settings: Dictionary) -> void:
 	_set_flipped(human == "b")
 	sound_player.play("game_start")
 	_next_turn()
+
+
+func _show_setup() -> void:
+	review.hide()
+	clock = null
+	white_clock.clock = null
+	black_clock.clock = null
+	setup.show()
 
 
 # One setting to whatever reads it; the next move, sound or game picks it up.

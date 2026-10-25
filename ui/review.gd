@@ -1,5 +1,8 @@
 extends Control
 
+signal rematch_requested
+signal setup_requested
+
 # Clock snapshots are the mover's remaining milliseconds after each move (HIST-001).
 const Clock = preload("res://core/clock.gd")
 const Pgn = preload("res://core/pgn.gd")
@@ -23,6 +26,16 @@ func _ready() -> void:
 	_moves.set_column_custom_minimum_width(0, 60)
 	$Margin/Content/Actions/CopyPgn.pressed.connect(func(): copy_text.call(_pgn))
 	$Margin/Content/Actions/Lichess.pressed.connect(func(): open_browser.call(_url))
+	$Margin/Content/Actions/Rematch.pressed.connect(func(): rematch_requested.emit())
+	$Margin/Content/Actions/Setup.pressed.connect(func(): setup_requested.emit())
+
+
+# Handle Space before the focused move list or a button consumes it as GUI input.
+func _input(event: InputEvent) -> void:
+	if visible and event is InputEventKey and event.is_pressed() and not event.is_echo() \
+			and event.keycode == KEY_SPACE:
+		get_viewport().set_input_as_handled()
+		rematch_requested.emit()
 
 
 func present(game, clocks: Array, settings: Dictionary, result_text: String) -> void:
