@@ -43,13 +43,25 @@ func left(side: String) -> int:
 
 # After `side` moved: its clock stops and gains the increment, or flags when the time ran out
 # before the move; the other side's clock starts once that side has made its first move.
-func moved(side: String) -> void:
-	if side == _running:
-		stop()
+func moved(side: String, premove := false) -> void:
+	var timed := side == _running
+	if timed:
+		if premove:
+			# Use the fixed cost instead of frame/animation time since the opponent's move.
+			_running = ""
+		else:
+			stop()
+	if premove:
+		_left[side] = maxi(0, _left[side] - 100)
+		if _left[side] <= low_time_ms and not _warned.has(side):
+			_warned[side] = true
+			low_time.emit(side)
+	if timed or premove:
 		if _left[side] == 0:
 			flagged.emit(side)
 			return
-		_left[side] += increment
+		if timed:
+			_left[side] += increment
 	_moved[side] = true
 	var other := "b" if side == "w" else "w"
 	if _moved.has(other):
