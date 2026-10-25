@@ -9,6 +9,11 @@ signal cancelled
 const CHOICES := "qrbn"
 
 
+# Shared with premove input: Alt always requests an explicit promotion choice.
+static func should_auto_queen(mode: String, premove: bool, alt: bool) -> bool:
+	return not alt and (mode == "on" or (mode == "only on premoves" and premove))
+
+
 # textures: FEN letter -> texture. at: the promotion square's top-left; down: the column's direction.
 func open(textures: Dictionary, white: bool, at: Vector2, cell: float, down: bool) -> void:
 	for i in CHOICES.length():

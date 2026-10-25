@@ -1,16 +1,18 @@
 extends Control
 
-# The board (§8.1): draws the position of `game` and turns drags into moves on it.
+# The board (§8.1, §8.3): draws the position, handles moves and square annotations.
 # Always square and centred in the control, so it scales with the window.
 
 signal move_played(san: String)
 signal sound_requested(event: String)
 
 const ThemeLoader = preload("res://ui/theme_loader.gd")
+const PromotionPicker = preload("res://ui/promotion_picker.gd")
 const SNAP_BACK_SECONDS := 0.15
 const LAST_MOVE := Color(0.61, 0.78, 0, 0.41)
 const CHECK := Color(1, 0, 0, 0.6)
 const TARGET := Color(0.08, 0.33, 0.12, 0.5)
+const DRAWING := Color(0.12, 0.65, 0.22, 0.75)
 
 # How long a move that was not dragged (the bot's, a premove) slides; 0 is instant.
 @export var slide_seconds := 0.12
@@ -18,6 +20,12 @@ const TARGET := Color(0.08, 0.33, 0.12, 0.5)
 @export var show_targets := true
 @export var board_theme := "brown"
 @export var piece_theme := "cburnett"
+@export var click_click := false:
+	set(value):
+		click_click = value
+		if not value and _selected:
+			_end_snap_back()
+@export_enum("off", "on", "only on premoves") var auto_queen := "off"
 
 var _board_style := {"light": ThemeLoader.BROWN_LIGHT, "dark": ThemeLoader.BROWN_DARK, "texture": null}
 
@@ -29,6 +37,9 @@ var game:
 		if _snap:
 			_snap.kill()
 		_held_moves.clear()
+		drawings.clear()
+		_drawing_from = ""
+		_drawing_to = ""
 		_promoting = ""
 		# Null on a board built outside a scene.
 		if _picker and _picker.visible:
@@ -44,6 +55,11 @@ var flipped := false:
 var _textures := {}
 # The held piece's square; "" when nothing is held.
 var _drag_from := ""
+# A piece selected by a completed click stays on its square until the next click.
+var _selected := ""
+var _reselected := false
+var _press_pos := Vector2.ZERO
+var _dragged := false
 # The held piece's centre, in control coordinates.
 var _drag_pos := Vector2.ZERO:
 	set(value):
@@ -62,6 +78,10 @@ var _slide_pos := Vector2.ZERO:
 var _slide: Tween
 # From and to of the promotion waiting on the picker.
 var _promoting := ""
+# Square pairs, independent of board orientation/size. Equal endpoints represent a circle.
+var drawings: Array[PackedStringArray] = []
+var _drawing_from := ""
+var _drawing_to := ""
 
 @onready var _picker = $PromotionPicker
 
@@ -150,6 +170,23 @@ func _draw() -> void:
 		_draw_piece(game.board.piece_at(_slide_to), _slide_pos - cell / 2, cell)
 	if _drag_from:
 		_draw_piece(game.board.piece_at(_drag_from), _drag_pos - cell / 2, cell)
+	for drawing in drawings:
+		_draw_annotation(drawing[0], drawing[1], cell.x)
+	if _drawing_from and _drawing_to:
+		_draw_annotation(_drawing_from, _drawing_to, cell.x)
+
+
+func _draw_annotation(from: String, to: String, cell: float) -> void:
+	var start := _centre(from)
+	var end := _centre(to)
+	if from == to:
+		draw_arc(start, cell * 0.43, 0, TAU, 64, DRAWING, cell * 0.07, true)
+	else:
+		var direction := (end - start).normalized()
+		var base := end - direction * cell * 0.3
+		var wing := direction.orthogonal() * cell * 0.2
+		draw_line(start, base, DRAWING, cell * 0.12, true)
+		draw_colored_polygon(PackedVector2Array([end, base + wing, base - wing]), DRAWING)
 
 
 # Files along the bottom edge, ranks along the left edge, in the other square colour.
@@ -174,13 +211,57 @@ func _draw_piece(piece: String, at: Vector2, cell: Vector2) -> void:
 
 
 func _gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT:
+		var square := square_at(event.position - _corner(), _side(), flipped)
 		if event.pressed:
-			_pick_up(event.position)
+			_drawing_from = square
+			_drawing_to = square
+		else:
+			if _drawing_from and square:
+				drawings.append(PackedStringArray([_drawing_from, square]))
+			_drawing_from = ""
+			_drawing_to = ""
+		queue_redraw()
+	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if event.pressed:
+			drawings.clear()
+			_drawing_from = ""
+			_drawing_to = ""
+			queue_redraw()
+		if _snapping or _promoting:
+			return
+		if event.pressed:
+			if _selected:
+				_drag_from = _selected
+				_selected = ""
+				if square_at(event.position - _corner(), _side(), flipped) == _drag_from:
+					# A second click deselects on release, but can still become a drag.
+					_reselected = true
+					_press_pos = event.position
+					_drag_pos = event.position
+					_dragged = false
+				else:
+					_drop(event.position, true, event.alt_pressed)
+			else:
+				_pick_up(event.position)
 		elif _drag_from and not _snapping:
-			_drop(event.position)
-	elif event is InputEventMouseMotion and _drag_from and not _snapping:
-		_drag_pos = event.position
+			var to := square_at(event.position - _corner(), _side(), flipped)
+			if click_click and not _dragged and to == _drag_from:
+				if _reselected:
+					_end_snap_back()
+				else:
+					_selected = _drag_from
+					_drag_from = ""
+					queue_redraw()
+			else:
+				_drop(event.position, false, event.alt_pressed)
+	elif event is InputEventMouseMotion:
+		if _drawing_from:
+			_drawing_to = square_at(event.position - _corner(), _side(), flipped)
+			queue_redraw()
+		elif _drag_from and not _snapping and not _promoting:
+			_dragged = _dragged or event.position.distance_to(_press_pos) >= 8
+			_drag_pos = event.position
 
 
 # Only a piece of the side to move, and never once the game is over.
@@ -193,12 +274,15 @@ func _pick_up(point: Vector2) -> void:
 		_end_slide()
 		_drag_from = square
 		_drag_pos = point
+		_press_pos = point
+		_dragged = false
+		_reselected = false
 		for move in game.board.legal_moves():
 			if move.begins_with(square):
 				_held_moves.append(move)
 
 
-func _drop(point: Vector2) -> void:
+func _drop(point: Vector2, clicked := false, alt := false) -> void:
 	var to := square_at(point - _corner(), _side(), flipped)
 	var moves := PackedStringArray()
 	for move in _held_moves:
@@ -206,9 +290,14 @@ func _drop(point: Vector2) -> void:
 			moves.append(move)
 	_held_moves.clear()
 	if moves.size() > 1:
-		_open_picker(to)
+		if PromotionPicker.should_auto_queen(auto_queen, false, alt):
+			_commit(_drag_from + to + "q", clicked)
+		else:
+			_open_picker(to)
 	elif moves:
-		_commit(moves[0], false)
+		_commit(moves[0], clicked)
+	elif clicked:
+		_end_snap_back()
 	else:
 		_snapping = true
 		_snap = create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
@@ -232,6 +321,9 @@ func _commit(move: String, slide: bool) -> void:
 		_end_snap_back()
 		return
 	_drag_from = ""
+	_selected = ""
+	_held_moves.clear()
+	_promoting = ""
 	if slide and slide_seconds > 0:
 		_end_slide()
 		_slide_to = move.substr(2, 2)
@@ -257,7 +349,11 @@ func _end_slide() -> void:
 
 func _end_snap_back() -> void:
 	_snapping = false
+	_reselected = false
 	_drag_from = ""
+	_selected = ""
+	_held_moves.clear()
+	_promoting = ""
 	queue_redraw()
 
 
