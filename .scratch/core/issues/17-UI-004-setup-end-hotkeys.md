@@ -1,5 +1,5 @@
 # UI-004: Setup, game end, rematch and hotkeys
-Stage: to-implement
+Stage: to-review
 Blocked by: CLOCK-001
 Review: agent
 Difficulty: normal
@@ -9,6 +9,7 @@ Difficulty: normal
   - ui/main.tscn, ui/main.gd
   - core/game.gd (claim, resign)
   - ui/move_list.gd (reset only)
+  - ui/board_view.gd (scope: the `game` setter clears the held piece, its targets, the pending promotion, the open picker and the slide and snap-back tweens)
   - New: tests/test_session.gd
 
 #### What to build
@@ -102,3 +103,14 @@ What is left: before the game is swapped, clear the drag, held/queued moves, the
 Note for stage 2: the block quoted above is the previous review's record, kept for history; the live fields are the ones below it. Write the new receipt as `Gate evidence: <path>` at the very start of its own line, with no list dash and nothing after the path: the installed driver misses a `- Gate evidence:` line (fix pending in Agent-Skills#4).
 
 Verdict: Reopen — criterion 3: a rematch keeps the old game's BoardView interaction state (promotion picker, held move)
+
+Proxy decided (opus): `ui/board_view.gd` joins Primary files, limited to the `game` setter clearing the held piece, its targets, the pending promotion, the open picker (via its existing `_close("")`, guarded against a null `_picker` for boards built outside a scene) and the slide and snap-back tweens — all of it is private to BoardView, a reset in the setter makes every new game start clean with no extra call for `main._start` to remember, and replacing the node would lose the flip, theme and signal wiring.
+
+- 2026-10-24 Stage 2 after the reopen (opus-5.5):
+  - Red: d7aad4d (test-only, plus ticket metadata and a note under UI-007) gives `113 passed, 2 failed`. With the picker open at a flag, a new game leaves it visible with `a7a8` pending. With `e5` held at a flag, a new game keeps `e5` held and its `e5e6` target, so after Maia's e2e4 the e7-to-e6 drop opens the picker instead of playing.
+  - Green: 7891185 (`ui/board_view.gd` only). The `game` setter ends the slide, kills the snap-back tween (now stored in `_snap`), clears the held moves and the pending promotion, closes the picker if it is open, and drops the held piece. Gate exit 0, `115 passed, 0 failed`. `godot --headless --quit-after 30` loads the main scene with no script error.
+  - Not met as the reopen asked: the tests do not drive the real `Main`. The runner calls every test from `SceneTree._initialize`, before the root enters the tree (a probe printed `root inside tree: false`), so neither `main.tscn` nor `board_view.tscn` ever gets `_ready`, and Main's `@onready` nodes stay null. Making Main testable that way needs a change to `tests/run.gd`, which is outside Primary files. The tests instead drive the board scene through the same `board_view.game = Game.new()` assignment that `Main._start` makes (ui/main.gd:153), with the picker wired by hand and slides off, since a tween needs the tree.
+  - Not tested: killing the snap-back tween, since tweens only run in the tree. That kill stops a stale `_end_snap_back` from dropping a piece picked up in the first 0.15 s of the new game.
+  - Callers of the setter: `main._ready` (fresh board, nothing held, picker hidden), `main._start` (the rematch) and tests. The CLOCK-001 test builds `BoardView.new()` with a null `_picker`, which the guard covers. That test still passes.
+
+Gate evidence: C:\Users\Lage\AppData\Local\Temp\claude\D--Desktop-Projects-P-Chess--artifacts-build-lanes-core\93202eda-48f6-4cd8-8f92-1905edf073bb\scratchpad\UI-004-reopen-gate.json
