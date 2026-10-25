@@ -58,6 +58,8 @@ func _key(main, code: Key) -> void:
 
 func _games(folder: String) -> Array:
 	var games := []
+	if not DirAccess.dir_exists_absolute(folder.path_join("games")):
+		return games
 	for file in DirAccess.get_files_at(folder.path_join("games")):
 		var parsed := Pgn.parse(FileAccess.get_file_as_string(folder.path_join("games").path_join(file)))
 		assert_eq(parsed.error, "")
@@ -70,13 +72,11 @@ func _folder() -> String:
 
 
 func _clean(folder: String) -> void:
-	var games := folder.path_join("games")
-	for file in DirAccess.get_files_at(games):
-		DirAccess.remove_absolute(games.path_join(file))
-	DirAccess.remove_absolute(games)
-	for file in DirAccess.get_files_at(folder):
-		DirAccess.remove_absolute(folder.path_join(file))
-	DirAccess.remove_absolute(folder)
+	for subdir in [folder.path_join("games"), folder]:
+		if DirAccess.dir_exists_absolute(subdir):
+			for file in DirAccess.get_files_at(subdir):
+				DirAccess.remove_absolute(subdir.path_join(file))
+			DirAccess.remove_absolute(subdir)
 
 
 func test_finished_game_saves_one_pgn_with_headers_moves_and_exact_clocks():
@@ -164,3 +164,131 @@ func test_main_saves_mate_once_with_final_increment_and_resets_history_on_rematc
 	assert_eq(History.new(folder).stats("maia-1500", "3+2").losses, 2)
 	main.free()
 	_clean(folder)
+
+
+func test_headers_use_actual_level_colour_control_and_only_a_known_opening():
+	var folder := _folder()
+	var history = History.new(folder)
+	var settings := {"colour": "b", "level": "maia-1900", "control": "1+0"}
+	for control in {"1+0": "60+0", "3+2": "180+2", "5+0": "300+0"}:
+		settings.control = control
+		var game = Game.new()
+		game.resign("w")
+		var path: String = history.save(game, [], settings, "Bird Opening")
+		var parsed := Pgn.parse(FileAccess.get_file_as_string(path))
+		assert_eq(parsed.error, "")
+		assert_eq(parsed.games[0].headers, {"White": "Maia 1900", "Black": "You",
+				"TimeControl": {"1+0": "60+0", "3+2": "180+2", "5+0": "300+0"}[control],
+				"Result": "0-1", "Termination": "Normal", "Opening": "Bird Opening"})
+	_clean(folder)
+
+
+func test_main_saves_a_clock_flag_once_and_keeps_move_time_snapshots():
+	var folder := _folder()
+	var time := FakeTime.new()
+	var main = _session(folder, time)
+	assert_true(main.board_view.play("e2e4"))
+	main._on_maia_move("e7e5")
+	time.now = 180000
+	main._process(0)
+	main._show_result()
+	var games := _games(folder)
+	assert_eq(games.size(), 1)
+	if games.size() == 1:
+		assert_eq(games[0].headers.Termination, "Time forfeit")
+		assert_eq(games[0].result, "0-1")
+		assert_eq(games[0].moves.map(func(move): return move.clock_ms), [180000, 180000], "not the clocks at game end")
+	assert_eq(History.new(folder).stats("maia-1500", "3+2"),
+			{"wins": 0, "draws": 0, "losses": 1, "flag_wins": 0, "flag_losses": 1})
+	main.free()
+	_clean(folder)
+
+
+func test_main_saves_a_claimed_draw_once():
+	var folder := _folder()
+	var time := FakeTime.new()
+	var main = _session(folder, time)
+	main.board_view.game.auto_claim = false
+	for move in ["g1f3", "g8f6", "f3g1", "f6g8", "g1f3", "g8f6", "f3g1", "f6g8"]:
+		assert_true(main.board_view.play(move))
+	main.claim_draw.pressed.emit()
+	main._show_result()
+	var games := _games(folder)
+	assert_eq(games.size(), 1)
+	if games.size() == 1:
+		assert_eq(games[0].result, "1/2-1/2")
+		assert_eq(games[0].headers.Termination, "Normal")
+		assert_eq(games[0].moves.size(), 8)
+	assert_eq(History.new(folder).stats("maia-1500", "3+2").draws, 1)
+	main.free()
+	_clean(folder)
+
+
+func test_main_records_first_and_later_premoves_after_exactly_one_charge():
+	var folder := _folder()
+	var time := FakeTime.new()
+	var settings := SETTINGS.duplicate()
+	settings.colour = "b"
+	var main = _session(folder, time, settings)
+	var board = main.board_view
+	assert_true(board.premoves.enqueue(board.game.board, "g8f6"))
+	assert_true(board.premoves.enqueue(board.game.board, "f6g4"))
+	main._on_maia_move("e2e4")
+	main._on_maia_move("d2d4")
+	main._on_flagged("w")
+	var games := _games(folder)
+	assert_eq(games.size(), 1)
+	if games.size() == 1:
+		assert_eq(games[0].moves.map(func(move): return move.uci), ["e2e4", "g8f6", "d2d4", "f6g4"])
+		assert_eq(games[0].moves.map(func(move): return move.clock_ms), [180000, 179900, 182000, 181800])
+	assert_eq(History.new(folder).stats("maia-1500", "3+2").flag_wins, 1)
+	main.free()
+	_clean(folder)
+
+
+func test_main_waits_for_the_last_snapshot_when_move_accounting_emits_a_flag():
+	for final_move in ["g1f3", "d8h4"]:
+		var folder := _folder()
+		var time := FakeTime.new()
+		var main = _session(folder, time)
+		if final_move == "g1f3":
+			main.board_view.play("e2e4")
+			main._on_maia_move("e7e5")
+		else:
+			main.board_view.play("f2f3")
+			main._on_maia_move("e7e5")
+			main.board_view.play("g2g4")
+		time.now = 200000
+		main.board_view.play(final_move)
+		var games := _games(folder)
+		assert_eq(games.size(), 1)
+		if games.size() == 1:
+			assert_eq(games[0].moves[-1].uci, final_move)
+			assert_eq(games[0].moves[-1].clock_ms, 0)
+			assert_eq(games[0].headers.Termination, "Time forfeit" if final_move == "g1f3" else "Normal",
+					"terminal-move precedence is preserved")
+		assert_eq(main.history.error, "")
+		main.free()
+		_clean(folder)
+
+
+func test_main_reports_failed_game_and_stats_writes_in_the_result_ui():
+	for blocked in ["games", "stats.cfg"]:
+		var folder := _folder()
+		var time := FakeTime.new()
+		var main = _session(folder, time)
+		DirAccess.make_dir_recursive_absolute(folder)
+		if blocked == "games":
+			var file := FileAccess.open(folder.path_join(blocked), FileAccess.WRITE)
+			file.close()
+		else:
+			DirAccess.make_dir_absolute(folder.path_join(blocked))
+		_key(main, KEY_ESCAPE)
+		_key(main, KEY_ESCAPE)
+		assert_true(main.board_view.game.is_over())
+		assert_true(not main.history.error.is_empty(), "write failure is returned")
+		assert_true(main.result_label.text.contains("History: " + main.history.error), "the player sees the failure")
+		assert_true(main.result_label.text.contains("Space for a rematch"), "the game remains usable")
+		main.free()
+		DirAccess.remove_absolute(folder.path_join(blocked))
+		_clean(folder)

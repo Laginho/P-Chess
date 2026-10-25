@@ -150,9 +150,10 @@ func _session(waits):
 	main.history = load("res://core/history.gd").new(folder)
 	main.tree_exiting.connect(func():
 		for subdir in [folder.path_join("games"), folder]:
-			for file in DirAccess.get_files_at(subdir):
-				DirAccess.remove_absolute(subdir.path_join(file))
-			DirAccess.remove_absolute(subdir))
+			if DirAccess.dir_exists_absolute(subdir):
+				for file in DirAccess.get_files_at(subdir):
+					DirAccess.remove_absolute(subdir.path_join(file))
+				DirAccess.remove_absolute(subdir))
 	main.uci.free()
 	main.uci = HeldBridge.new()
 	main.maia = Main.MaiaPlayer.new(main.uci, waits.start)
