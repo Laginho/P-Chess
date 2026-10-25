@@ -1,5 +1,5 @@
 # CLEAN-004: Consider shared finished-game PGN construction
-Stage: to-implement
+Stage: implementing
 Status: ready-for-agent
 Blocked by: none
 Review: agent

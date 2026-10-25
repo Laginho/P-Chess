@@ -3,6 +3,7 @@ extends "res://tests/run.gd".Test
 # PGN in and out (CORE-006).
 
 const Pgn = preload("res://core/pgn.gd")
+const Game = preload("res://core/game.gd")
 
 const FIXTURES := "res://tests/fixtures/pgn/"
 
@@ -95,6 +96,32 @@ func test_written_game_reads_back_with_the_same_headers_moves_and_clocks():
 	assert_eq(_field(game.moves, "clock_ms"), clocks)
 	assert_eq(game.result, "0-1")
 
+
+func test_finished_game_builds_the_headers_and_clock_records_both_exports_share():
+	var game = Game.new()
+	for move in ["f2f3", "e7e5", "g2g4", "d8h4"]:
+		assert_true(game.play(move))
+	var built: Dictionary = Pgn.finished_game(game, [180000, 180000, 179534, 181001],
+			{"colour": "w", "level": "maia-1500", "control": "3+2"})
+	assert_eq(built.headers, {"White": "You", "Black": "Maia 1500", "TimeControl": "180+2",
+			"Result": "0-1", "Termination": "Normal"})
+	assert_eq(built.moves, [{"uci": "f2f3", "clock_ms": 180000}, {"uci": "e7e5", "clock_ms": 180000},
+			{"uci": "g2g4", "clock_ms": 179534}, {"uci": "d8h4", "clock_ms": 181001}])
+	assert_eq(built.result, "0-1")
+
+
+func test_finished_game_names_a_flag_and_an_optional_opening_last():
+	var game = Game.new()
+	for move in ["e2e4", "e7e5"]:
+		assert_true(game.play(move))
+	game.flag("w")
+	var built: Dictionary = Pgn.finished_game(game, [60000, 59000],
+			{"colour": "b", "level": "maia-1900", "control": "1+0"}, "King's Pawn Game")
+	assert_eq(built.headers, {"White": "Maia 1900", "Black": "You", "TimeControl": "60+0",
+			"Result": "0-1", "Termination": "Time forfeit", "Opening": "King's Pawn Game"})
+	assert_eq(built.headers.keys().back(), "Opening")
+	assert_eq(built.moves, [{"uci": "e2e4", "clock_ms": 60000}, {"uci": "e7e5", "clock_ms": 59000}])
+	assert_eq(built.result, "0-1")
 
 func test_header_backslashes_read_back_unchanged():
 	# PGN escapes only \\ and \"; a C-style \n or \t must stay two characters.
