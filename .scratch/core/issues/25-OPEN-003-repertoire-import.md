@@ -1,5 +1,5 @@
 # OPEN-003: Repertoire import and My repertoire mode
-Stage: implementing
+Stage: to-review
 Blocked by: CORE-006, OPEN-002
 Review: agent
 Difficulty: normal
@@ -64,7 +64,7 @@ Disclosure: decision | none | OPEN-003 Comments, legacy setup assertion migratio
 
 Acceptance: passed | C:\Users\Lage\AppData\Local\Temp\OPEN-003-acceptance.log — production import/setup/game controls with real Maia-1500, merged study, imported-colour start, imported replies, durable practice count and swapped-colour rematch; headless acceptance, without visual assessment.
 
-Gate evidence: C:\Users\Lage\AppData\Local\Temp\OPEN-003-green-gate.json
+Gate evidence: C:\Users\Lage\AppData\Local\Temp\OPEN-003-chapter-comments-gate.json
 
 #### Resolution (2026-10-25)
 
@@ -98,3 +98,15 @@ Acceptance: pending | Criterion 1 requires repair and a regression for chapter-l
 Disclosure: decision | none | The recorded proxy decision adding the Main lifecycle seam and actual-colour/rematch coverage is within the amended contract and independently reviewed above; no further integration or release condition comes from that decision.
 Disclosure: decision | none | The recorded proxy decision migrating OPEN-001's temporary disabled-mode assertion is within scope and preserves Catalog/Free assertions; no further integration or release condition comes from that decision.
 Disclosure: pending | integration | This Resolution's P2 criterion-1 finding must be repaired and reviewed before OPEN-003 integrates; the ticket remains open at `to-implement`, with its implementation preserved on the existing branch.
+
+#### Stage 2 repair handoff (2026-10-25)
+
+- Addressed the sole reopened finding, criterion 1: each chapter's non-empty leading comment now merges once into its starting-position root's `comments`. Shared-root chapters retain distinct guidance without duplicates; different FEN roots retain their own guidance. No schema, saved-file format, move merge, path construction or lifecycle changes.
+- Read around `Repertoire.parse` before the red test: `import_pgn` parses a candidate before saving/publishing; `load_saved` re-parses saved PGN. UI import calls `import_pgn`; Setup and Main load through `load_saved`. Existing validation/state-preservation paths remain unchanged. Boundary cases covered by the added public import/load regression: repeated guidance, an uncommented chapter, duplicate shorter lines and a distinct starting-position root, alongside move comments, variation-opening comments and NAGs.
+- Test-only commit `24aeb8f` (plus `Stage: implementing` metadata): `tests/test_repertoire.gd` regression calls production import and reload, expecting two distinct shared-root comments and a separate FEN-root comment. Focused suite: **7 passed, 1 failed**, exit 1, specifically because those root comment arrays were empty both after import and reload; no script/engine errors. Log: `C:\Users\Lage\AppData\Local\Temp\OPEN-003-chapter-comments-red.log`.
+- Production-only commit `416693c`: two lines in `bot/repertoire.gd`; no test changes. Focused suite: **8 passed, 0 failed**, exit 0, including the new annotation regression and all existing repertoire lifecycle tests. Log: `C:\Users\Lage\AppData\Local\Temp\OPEN-003-chapter-comments-green.log`.
+- Bound gate on clean committed `416693cce7d37a0118f522a55bf0740b38b3bf1b`, via `gate-evidence.ps1`: `godot --headless -s tests/run.gd` → **218 passed, 0 failed**, exit 0. No FAIL, SKIP, script errors or engine errors; existing malformed-theme/time-table warning cases remain expected. Log: `C:\Users\Lage\AppData\Local\Temp\OPEN-003-chapter-comments-gate.log`; SHA-256: `E0595CAD605E460BD47F36F8E37F7C9BD6D3A9525445FD6512946E045251ABC2`. The receipt above supersedes the previous gate receipt. Only this ticket's metadata follows the tested commit.
+- Final diff and commit separation checked: only the approved test, importer and ticket changed from the reopen commit; `git diff --check` passes. Criteria 2–5 were preserved and their existing tests passed. Independent stage-3 re-review remains before integration; no new proxy decision or contract amendment.
+
+Acceptance: passed | `C:\Users\Lage\AppData\Local\Temp\OPEN-003-chapter-comments-green.log` verifies the repaired annotation acceptance case through production import/reload; the earlier real-Maia acceptance log remains evidence for continuations, saved colour, counts and rematches. Verification remains headless; visual layout and native file-dialog interaction were not assessed.
+Disclosure: pending | integration | The previous Resolution's criterion-1 defect is repaired with red/green evidence above; independent stage-3 re-review of that finding and the added diff remains required before integration. OPEN-003 is handed off at `to-review` on its retained branch.
