@@ -7,11 +7,14 @@ Install script-only dependencies with:
 from dataclasses import dataclass
 from bisect import bisect_right
 from collections import defaultdict
+from contextlib import contextmanager
+import io
 import math
 import statistics
 
 import chess
 import chess.pgn
+import zstandard
 
 
 CONTROLS = {"60+0": (60, 0, "1+0"), "180+2": (180, 2, "3+2"),
@@ -27,6 +30,34 @@ class Sample:
     level: str
     clock_fraction: float
     seconds: float
+
+
+class LimitedReader:
+    """Never ask the HTTP response for bytes past the approved download cap."""
+
+    def __init__(self, source, max_bytes):
+        self.source = source
+        self.remaining = max_bytes
+
+    def read(self, size=-1):
+        size = self.remaining if size < 0 else min(size, self.remaining)
+        if not size:
+            return b""
+        data = self.source.read(size)
+        self.remaining -= len(data)
+        return data
+
+
+@contextmanager
+def pgn_stream(source, max_bytes):
+    """Decode a bounded compressed prefix in memory, including partial frames."""
+    if max_bytes <= 0:
+        raise ValueError("max_bytes must be positive")
+    limited = LimitedReader(source, max_bytes)
+    with zstandard.ZstdDecompressor().stream_reader(
+            limited, read_across_frames=True, closefd=False) as reader:
+        with io.TextIOWrapper(reader, encoding="utf-8", errors="replace") as text:
+            yield text
 
 
 def extract_samples(pgn):
