@@ -1,5 +1,5 @@
 # OPEN-002: Book weight in Catalog mode
-Stage: to-review
+Stage: done
 Blocked by: BOT-003, HIST-001, OPEN-001
 Review: agent
 Difficulty: hard
@@ -74,3 +74,41 @@ Disclosure: decision | none | OPEN-002 Comments, existing scene-fixture amendmen
 Acceptance: passed | C:\Users\Lage\AppData\Local\Temp\OPEN-002-acceptance.log — five scripted real-engine games through the production scenes, with responsive catalog loading, early book preference, complete late fade, five durable target counts and five named PGNs; headless acceptance, without visual assessment.
 
 Gate evidence: C:\Users\Lage\AppData\Local\Temp\OPEN-002-green-gate.json
+
+#### Resolution (2026-10-25)
+
+Verdict: Approve
+
+Independent Standards (`/root/standards_review`) and Spec (`/root/spec_review`) agents reviewed `6550088ce350c90866dd20de401d9aed4248db2d...ec6d15cd83e901ea64e8d794a13d945092c183e6`, including the complete diff and all twelve commit stats. This review authored no production or test changes and made no contract amendments or proxy decisions.
+
+##### Standards
+
+No documented-standard violations or actionable baseline smells. All changed files are within the amended Primary files. Five test commits plus a separate harness correction precede five production-only commits; the final handoff is metadata only. The four existing scene-test files only preload their tiny catalog fixtures, preserving their behavior assertions. Tests exercise the real Book, Maia, settings, history and scene interfaces, with fake external engines and isolated storage.
+
+##### Spec
+
+1. ✅ Checked continuations are indexed by position; different move orders and positional re-entry match the same book.
+2. ✅ Every legal move receives the specified target/other formula, or weight 1 when unmatched or unchecked.
+3. ✅ Game-ply fade is complete through ply 6, half at 11, and zero from 16 onward.
+4. ✅ All three intensity pairs are correct; medium defaults, validation, persistence, settings control and live routing are connected.
+5. ✅ Targets minimize persisted practice counts, break ties with the supplied RNG and respect Maia's repertoire side. Main passes Maia's actual side and chooses again on rematch.
+6. ✅ Completed games increment their selected target once through Main's existing terminal guard; counts survive reopening history storage. Free games have no target.
+7. ✅ Unmatched positions receive weight 1 without permanently disabling later positional matches; re-entry uses the actual game's ply.
+8. ✅ History recognizes the deepest catalog endpoint reached in every mode, independently of checked lines, retaining it after departure. Explicit Opening overrides remain supported.
+9. ✅ Maia snapshots book weights before the existing picker cut. The production integration test samples the 0.5% line move in 1,000 seeded Catalog first moves under strong intensity, and never in 1,000 Free first moves.
+10. ✅ Main loads the setup's saved selection, connects shared catalog/counts/intensity and handles rematches and repeated terminal callbacks. Main and the picker await one worker; readiness follows completion and joining. Cold starts show loading status, suspend board input and defer clock creation and Maia requests. Startup and selection failures leave a usable retry. Main neither opens the picker nor applies its hidden remembered selection.
+
+Standards: 0 actionable findings. Spec: 0 findings. No unresolved defect or accepted deferral remains on this ticket. Repertoire import remains OPEN-003 scope.
+
+Examined: all changed code, tests and commit boundaries; Book loader/index/search/selection compatibility and endpoint recognition; Maia's explicit and implicit begin-game callers, legal-policy sampling, stale FIFO replies and pending intensity snapshots; Main setup/review/rematch/terminal/clock/input paths; shared picker ownership, concurrent waiters, joining, startup failure, retry and hidden selection isolation; history persistence failures, result statistics and explicit Opening overrides; settings validation/persistence/routing; empty selections, unmatched/completed lines and transpositions. The retained acceptance script and log cover full-catalog loading and real Lc0 play. Not newly exercised: visual layout, hands-on mouse/keyboard play, exported builds, or additional induced filesystem/thread failures. Existing automated failure-path tests and unchanged-code gate evidence were inspected.
+
+Red/green: inspected the retained logs and separate committed cycles: weights **0/1 → 1/0**; history/recognition **3/2 → 5/0**; Maia/settings **5/2 → 7/0**; Main/readiness **7/3 → 10/0**; loading-input regression **10/1 → final gate 210/0** (passed/failed). The history harness correction is a separate test-only commit; its corrected red run fails on the missing production APIs. Every production commit contains no test edits.
+
+Gate: the installed `Assert-GateEvidence` helper verified the receipt, SHA-256 log hash, exit marker, available tested commit and identical production against the reviewed tip and merged session tree. Command: `godot --headless -s tests/run.gd`; tested commit: `267086f2daf6e413439bc6e5794a574350caf333`; **210 passed, 0 failed**, exit 0, no SKIP lines. Receipt: `C:\Users\Lage\AppData\Local\Temp\OPEN-002-green-gate.json`; log SHA-256: `8369E96AEFCEFD39421031F7C100C6D19EA18443D7C7085E99B9A173E6CE221E`. Only permitted tracker metadata follows tested code, so no repeated gate was needed. `git diff --check` passes.
+
+Integration: rebase onto `sweatshop/core/2026-10-25-0159` was already up to date. Merged without conflicts or squash as `c44187860482d3ee5728fccc95d0bcfd9f9b72da`; its tree exactly matches the reviewed ticket tip. Stage and ledger close together on the session branch. No PR or push is part of this stage.
+
+Acceptance: passed | [Book and real-scene regressions](../../../tests/test_book.gd) pass in the verified 210/210 gate. Retained `C:\Users\Lage\AppData\Local\Temp\OPEN-002-acceptance.log` records 3,865 catalog entries with zero errors, 2,034 event-loop frames during loading, five real-engine games, 13/15 early line moves, 20 fully faded late turns, five persisted target counts and five named PGNs, with zero acceptance failures. This is scripted headless acceptance; visual and hands-on acceptance were not assessed.
+Disclosure: decision | none | The recorded proxy decision for Main lifecycle wiring and criterion-7 re-entry is implemented and independently approved above; no additional integration or release condition.
+Disclosure: decision | none | The recorded proxy decision for one shared public picker/Main catalog-readiness operation is implemented and independently approved above; no additional integration or release condition.
+Disclosure: decision | none | The recorded proxy decision for tiny preloaded catalogs in four existing scene-test helpers is implemented with unchanged assertions and independently approved above; no additional integration or release condition.
