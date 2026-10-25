@@ -1,5 +1,5 @@
 # HIST-001: Game history and stats
-Stage: to-implement
+Stage: implementing
 Blocked by: CORE-006, UI-004
 Review: agent
 Difficulty: normal
@@ -160,3 +160,5 @@ Scope for this ticket: validate each result record before use (a Dictionary whos
 Regressions to write first (own commit, red), in `tests/test_history.gd`: a partial dictionary (`{"wins": 12}`) and a scalar record for the current level/control, each through `save` and through the real Main's game end: no script error, the other levels' records unchanged, the counters written back complete, and the error visible on the result/review screen.
 
 Reopen diagnosis: earlier review miss, not a new defect. The unvalidated read is in `7e5b8a4` (stage 2's first pass) and was present at both ticket reviews (`89b5635`, `396b21b`); neither examined a hand-edited or partially written `stats.cfg`. The session review is the consolidated review of the affected path (`core/history.gd` persisted-data reads); no contract gap (criteria 3 and 5 already require it), no review-induced churn. Next action: stage 2 (two reopens, so the hard implementer), repairing within `core/history.gd`, `ui/main.gd` if the error must reach the review screen, and `tests/test_history.gd`.
+
+- Stage-2 corruption repair read-around: `History.stats()` feeds `save()` and history tests; Main calls `save()` once at game end and copies `history.error` into both the result label and review screen. `practice_counts()` is read during Main startup and shares `stats.cfg`, but its corruption repair belongs to OPEN-002. Preserve existing valid level/control records and practice keys, missing-record defaults, PGN saving, and the save-once guard. Boundaries under test at the existing History persistence seam: partial/scalar/null/array records, missing fields, and negative, float, bool, string or null values in each of the five required counters. The existing real-Main seam will verify the visible game-end warning independently.

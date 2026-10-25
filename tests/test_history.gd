@@ -80,6 +80,58 @@ func _clean(folder: String) -> void:
 			DirAccess.remove_absolute(subdir)
 
 
+func _seed_result_records(folder: String, corrupt) -> bool:
+	assert_eq(DirAccess.make_dir_recursive_absolute(folder), OK)
+	var stored := ConfigFile.new()
+	stored.set_value("maia-1500", "3+2", corrupt)
+	stored.set_value("maia-1500", "1+0",
+			{"wins": 3, "draws": 2, "losses": 1, "flag_wins": 1, "flag_losses": 0})
+	stored.set_value("maia-1700", "3+2",
+			{"wins": 9, "draws": 8, "losses": 7, "flag_wins": 2, "flag_losses": 1})
+	stored.set_value("practice", "fixture-line", 4)
+	var status := stored.save(folder.path_join("stats.cfg"))
+	assert_eq(status, OK, "seed only owned test history")
+	return status == OK
+
+
+func _assert_recovered_result_records(folder: String) -> void:
+	var stored := ConfigFile.new()
+	assert_eq(stored.load(folder.path_join("stats.cfg")), OK)
+	assert_eq(stored.get_value("maia-1500", "3+2"),
+			{"wins": 0, "draws": 0, "losses": 1, "flag_wins": 0, "flag_losses": 0})
+	assert_eq(stored.get_value("maia-1500", "1+0"),
+			{"wins": 3, "draws": 2, "losses": 1, "flag_wins": 1, "flag_losses": 0})
+	assert_eq(stored.get_value("maia-1700", "3+2"),
+			{"wins": 9, "draws": 8, "losses": 7, "flag_wins": 2, "flag_losses": 1})
+	assert_eq(stored.get_value("practice", "fixture-line"), 4, "practice data survives")
+
+
+func test_save_recovers_corrupt_result_records_and_preserves_valid_stats():
+	var corrupt_records: Array = [{"wins": 12}, 12, null, {}, "invalid", []]
+	for invalid_counter in [-1, 1.5, 1.0, true, "2", null]:
+		for counter in ["wins", "draws", "losses", "flag_wins", "flag_losses"]:
+			var record := {"wins": 3, "draws": 2, "losses": 1, "flag_wins": 1, "flag_losses": 0}
+			record[counter] = invalid_counter
+			corrupt_records.append(record)
+	for record in corrupt_records:
+		var folder := _folder()
+		if not _seed_result_records(folder, record):
+			_clean(folder)
+			continue
+		var history = History.new(folder)
+		var game = Game.new()
+		game.resign("w")
+		var path = history.save(game, [], SETTINGS)
+		assert_true(path is String and not path.is_empty(), "corrupt stats do not prevent saving the PGN")
+		assert_true(history.error.contains("Corrupt") and history.error.contains("maia-1500")
+				and history.error.contains("3+2"), "report the affected result record")
+		_assert_recovered_result_records(folder)
+		assert_eq(History.new(folder).stats("maia-1500", "3+2"),
+				{"wins": 0, "draws": 0, "losses": 1, "flag_wins": 0, "flag_losses": 0})
+		assert_eq(_games(folder).size(), 1)
+		_clean(folder)
+
+
 func test_finished_game_saves_one_pgn_with_headers_moves_and_exact_clocks():
 	var folder := _folder()
 	var history = History.new(folder)
