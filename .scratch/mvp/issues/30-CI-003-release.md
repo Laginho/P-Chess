@@ -31,3 +31,4 @@ A `v*` tag produces a downloadable zip that runs: the Windows build plus Lc0 and
 - None at a GDScript seam: release workflow. The evidence is the release link and the manual game.
 
 ## Comments
+- 2026-10-25 CI-002 review: with no engine beside the exe, the exported app says "Run scripts/fetch-engine.ps1 to download it", but an export does not ship that script. The release zip carries the engine, so the message should not show; if it ever does (a broken zip), the text points at a file the user does not have. A note, not a criterion.
