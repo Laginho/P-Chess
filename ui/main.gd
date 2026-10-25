@@ -11,6 +11,7 @@ const UCI = preload("res://engine/uci.gd")
 const MaiaPlayer = preload("res://bot/maia_player.gd")
 const Settings = preload("res://core/settings.gd")
 const SettingsScreen = preload("res://ui/settings.tscn")
+const History = preload("res://core/history.gd")
 
 const WINNERS := {"1-0": "White wins", "0-1": "Black wins", "1/2-1/2": "Draw"}
 
@@ -31,6 +32,11 @@ var resign_key := ResignKey.new(Time.get_ticks_msec)
 # Only the board and the clocks show (§8.7).
 var focus := false
 var _playing_premove := false
+# Created at ready time so scene tests can supply isolated storage before any file is read.
+var history
+var _move_clocks := []
+var _history_saved := false
+var _recording_move := false
 
 
 # Esc resigns on a second press within 2 s of the first (§7). The time source returns milliseconds.
@@ -91,6 +97,8 @@ static func material_balance(board) -> Dictionary:
 
 
 func _ready() -> void:
+	if history == null:
+		history = History.new()
 	get_window().min_size = Vector2i(800, 600)
 	sound_player.name = "Sounds"
 	add_child(sound_player)
@@ -143,6 +151,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 
 func _start(new_settings: Dictionary) -> void:
 	setup.hide()
+	_move_clocks.clear()
+	_history_saved = false
 	settings = new_settings
 	human = settings.colour
 	uci.set_level(MaiaPlayer.net_path(settings.level))
@@ -230,11 +240,16 @@ func _on_move_played(san: String) -> void:
 	move_list.add(san)
 	var game = board_view.game
 	claim_draw.disabled = not game.can_claim_draw()
+	var mover: String = "b" if game.board.side_to_move == "w" else "w"
+	_recording_move = true
+	if not _playing_premove:
+		# May flag, when the time ran out before the move landed.
+		# A terminal move keeps its existing result even if clock.moved emits a flag.
+		clock.moved(mover)
+	_move_clocks.append(clock.left(mover))
+	_recording_move = false
 	if game.is_over():
 		_show_result()
-	elif not _playing_premove:
-		# May flag, when the time ran out before the move landed.
-		clock.moved("b" if game.board.side_to_move == "w" else "w")
 	var balance := material_balance(board_view.game.board)
 	white_material.text = _captured(balance.w, BLACK_GLYPHS) + _lead(balance.diff)
 	black_material.text = _captured(balance.b, WHITE_GLYPHS) + _lead(-balance.diff)
@@ -244,7 +259,9 @@ func _on_move_played(san: String) -> void:
 # The clock has already stopped. Maia may still be thinking: its move then finds the game over.
 func _on_flagged(side: String) -> void:
 	board_view.game.flag(side)
-	_show_result()
+	# A flag during move accounting must wait for that move's clock snapshot.
+	if not _recording_move:
+		_show_result()
 
 
 # Every way a game ends lands here, after the game has its result.
@@ -254,6 +271,11 @@ func _show_result() -> void:
 	clock.stop()
 	claim_draw.disabled = true
 	result_label.text = "%s by %s (%s)\nSpace for a rematch" % [WINNERS[game.result], game.reason, game.result]
+	if not _history_saved:
+		_history_saved = true
+		history.save(game, _move_clocks, settings)
+	if history.error:
+		result_label.text += "\nHistory: " + history.error
 	sound_player.play("game_end")
 	print("Maia: median %.1f ms from your move to Lc0's answer, over %d moves"
 			% [maia.median_ms(), maia.latencies_ms.size()])
