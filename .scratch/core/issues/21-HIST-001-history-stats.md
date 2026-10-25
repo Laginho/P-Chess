@@ -1,5 +1,5 @@
 # HIST-001: Game history and stats
-Stage: to-review
+Stage: done
 Blocked by: CORE-006, UI-004
 Review: agent
 Difficulty: normal
@@ -117,3 +117,32 @@ Acceptance: pending | Automated criterion-7 repair and full gate pass; independe
 Disclosure: decision | none | Proxy amendment under Comments authorizes only the omitted settings-test harness; criterion 7 and production behavior are unchanged.
 Disclosure: pending | integration | The first-review criterion-7 finding is repaired on this branch and awaits independent re-review on HIST-001.
 Disclosure: pending | release | The original Verification step to play two games interactively and inspect their user://games/ PGNs has not been performed.
+
+#### Resolution (2026-10-25, re-review)
+
+Verdict: Approve
+
+Independent Standards and Spec sub-agents reviewed `89b56356d14fe4946b4a82b148713f87b7f60f95...69be6b1fcc8ab50908b9d44e293143468c3c1f5d`, the first review's criterion-7 finding and all three repair commits. This review authored no production or test changes. Rebase onto `sweatshop/core/2026-10-25-0159` was already up to date; the ticket was merged without squash as `21b1790`. The merge tree is identical to the reviewed ticket tree.
+
+##### Standards
+
+No documented-standard violations. `ddbac01` changes the test harness and permitted ticket metadata; `b4f0e89` changes only the approved test harness; `69be6b1` is ticket metadata only. Every existing settings assertion is preserved. This harness-only repair adds no production behavior and does not need a production commit to follow its test correction.
+
+One optional possible Duplicated Code observation continues the first review's cleanup note: the settings test now repeats the same owned-directory cleanup used by the history, session and premove tests. It is tracked for triage in [CLEAN-003](34-CLEAN-003-history-test-cleanup.md), without expanding this repair or blocking integration.
+
+##### Spec
+
+7. ✅ The settings test constructs real History with a unique isolated root and injects it before Main enters the tree. History's constructor loads only that root's `stats.cfg`; Main retains the supplied instance at startup. The pre-tree guard fails and returns before Main can load normal player history if injection is omitted. Cleanup removes files only from the captured test root and its `games` child. All existing settings behavior assertions remain intact. Criteria 1–6 retain the passing verdicts of the first review; production code is unchanged by this repair.
+
+Examined: History construction, Main's ready-time null guard, every real-Main test caller (settings, session, premove and history integration), settings startup/reload assertions, normal tree-exit cleanup, and the fail-closed off-tree cleanup path. Static Main usages do not instantiate the scene. No new miss in previously reviewed code was identified. Interactive two-game acceptance, exported builds and real disk-full/permission failures remain unexamined.
+
+Red/green: inspected both committed test-only changes and the retained focused logs. `ddbac01` gives **14 passed, 1 failed**, with the sole failure identifying the missing isolated History before tree entry. `b4f0e89` gives **15 passed, 0 failed**. These exercise real History and Main; the negative guard returns before normal history can be read.
+
+Gate: the installed `Assert-GateEvidence` helper validated the current receipt before integration and on merge `21b1790`: bound command `godot --headless -s tests/run.gd`, tested commit `b4f0e896c059fbb0c3b65f42029b08b1869417d6`, **180 passed, 0 failed**, exit 0. The log SHA-256 `F64A21F526043FDB7298BE18646D45ED0DAA29577E7B40CE2E8489BE78CA7420` and exit marker match, and the tested commit exists. Only permitted tracker metadata differs from the tested code, so the green gate is reused. `git diff --check` passes.
+
+Proxy review: both existing `Proxy decided (gpt-6-astra high, fallback)` decisions are satisfied: session/premove history isolation and real-Main integration coverage from the original implementation, and the narrowly approved settings-test isolation/startup assertion from the repair. No new proxy decision or contract amendment was made during this review. The previous criterion-7 integration holds are resolved by this approval and merge.
+
+Acceptance: pending | Automated acceptance and independent criterion-7 re-review pass. The original Verification step to play two games interactively and inspect their user://games/ PGNs remains pending for release.
+Disclosure: decision | none | Both existing proxy-approved test seams are implemented and independently approved; their prior integration condition is resolved.
+Disclosure: deferred | none | [CLEAN-003](34-CLEAN-003-history-test-cleanup.md) retains the optional repeated-cleanup observation for triage. It is not a runtime defect or a release condition.
+Disclosure: pending | release | Interactive play of two games and inspection of their user://games/ PGNs remains as recorded in Verification.
