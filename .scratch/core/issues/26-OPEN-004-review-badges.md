@@ -1,5 +1,5 @@
 # OPEN-004: Review badges and repertoire check
-Stage: to-implement
+Stage: implementing
 Blocked by: HIST-002, OPEN-003
 Review: agent
 Difficulty: normal
@@ -107,3 +107,7 @@ Scope for this ticket: after the catalog `await`, re-evaluate whether the repert
 Regression to write first (own commit, red), in `tests/test_badges.gd` (real Main, as the existing session tests): Free mode, corrupt saved repertoire, checking off; Start, enable checking through the Settings control during the catalog load; assert the game does not start, no Maia request or clock is created, and the setup shows the load error.
 
 Next action: stage 2.
+
+#### Reopened stage 2 caller inspection (2026-10-25)
+
+`Main._start` is reached from Setup.started, Review.rematch_requested and the Space rematch hotkey. Its catalog await permits live Settings changes before clock/game creation. Preserve the pre-game repertoire snapshot (including checking enabled later during play), existing catalog failures, Free/Catalog colour and bot mode, and My repertoire's required load. The agreed regression seam is the real Main/Setup/Settings/Review session in `tests/test_badges.gd`; hold only external catalog I/O and engine requests. Cover checking off at Start, enabling it during loading with corrupt saved PGN, rejecting the start before any game/clock/policy request, and retrying with different repaired paths.
