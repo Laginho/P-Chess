@@ -65,6 +65,18 @@ func test_errors():
 	assert_true("0 passed, 1 failed" in run.output, run.output)
 
 
+func test_an_assert_after_an_await_counts():
+	var dir := _case("awaiting", """extends "res://tests/run.gd".Test
+func test_fails_after_a_timer():
+	await Engine.get_main_loop().create_timer(0.05).timeout
+	assert_true(false, "after the await")
+""")
+	var run := _run(dir)
+	assert_true(run.code != 0, "exit code %d" % run.code)
+	assert_true("after the await" in run.output, run.output)
+	assert_true("0 passed, 1 failed" in run.output, run.output)
+
+
 func test_default_run_skips_fixtures():
 	var files: PackedStringArray = load("res://tests/run.gd").find_tests("res://tests")
 	assert_true("res://tests/test_runner.gd" in files, str(files))
