@@ -100,7 +100,7 @@ func _add_name(entry: Dictionary) -> void:
 func search(query: String) -> Array[String]:
 	var visible := {}
 	for path in nodes:
-		if not query.to_lower() in path.to_lower():
+		if not query.is_empty() and not query.to_lower() in path.to_lower():
 			continue
 		var ancestor: String = path
 		while not ancestor.is_empty():
