@@ -1,5 +1,5 @@
 # UI-004: Setup, game end, rematch and hotkeys
-Stage: to-review
+Stage: done
 Blocked by: CLOCK-001
 Review: agent
 Difficulty: normal
@@ -114,3 +114,34 @@ Proxy decided (opus): `ui/board_view.gd` joins Primary files, limited to the `ga
   - Callers of the setter: `main._ready` (fresh board, nothing held, picker hidden), `main._start` (the rematch) and tests. The CLOCK-001 test builds `BoardView.new()` with a null `_picker`, which the guard covers. That test still passes.
 
 Gate evidence: C:\Users\Lage\AppData\Local\Temp\claude\D--Desktop-Projects-P-Chess--artifacts-build-lanes-core\93202eda-48f6-4cd8-8f92-1905edf073bb\scratchpad\UI-004-reopen-gate.json
+
+#### Resolution (2026-10-24, re-review)
+
+Verdict: Approve
+
+Stage 3 (opus-5.5), re-review after the session PR #8 reopen: the ❌ item (criterion 3) and the diff since the last review, d7aad4d (test-only, plus ticket metadata and a note under UI-007), 7891185 (`ui/board_view.gd` only) and 0b29179 (ticket only). The Standards and Spec axes ran as separate sub-agents. Standards found no violation and no baseline smell. The tests reach into BoardView's private state the same way `tests/test_board_view.gd` does. Spec found the fix meets the reopen, with two gaps in test coverage, not in behaviour (below). The UI-007 line is a note on an open ticket, not scope creep.
+
+Examined: the `game` setter's callers. `main._ready` builds a fresh board, with the picker hidden and nothing held, so the setter changes nothing there. `main._start` runs it for the first game and for a rematch. `tests/test_board_view.gd` builds `BoardView.new()` with a null `_picker`, which the guard covers. `_apply("auto_claim")` writes to the game, not through the setter. `_picker._close("")` hides the picker, frees its buttons and emits `cancelled`, which runs `_end_snap_back`, and the setter's own `_end_snap_back` after it is idempotent. `_end_slide` kills a slide still running from the old game. A mouse button still held across Space finds `_drag_from` empty, so motion and release do nothing. Outside the setter, `_drop` now keeps the snap-back tween in `_snap` so that the setter can kill it. This stays within the Proxy decided scope, which names the snap-back tween. Not examined: the app in a window, by a person.
+
+Criteria:
+
+3. ✅ (was ❌). A rematch now starts on a clean board. I checked this on the real `Main`, in the tree, with an uncommitted review probe: a `SceneTree` script that defers from `_initialize`, adds `ui/main.tscn` to the root, and drives `_on_flagged`, `_unhandled_key_input` (Space) and `board_view._gui_input`, on a fresh `Main` per scenario. Repro A (picker open at a flag, then Space): no picker, its buttons freed, nothing pending. Repro B (e5 held at a flag, then Space): nothing held, and e7e6 plays after Maia's e2e4. Snap-back race (a piece snapping back at the flag, Space, then d2 picked up at once): d2 is still held 0.4 s later. On HEAD all 10 checks pass. On d7aad4d (no fix) 6 fail, covering both repros and the race. With only `_snap.kill()` removed, only the race check fails, so the kill is needed.
+
+Every other criterion verdict of the first review stands (quoted above).
+
+The regression was the first stage-3 pass's miss. That pass read `_start` and traced the game-over guards in `BoardView.play` and `Game.play`, but did not check what BoardView holds, or has pending for promotion, when a new game is assigned.
+
+Rules: test-only d7aad4d comes before production-only 7891185, and 0b29179 touches only the ticket. All code changes are in Primary files. No rebase was needed: the branch sat on the session tip 2c234be. Merged as 1ee143f, whose tree matches 0b29179.
+
+Red-green: in a throwaway worktree on d7aad4d the suite gives `113 passed, 2 failed`. The two new tests fail on the stale picker with `a7a8` pending, and on the stale `e5` held with its `e5e6` target. Green is stage 2's gate on 7891185: exit 0, `115 passed, 0 failed` (receipt in the `Gate evidence:` line above; its log shows the same counts). No production code changed after that, so the receipt is reused.
+
+Not met as the reopen asked, and not a reopen: the committed tests drive BoardView through the same assignment `Main._start` makes, not through the real `Main`, and no committed test covers the snap-back kill. The runner calls tests from `_initialize`, before the root is in the tree, and `tests/run.gd` is outside Primary files. The probe shows the seam works. The test it would host is noted under CLOCK-002 ## Comments, whose blocked question is about the same seam.
+
+`Proxy decided` lines: three, all (opus), under Comments. They cover `ui/move_list.gd`'s `reset()`, the Esc hint and the result in focus mode, and `ui/board_view.gd`'s `game` setter (this reopen).
+
+Acceptance: pending | the manual checks in Verification have not been run by a person: Esc Esc resign, a Space rematch that swaps colours, F11 focus mode, and claiming a threefold with auto-claim off in Settings. So far: the gate at 115/115 on 7891185, and the in-tree probe of the rematch path above.
+Disclosure: decision | none | Proxy decided (opus), see ## Comments: `ui/move_list.gd` joins Primary files for the `reset()` the rematch calls.
+Disclosure: decision | none | Proxy decided (opus), see ## Comments: in focus mode the Esc hint stays visible and the game-end result shows (review fix c4bd40f).
+Disclosure: decision | none | Proxy decided (opus), see the Reopen block: `ui/board_view.gd` joins Primary files, limited to the reset in the `game` setter and the `_snap` field it kills.
+Disclosure: deferred | none | no committed test drives the real `Main` rematch or the snap-back kill; it waits on a runner that hosts scenes in the tree. Not accepted by a person: the open destination is `.scratch/core/issues/32-CLOCK-002-move-after-flag.md` ## Comments (the same seam question). The behaviour was checked in this review by the probe above.
+Disclosure: pending | release | dropping Maia's stale reply after a rematch mid-think has no test, because it needs a window and Lc0. Check it by hand by rematching while Maia thinks.
