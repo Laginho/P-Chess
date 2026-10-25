@@ -1,5 +1,5 @@
 # OPEN-004: Review badges and repertoire check
-Stage: to-review
+Stage: done
 Blocked by: HIST-002, OPEN-003
 Review: agent
 Difficulty: normal
@@ -62,3 +62,34 @@ Disclosure: decision | none | OPEN-004 proxy scope and badge clarification: pres
 Acceptance: passed | `tests/test_badges.gd` (11 pure/UI/session tests) and the rendered move-5 production-review fixture described above; no real-engine play-through claimed.
 
 Gate evidence: C:\Users\Lage\AppData\Local\Temp\p-chess-OPEN-004\gate.json
+
+#### Resolution (2026-10-25)
+
+Verdict: Approve
+
+Independent Standards and Spec sub-agents reviewed the full diff `2f5d1232f24e9f11ae9ae77b0e7a6e631d81659a...cc048be4bd88d63f51c0338cf811b8cb32a0a5a7`, all numbered criteria, the proxy amendment and docs/spec.md sections 6.4/9.3. This review authored no production or test changes. Rebase onto `sweatshop/core/2026-10-25-0159` was already up to date. Merge `c404dd9` preserves every implementation commit; its tree is identical to the independently reviewed ticket tree.
+
+##### Standards
+
+0 hard documented-standard violations; 0 actionable judgement-call smells. All thirteen commit stats preserve test/production separation: seven test-only commits (with permitted ticket metadata), five production-only commits and one metadata handoff. All source and test changes remain within Primary files. The pure evaluator, position index, repertoire snapshot and presentation are cohesive and follow the surrounding dictionary-based domain records. No unrequested refactor, added logging or concrete security/accessibility regression was found.
+
+##### Spec
+
+1. ✅ Book indexes all catalog entries regardless of picker checks. Position/move matches receive Book until the first exit; badges never resume afterward, including after returning to a known position. Checking off preserves Book.
+2. ✅ The persisted boolean defaults to off and is editable in Settings. Setup supplies a repertoire in every mode; only My repertoire adopts its saved colour and supplies Maia's repertoire book. Main snapshots the loaded PGN, uses the live checking preference at review and the actual played colour on rematches, and reports required load failures before creating a new clock/game. Repair and retry do not use stale repertoire data. History retains the shared catalog.
+3. ✅ Every imported path contributes position/move continuations using Board.position_key without counters. Only human moves receive repertoire badges, ending at the sole first human exit. Expected moves are distinct SAN; opponent deviations and PGN leaves display No continuation in repertoire. Tests cover transpositions, actual Black play and permanent exit. A wrapping detail label keeps expected moves readable outside the clipped badge column and clears for the next review.
+4. ✅ The existing live SAN list has no book/repertoire annotations. Setup and Review stay hidden during play in all three modes; badges are presented only after the game ends.
+5. ✅ Badges.evaluate reconstructs its own board and returns one record per ply without changing game/book data. Eleven production-bound pure, settings, Setup and real-Main/Review session tests cover the contracted behavior and failure paths.
+
+0 missing/partial requirements, 0 scope-creep findings and 0 incorrect implementations. Examined the complete diff and all added tests; Main start/result/rematch callers; Setup mode, colour and load/retry paths; settings validation/persistence; Book/Repertoire parsing and indexing; Board position keys/SAN; Maia opening-mode selection; History catalog recognition; Review move times, export actions and reset state. Not experimentally examined in this review: a real-engine play-through, exported builds or physical storage failures. These changes introduce no new external integration boundary.
+
+Red/green evidence: inspected the retained focused logs and separate committed cycles. Missing module: **0 passed, 1 failed → 1 passed, 0 failed**; repertoire after fixture correction: **1 passed, 3 failed → 4 passed, 0 failed**; settings/setup: **4 passed, 2 failed → 6 passed, 0 failed**; Main/Review sessions: **6 passed, 4 failed → 10 passed, 0 failed**; readable exit details: **10 passed, 1 failed → 11 passed, 0 failed**. The typing and transposition fixture corrections are isolated test-only commits with explanations above. Tests call the production evaluator/scenes; the full gate uses the tracked test file rather than the ignored focused copy.
+
+Gate: Assert-GateEvidence validated the existing receipt against the reviewed HEAD and merge `c404dd9`: bound command `godot --headless -s tests/run.gd`, tested commit `430edbe47b154659aa067f67d644fd098c109397`, **229 passed, 0 failed**, exit 0. SHA-256 `5788008C4BCA6931A77B820ECBE4212C70E1E0F0E4318E98402F3017486D5307` and the exit marker match; the tested commit exists. All eleven new tests pass in the full log; no ERROR/SCRIPT ERROR is present. Only permitted tracker metadata differs from the tested code, so the green gate is reused. `git diff --check` passes.
+
+Visual acceptance: independently inspected the existing Settings and move-5 Review captures at 800×600 and their production-scene fixture. Controls/actions fit; Repertoire appears through move 4 and the readable detail says `5. White: Left repertoire — expected: d3`. The long badge text clips within its table cell, with the complete explanation visible below it. No real-engine play-through is claimed.
+
+Proxy review: the existing Proxy decided (gpt-6-astra high, fallback) amendment is satisfied by the narrowly scoped Main composition, catalog badges independent of checking, the sole human exit and explicit no-continuation text. Existing bot modes, history ownership and swapped-colour rematches are preserved. No new proxy decision or contract amendment was made.
+
+Acceptance: passed | Eleven production-bound badge tests, the validated 229-test gate, independent Standards/Spec review and the rendered move-5 fixture above satisfy this ticket's acceptance scope.
+Disclosure: decision | none | Existing OPEN-004 proxy scope/badge clarification is implemented and independently approved; no migration or additional integration/release condition. No unresolved finding remains.
