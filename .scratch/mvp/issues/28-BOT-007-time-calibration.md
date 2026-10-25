@@ -1,5 +1,5 @@
 # BOT-007: Time-model calibration from Lichess data
-Stage: reviewing
+Stage: done
 Blocked by: BOT-001, BOT-006
 Review: human
 Difficulty: normal
@@ -127,3 +127,29 @@ Disclosure: pending | integration | This Resolution, criterion 5: calibration po
 Acceptance: pending | This reopened handoff: offline history-context repair passes; approved real-data calibration, generated production table validation and M8 human assessment remain outstanding.
 Disclosure: pending | integration | Previous Resolution criterion 5 is repaired by `18cf32e` with regression `43656a5`; independent stage-3 review must confirm the repair before integration.
 Disclosure: pending | release | Verification: real-data calibration and data/time_model.json remain pending Bruno's explicit chat approval for the planned download; no download was attempted.
+
+#### Resolution (2026-10-25)
+
+Verdict: Approve
+
+##### Standards
+
+- Independent Standards re-review examined `git diff ae438a0...ae3193f`: one minor tracker-convention finding, no code-standard violations or actionable baseline smells. The new criterion-5 repair comment had been inserted before earlier history, contrary to `docs/agents/issue-tracker.md`. Documentation-only commit `60a3b66` moves it after the preceding review; the finding is resolved. No production behavior was authored during review.
+
+##### Spec
+
+- Independent Spec re-review found no missing requirements, incorrect behavior or scope creep in the repair. Previously failed criterion 5 is now satisfied: each sample preserves its initial FEN and immutable preceding-move history, including untimed and missing-clock moves; `lc0_policy` sends the same position context as `engine/uci.gd::request_policy`. The sampled move itself is excluded, empty history omits the suffix, and the current FEN still filters legal moves. Criteria 1-4 and 6-8 retain the preceding review's approval; their implementations are unchanged.
+- Examined affected paths and callers: extraction -> sample snapshots -> reservoir -> `lc0_policy` -> bucketing, the local fake-UCI pipeline, and comparisons with `engine/uci.gd`, `bot/maia_player.gd` and BOT-006's table consumer. Regression cases cover opening history, missing clocks, a custom initial FEN and empty history. No new findings in previously reviewed code. Not examined: a real monthly dump, a production calibration table or M8's human assessment; these remain the documented product checks.
+
+##### Verification and integration
+
+- Independently replayed test-only commit `43656a5` in a temporary directory: **4 failed, 6 passed**, exit 1, with three wrong history-sensitive probabilities and one absent-context-field failure. Current Python suite: **10 passed**, exit 0, using Python 3.14.6 with `-B -m pytest -p no:cacheprovider scripts/test_calibrate_time.py`; one upstream python-chess deprecation warning. Commit stats confirm the repair's tests (`43656a5`) precede production (`18cf32e`). The original handoff's disclosed CLI-authoring chronology limitation remains part of the historical record.
+- Independent real-Lc0 smoke through production `lc0_policy`, with fresh installed maia-1500 processes, confirms fixture top P **0.4694** before `2.Nf3` and **0.3439** before `3.Bb5`, matching the prior review's history-preserving reference. No HTTP request, download or calibration table was produced.
+- Reused and independently verified the bound gate receipt above: tested commit `18cf32e68d10c79a5c00ab4b2f5250cb311b04d6`, `godot --headless -s tests/run.gd`, **137 passed, 0 failed**, exit 0; log SHA-256 `40F2D2325C8013758751AA03113B64BEE1C41256C730292DB5664C67D6038B46` matches. Only tracker metadata and the feature ledger change after tested code; rebase was already up to date. No new gate run was needed.
+- Both existing proxy decisions remain applicable: the gpt-6-astra high fallback approved offline CLI/reservoir/UCI seams within existing criteria; opus kept PolicyTemperature at the game's Lc0 v0.32.1 default 1.359. Neither authorizes downloading. A different temperature still requires Bruno's decision and coordinated engine/script settings before calibration.
+- Reviewed the final diff for scope, whitespace, generated data and unintended changes. Merged locally with `--no-ff` as `d7bea26` into `sweatshop/mvp/2026-10-25-0006`; this closing commit sets `done` and adds the ledger line together. Under the session flow, `Review: human` flags the session PR for human attention; no push or separate ticket PR is part of this stage.
+- Review totals: **Standards 1 minor documentation finding, resolved; Spec 0; no unresolved implementation findings**. The previous criterion-5 integration disclosure is resolved by this independent review.
+
+Acceptance: pending | Verification and this Resolution: the offline implementation is approved; Bruno's approved real-data run, production table validation and M8 human assessment remain outstanding.
+Disclosure: decision | none | This Resolution approves `18cf32e` with regression `43656a5`, resolving the previous history-context integration finding; no implementation defect remains open from these reviews.
+Disclosure: pending | release | Original Verification and this Resolution: data/time_model.json and M8 remain pending Bruno's explicit download approval and real-data validation; the game continues using its documented formula fallback until the table is generated.
