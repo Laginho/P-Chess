@@ -5,6 +5,7 @@ const Game = preload("res://core/game.gd")
 const MainScene = preload("res://ui/main.tscn")
 const History = preload("res://core/history.gd")
 const Clock = preload("res://core/clock.gd")
+const Pgn = preload("res://core/pgn.gd")
 const SETTINGS := {"colour": "w", "level": "maia-1500", "control": "3+2", "opening": "Free"}
 
 
@@ -145,3 +146,37 @@ func test_review_opens_for_no_move_resignation_flag_and_claimed_draw():
 			if ending == "resignation":
 				assert_eq(review.get_node("Margin/Content/Moves").get_root().get_child_count(), 0)
 		main.free()
+
+
+func test_export_buttons_send_finished_pgn_and_lichess_url():
+	var time := FakeTime.new()
+	var main = _session(time)
+	main.board_view.play("f2f3")
+	main._on_maia_move("e7e5")
+	time.now = 250
+	main.board_view.play("g2g4")
+	time.now = 1250
+	main._on_maia_move("d8h4")
+	var review = main.get_node("Review")
+	var copy = review.get_node_or_null("Margin/Content/Actions/CopyPgn")
+	var lichess = review.get_node_or_null("Margin/Content/Actions/Lichess")
+	assert_true(copy != null and lichess != null, "review provides both export actions")
+	if copy == null or lichess == null:
+		main.free()
+		return
+	var sent := {"pgn": "", "url": ""}
+	review.copy_text = func(text: String): sent.pgn = text
+	review.open_browser = func(url: String): sent.url = url
+	copy.pressed.emit()
+	lichess.pressed.emit()
+	var parsed := Pgn.parse(sent.pgn)
+	assert_eq(parsed.error, "")
+	assert_eq(parsed.games.size(), 1)
+	if parsed.games.size() == 1:
+		assert_eq(parsed.games[0].headers, {"White": "You", "Black": "Maia 1500", "TimeControl": "180+2",
+				"Result": "0-1", "Termination": "Normal"})
+		assert_eq(parsed.games[0].moves.map(func(move): return move.uci), ["f2f3", "e7e5", "g2g4", "d8h4"])
+		assert_eq(parsed.games[0].moves.map(func(move): return move.clock_ms), [180000, 180000, 181750, 181000])
+		assert_eq(parsed.games[0].result, "0-1")
+	assert_eq(sent.url, "https://lichess.org/analysis/pgn/1.%20f3%20e5%202.%20g4%20Qh4%23%200-1")
+	main.free()
