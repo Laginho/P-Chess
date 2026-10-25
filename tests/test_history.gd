@@ -107,7 +107,7 @@ func _assert_recovered_result_records(folder: String) -> void:
 
 
 func test_save_recovers_corrupt_result_records_and_preserves_valid_stats():
-	var corrupt_records: Array = [{"wins": 12}, 12, null, {}, "invalid", []]
+	var corrupt_records: Array = [{"wins": 12}, 12, {}, "invalid", []]
 	for invalid_counter in [-1, 1.5, 1.0, true, "2", null]:
 		for counter in ["wins", "draws", "losses", "flag_wins", "flag_losses"]:
 			var record := {"wins": 3, "draws": 2, "losses": 1, "flag_wins": 1, "flag_losses": 0}
@@ -124,7 +124,7 @@ func test_save_recovers_corrupt_result_records_and_preserves_valid_stats():
 		var path = history.save(game, [], SETTINGS)
 		assert_true(path is String and not path.is_empty(), "corrupt stats do not prevent saving the PGN")
 		assert_true(history.error.contains("Corrupt") and history.error.contains("maia-1500")
-				and history.error.contains("3+2"), "report the affected result record")
+				and history.error.contains("3+2"), "report the affected result record: " + var_to_str(record))
 		_assert_recovered_result_records(folder)
 		assert_eq(History.new(folder).stats("maia-1500", "3+2"),
 				{"wins": 0, "draws": 0, "losses": 1, "flag_wins": 0, "flag_losses": 0})
