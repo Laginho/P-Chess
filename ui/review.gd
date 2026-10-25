@@ -7,6 +7,7 @@ signal setup_requested
 const Clock = preload("res://core/clock.gd")
 const Pgn = preload("res://core/pgn.gd")
 const Board = preload("res://core/board.gd")
+const Badges = preload("res://bot/badges.gd")
 
 # System boundaries stay replaceable for headless tests.
 var copy_text: Callable = DisplayServer.clipboard_set
@@ -22,6 +23,8 @@ func _ready() -> void:
 	_moves.set_column_title(0, "Move")
 	_moves.set_column_title(1, "White · time spent")
 	_moves.set_column_title(2, "Black · time spent")
+	_moves.set_column_title(3, "White · badges")
+	_moves.set_column_title(4, "Black · badges")
 	_moves.set_column_expand(0, false)
 	_moves.set_column_custom_minimum_width(0, 60)
 	$Margin/Content/Actions/CopyPgn.pressed.connect(func(): copy_text.call(_pgn))
@@ -38,22 +41,39 @@ func _input(event: InputEvent) -> void:
 		rematch_requested.emit()
 
 
-func present(game, clocks: Array, settings: Dictionary, result_text: String) -> void:
+func present(game, clocks: Array, settings: Dictionary, result_text: String,
+		catalog: Array = [], repertoire: Array = [], check_repertoire := false) -> void:
 	_result.text = result_text
 	_moves.clear()
 	var root := _moves.create_item()
 	var board = Board.from_fen(Pgn.START)
 	var times := move_times(clocks, settings.control)
+	var badges := Badges.evaluate(game.moves, catalog, repertoire, settings.colour, check_repertoire)
 	var row: TreeItem
 	for i in game.moves.size():
 		if i % 2 == 0:
 			row = _moves.create_item(root)
 			row.set_text(0, "%d." % (i / 2 + 1))
 		row.set_text(i % 2 + 1, "%s (%.3f s)" % [board.san(game.moves[i]), times[i] / 1000.0])
+		var text := _badge_text(badges[i])
+		row.set_text(i % 2 + 3, text)
+		row.set_tooltip_text(i % 2 + 3, text)
 		board.make_move(game.moves[i])
 	_pgn = _game_pgn(game, clocks, settings)
 	_url = lichess_url(game)
 	show()
+
+
+static func _badge_text(mark: Dictionary) -> String:
+	var labels := PackedStringArray()
+	if mark.book:
+		labels.append("Book")
+	if mark.repertoire:
+		labels.append("Repertoire")
+	if mark.left_repertoire:
+		labels.append("Left repertoire — " + ("No continuation in repertoire" if mark.expected.is_empty()
+				else "expected: " + ", ".join(mark.expected)))
+	return " · ".join(labels)
 
 
 static func move_times(clocks: Array, control: String) -> Array:
