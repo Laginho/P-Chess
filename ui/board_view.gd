@@ -8,6 +8,7 @@ signal sound_requested(event: String)
 
 const ThemeLoader = preload("res://ui/theme_loader.gd")
 const PromotionPicker = preload("res://ui/promotion_picker.gd")
+const PremoveQueue = preload("res://ui/premove_queue.gd")
 const SNAP_BACK_SECONDS := 0.15
 const LAST_MOVE := Color(0.61, 0.78, 0, 0.41)
 const CHECK := Color(1, 0, 0, 0.6)
@@ -27,11 +28,20 @@ const DRAWING := Color(0.12, 0.65, 0.22, 0.75)
 			_end_snap_back()
 @export_enum("off", "on", "only on premoves") var auto_queen := "off"
 
+var premoves := PremoveQueue.new("w")
+# Empty preserves the standalone board's two-human input.
+var human_side := "":
+	set(value):
+		human_side = value
+		premoves.human = value
+		premoves.clear()
+
 var _board_style := {"light": ThemeLoader.BROWN_LIGHT, "dark": ThemeLoader.BROWN_DARK, "texture": null}
 
 var game:
 	set(value):
 		game = value
+		premoves.clear()
 		# A new game (a rematch) keeps nothing held, sliding or promoting from the old one.
 		_end_slide()
 		if _snap:
@@ -69,6 +79,7 @@ var _snapping := false
 var _snap: Tween
 # The held piece's legal moves, UCI.
 var _held_moves := PackedStringArray()
+var _held_piece := ""
 # The sliding piece's destination; "" when nothing slides.
 var _slide_to := ""
 var _slide_pos := Vector2.ZERO:
@@ -127,10 +138,10 @@ func set_piece_theme(name: String) -> void:
 
 
 # A move not dragged on the board (the bot's, a premove); false when it is illegal.
-func play(move: String) -> bool:
+func play(move: String, premove := false) -> bool:
 	if game.is_over() or not move in game.board.legal_moves():
 		return false
-	_commit(move, true)
+	_commit(move, true, premove)
 	return true
 
 
@@ -139,6 +150,11 @@ func _draw() -> void:
 	var cell := Vector2.ONE * side / 8
 	var last: String = game.moves[-1] if game and game.moves else ""
 	var checked := ""
+	var position = game.board if game else null
+	if game and not premoves.moves.is_empty():
+		var ghost = premoves.position(game.board)
+		if ghost != null:
+			position = ghost
 	if game and game.board.in_check():
 		checked = "K" if game.board.side_to_move == "w" else "k"
 	if _board_style.texture:
@@ -150,11 +166,11 @@ func _draw() -> void:
 			draw_rect(Rect2(at, cell), _board_style.light if _is_light(square) else _board_style.dark)
 		if last and square in [last.substr(0, 2), last.substr(2, 2)]:
 			draw_rect(Rect2(at, cell), LAST_MOVE)
-		var piece: String = game.board.piece_at(square) if game else ""
+		var piece: String = position.piece_at(square) if position else ""
 		if checked and piece == checked:
 			draw_circle(at + cell / 2, cell.x / 2, CHECK)
 		if square != _drag_from and square != _slide_to:
-			_draw_piece(piece, at, cell)
+			_draw_piece(piece, at, cell, 0.5 if game and piece != game.board.piece_at(square) else 1.0)
 	_draw_coordinates(cell.x)
 	if show_targets:
 		for move in _held_moves:
@@ -169,7 +185,7 @@ func _draw() -> void:
 	if _slide_to:
 		_draw_piece(game.board.piece_at(_slide_to), _slide_pos - cell / 2, cell)
 	if _drag_from:
-		_draw_piece(game.board.piece_at(_drag_from), _drag_pos - cell / 2, cell)
+		_draw_piece(_held_piece, _drag_pos - cell / 2, cell)
 	for drawing in drawings:
 		_draw_annotation(drawing[0], drawing[1], cell.x)
 	if _drawing_from and _drawing_to:
@@ -205,9 +221,9 @@ func _draw_coordinates(cell: float) -> void:
 				HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, _board_style.dark if _is_light(rank) else _board_style.light)
 
 
-func _draw_piece(piece: String, at: Vector2, cell: Vector2) -> void:
+func _draw_piece(piece: String, at: Vector2, cell: Vector2, opacity := 1.0) -> void:
 	if piece and _textures.get(piece):
-		draw_texture_rect(_textures[piece], Rect2(at, cell), false)
+		draw_texture_rect(_textures[piece], Rect2(at, cell), false, Color(1, 1, 1, opacity))
 
 
 func _gui_input(event: InputEvent) -> void:
@@ -264,20 +280,24 @@ func _gui_input(event: InputEvent) -> void:
 			_drag_pos = event.position
 
 
-# Only a piece of the side to move, and never once the game is over.
+# During Maia's turn only human pieces can be held, on the queued position.
 func _pick_up(point: Vector2) -> void:
 	if _drag_from or game == null or game.is_over():
 		return
 	var square := square_at(point - _corner(), _side(), flipped)
-	var piece: String = game.board.piece_at(square) if square else ""
-	if piece and (piece == piece.to_upper()) == (game.board.side_to_move == "w"):
+	var position = _input_position()
+	if position == null:
+		return
+	var piece: String = position.piece_at(square) if square else ""
+	if piece and (piece == piece.to_upper()) == (position.side_to_move == "w"):
 		_end_slide()
 		_drag_from = square
+		_held_piece = piece
 		_drag_pos = point
 		_press_pos = point
 		_dragged = false
 		_reselected = false
-		for move in game.board.legal_moves():
+		for move in position.legal_moves():
 			if move.begins_with(square):
 				_held_moves.append(move)
 
@@ -291,11 +311,11 @@ func _drop(point: Vector2, clicked := false, alt := false) -> void:
 	_held_moves.clear()
 	if moves.size() > 1:
 		if PromotionPicker.should_auto_queen(auto_queen, false, alt):
-			_commit(_drag_from + to + "q", clicked)
+			_submit(_drag_from + to + "q", clicked)
 		else:
 			_open_picker(to)
 	elif moves:
-		_commit(moves[0], clicked)
+		_submit(moves[0], clicked)
 	elif clicked:
 		_end_snap_back()
 	else:
@@ -314,7 +334,7 @@ func _open_picker(to: String) -> void:
 
 
 # shortcut: only the moving piece slides, a castling rook jumps; slide it too if it looks wrong.
-func _commit(move: String, slide: bool) -> void:
+func _commit(move: String, slide: bool, premove := false) -> void:
 	var san: String = game.board.san(move)
 	# The game ended (a flag) while the piece was held or the promotion picker was open.
 	if not game.play(move):
@@ -332,7 +352,7 @@ func _commit(move: String, slide: bool) -> void:
 		_slide.tween_property(self, "_slide_pos", _centre(_slide_to), slide_seconds)
 		_slide.tween_callback(_end_slide)
 	queue_redraw()
-	sound_requested.emit("castle" if san.begins_with("O-O") else "capture" if "x" in san else "move")
+	sound_requested.emit("premove" if premove else "castle" if san.begins_with("O-O") else "capture" if "x" in san else "move")
 	if "=" in san:
 		sound_requested.emit("promote")
 	if game.board.in_check():
@@ -353,8 +373,27 @@ func _end_snap_back() -> void:
 	_drag_from = ""
 	_selected = ""
 	_held_moves.clear()
+	_held_piece = ""
 	_promoting = ""
 	queue_redraw()
+
+
+func _is_premove_input() -> bool:
+	return game != null and human_side != "" and game.board.side_to_move != human_side
+
+
+func _input_position():
+	if _is_premove_input():
+		return null if premoves.style == "off" else premoves.input_position(game.board)
+	return game.board
+
+
+func _submit(move: String, slide: bool) -> void:
+	if _is_premove_input():
+		premoves.enqueue(game.board, move)
+		_end_snap_back()
+	else:
+		_commit(move, slide)
 
 
 func _side() -> float:

@@ -30,6 +30,7 @@ var settings_screen := SettingsScreen.instantiate()
 var resign_key := ResignKey.new(Time.get_ticks_msec)
 # Only the board and the clocks show (§8.7).
 var focus := false
+var _playing_premove := false
 
 
 # Esc resigns on a second press within 2 s of the first (§7). The time source returns milliseconds.
@@ -148,6 +149,7 @@ func _start(new_settings: Dictionary) -> void:
 	var game = Game.new()
 	maia.begin_game(game)
 	board_view.game = game
+	board_view.human_side = human
 	board_view.game.auto_claim = preferences.get_value("auto_claim")
 	resign_key = ResignKey.new(Time.get_ticks_msec)
 	move_list.reset()
@@ -228,7 +230,7 @@ func _on_move_played(san: String) -> void:
 	claim_draw.disabled = not game.can_claim_draw()
 	if game.is_over():
 		_show_result()
-	else:
+	elif not _playing_premove:
 		# May flag, when the time ran out before the move landed.
 		clock.moved("b" if game.board.side_to_move == "w" else "w")
 	var balance := material_balance(board_view.game.board)
@@ -254,14 +256,22 @@ func _show_result() -> void:
 			% [maia.median_ms(), maia.latencies_ms.size()])
 
 
-# While Maia is to move the board takes no input, so the human cannot hold one of its pieces when
-# its move lands (BoardView.play does not drop a held piece).
+# Input stays available for human premoves while Maia thinks.
 func _next_turn() -> void:
 	var game = board_view.game
 	var maia_to_move: bool = not game.is_over() and game.board.side_to_move != human
-	board_view.mouse_filter = MOUSE_FILTER_IGNORE if maia_to_move else MOUSE_FILTER_STOP
+	board_view.mouse_filter = MOUSE_FILTER_STOP
 	if maia_to_move:
 		maia.think(game, clock.left(game.board.side_to_move), Clock.CONTROLS[settings.control][0])
+	elif not game.is_over():
+		var move: String = board_view.premoves.take(game.board)
+		if move:
+			# Charge before playing: the increment or a mating move cannot rescue a flag.
+			clock.moved(human, true)
+			if not game.is_over():
+				_playing_premove = true
+				board_view.play(move, true)
+				_playing_premove = false
 
 
 static func _captured(roles: String, glyphs: Dictionary) -> String:
