@@ -284,7 +284,7 @@ func test_main_uses_named_selection_counts_once_rematches_and_recognizes_free_op
 	settings.selection = "Practice"
 	main.setup.started.emit(settings)
 	assert_eq(main.maia.target_id, book.entries[0].id, "load the saved name, not residual picker checks")
-	assert_eq(main.maia.book, book, "one shared catalog")
+	assert_true(main.maia.book == book, "one shared catalog")
 	assert_true(main.preferences.set_value("book_intensity", "strong"))
 	assert_eq(main.maia.book_intensity, "strong", "live preference routing")
 	for move in ["g1f3", "g8f6", "g2g3", "g7g6", "f1g2", "f8g7"]:
@@ -361,6 +361,7 @@ func test_cold_main_and_picker_share_one_loader_and_wait_responsively_before_sta
 	book.entered.wait()
 	assert_eq(main.clock, null, "no clock during loading")
 	assert_eq(main.uci.requests.size(), 0, "no engine request during loading")
+	assert_eq(main.board_view.mouse_filter, Control.MOUSE_FILTER_IGNORE, "the waiting board cannot play before a clock exists")
 	assert_true(main.result_label.text.contains("Loading"), "visible loading status")
 	assert_true(not picker.visible, "starting a game doesn't open the picker")
 	var ready := []
@@ -382,6 +383,49 @@ func test_cold_main_and_picker_share_one_loader_and_wait_responsively_before_sta
 	_watch_catalog(picker, ready)
 	assert_eq(ready.size(), 3, "already loaded readiness completes immediately")
 	assert_eq(book.loads, 1)
+	main.free()
+	_clean(folder)
+
+
+func test_main_joins_a_picker_load_without_applying_its_old_selection_and_rejects_a_bad_save_name():
+	var folder := _folder()
+	var book := DelayedBook.new()
+	var main = _session(folder, book)
+	var picker = main.setup.get_node("OpeningPicker")
+	var selection = _sample()
+	selection.selection_dir = book.selection_dir
+	selection.set_checked("Other", false)
+	assert_eq(selection.save_selection("Current"), "")
+	selection.set_checked("Target", false)
+	selection.set_checked("Other", true)
+	assert_eq(selection.save_selection("Old"), "")
+	picker.present("Old")
+	picker.hide()
+	book.entered.wait()
+	var settings := SETTINGS.duplicate()
+	settings.selection = "Current"
+	main.setup.started.emit(settings)
+	assert_eq(main.clock, null)
+	book.release.post()
+	var ready := []
+	_watch_catalog(picker, ready)
+	var deadline := Time.get_ticks_msec() + 5000
+	while ready.is_empty() and Time.get_ticks_msec() < deadline:
+		picker._process(0)
+		OS.delay_msec(1)
+	assert_eq(ready, [""])
+	assert_eq(book.loads, 1)
+	assert_eq(main.maia.target_id, book.entries[0].id, "Main loads its own saved selection after joining")
+	assert_eq(book.selected_ids(), [book.entries[0].id], "hidden picker's old name is not loaded")
+	assert_eq(main.board_view.mouse_filter, Control.MOUSE_FILTER_STOP, "input resumes when ready")
+	main.board_view.game.resign("w")
+	main._show_result()
+	settings.selection = "missing"
+	var requests: int = main.uci.requests.size()
+	main.setup.started.emit(settings)
+	assert_true(main.setup.visible, "invalid saved selection returns to setup")
+	assert_eq(main.uci.requests.size(), requests)
+	assert_true(main.board_view.game.is_over(), "failed Catalog start doesn't create a free game")
 	main.free()
 	_clean(folder)
 
