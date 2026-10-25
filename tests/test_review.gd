@@ -180,3 +180,72 @@ func test_export_buttons_send_finished_pgn_and_lichess_url():
 		assert_eq(parsed.games[0].result, "0-1")
 	assert_eq(sent.url, "https://lichess.org/analysis/pgn/1.%20f3%20e5%202.%20g4%20Qh4%23%200-1")
 	main.free()
+
+
+func test_space_with_review_focused_rematches_and_replaces_the_previous_game():
+	var time := FakeTime.new()
+	var main = _session(time)
+	main.board_view.play("e2e4")
+	_key(main, KEY_ESCAPE)
+	_key(main, KEY_ESCAPE)
+	var review = main.get_node("Review")
+	review.get_node("Margin/Content/Moves").grab_focus()
+	var event := InputEventKey.new()
+	event.keycode = KEY_SPACE
+	event.pressed = true
+	Engine.get_main_loop().root.push_input(event)
+	assert_true(not review.visible, "Space works with the move list focused")
+	assert_true(not main.setup.visible)
+	assert_eq(main.settings, {"colour": "b", "level": "maia-1500", "control": "3+2", "opening": "Free"})
+	assert_eq(main.board_view.game.moves, PackedStringArray())
+	main._on_maia_move("d2d4")
+	_key(main, KEY_ESCAPE)
+	_key(main, KEY_ESCAPE)
+	assert_true(review.visible)
+	var rows = review.get_node("Margin/Content/Moves").get_root().get_children()
+	assert_eq(rows.size(), 1)
+	if rows.size() == 1:
+		assert_eq(rows[0].get_text(1), "d4 (0.000 s)", "no moves or times from the previous game")
+		assert_eq(rows[0].get_text(2), "")
+	var sent := {"pgn": ""}
+	review.copy_text = func(text: String): sent.pgn = text
+	review.get_node("Margin/Content/Actions/CopyPgn").pressed.emit()
+	var parsed := Pgn.parse(sent.pgn)
+	assert_eq(parsed.error, "")
+	if parsed.games.size() == 1:
+		assert_eq(parsed.games[0].headers.White, "Maia 1500")
+		assert_eq(parsed.games[0].result, "1-0")
+		assert_eq(parsed.games[0].moves.map(func(move): return move.uci), ["d2d4"])
+	else:
+		assert_eq(parsed.games.size(), 1)
+	main.free()
+
+
+func test_review_returns_to_setup_and_starts_a_fresh_game():
+	var time := FakeTime.new()
+	var main = _session(time)
+	_key(main, KEY_F11)
+	_key(main, KEY_ESCAPE)
+	_key(main, KEY_ESCAPE)
+	var review = main.get_node("Review")
+	var back = review.get_node_or_null("Margin/Content/Actions/Setup")
+	assert_true(back != null, "review provides a return to setup")
+	if back == null:
+		main.free()
+		return
+	back.pressed.emit()
+	assert_true(main.setup.visible)
+	assert_true(not review.visible)
+	assert_true(main.clock == null, "setup has no active game")
+	_key(main, KEY_SPACE)
+	assert_true(main.setup.visible, "Space on setup does not silently start a rematch")
+	var next := SETTINGS.duplicate()
+	next.control = "1+0"
+	main.setup.started.emit(next)
+	assert_true(not main.setup.visible and not review.visible)
+	assert_eq(main.clock.left("w"), 60000)
+	_key(main, KEY_ESCAPE)
+	_key(main, KEY_ESCAPE)
+	assert_true(review.visible)
+	assert_eq(review.get_node("Margin/Content/Moves").get_root().get_child_count(), 0)
+	main.free()
