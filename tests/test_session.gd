@@ -4,6 +4,8 @@ extends "res://tests/run.gd".Test
 # on a fake time source, so nothing here opens a window or waits.
 
 const Main = preload("res://ui/main.gd")
+const BoardView = preload("res://ui/board_view.tscn")
+const Game = preload("res://core/game.gd")
 
 
 class FakeTime:
@@ -58,3 +60,56 @@ func test_a_resign_disarms_the_key():
 	key.press()
 	assert_true(not key.armed(), "no hint after resigning")
 	assert_true(not key.press(), "a third Esc starts over")
+
+
+# The board scene on an 800 px board, playing `fen`. The runner calls tests before the root enters
+# the tree, so the scene never gets _ready (nor does Main): the picker is wired by hand and nothing
+# slides, since a tween needs the tree.
+func _board(fen: String):
+	var board = BoardView.instantiate()
+	board._picker = board.get_node("PromotionPicker")
+	board.set_piece_theme("cburnett")
+	board.slide_seconds = 0
+	board.size = Vector2(800, 800)
+	board.game = Game.new(fen)
+	return board
+
+
+func _mouse(board, pressed: bool, square: String) -> void:
+	var event := InputEventMouseButton.new()
+	event.button_index = MOUSE_BUTTON_LEFT
+	event.pressed = pressed
+	event.position = board.square_position(square, 800, board.flipped) + Vector2(50, 50)
+	board._gui_input(event)
+
+
+# A rematch is Main._start handing the board a new game, black at the bottom after playing white.
+func _rematch(board) -> void:
+	board.game = Game.new()
+	board.flipped = true
+
+
+func test_a_rematch_closes_the_promotion_picker_left_open_by_a_flag():
+	var board = _board("4k3/P7/8/8/8/8/8/4K3 w - - 0 1")
+	_mouse(board, true, "a7")
+	_mouse(board, false, "a8")
+	assert_true(board._picker.visible, "the picker is open")
+	board.game.flag("w")
+	_rematch(board)
+	assert_true(not board._picker.visible, "no picker over the new game")
+	assert_eq(board._promoting, "", "no promotion pending")
+	board.free()
+
+
+func test_a_rematch_drops_the_piece_held_when_the_game_ended():
+	var board = _board("4k3/8/8/4P3/8/8/8/4K3 w - - 0 1")
+	_mouse(board, true, "e5")
+	board.game.flag("w")
+	_rematch(board)
+	assert_eq(board._drag_from, "", "nothing held in the new game")
+	assert_eq(board._held_moves, PackedStringArray(), "no targets from the old game")
+	assert_true(board.play("e2e4"), "Maia's first move")
+	_mouse(board, true, "e7")
+	_mouse(board, false, "e6")
+	assert_eq(board.game.moves, PackedStringArray(["e2e4", "e7e6"]), "e7e6 plays in the new game")
+	board.free()

@@ -1,5 +1,5 @@
 # UI-004: Setup, game end, rematch and hotkeys
-Stage: to-implement
+Stage: implementing
 Blocked by: CLOCK-001
 Review: agent
 Difficulty: normal
@@ -9,6 +9,7 @@ Difficulty: normal
   - ui/main.tscn, ui/main.gd
   - core/game.gd (claim, resign)
   - ui/move_list.gd (reset only)
+  - ui/board_view.gd (scope: the `game` setter clears the held piece, its targets, the pending promotion, the open picker and the slide and snap-back tweens)
   - New: tests/test_session.gd
 
 #### What to build
@@ -102,3 +103,5 @@ What is left: before the game is swapped, clear the drag, held/queued moves, the
 Note for stage 2: the block quoted above is the previous review's record, kept for history; the live fields are the ones below it. Write the new receipt as `Gate evidence: <path>` at the very start of its own line, with no list dash and nothing after the path: the installed driver misses a `- Gate evidence:` line (fix pending in Agent-Skills#4).
 
 Verdict: Reopen — criterion 3: a rematch keeps the old game's BoardView interaction state (promotion picker, held move)
+
+Proxy decided (opus): `ui/board_view.gd` joins Primary files, limited to the `game` setter clearing the held piece, its targets, the pending promotion, the open picker (via its existing `_close("")`, guarded against a null `_picker` for boards built outside a scene) and the slide and snap-back tweens — all of it is private to BoardView, a reset in the setter makes every new game start clean with no extra call for `main._start` to remember, and replacing the node would lose the flip, theme and signal wiring.
