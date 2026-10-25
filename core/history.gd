@@ -5,6 +5,8 @@ const Pgn = preload("res://core/pgn.gd")
 const Clock = preload("res://core/clock.gd")
 
 var error := ""
+# Shared loaded catalog; recognition applies in every mode, independently of its checks.
+var book
 var _root: String
 var _results := ConfigFile.new()
 var _load_error := OK
@@ -16,8 +18,9 @@ func _init(root := "user://") -> void:
 
 
 # clocks contains the moving side's remaining milliseconds after each played move.
-# Returns the PGN path, or "" with a reportable error. opening_name is supplied by OPEN-002.
-func save(game, clocks: Array, settings: Dictionary, opening_name := "") -> String:
+# Returns the PGN path, or "" with a reportable error. An explicit Opening overrides recognition.
+# Main supplies the selected target only once, with its completed-game save.
+func save(game, clocks: Array, settings: Dictionary, opening_name := "", target_id := "") -> String:
 	error = ""
 	if _load_error not in [OK, ERR_FILE_NOT_FOUND]:
 		error = "Could not read history stats (%s)." % error_string(_load_error)
@@ -34,6 +37,8 @@ func save(game, clocks: Array, settings: Dictionary, opening_name := "") -> Stri
 		"Result": game.result,
 		"Termination": "Time forfeit" if game.reason == "time" else "Normal",
 	}
+	if opening_name.is_empty() and book != null:
+		opening_name = book.opening_name(game.moves)
 	if opening_name:
 		headers.Opening = opening_name
 	var moves := []
@@ -70,8 +75,13 @@ func save(game, clocks: Array, settings: Dictionary, opening_name := "") -> Stri
 		if game.reason == "time":
 			counts["flag_wins" if won else "flag_losses"] += 1
 	_results.set_value(settings.level, settings.control, counts)
+	var practiced: int = _results.get_value("practice", target_id, 0)
+	if not target_id.is_empty():
+		_results.set_value("practice", target_id, practiced + 1)
 	status = _results.save(_root.path_join("stats.cfg"))
 	if status != OK:
+		if not target_id.is_empty():
+			_results.set_value("practice", target_id, practiced)
 		error = "Could not save history stats (%s)." % error_string(status)
 		return ""
 	return path
@@ -81,3 +91,11 @@ func save(game, clocks: Array, settings: Dictionary, opening_name := "") -> Stri
 func stats(level: String, control: String) -> Dictionary:
 	return _results.get_value(level, control,
 			{"wins": 0, "draws": 0, "losses": 0, "flag_wins": 0, "flag_losses": 0}).duplicate()
+
+
+func practice_counts() -> Dictionary:
+	var counts := {}
+	if _results.has_section("practice"):
+		for id in _results.get_section_keys("practice"):
+			counts[id] = _results.get_value("practice", id, 0)
+	return counts

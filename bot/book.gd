@@ -17,6 +17,7 @@ var selection_dir := "user://openings"
 var target_id := ""
 # Position -> continuation -> whether it belongs to this game's target.
 var _book_moves := {}
+var _endings := {}
 var _checked := {}
 var _name_paths := {}
 var _prefixes := {}
@@ -32,6 +33,7 @@ func load_catalog(folder := "res://data/openings") -> void:
 	_checked.clear()
 	_name_paths.clear()
 	_prefixes.clear()
+	_endings.clear()
 	for volume in VOLUMES:
 		var path: String = folder.path_join(volume + ".tsv")
 		var file := FileAccess.open(path, FileAccess.READ)
@@ -87,6 +89,9 @@ func load_tsv(text: String, source := "TSV") -> void:
 			continue
 		entries.append({"id": fields[0] + ":" + fields[2], "eco": fields[0],
 				"name": fields[1], "pgn": fields[2], "moves": moves, "positions": positions})
+		var ending: String = positions[-1]
+		if not _endings.has(ending) or moves.size() > _endings[ending].depth:
+			_endings[ending] = {"name": fields[1], "depth": moves.size()}
 		_add_name(entries.back())
 
 
@@ -200,6 +205,21 @@ func weights(board, ply: int, intensity := "medium") -> Dictionary:
 			var bonus: float = bonuses[0 if continuations[move] else 1]
 			result[move] += (bonus - 1.0) * fade
 	return result
+
+
+# Only a catalog entry's endpoint earns its name; shared prefixes do not identify
+# an unplayed variation. Keep the deepest reached name even after leaving the book.
+func opening_name(moves: PackedStringArray) -> String:
+	var board = Board.from_fen(START)
+	var name := ""
+	var depth := 0
+	for move in moves:
+		board.make_move(move)
+		var ending: Dictionary = _endings.get(board.position_key(), {})
+		if not ending.is_empty() and ending.depth > depth:
+			name = ending.name
+			depth = ending.depth
+	return name
 
 
 func selection_names() -> Array[String]:
