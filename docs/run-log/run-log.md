@@ -59,3 +59,7 @@
 | 2026-10-24 19:36 | UI-004 | review | opus-5.5 xhigh | 2 | merged | sweatshop/core/2026-10-24-1911 | 10m | 5.0M in (94% cached), 62k out | $2.944 | 1.053 |
 | 2026-10-24 19:55 | UI-005 | implement | opus-5.5 high | 1 | to-review | sweatshop/core/2026-10-24-1911 | 18m | 4.5M in (98% cached), 34k out | $2.391 | 0.515 |
 | 2026-10-24 20:10 | UI-005 | review | opus-5.5 xhigh | 1 | merged | sweatshop/core/2026-10-24-1911 | 15m | 6.8M in (96% cached), 94k out | $3.666 | 0.529 |
+| 2026-10-24 21:21 | UI-004 | implement | opus-5.5 high | 2 | to-review | sweatshop/core/2026-10-24-1911 | 15m | 4.6M in (96% cached), 36k out | $2.726 | 0.527 |
+| 2026-10-24 21:34 | UI-004 | review | opus-5.5 xhigh | 2 | failed (incomplete handoff), blocked | sweatshop/core/2026-10-24-1911 | 13m | 5.1M in (96% cached), 56k out | $2.821 | 0.783 |
+| 2026-10-24 21:39 | UI-005 | implement | opus-5.5 high | 1 | to-review | sweatshop/core/2026-10-24-1911 | 4m | 1.6M in (96% cached), 12k out | $1.034 | 0.520 |
+| 2026-10-24 21:45 | UI-005 | review | opus-5.5 xhigh | 1 | merged | sweatshop/core/2026-10-24-1911 | 6m | 3.6M in (96% cached), 32k out | $1.699 | 0.521 |
