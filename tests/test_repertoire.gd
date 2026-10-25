@@ -174,3 +174,118 @@ func test_real_import_and_setup_controls_adopt_saved_colour_and_reject_invalid_f
 	assert_true(not start.disabled)
 	setup.free()
 	_clean(folder)
+
+
+class HeldEngine extends "res://engine/uci.gd":
+	var requests := []
+
+
+	func start(_dirs := PackedStringArray()) -> bool:
+		return true
+
+
+	func set_level(_path: String) -> void:
+		pass
+
+
+	func request_policy(_fen: String, moves: PackedStringArray) -> void:
+		requests.append(moves.duplicate())
+
+
+func _session(folder: String):
+	var main = load("res://ui/main.tscn").instantiate()
+	main.preferences = load("res://core/settings.gd").new(folder.path_join("settings.cfg"))
+	main.history = load("res://core/history.gd").new(folder)
+	var setup = main.get_node("Setup")
+	setup.book.selection_dir = folder.path_join("openings")
+	setup.book.load_tsv("eco\tname\tpgn\nC40\tKing Pawn\t1. e4 e5\nA00\tCatalog only\t1. d4 d5\n")
+	setup.book.set_checked("Catalog only", true)
+	assert_eq(setup.book.save_selection("Catalog"), "")
+	setup.repertoire.storage_dir = folder.path_join("repertoires")
+	assert_eq(setup.repertoire.import_pgn(FileAccess.get_file_as_string(STUDY), "w", "Study"), "")
+	main.uci.free()
+	main.uci = HeldEngine.new()
+	main.maia = load("res://bot/maia_player.gd").new(main.uci)
+	Engine.get_main_loop().root.add_child(main)
+	main.board_view.slide_seconds = 0
+	main.sound_player.select_theme("__repertoire_silent__")
+	return main
+
+
+func test_main_uses_repertoire_for_maia_catalog_for_history_and_preserves_rematches_and_modes():
+	var main = load("res://ui/main.tscn").instantiate()
+	var supported := main.get_node("Setup").get("repertoire") != null
+	main.free()
+	if not supported:
+		assert_true(false, "repertoire lifecycle exists")
+		return
+	var folder := _folder()
+	main = _session(folder)
+	var setup = main.setup
+	var opening: OptionButton = setup.get_node("Center/Form/Opening")
+	opening.select(2)
+	opening.item_selected.emit(2)
+	setup.get_node("Center/Form/Start").pressed.emit()
+	assert_eq(main.settings.opening, "My repertoire")
+	assert_true(main.maia.book != setup.book, "practice book replaces the catalog")
+	assert_eq(main.maia.book.entries.size(), 4)
+	assert_true(main.maia.target_id.begins_with("repertoire:"))
+	assert_true(main.history.book == setup.book, "history retains catalog recognition")
+	main.maia.clock = null
+	assert_true(main.board_view.play("e2e4"))
+	assert_eq(main.uci.requests[-1], PackedStringArray(["e2e4"]))
+	assert_true(main.maia._pending[-1].weights.e7e5 > 1.0, "book applied before policy sampling")
+	assert_eq(main.maia._pending[-1].weights.d7d5, 1.0)
+	main.uci.policy_ready.emit({"e7e5": 1.0})
+	assert_eq(main.board_view.game.moves, PackedStringArray(["e2e4", "e7e5"]))
+	var first_target: String = main.maia.target_id
+	main.board_view.game.resign("w")
+	main._show_result()
+	assert_eq(main.history.practice_counts(), {first_target: 1})
+	var game_files := DirAccess.get_files_at(folder.path_join("games"))
+	var parsed = load("res://core/pgn.gd").parse(FileAccess.get_file_as_string(folder.path_join("games").path_join(game_files[0])))
+	assert_eq(parsed.games[0].headers.Opening, "King Pawn")
+	main._start(main.rematch(main.settings))
+	assert_eq(main.human, "b", "existing rematch swaps human side")
+	assert_true(main.maia.target_id != first_target, "least-practiced remaining path")
+	assert_eq(main.maia.book.entries[0].colour, "w", "Maia is now White")
+	assert_eq(main.maia.book.weights(main.board_view.game.board, 0).e2e4, 20.0)
+	assert_eq(main.uci.requests[-1], PackedStringArray(), "Maia requests White's first move")
+	assert_eq(setup.repertoire.colour, "w", "imported colour unchanged by rematch")
+	main._start({"colour": "w", "level": "maia-1500", "control": "3+2", "opening": "Catalog", "selection": "Catalog"})
+	assert_true(main.maia.book == setup.book)
+	assert_true(main.maia.target_id.begins_with("A00:"))
+	assert_eq(main.maia.book.weights(main.board_view.game.board, 0).d2d4, 20.0)
+	assert_eq(main.maia.book.weights(main.board_view.game.board, 0).e2e4, 1.0)
+	main._start({"colour": "w", "level": "maia-1500", "control": "3+2", "opening": "Free"})
+	assert_eq(main.maia.target_id, "")
+	main.free()
+	_clean(folder)
+
+
+func test_failed_repertoire_load_does_not_start_clock_or_policy_and_can_retry():
+	var setup = load("res://ui/setup.tscn").instantiate()
+	var supported := setup.get("repertoire") != null
+	setup.free()
+	if not supported:
+		assert_true(false, "repertoire lifecycle exists")
+		return
+	var folder := _folder()
+	var main = _session(folder)
+	var settings := {"colour": "w", "level": "maia-1500", "control": "3+2",
+			"opening": "My repertoire", "repertoire": "Study"}
+	var path: String = main.setup.repertoire.storage_dir.path_join("Study.json")
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	file.store_string("{invalid")
+	file.close()
+	main.setup.started.emit(settings)
+	assert_eq(main.clock, null, "no game starts after invalid saved repertoire")
+	assert_eq(main.uci.requests.size(), 0)
+	assert_true(main.setup.visible)
+	assert_true("JSON" in main.setup.get_node("Center/Form/Missing").text)
+	assert_eq(main.setup.repertoire.import_pgn(FileAccess.get_file_as_string(STUDY), "w", "Study"), "")
+	main.setup.started.emit(settings)
+	assert_true(main.clock != null, "successful retry starts a fresh game")
+	assert_true(main.maia.target_id.begins_with("repertoire:"))
+	main.free()
+	_clean(folder)
