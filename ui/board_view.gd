@@ -20,7 +20,11 @@ const DRAWING := Color(0.12, 0.65, 0.22, 0.75)
 @export var show_targets := true
 @export var board_theme := "brown"
 @export var piece_theme := "cburnett"
-@export var click_click := false
+@export var click_click := false:
+	set(value):
+		click_click = value
+		if not value and _selected:
+			_end_snap_back()
 @export_enum("off", "on", "only on premoves") var auto_queen := "off"
 
 var _board_style := {"light": ThemeLoader.BROWN_LIGHT, "dark": ThemeLoader.BROWN_DARK, "texture": null}
@@ -53,6 +57,7 @@ var _textures := {}
 var _drag_from := ""
 # A piece selected by a completed click stays on its square until the next click.
 var _selected := ""
+var _reselected := false
 var _press_pos := Vector2.ZERO
 var _dragged := false
 # The held piece's centre, in control coordinates.
@@ -229,15 +234,25 @@ func _gui_input(event: InputEvent) -> void:
 			if _selected:
 				_drag_from = _selected
 				_selected = ""
-				_drop(event.position, true, event.alt_pressed)
+				if square_at(event.position - _corner(), _side(), flipped) == _drag_from:
+					# A second click deselects on release, but can still become a drag.
+					_reselected = true
+					_press_pos = event.position
+					_drag_pos = event.position
+					_dragged = false
+				else:
+					_drop(event.position, true, event.alt_pressed)
 			else:
 				_pick_up(event.position)
 		elif _drag_from and not _snapping:
 			var to := square_at(event.position - _corner(), _side(), flipped)
 			if click_click and not _dragged and to == _drag_from:
-				_selected = _drag_from
-				_drag_from = ""
-				queue_redraw()
+				if _reselected:
+					_end_snap_back()
+				else:
+					_selected = _drag_from
+					_drag_from = ""
+					queue_redraw()
 			else:
 				_drop(event.position, false, event.alt_pressed)
 	elif event is InputEventMouseMotion:
@@ -261,6 +276,7 @@ func _pick_up(point: Vector2) -> void:
 		_drag_pos = point
 		_press_pos = point
 		_dragged = false
+		_reselected = false
 		for move in game.board.legal_moves():
 			if move.begins_with(square):
 				_held_moves.append(move)
@@ -333,6 +349,7 @@ func _end_slide() -> void:
 
 func _end_snap_back() -> void:
 	_snapping = false
+	_reselected = false
 	_drag_from = ""
 	_selected = ""
 	_held_moves.clear()
