@@ -280,6 +280,27 @@ func test_game_snapshots_repertoire_and_uses_live_check_preference_at_review():
 	_clean(folder)
 
 
+func test_expected_moves_are_visible_in_review_without_hovering_over_a_clipped_badge():
+	var folder := _folder()
+	var main = _session(folder)
+	main.preferences.set_value("check_repertoire", true)
+	main.setup.started.emit(CONFIG.duplicate())
+	for move in ["e2e4", "e7e5", "d2d4"]:
+		assert_true(main.board_view.play(move))
+	_finish(main)
+	var details = main.review.get_node_or_null("Margin/Content/RepertoireExit")
+	assert_true(details != null, "expected moves have a readable area outside the narrow badge column")
+	if details != null:
+		assert_true(details.is_visible_in_tree())
+		assert_eq(details.text, "2. White: Left repertoire — expected: Nc3, Nf3")
+	main.review.rematch_requested.emit()
+	_finish(main)
+	if details != null:
+		assert_true(not details.visible, "a fresh no-move review clears the previous exit details")
+	main.free()
+	_clean(folder)
+
+
 func test_required_repertoire_load_failure_prevents_new_game_and_retry_uses_repaired_study():
 	for mode in ["Free", "Catalog", "My repertoire"]:
 		var folder := _folder()
