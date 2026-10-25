@@ -80,10 +80,10 @@ func test_repertoire_uses_actual_black_side_and_transposed_positions():
 	assert_eq(repertoire.parse("1. Nf3 Nf6 2. g3 g6 3. Bg2 Bg7 *", "w"), "")
 	var game = _game(["g2g3", "g7g6", "g1f3", "g8f6", "f1g2", "f8g7"])
 	var result: Array = badges.evaluate(game.moves, [], repertoire.lines, "b", true)
-	# Only the first black move is outside this path, so use a second PGN root that
-	# covers it. Later Nf6/Bg7 must be recognized by position, not the mainline ply.
+	# Cover the alternate move order up to Nf6. The final Bg7 must then match the
+	# first chapter by position despite having arrived through the second chapter.
 	assert_true(result[1].left_repertoire)
-	assert_eq(repertoire.parse("1. Nf3 Nf6 2. g3 g6 3. Bg2 Bg7 *\n\n1. g3 g6 *", "w"), "")
+	assert_eq(repertoire.parse("1. Nf3 Nf6 2. g3 g6 3. Bg2 Bg7 *\n\n1. g3 g6 2. Nf3 Nf6 *", "w"), "")
 	result = badges.evaluate(game.moves, [], repertoire.lines, "b", true)
 	assert_eq(result.map(func(mark): return mark.repertoire), [false, true, false, true, false, true])
 	assert_eq(result.map(func(mark): return mark.left_repertoire), [false, false, false, false, false, false])

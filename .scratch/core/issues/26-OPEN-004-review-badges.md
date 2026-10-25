@@ -40,5 +40,6 @@ Proxy decided (gpt-6-astra high, fallback): Allow narrowly scoped Main compositi
 Disclosure: decision | none | OPEN-004 proxy scope and badge clarification: preserves opening modes, history and swapped-colour rematches; no migration or additional integration/release condition.
 
 - Test harness correction: the first run could not infer the fixture board FEN type; declared it explicitly as String. This is a test-only correction; rerun must fail because the production badge module is missing.
+- Repertoire fixture correction: the transposition fixture originally did not cover the intermediate black Nf6, so it required a valid earlier exit. Extend that fixture chapter through Nf6; Bg7 still requires matching the other chapter by position. The corrected tests are red against the Book-only implementation and green with repertoire evaluation.
 
 - Stage 2 caller inspection: `ui/main.gd` is the caller of `review.present` and owns game start, rematches, settings and the setup catalog/repertoire. Existing review/export/time and setup colour/error behavior must remain intact. The new pure seam takes UCI moves and book paths; boundaries include empty games/books, unchecked lines, first exit and later transpositions back into the catalog. Tests live in `tests/test_badges.gd` as contracted.
