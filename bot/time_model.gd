@@ -84,8 +84,9 @@ static func _bin(edges: Array, value: float) -> int:
 	return edges.slice(1, -1).bsearch(value, false)
 
 
+# Finite too: the JSON parser reads 1e999 as inf.
 static func _number(value) -> bool:
-	return typeof(value) in [TYPE_INT, TYPE_FLOAT]
+	return typeof(value) in [TYPE_INT, TYPE_FLOAT] and is_finite(value)
 
 
 static func _edges(edges) -> bool:
