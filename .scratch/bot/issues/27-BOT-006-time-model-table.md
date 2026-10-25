@@ -1,5 +1,5 @@
 # BOT-006: Time-model table
-Stage: implementing
+Stage: to-review
 Blocked by: BOT-005
 Review: agent
 Difficulty: normal
@@ -36,7 +36,7 @@ Maia's think time comes from `data/time_model.json` when it exists (§4.1), and 
 
 - Proxy decided (opus): option B — bot/maia_player.gd (level var, load the table once, pass the bucket) and ui/main.gd (one line in _start: maia.level = level) join Primary files, plus c6 "in a game, Maia's delay comes from the game's bucket" — "What to build" and M8 need the table loaded in the game, BOT-007 cannot do it, and the main.gd line lands in the conflict BOT-005 already disclosed. Conditions: time_model.gd stays pure (static loader, lookup, sampler); an empty `level` misses the lookup, so BOT-005's wiring tests stay unchanged; the wiring is proven by a mutant; the `ui/main.gd` line is its own commit. For stage 3: `Disclosure: pending | integration | ui/main.gd _start: BOT-005's maia.clock/maia.control plus BOT-006's maia.level conflict with the core lane's _start(new_settings); resolve as maia.clock = clock, maia.control = settings.control, maia.level = settings.level`
 - Stage 2 (2026-10-24): red at 4b33e29 (`Static function "load_table()" not found`, `Too many arguments for "delay()"`; test_time_model.gd fails to load; 102 passed, 1 failed). Green at 6b57c78: 119 passed, 0 failed (102 + 17 in test_time_model.gd, 7 new). Mutants: `maia_player` not passing the bucket fails `test_in_a_game_maia_s_delay_comes_from_its_bucket`; `_bin` with `bsearch(value, true)` (an edge in the bin below) fails four lookups in `test_the_table_buckets_by_control_level_clock_and_top_p`. Format choices (the ticket owns them): keys are the game's own strings (`"3+2"`, `"maia-1500"`); n ascending edges make n − 1 bins, bin i is [edge i, edge i+1), and values past either end fall in the end bins, so a clock past its start (increments) uses the top bin; the format is documented at `TABLE` in `bot/time_model.gd`. Callers of `TimeModel.delay`: only `bot/maia_player.gd`; the new parameter defaults to `{}`, so BOT-005's calls are unchanged.
-Gate evidence: C:/Users/Lage/AppData/Local/Temp/claude/D--Desktop-Projects-P-Chess--artifacts-build-lanes-bot/6a80a8f4-fd2f-4279-a50f-d09df80694a4/scratchpad/bot-006-gate.json
+First-round gate receipt (stale since the reopen): C:/Users/Lage/AppData/Local/Temp/claude/D--Desktop-Projects-P-Chess--artifacts-build-lanes-bot/6a80a8f4-fd2f-4279-a50f-d09df80694a4/scratchpad/bot-006-gate.json
 
 #### Resolution (2026-10-24)
 
@@ -89,3 +89,11 @@ Left for stage 2:
 
 - BLOCKING: require every number the loader reads (bin edges, `median`, `log_sigma`) to be finite, so a table with `inf` or `nan` logs one warning and falls back to the formula. Add regression cases to the malformed-file test for an overflowing median, an overflowing log-sigma and an overflowing bin edge (e.g. `1e999` in the JSON text), each red before the fix.
 - NON-BLOCKING (include it if it stays inside `tests/test_time_model.gd`): the timing integration tests at `tests/test_time_model.gd:58` (`_moves_at_once`) only look at what was emitted before `think()` returns, so they would still pass with a timer that is too long or a final move that never comes. Add async coverage: exactly one delayed move arrives, Maia's clock is charged `max(delay, compute)`, and a flag before the pending reply stops the move. The reviewer's probes say these paths already work today, so these tests may be green from the start; say so instead of forcing a red.
+
+#### Stage 2, after Review 2 (2026-10-24, opus-5.5)
+
+- BLOCKING item: fixed in `bot/time_model.gd` `_number()`, the one check every number the loader reads goes through (bin edges, bin indices, `median`, `log_sigma`): it now also requires `is_finite`. Its only callers are `_edges`, `_bin_index` and `load_table`'s bucket check. Red at dcbc80c: four new cases in `test_a_malformed_table_warns_and_is_empty`: an overflowing median, log-sigma, last clock edge and first top-p edge (`-1e999`), written as `1e999` in the JSON text. Each loaded as a table with `inf` and no loader warning (118 passed, 1 failed). Fix at c13300e.
+- Harness correction, 7e81d0e (test-only): Godot's JSON parser logs its own `Exponent too high` warning on `1e999`, so the fixed loader produced two warnings and failed the "one warning" assert. The test now counts only the warnings that name the table, which are the loader's. Red again against the pre-fix `time_model.gd` (c13300e~1, restored afterwards, `git status` clean): all four cases fail, the table is kept and `got ["Exponent too high"]` with no loader warning (118 passed, 1 failed). Green at 7e81d0e: 119 passed, 0 failed.
+- NON-BLOCKING item (async timing coverage): not done, because it cannot stay inside `tests/test_time_model.gd`. `tests/run.gd` calls each test synchronously from `_initialize` and quits before any frame runs. A SceneTree timer never fires there, and a test that `await`s returns at its first await without its asserts. Covering the delayed move, the clock charge and a flag before the reply needs `tests/run.gd` to await coroutines and process frames. The flag path is also in `ui/main.gd` `_on_flagged` → `game.flag`, not in `maia_player`. Left for stage 3 to schedule as a follow-up (`CLEAN-*`/test-harness ticket).
+
+Gate evidence: C:/Users/Lage/AppData/Local/Temp/claude/D--Desktop-Projects-P-Chess--artifacts-build-lanes-bot/5386cdc1-e131-4f47-9845-17de633263bb/scratchpad/bot-006-gate-r2.json
