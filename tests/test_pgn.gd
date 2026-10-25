@@ -119,7 +119,7 @@ func test_finished_game_names_a_flag_and_an_optional_opening_last():
 			{"colour": "b", "level": "maia-1900", "control": "1+0"}, "King's Pawn Game")
 	assert_eq(built.headers, {"White": "Maia 1900", "Black": "You", "TimeControl": "60+0",
 			"Result": "0-1", "Termination": "Time forfeit", "Opening": "King's Pawn Game"})
-	assert_eq(built.headers.keys().back(), "Opening")
+	assert_eq(str(built.headers.keys().back()), "Opening")
 	assert_eq(built.moves, [{"uci": "e2e4", "clock_ms": 60000}, {"uci": "e7e5", "clock_ms": 59000}])
 	assert_eq(built.result, "0-1")
 
