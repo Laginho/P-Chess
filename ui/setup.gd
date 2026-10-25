@@ -4,7 +4,8 @@ extends Control
 # Start. Catalog selections and imported repertoires are stored separately.
 
 # settings: colour ("w" or "b", random already drawn), level, control and opening.
-# Catalog emits selection; My repertoire emits repertoire, with its saved human colour.
+# Catalog emits selection; every mode may emit a repertoire to check in review.
+# Only My repertoire starts with its saved human colour.
 signal started(settings: Dictionary)
 
 const Clock = preload("res://core/clock.gd")
@@ -51,6 +52,7 @@ func _ready() -> void:
 	_importer.saved.connect(_refresh_repertoires)
 	$Center/Form/RepertoireControls/Import.pressed.connect(_importer.present)
 	_repertoires.item_selected.connect(func(_index): _on_opening_selected(_opening.selected))
+	_repertoires.tooltip_text = "Repertoire to check in review; also Maia's book in My repertoire mode"
 	visibility_changed.connect(func():
 		if visible:
 			_refresh_selections()
@@ -74,10 +76,11 @@ func _on_opening_selected(index: int) -> void:
 	if not _engine_missing:
 		_missing.hide()
 	_catalog_controls.visible = OPENINGS[index] == "Catalog"
-	_repertoire_controls.visible = OPENINGS[index] == "My repertoire"
-	_colour.disabled = _repertoire_controls.visible
+	_repertoire_controls.show()
+	var repertoire_mode: bool = OPENINGS[index] == "My repertoire"
+	_colour.disabled = repertoire_mode
 	_start.disabled = _catalog_controls.visible and _selections.item_count == 0
-	if _repertoire_controls.visible:
+	if repertoire_mode:
 		_start.disabled = _repertoires.item_count == 0
 		if not _start.disabled:
 			var error: String = repertoire.load_saved(_repertoires.get_item_text(_repertoires.selected))
@@ -119,6 +122,8 @@ func _on_start() -> void:
 	var colour: String = ["w", "b", ["w", "b"].pick_random()][_colour.selected]
 	var settings := {"colour": colour, "level": LEVELS[_level.selected],
 			"control": _control.get_item_text(_control.selected), "opening": OPENINGS[_opening.selected]}
+	if _repertoires.selected >= 0:
+		settings["repertoire"] = _repertoires.get_item_text(_repertoires.selected)
 	if settings.opening == "Catalog":
 		settings["selection"] = _selections.get_item_text(_selections.selected)
 	elif settings.opening == "My repertoire":

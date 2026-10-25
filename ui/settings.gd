@@ -31,6 +31,7 @@ func _ready() -> void:
 	_choice("panic", "Panic intensity", Settings.CHOICES.panic)
 	_choice("book_intensity", "Book intensity", Settings.CHOICES.book_intensity)
 	_check("auto_claim", "Auto-claim threefold")
+	_check("check_repertoire", "Check my moves against my repertoire")
 
 
 # While open, the screen keeps keys from the game: Esc closes it instead of resigning.

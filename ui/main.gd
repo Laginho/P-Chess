@@ -41,6 +41,7 @@ var _move_clocks := []
 var _history_saved := false
 var _recording_move := false
 var _starting := false
+var _review_repertoire: Array = []
 
 
 # Esc resigns on a second press within 2 s of the first (§7). The time source returns milliseconds.
@@ -168,9 +169,17 @@ func _start(new_settings: Dictionary) -> void:
 	result_label.text = "Loading opening catalog…"
 	var error := ""
 	var practice_book = setup.book
-	if new_settings.opening == "My repertoire":
-		error = setup.repertoire.load_saved(new_settings.get("repertoire", ""))
-		if error.is_empty():
+	var review_repertoire: Array = []
+	var repertoire_name: String = new_settings.get("repertoire", "")
+	var repertoire_mode: bool = new_settings.opening == "My repertoire"
+	if repertoire_mode or not repertoire_name.is_empty():
+		var load_error: String = setup.repertoire.load_saved(repertoire_name)
+		if repertoire_mode or preferences.get_value("check_repertoire"):
+			error = load_error
+		if load_error.is_empty():
+			# Snapshot even with checking off, so enabling it during play uses this PGN.
+			review_repertoire = setup.repertoire.lines.duplicate(true)
+		if repertoire_mode and error.is_empty():
 			practice_book = setup.Book.new()
 			practice_book.load_repertoire(setup.repertoire.lines, "b" if new_settings.colour == "w" else "w")
 	if error.is_empty():
@@ -188,6 +197,7 @@ func _start(new_settings: Dictionary) -> void:
 	_move_clocks.clear()
 	_history_saved = false
 	settings = new_settings.duplicate()
+	_review_repertoire = review_repertoire
 	human = settings.colour
 	uci.set_level(MaiaPlayer.net_path(settings.level))
 	var game = Game.new()
@@ -322,7 +332,8 @@ func _show_result() -> void:
 		history.save(game, _move_clocks, settings, "", maia.target_id)
 	if history.error:
 		result_label.text += "\nHistory: " + history.error
-	review.present(game, _move_clocks, settings, result_label.text)
+	review.present(game, _move_clocks, settings, result_label.text,
+			setup.book.entries, _review_repertoire, preferences.get_value("check_repertoire"))
 	sound_player.play("game_end")
 	print("Maia: median %.1f ms from your move to Lc0's answer, over %d moves"
 			% [maia.median_ms(), maia.latencies_ms.size()])
