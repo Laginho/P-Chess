@@ -112,7 +112,7 @@ func search(query: String) -> Array[String]:
 		if needle in name.to_lower():
 			visible[_name_paths[name]] = true
 	for path in nodes:
-		if not visible.has(path) and not needle in path.to_lower():
+		if not needle.is_empty() and not visible.has(path) and not needle in path.to_lower():
 			continue
 		var ancestor: String = path
 		while not ancestor.is_empty():
