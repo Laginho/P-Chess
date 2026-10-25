@@ -88,9 +88,27 @@ func save(game, clocks: Array, settings: Dictionary, opening_name := "", target_
 
 
 # Counters are from the human's perspective; flag results are subsets of wins/losses.
+# A corrupt record counts as zero and reports through the same error shown by Main.
 func stats(level: String, control: String) -> Dictionary:
-	return _results.get_value(level, control,
-			{"wins": 0, "draws": 0, "losses": 0, "flag_wins": 0, "flag_losses": 0}).duplicate()
+	var empty := {"wins": 0, "draws": 0, "losses": 0, "flag_wins": 0, "flag_losses": 0}
+	var counts = _results.get_value(level, control, empty)
+	var valid: bool = counts is Dictionary
+	if valid:
+		for counter in empty:
+			if not counts.has(counter) or typeof(counts[counter]) != TYPE_INT or counts[counter] < 0:
+				valid = false
+				break
+	if not valid:
+		_report_corrupt_stats(level, control)
+		return empty
+	return counts.duplicate()
+
+
+# Shared warning path for corrupt values in stats.cfg, including practice counts.
+func _report_corrupt_stats(section: String, key: String) -> void:
+	var warning := "Corrupt history stats (%s/%s); invalid counters reset to zero." % [section, key]
+	if not error.contains(warning):
+		error += ("\n" if not error.is_empty() else "") + warning
 
 
 func practice_counts() -> Dictionary:
