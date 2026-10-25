@@ -1,5 +1,5 @@
 # HIST-001: Game history and stats
-Stage: to-review
+Stage: to-implement
 Blocked by: CORE-006, UI-004
 Review: agent
 Difficulty: normal
@@ -60,3 +60,40 @@ Gate evidence: C:\Users\Lage\AppData\Local\Temp\HIST-001-24085c8-gate.json
 
 Acceptance: pending | Automated real-Main games and saved-PGN inspection pass in tests/test_history.gd; the ticket's manual check of playing two games in the interactive app and opening their user://games/ files has not been performed.
 Disclosure: pending | release | HIST-001 Verification and Stage 2 handoff: interactive two-game acceptance remains; headless tests cover all end paths, clocks, persistence, rematch and visible write errors.
+
+#### Resolution (2026-10-25, first review)
+
+Verdict: Reopen — criterion 7: the real-Main settings test still reads the player's normal history stats.
+
+Reviewed `11cd68bf37bc778f784d729c10e53a597458f84a...4c9a1fa01cc09a746576a4c924a26646990e613b` against the ticket and docs/spec.md §9.4, with independent Standards and Spec sub-agents. No production or test changes were authored during review. Preserve `HIST-001-history-stats` for the repair; it has not been merged into `sweatshop/core/2026-10-25-0159`, and no ledger entry was added.
+
+##### Standards
+
+No hard documented-standard violations. Every implementation commit stays within the amended Primary files; production commits change only production, test commits change only tests and permitted tracker metadata. Existing session/premove behavior assertions are preserved.
+
+One optional judgment call, possible Duplicated Code: directory cleanup repeats in `tests/test_history.gd:75`, `tests/test_session.gd:152` and `tests/test_premove.gd:38`, and the same directory-existence correction was needed in all three. This is a non-blocking observation on this open ticket, not an additional repair criterion or permission for unrelated refactoring.
+
+##### Spec
+
+1. ✅ Main records the mover's remaining milliseconds after applicable accounting, including the final move and exactly one premove charge, and saves one PGN per finished game.
+2. ✅ Headers use the actual Maia level and colour, the three specified time controls, result and termination; the persistence API accepts a known Opening name for OPEN-002. No rating headers.
+3. ✅ Human-perspective wins, draws, losses and flag subsets persist independently per level/control.
+4. ✅ Saved moves and exact millisecond clocks round-trip through the production PGN reader.
+5. ✅ Folder/PGN/stats write failures return a reportable error; Main displays it with the result and keeps the rematch hint.
+6. ✅ Flag, resignation, checkmate and draw paths converge on guarded saving; reentrant flags wait for the last snapshot. Rematch resets the snapshots and guard.
+7. ❌ `tests/test_input_modes.gd:266` instantiates Main and adds it to the tree at line 271 without assigning isolated `history`. The new `ui/main.gd:100-101` path constructs `History.new()` with its default `user://` root, and `core/history.gd:16` immediately loads the player's normal `user://stats.cfg`. The settings test need not finish or even start a game for this read to happen. This is a regression introduced by the new ready-time initialization, despite the isolated session/premove harnesses. Inject isolated history before this scene enters the tree, or otherwise prevent the normal-history read, preserving its current settings assertions. The omitted test file is outside Primary files: obtain the required stage-1/proxy contract amendment before editing it; this review does not expand the boundary or rewrite criterion 7.
+
+No unasked product behavior or further incorrect implementation was found. Standards: 0 hard violations and 1 optional cleanup observation. Spec: 1 finding, criterion 7 (P2).
+
+Examined: the entire diff and all nine commit stats; Main result callers for claims, resignation, terminal moves and ordinary/reentrant flags; BoardView's synchronous move emission; Clock first moves, increments and premove accounting; Game terminal-result precedence; Maia callbacks and rematch lifecycle; PGN writing/parsing; stats keys and human perspective; directory/PGN/stats write errors; and every real-Main scene instantiation in tests, including the omitted input-settings caller. Not experimentally examined: real disk-full/permission failures, simultaneous app processes, exported builds, or interactive two-game acceptance. The criterion-7 call chain was confirmed statically without opening or modifying the player's normal history files during this review.
+
+Red/green: inspected the committed test-first cycles and retained logs. The initial red log identifies the missing `core/history.gd` (that unprivileged full run also has unrelated denied-write failures). The recorded focused cycles cover the missing History, stats and Main integration before their separate production commits. Retained mutation logs confirm clock-snapshot and save-once mutations each yield **6 passed, 3 failed**, and suppressing the visible write error yields **8 passed, 1 failed**. The final bound gate is **180 passed, 0 failed**, including the 9 history tests. It does not detect the criterion-7 read above.
+
+Gate: the installed `Assert-GateEvidence` helper verified the existing receipt against HEAD: bound command `godot --headless -s tests/run.gd`, tested commit `24085c8344288fbba0aea60a6a2164710d4cdca0`, exit 0, matching log SHA-256 `2CBF6418A2A1C4519A0213C5D11D651CC6AF0C7ECA79DBCE1A990A14E9068D25` and exit marker. Only ticket metadata follows that tested code. No gate rerun is needed for this metadata-only review; `git diff --check` passes. The repair will require new validation.
+
+Proxy review: the existing `Proxy decided (gpt-6-astra high, fallback)` approved isolated History injection in session/premove tests and real-Main integration coverage. That intent is not fully met because the input-settings Main caller was omitted. No new proxy decision or contract amendment was made during this review.
+
+Acceptance: pending | Criterion 7 must be repaired and independently reviewed before integration. The manual two-game check in Verification remains pending for release.
+Disclosure: decision | none | The existing proxy-approved history-test isolation and Main integration seams remain the contract; this review makes no contract changes.
+Disclosure: pending | integration | The criterion-7 finding is scheduled on this reopened HIST-001 ticket. Stage 2 must resolve the missing Primary-file scope through the stage-1/proxy workflow, isolate the remaining Main test, preserve its settings assertions and return with valid gate evidence.
+Disclosure: pending | release | Interactive play of two games and inspection of their user://games/ PGNs remains as recorded in Verification and the Stage 2 handoff.
