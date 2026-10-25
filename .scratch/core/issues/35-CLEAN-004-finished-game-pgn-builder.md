@@ -1,5 +1,5 @@
 # CLEAN-004: Consider shared finished-game PGN construction
-Stage: to-review
+Stage: done
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -39,3 +39,30 @@ Consider sharing the finished-game headers and per-move clock-record constructio
 - Harness fix, 992b329 (test-only): the order check compared `keys().back()` — a StringName, since `headers.Opening = ...` stores `&"Opening"` — with the String `"Opening"` and failed on type alone. Now wrapped in `str()`. Re-proved red by mutating production (Opening header dropped from `finished_game`): the new test and existing History/Book/Repertoire Opening tests fail (242 passed, 5 failed); production restored.
 - Gate at 992b329: 247 passed, 0 failed, 4 skipped (no Lc0 in this worktree), exit 0.
 Gate evidence: C:\Users\bruno\AppData\Local\Temp\p-chess-gate-evidence\CLEAN-004-gate.json
+
+#### Resolution (2026-10-25)
+
+Verdict: Approve
+
+Stage 3 (opus-5.5) reviewed both axes inline in this session, with no sub-agents. Rebased onto main `6168e60` (after CLEAN-001's runner change); merged without squash as `6eb1441` via [PR #15](https://github.com/Laginho/P-Chess/pull/15), CI green.
+
+##### Standards
+
+Commit stats alternate correctly: `d82dc9f` test-only red (plus ticket metadata), `0f831fa` production-only, `9fb4e4a` test-only harness fix, `63d9740` ticket only. Code changes stay inside Primary files. The extraction is verbatim; History drops its unused `Clock` preload, Review keeps its own (still used by `charged_times`). No stale documentation: `_game_pgn` remains only in HIST-002's historical Resolution. Nit, not a finding: one blank line instead of two before `test_header_backslashes_read_back_unchanged` in `tests/test_pgn.gd`.
+
+##### Spec
+
+1. ✅ `Pgn.finished_game` emits White/Black per colour, TimeControl, Result, Termination (`Time forfeit` on a flag), one `clock_ms` per move, and Opening last when named; History still resolves the opening from its book before calling it.
+2. ✅ Both callers build from the game, clocks and settings passed at call time, so rematches export the current game; History's validation and write-error paths and Review's clipboard/browser callables are untouched.
+3. ✅ Existing History, Review and session export tests are unchanged and pass, with the gate below.
+
+Examined: `History.save` (called from Main's result path) and `Review.present` (called from Main), History's write-error branches, Review's export callables. Not examined: interactive clipboard/Lichess behaviour (HIST-002's pending manual item).
+
+Red/green, reproduced in review: `tests/test_pgn.gd` from `9fb4e4a` against main's production fails to load because `finished_game` is missing — **238 passed, 1 failed** (the whole file counts as one failure; its other tests did not run in that state). Branch head: **250 passed, 0 failed, 4 skipped** (no Lc0), exit 0.
+
+Gate evidence: C:\Users\bruno\AppData\Local\Claude-Data\claude_pzs8sxrjxfjjc\side-session-notes\local_ea9dedf1-afd3-427a-be68-f9943a87cc6f\clean-004-review-gate.json (tested `63d9740`, the merged ticket tree).
+
+No `Proxy decided` lines in this ticket. The `core/pgn.gd` placement (it now preloads `clock.gd` and names "You"/"Maia") is the extraction Bruno approved in stage 1.
+
+Acceptance: passed | gate above and PR #15 CI. Pure refactor; saved and copied PGNs keep their content.
+Disclosure: pending | release | HIST-002's manual clipboard/Lichess check remains owned by [HIST-002](22-HIST-002-review-screen.md); this ticket adds nothing to it.
