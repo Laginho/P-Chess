@@ -1,5 +1,5 @@
 # CLEAN-004: Consider shared finished-game PGN construction
-Stage: to-implement
+Stage: to-review
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -34,3 +34,8 @@ Consider sharing the finished-game headers and per-move clock-record constructio
 - Created by HIST-002 stage 3 on 2026-10-25 as the open destination for the optional duplicated-PGN-construction observation. No refactor was performed during review, and this follow-up does not block HIST-002 integration or release.
 - Blocked for stage-1 triage and confirmation of the proposed scope and validation approach.
 - 2026-10-25 Stage 1 (human, Bruno): approved the extraction of a shared pure builder into `core/pgn.gd`, called by `History.save` and `Review._game_pgn`, with criteria 1-3. Reason: saved and copied PGNs are one format kept in two copies, which will drift.
+- 2026-10-25 Stage 2 (opus-5.5): extracted `Pgn.finished_game(game, clocks, settings, opening_name := "") -> Dictionary` into `core/pgn.gd`; `History.save` and `Review.present` now call `Pgn.write(Pgn.finished_game(...))`. History keeps its validation, book-based Opening lookup and write-error handling; Review passes no opening, as before. `Review._game_pgn` and History's now-unused `Clock` preload are removed. Existing History/Review/session export assertions are unchanged.
+- Red: 32c3c26 (test-only) failed to load `tests/test_pgn.gd` because `finished_game()` did not exist (235 passed, 1 failed). Green: d0a5d20 (production only).
+- Harness fix, 992b329 (test-only): the order check compared `keys().back()` — a StringName, since `headers.Opening = ...` stores `&"Opening"` — with the String `"Opening"` and failed on type alone. Now wrapped in `str()`. Re-proved red by mutating production (Opening header dropped from `finished_game`): the new test and existing History/Book/Repertoire Opening tests fail (242 passed, 5 failed); production restored.
+- Gate at 992b329: 247 passed, 0 failed, 4 skipped (no Lc0 in this worktree), exit 0.
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\p-chess-gate-evidence\CLEAN-004-gate.json

@@ -65,7 +65,7 @@ func present(game, clocks: Array, settings: Dictionary, result_text: String,
 	# Keep expected moves readable even when a badge column is narrow.
 	$Margin/Content/RepertoireExit.text = exit_text
 	$Margin/Content/RepertoireExit.visible = not exit_text.is_empty()
-	_pgn = _game_pgn(game, clocks, settings)
+	_pgn = Pgn.write(Pgn.finished_game(game, clocks, settings))
 	_url = lichess_url(game)
 	show()
 
@@ -101,19 +101,3 @@ static func lichess_url(game) -> String:
 		moves.append({"uci": move})
 	var text := Pgn.write({"headers": {}, "moves": moves, "result": game.result}).strip_edges()
 	return "https://lichess.org/analysis/pgn/" + text.uri_encode()
-
-
-static func _game_pgn(game, clocks: Array, settings: Dictionary) -> String:
-	var maia_name: String = "Maia " + settings.level.trim_prefix("maia-")
-	var control: Array = Clock.CONTROLS[settings.control]
-	var headers := {
-		"White": "You" if settings.colour == "w" else maia_name,
-		"Black": maia_name if settings.colour == "w" else "You",
-		"TimeControl": "%d+%d" % [control[0] / 1000, control[1] / 1000],
-		"Result": game.result,
-		"Termination": "Time forfeit" if game.reason == "time" else "Normal",
-	}
-	var moves := []
-	for i in game.moves.size():
-		moves.append({"uci": game.moves[i], "clock_ms": clocks[i]})
-	return Pgn.write({"headers": headers, "moves": moves, "result": game.result})
