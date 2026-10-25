@@ -180,11 +180,12 @@ func _start(new_settings: Dictionary) -> void:
 	var review_repertoire: Array = []
 	var repertoire_name: String = new_settings.get("repertoire", "")
 	var repertoire_mode: bool = new_settings.opening == "My repertoire"
+	var repertoire_error := ""
 	if repertoire_mode or not repertoire_name.is_empty():
-		var load_error: String = setup.repertoire.load_saved(repertoire_name)
+		repertoire_error = setup.repertoire.load_saved(repertoire_name)
 		if repertoire_mode or preferences.get_value("check_repertoire"):
-			error = load_error
-		if load_error.is_empty():
+			error = repertoire_error
+		if repertoire_error.is_empty():
 			# Snapshot even with checking off, so enabling it during play uses this PGN.
 			review_repertoire = setup.repertoire.lines.duplicate(true)
 		if repertoire_mode and error.is_empty():
@@ -192,6 +193,9 @@ func _start(new_settings: Dictionary) -> void:
 			practice_book.load_repertoire(setup.repertoire.lines, "b" if new_settings.colour == "w" else "w")
 	if error.is_empty():
 		error = await setup.get_node("OpeningPicker").ensure_catalog()
+	# Settings stay live while the catalog loads; checking may now require the saved PGN.
+	if error.is_empty() and (repertoire_mode or preferences.get_value("check_repertoire")):
+		error = repertoire_error
 	if error.is_empty() and new_settings.opening == "Catalog":
 		error = setup.book.load_selection(new_settings.get("selection", ""))
 	_starting = false

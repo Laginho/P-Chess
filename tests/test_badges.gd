@@ -7,11 +7,15 @@ const Settings = preload("res://core/settings.gd")
 const MainScene = preload("res://ui/main.tscn")
 const History = preload("res://core/history.gd")
 const STUDY := "1. e4 e5 2. Nf3 (2. Nc3) Nc6 *"
+const CATALOG := "eco\tname\tpgn\nC00\tFixture\t1. e4 e5 2. Nf3 Nc6\n"
 const CONFIG := {"colour": "w", "level": "maia-1500", "control": "3+2",
 		"opening": "Free", "repertoire": "Study", "selection": "Fixture"}
 
 
 class HeldEngine extends "res://engine/uci.gd":
+	var requests := []
+
+
 	func start(_dirs := PackedStringArray()) -> bool:
 		return true
 
@@ -20,20 +24,35 @@ class HeldEngine extends "res://engine/uci.gd":
 		pass
 
 
-	func request_policy(_fen: String, _moves: PackedStringArray) -> void:
-		pass
+	func request_policy(_fen: String, moves: PackedStringArray) -> void:
+		requests.append(moves.duplicate())
 
 
-func _session(folder: String):
+# Hold catalog I/O at the worker boundary so Settings can change during the real await.
+class DelayedBook extends "res://bot/book.gd":
+	var entered := Semaphore.new()
+	var release := Semaphore.new()
+
+
+	func load_catalog(_folder := "res://data/openings") -> void:
+		entered.post()
+		release.wait()
+		load_tsv(CATALOG)
+
+
+func _session(folder: String, book = null):
 	DirAccess.make_dir_recursive_absolute(folder)
 	var main = MainScene.instantiate()
 	main.history = History.new(folder)
 	main.preferences = Settings.new(folder.path_join("settings.cfg"))
 	var setup = main.get_node("Setup")
+	if book != null:
+		setup.book = book
 	setup.book.selection_dir = folder.path_join("openings")
-	setup.book.load_tsv("eco\tname\tpgn\nC00\tFixture\t1. e4 e5 2. Nf3 Nc6\n")
-	setup.book.set_checked("Fixture", true)
-	assert_eq(setup.book.save_selection("Fixture"), "")
+	if book == null:
+		setup.book.load_tsv(CATALOG)
+		setup.book.set_checked("Fixture", true)
+		assert_eq(setup.book.save_selection("Fixture"), "")
 	setup.repertoire.storage_dir = folder.path_join("repertoires")
 	assert_eq(setup.repertoire.import_pgn(STUDY, "w", "Study"), "")
 	main.uci.free()
@@ -324,3 +343,58 @@ func test_required_repertoire_load_failure_prevents_new_game_and_retry_uses_repa
 		assert_eq(_marks(main, 0), "Book · Repertoire")
 		main.free()
 		_clean(folder)
+
+
+func test_enabling_checking_during_catalog_load_rejects_bad_repertoire_and_allows_repaired_retry():
+	var folder := _folder()
+	var book := DelayedBook.new()
+	var main = _session(folder, book)
+	var original_game = main.board_view.game
+	var file := FileAccess.open(main.setup.repertoire.storage_dir.path_join("Study.json"), FileAccess.WRITE)
+	file.store_string("corrupt")
+	file.close()
+	main.setup.get_node("Center/Form/Colour").select(1)
+	assert_eq(main.preferences.get_value("check_repertoire"), false)
+	main.setup.get_node("Center/Form/Start").pressed.emit()
+	book.entered.wait()
+	assert_eq(main.clock, null, "no clock while catalog I/O is pending")
+	assert_eq(main.uci.requests.size(), 0)
+	main.settings_screen.get_node("Open").pressed.emit()
+	var form = main.settings_screen.get_node("Panel/Center/Box/Form")
+	var toggle: CheckBox
+	for i in form.get_child_count():
+		if form.get_child(i) is Label and form.get_child(i).text == "Check my moves against my repertoire":
+			toggle = form.get_child(i + 1)
+	assert_true(toggle != null, "real Settings control enables checking during catalog loading")
+	if toggle != null:
+		toggle.button_pressed = true
+	assert_eq(main.preferences.get_value("check_repertoire"), true)
+	main.settings_screen.get_node("Panel/Center/Box/Close").pressed.emit()
+	var picker = main.setup.get_node("OpeningPicker")
+	var ready := []
+	picker.catalog_ready.connect(func(error): ready.append(error))
+	book.release.post()
+	var deadline := Time.get_ticks_msec() + 5000
+	while ready.is_empty() and Time.get_ticks_msec() < deadline:
+		picker._process(0)
+		OS.delay_msec(1)
+	assert_eq(ready, [""], "the real catalog await completed successfully")
+	assert_eq(main.clock, null, "newly required corrupt repertoire prevents clock creation")
+	assert_eq(main.uci.requests.size(), 0, "no Maia request after the failed required load")
+	assert_true(main.board_view.game == original_game, "failed start does not replace the game")
+	assert_true(main.setup.visible, "return to setup for repair and retry")
+	var status: Label = main.setup.get_node("Center/Form/Missing")
+	assert_true(status.is_visible_in_tree() and status.text == "The repertoire is not valid JSON.")
+	assert_eq(main.setup.repertoire.import_pgn("1. d4 d5 *", "w", "Study"), "")
+	main.setup.get_node("Center/Form/Start").pressed.emit()
+	assert_true(main.clock != null, "repair permits retry without a stuck start guard")
+	assert_eq(main.human, "b", "Free mode preserves the chosen colour")
+	assert_eq(main.settings.opening, "Free")
+	assert_eq(main.maia.target_id, "", "checking does not enable Maia's repertoire mode")
+	assert_eq(main.uci.requests.size(), 1, "only the successful retry requests Maia's first move")
+	assert_true(main.board_view.play("d2d4"))
+	assert_true(main.board_view.play("d7d5"))
+	_finish(main)
+	assert_eq(_marks(main, 1), "Repertoire", "retry snapshots the repaired study, not the old e4 paths")
+	main.free()
+	_clean(folder)
