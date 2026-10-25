@@ -143,7 +143,10 @@ for line in sys.stdin:
     elif command == 'isready':
         print('readyok', flush=True)
     elif command.startswith('position fen '):
-        board = chess.Board(command[len('position fen '):])
+        fen, _, moves = command[len('position fen '):].partition(' moves ')
+        board = chess.Board(fen)
+        for move in moves.split():
+            board.push_uci(move)
     elif command == 'go nodes 1':
         move = next(iter(board.legal_moves)).uci()
         print('info string a1a8  (1) N: 1 (P: 99.00%)', flush=True)
@@ -180,6 +183,67 @@ for line in sys.stdin:
     assert commands.count("go nodes 1") == 8
     assert not any("PolicyTemperature" in command for command in commands)
     assert commands[-1] == "quit"
+
+
+@pytest.mark.parametrize("scenario", ["opening", "missing_clocks", "custom_start", "no_moves"])
+def test_policy_uses_initial_position_and_all_preceding_moves(tmp_path, monkeypatch, scenario):
+    import calibrate_time as calibration
+
+    start = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+    with FIXTURE.open(encoding="utf-8") as pgn:
+        samples = list(extract_samples(pgn))
+    sample = samples[0]
+    moves = "e2e4 e7e5"
+    legal_move = "g1f3"
+    if scenario == "missing_clocks":
+        sample = samples[6]
+        moves = "e2e4 e7e5 g1f3 b8c6 f1b5 a7a6"
+        legal_move = "f3g1"
+    elif scenario == "custom_start":
+        start = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"
+        pgn = io.StringIO(f'''[SetUp "1"]
+[FEN "{start}"]
+[WhiteElo "1500"]
+[BlackElo "1500"]
+[TimeControl "180+2"]
+[Result "*"]
+
+1... e5 {{[%clk 0:03:00]}} 2. Nf3 {{[%clk 0:03:00]}} Nc6 {{[%clk 0:02:58]}} *
+''')
+        sample = next(extract_samples(pgn))
+        moves = "e7e5 g1f3"
+        legal_move = "b8c6"
+    elif scenario == "no_moves":
+        start = sample.fen
+        moves = ""
+        sample = replace(sample, start_fen=start, moves=())
+
+    expected = f"position fen {start}" + (f" moves {moves}" if moves else "")
+    fake = tmp_path / "history_policy.py"
+    fake.write_text('''
+import sys
+position = ''
+for line in sys.stdin:
+    command = line.strip()
+    if command == 'uci':
+        print('uciok', flush=True)
+    elif command == 'isready':
+        print('readyok', flush=True)
+    elif command.startswith('position '):
+        position = command
+    elif command == 'go nodes 1':
+        probability = '46.94' if position == sys.argv[1] else '27.34'
+        print(f'info string {sys.argv[2]}  (1) N: 1 (P: {probability}%)', flush=True)
+        print(f'bestmove {sys.argv[2]}', flush=True)
+    elif command == 'quit':
+        break
+''', encoding="utf-8")
+    (tmp_path / f"{sample.level}.pb.gz").touch()
+    real_popen = subprocess.Popen
+    monkeypatch.setattr(calibration.subprocess, "Popen", lambda command, **kwargs:
+                        real_popen([sys.executable, "-u", str(fake), expected, legal_move], **kwargs))
+    with calibration.lc0_policy(tmp_path / "lc0.exe", tmp_path) as policy:
+        assert policy(sample) == pytest.approx(0.4694)
 
 
 def test_reservoir_keeps_a_bounded_seeded_sample_from_the_whole_prefix():

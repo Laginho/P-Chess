@@ -1,5 +1,5 @@
 # BOT-007: Time-model calibration from Lichess data
-Stage: to-implement
+Stage: implementing
 Blocked by: BOT-001, BOT-006
 Review: human
 Difficulty: normal
@@ -42,6 +42,8 @@ Offline tests establish script behavior before download approval. The real `data
 - `scripts/test_calibrate_time.py`: CLI plan and explicit download opt-in at `main(argv)`, fixture-to-table execution with a mocked HTTP boundary, seeded bounded reservoir sampling, and `lc0_policy` through a local fake UCI process. No network. Red for missing CLI, sampling, or engine-boundary behavior.
 
 ## Comments
+
+- 2026-10-25 Stage 2 criterion-5 repair: inspected all callers of `extract_samples`, `Sample` and `lc0_policy` (the CLI and offline tests), plus `engine/uci.gd::request_policy` and the `bot/maia_player.gd` caller. Regression at the approved extraction/local-UCI seam covers opening history, intervening moves with missing clocks, a nonstandard initial FEN, and empty history. The existing pipeline fake now accepts UCI FEN-plus-moves. Before production changes: **4 failed, 6 passed**; three cases return the FEN-only sentinel 0.2734 instead of the history-sensitive 0.4694, and the empty-history case exposes the absent sample context fields. No HTTP request or download occurred.
 
 - 2026-10-25 Additional regression coverage starts green: seeded reservoir bounds/reproducibility (including empty and undersized input) and an engine that exits before `uciok`, which must return an error without replacing the previous output. The reservoir test fails with a first-N mutant; no production fix was needed. Fixture-based pipeline checks `Range`, exact consumed bytes, all three sampled Maia nets, `go nodes 1`, legal-move filtering and BOT-006 JSON keys. Six Python tests pass. python-chess emits its upstream Python 3.14 `DefaultEventLoopPolicy` deprecation warning; it does not affect these results.
 
