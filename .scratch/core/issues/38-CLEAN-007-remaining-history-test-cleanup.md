@@ -1,5 +1,5 @@
 # CLEAN-007: Consider the shared History cleanup in the remaining scene-test harnesses
-Stage: to-review
+Stage: done
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -45,3 +45,30 @@ Each file gains `const HistoryStorage = preload("res://tests/history_storage.gd"
 
 Acceptance: passed | the gate and static verification above cover this test-only refactor; stage 3 review remains pending.
 Gate evidence: C:\Users\bruno\AppData\Local\Temp\CLEAN-007-b1fb2d5-gate.json
+
+#### Resolution (2026-10-25)
+
+Verdict: Approve
+
+Stage 3: two independent `code-review` axes examined `ad20d5d...3193331`, including both commits and their file separation. The fixed point is the session branch `sweatshop/2026-10-25-1843`. No review fixes or production changes were needed; rebase was already up to date. Integrated with `--no-ff` as `a2d6ff63475b6a01072504eb7370b72b89b5c20c`, preserving both ticket commits.
+
+Standards axis: 0 findings. The two preloads and callbacks follow the existing session, premove and input-modes harnesses. Reusing the helper removes duplication without expanding its interface or changing the surrounding structure. No documented-standard breach or relevant baseline smell was introduced.
+
+Spec axis: 0 findings.
+
+1. Pass: both callbacks capture their original `user://test_review_<ticks>` / `user://test_clock_input_order_<ticks>` root. The unchanged helper performs the same child-first cleanup of `games` and then the root, with the same absent-directory guard; normal player history, stats, books and repertoires remain outside those roots.
+2. Pass: only the two Primary test files and ticket metadata changed. History injection before Main enters the tree, startup, assertions, test declarations, fixtures, runner and production are unchanged. `test_badges.gd` and `test_book.gd` retain their wider cleanup.
+3. Pass: the existing gate receipt validates against the integrated code: exact command, exit 0, log SHA-256, available tested commit and no changes after that commit outside this ticket and its ledger. The log contains 253 PASS lines and `253 passed, 0 failed`, with no SKIP, FAIL, script-error or parse-error lines. The warnings are the existing malformed-theme/time-model fixtures. No gate rerun was needed because tested code is identical.
+
+Examined: every `_session` caller in both migrated harnesses, `_maia_reply_scheduled` and its callers, normal and early-return `main.free()` teardown, empty/unfinished sessions, saved checkmates, resignation/time/repetition, rematches, setup transitions and delayed Maia replies. `Main._ready()` retains the injected History, and `History.save()` closes the PGN before teardown. The helper's existing ignored deletion errors are unchanged; no new defect was found.
+
+Red/green: explicitly exempt by the approved mechanical, test-only contract. Every commit's file diff was checked; no production commit or changed test body was introduced. `git diff --check` passes, no `func test_` line changed, and the old loop remains only in `tests/history_storage.gd`. Both main and this branch have 258 textual declarations outside `tests/fixtures/`, including five fixture-string declarations, yielding 253 suite tests; counting the deliberately failing on-disk fixture as well gives 259 declarations.
+
+Gate: `godot --headless -s tests/run.gd`, Godot 4.7 stable, tested commit `b1fb2d568c2cadeceaa8ea93bcba07c2242f373f`, 253 passed, 0 failed, exit 0. The receipt above and log `C:\Users\bruno\AppData\Local\Temp\CLEAN-007-b1fb2d5-gate.log` were independently verified, including SHA-256 `B195C9030991E8688E0B6E3C8416EB9A0AD4951C58C7A0AE3A9D29B59ED5D50A`.
+
+All four stage-1 `Proxy decided (opus)` lines were reviewed: narrow scope with unchanged helper/badges/book; no red test with static and gate validation; low-priority implementation; and the ready-for-agent/to-implement/agent/normal handoff. Implementation honors each decision without changing the contract.
+
+Acceptance: passed | criteria and verified gate evidence above cover this test-only refactor.
+Disclosure: decision | none | the four stage-1 proxy decisions above are preserved and honored; no integration or release condition remains for this ticket.
+
+Not examined: the app in a window; this ticket changes only test teardown. No push or PR is part of this session-branch stage.
