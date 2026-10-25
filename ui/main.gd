@@ -30,10 +30,6 @@ var settings_screen := SettingsScreen.instantiate()
 var resign_key := ResignKey.new(Time.get_ticks_msec)
 # Only the board and the clocks show (§8.7).
 var focus := false
-# Maia's replies not yet arrived, one per think(); a rematch makes the old game's ones stale, since
-# MaiaPlayer would otherwise sample them against the new game.
-var _replies_owed := 0
-var _stale_replies := 0
 
 
 # Esc resigns on a second press within 2 s of the first (§7). The time source returns milliseconds.
@@ -149,8 +145,9 @@ func _start(new_settings: Dictionary) -> void:
 	settings = new_settings
 	human = settings.colour
 	uci.set_level(MaiaPlayer.net_path(settings.level))
-	_stale_replies = _replies_owed
-	board_view.game = Game.new()
+	var game = Game.new()
+	maia.begin_game(game)
+	board_view.game = game
 	board_view.game.auto_claim = preferences.get_value("auto_claim")
 	resign_key = ResignKey.new(Time.get_ticks_msec)
 	move_list.reset()
@@ -218,11 +215,7 @@ func _set_focus(on: bool) -> void:
 
 
 func _on_maia_move(move: String) -> void:
-	_replies_owed -= 1
-	if _stale_replies > 0:
-		_stale_replies -= 1
-	else:
-		board_view.play(move)
+	board_view.play(move)
 
 
 func _on_move_played(san: String) -> void:
@@ -264,7 +257,6 @@ func _next_turn() -> void:
 	var maia_to_move: bool = not game.is_over() and game.board.side_to_move != human
 	board_view.mouse_filter = MOUSE_FILTER_IGNORE if maia_to_move else MOUSE_FILTER_STOP
 	if maia_to_move:
-		_replies_owed += 1
 		maia.think(game, clock.left(game.board.side_to_move), Clock.CONTROLS[settings.control][0])
 
 
