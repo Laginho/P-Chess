@@ -70,3 +70,53 @@ func test_every_square_centre_maps_back_to_its_square():
 				var square: String = "abcdefgh"[i % 8] + str(i / 8 + 1)
 				var centre: Vector2 = BoardView.square_position(square, side, flipped) + Vector2.ONE * side / 16
 				assert_eq(BoardView.square_at(centre, side, flipped), square, "%s %d %s" % [square, side, flipped])
+
+
+# CLEAN-002: an open promotion picker follows the board through a flip and a resize.
+func _open_promotion_picker(premove: bool):
+	var board = preload("res://ui/board_view.tscn").instantiate()
+	board.game = preload("res://core/game.gd").new("4k3/P7/8/8/8/8/7P/4K3 %s - - 0 1" % ("b" if premove else "w"))
+	if premove:
+		board.human_side = "w"
+	board.slide_seconds = 0
+	Engine.get_main_loop().root.add_child(board)
+	board.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	board.size = Vector2(800, 800)
+	board._gui_input(_mouse(true, Vector2(50, 150)))
+	board._gui_input(_mouse(false, Vector2(50, 50)))
+	return board
+
+
+# Expected button rectangles: queen on `at` (the promotion square), the rest one cell apart.
+func _assert_picker_buttons(board, at: Vector2, cell: float, down: bool, when: String) -> void:
+	var picker = board.get_node("PromotionPicker")
+	assert_true(picker.visible, when)
+	for i in 4:
+		var expected := Rect2(at + Vector2(0, i * cell * (1 if down else -1)), Vector2.ONE * cell)
+		assert_eq(picker.get_child(i).get_rect(), expected, "%s, button %d" % [when, i])
+
+
+func test_an_open_promotion_picker_follows_flip_and_resize():
+	for premove in [false, true]:
+		for choose in [true, false]:
+			var board = _open_promotion_picker(premove)
+			var played := []
+			board.move_played.connect(func(san): played.append(san))
+			_assert_picker_buttons(board, Vector2(0, 0), 100, true, "opened")
+			board.flipped = true
+			_assert_picker_buttons(board, Vector2(700, 700), 100, false, "flipped")
+			# 480 wide, 600 high: a 480 board centred vertically, 60 px squares.
+			board.size = Vector2(480, 600)
+			_assert_picker_buttons(board, Vector2(420, 480), 60, false, "resized")
+			var picker = board.get_node("PromotionPicker")
+			if choose:
+				picker.get_child(3).pressed.emit()
+			else:
+				picker._gui_input(_mouse(true, Vector2(10, 10)))
+			var moved := PackedStringArray(["a7a8n"]) if choose else PackedStringArray()
+			var label := "premove=%s choose=%s" % [premove, choose]
+			assert_true(not picker.visible, label)
+			assert_eq(board.premoves.moves if premove else board.game.moves, moved, label)
+			assert_eq(board.game.moves if premove else board.premoves.moves, PackedStringArray(), label)
+			assert_eq(played.size(), 1 if choose and not premove else 0, label)
+			board.free()

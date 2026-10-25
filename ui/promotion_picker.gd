@@ -14,19 +14,28 @@ static func should_auto_queen(mode: String, premove: bool, alt: bool) -> bool:
 	return not alt and (mode == "on" or (mode == "only on premoves" and premove))
 
 
-# textures: FEN letter -> texture. at: the promotion square's top-left; down: the column's direction.
-func open(textures: Dictionary, white: bool, at: Vector2, cell: float, down: bool) -> void:
+# textures: FEN letter -> texture. The board places the buttons with layout().
+func open(textures: Dictionary, white: bool) -> void:
 	for i in CHOICES.length():
 		var button := Button.new()
 		var piece: String = CHOICES[i].to_upper() if white else CHOICES[i]
 		button.icon = textures[piece]
 		button.expand_icon = true
 		button.focus_mode = FOCUS_NONE
-		button.position = at + Vector2(0, i * cell * (1 if down else -1))
-		button.size = Vector2.ONE * cell
 		button.pressed.connect(_close.bind(CHOICES[i]))
 		add_child(button)
 	show()
+
+
+# at: the promotion square's top-left; down: the column's direction. Called again on flip or resize.
+func layout(at: Vector2, cell: float, down: bool) -> void:
+	var i := 0
+	# Buttons of a picker closed this frame are still children until freed.
+	for button in get_children():
+		if not button.is_queued_for_deletion():
+			button.position = at + Vector2(0, i * cell * (1 if down else -1))
+			button.size = Vector2.ONE * cell
+			i += 1
 
 
 func _draw() -> void:

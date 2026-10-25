@@ -66,6 +66,7 @@ var game:
 var flipped := false:
 	set(value):
 		flipped = value
+		_layout_picker()
 		queue_redraw()
 
 # FEN letter -> texture.
@@ -127,7 +128,9 @@ func _ready() -> void:
 	set_board_theme(board_theme)
 	set_piece_theme(piece_theme)
 	texture_filter = TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
-	resized.connect(queue_redraw)
+	resized.connect(func() -> void:
+		_layout_picker()
+		queue_redraw())
 	_picker.picked.connect(func(piece: String) -> void: _submit(_promoting + piece, false))
 	_picker.cancelled.connect(_end_snap_back)
 
@@ -347,9 +350,18 @@ func _drop(point: Vector2, clicked := false, alt := false) -> void:
 # The pawn waits on the promotion square; the picker covers the board until it is answered.
 func _open_picker(to: String) -> void:
 	_promoting = _drag_from + to
+	_picker.open(_textures, _held_piece == "P")
+	_layout_picker()
+
+
+# The pawn and the picker's column sit on the promotion square, also after a flip or resize.
+func _layout_picker() -> void:
+	if not _promoting:
+		return
+	var to := _promoting.substr(2, 2)
 	_drag_pos = _centre(to)
 	var at := square_position(to, _side(), flipped)
-	_picker.open(_textures, _held_piece == "P", _corner() + at, _side() / 8, at.y < _side() / 2)
+	_picker.layout(_corner() + at, _side() / 8, at.y < _side() / 2)
 
 
 # shortcut: only the moving piece slides, a castling rook jumps; slide it too if it looks wrong.
