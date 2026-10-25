@@ -32,3 +32,55 @@ func test_invalid_san_is_reported_and_skipped_without_losing_later_rows():
 	assert_eq(book.entries[1].name, "Another line")
 	assert_eq(book.errors.size(), 1)
 	assert_true("sample:3" in book.errors[0] and "Qh9" in book.errors[0], "report source, row and move")
+
+
+func _sample():
+	var book = Book.new()
+	book.load_tsv("eco\tname\tpgn\n"
+			+ "B20\tSicilian Defense\t1. e4 c5\n"
+			+ "B90\tSicilian Defense: Najdorf Variation, English Attack\t1. e4 c5 2. Nf3\n"
+			+ "B90\tSicilian Defense: Najdorf Variation, English Attack\t1. Nf3 c5 2. e4\n"
+			+ "B90\tSicilian Defense: Najdorf Variation, Adams Attack\t1. e4 c5 2. Nc3\n"
+			+ "C20\tKing's Pawn Game\t1. e4 e5\n")
+	return book
+
+
+func test_names_form_a_tree_and_search_keeps_matching_branches_and_their_ancestors():
+	var book = _sample()
+	assert_eq(book.roots, ["Sicilian Defense", "King's Pawn Game"])
+	assert_eq(book.nodes["Sicilian Defense"].children, ["Sicilian Defense: Najdorf Variation"])
+	var najdorf: Dictionary = book.nodes["Sicilian Defense: Najdorf Variation"]
+	assert_eq(najdorf.label, "Najdorf Variation")
+	assert_eq(najdorf.children, ["Sicilian Defense: Najdorf Variation, English Attack",
+			"Sicilian Defense: Najdorf Variation, Adams Attack"])
+	assert_eq(book.nodes[najdorf.children[0]].lines.size(), 2, "transposed rows share a name node")
+	assert_eq(book.search("eNgLiSh"), ["Sicilian Defense", "Sicilian Defense: Najdorf Variation",
+			"Sicilian Defense: Najdorf Variation, English Attack"])
+	assert_eq(book.search("sicilian").size(), 4, "a family match includes all variations")
+	assert_eq(book.search("unmatched"), [])
+	assert_eq(book.search("").size(), 5)
+
+
+func test_checks_propagate_to_descendants_and_parents_show_partial_state():
+	var book = _sample()
+	var family := "Sicilian Defense"
+	var najdorf := family + ": Najdorf Variation"
+	var english := najdorf + ", English Attack"
+	assert_eq(book.check_state(family), 0)
+	book.set_checked(english, true)
+	assert_eq(book.selected_ids().size(), 2, "both transpositions are selected")
+	assert_eq(book.check_state(english), 1)
+	assert_eq(book.check_state(najdorf), 2)
+	assert_eq(book.check_state(family), 2)
+	assert_eq(book.check_state("King's Pawn Game"), 0)
+	book.set_checked(najdorf, true)
+	assert_eq(book.check_state(najdorf), 1)
+	assert_eq(book.check_state(family), 2, "family's own line is still unchecked")
+	book.set_checked(family, true)
+	assert_eq(book.selected_ids().size(), 4)
+	assert_eq(book.check_state(family), 1)
+	book.set_checked(najdorf, false)
+	assert_eq(book.selected_ids(), [book.entries[0].id], "keep the family's own catalog line")
+	book.set_checked(family, false)
+	assert_eq(book.selected_ids(), [])
+	assert_eq(book.check_state(family), 0)
