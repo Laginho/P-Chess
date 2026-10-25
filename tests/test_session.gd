@@ -217,6 +217,86 @@ func test_an_old_policy_after_rematch_is_dropped_before_a_wait_is_scheduled():
 	main.free()
 
 
+# The real board's layout is ready one frame after _session adds Main to the tree.
+func _laid_out(main):
+	await Engine.get_main_loop().process_frame
+	assert_true(main.board_view._side() > 0, "the board has a size")
+
+
+func _mouse_on(main, pressed: bool, square: String) -> void:
+	var board = main.board_view
+	var event := InputEventMouseButton.new()
+	event.button_index = MOUSE_BUTTON_LEFT
+	event.pressed = pressed
+	event.position = board._corner() + board.square_position(square, board._side(), board.flipped) \
+			+ Vector2.ONE * board._side() / 16
+	board._gui_input(event)
+
+
+# Main's own flag and Space paths: the clock flags the human, then Space starts the rematch.
+func _flag_and_rematch(main) -> void:
+	main.clock.flagged.emit(main.human)
+	assert_true(main.board_view.game.is_over(), "the flag ended the game")
+	_key(main, KEY_SPACE)
+	assert_eq(main.human, "b", "Space started the rematch")
+
+
+func test_a_main_rematch_after_a_flag_closes_the_open_promotion_picker():
+	var waits := ManualWaits.new()
+	var main = _session(waits)
+	await _laid_out(main)
+	var replies := ["b7b5", "a7a6", "c8b7", "b8c6"]
+	for i in replies.size():
+		assert_true(main.board_view.play(["a2a4", "a4b5", "b5a6", "a6b7"][i]))
+		main.uci.policy_ready.emit({replies[i]: 1.0})
+		_finish(waits, i)
+	_mouse_on(main, true, "b7")
+	_mouse_on(main, false, "a8")
+	var picker = main.board_view._picker
+	assert_true(picker.visible, "the picker is open")
+	assert_eq(picker.get_child_count(), 4, "with its four buttons")
+	_flag_and_rematch(main)
+	assert_true(not picker.visible, "no picker over the new game")
+	assert_eq(main.board_view._promoting, "", "no promotion pending")
+	await Engine.get_main_loop().process_frame
+	assert_eq(picker.get_child_count(), 0, "the picker's buttons are gone")
+	main.free()
+
+
+func test_a_main_rematch_after_a_flag_drops_the_held_piece():
+	var waits := ManualWaits.new()
+	var main = _session(waits)
+	await _laid_out(main)
+	_mouse_on(main, true, "e2")
+	assert_eq(main.board_view._drag_from, "e2", "e2 is held")
+	_flag_and_rematch(main)
+	assert_eq(main.board_view._drag_from, "", "nothing held in the new game")
+	assert_eq(main.board_view._held_moves, PackedStringArray(), "no targets from the old game")
+	main.uci.policy_ready.emit({"e2e4": 1.0})
+	_finish(waits, 0)
+	_mouse_on(main, true, "e7")
+	_mouse_on(main, false, "e6")
+	assert_eq(main.board_view.game.moves, PackedStringArray(["e2e4", "e7e6"]), "e7e6 plays in the new game")
+	main.free()
+
+
+func test_a_main_rematch_kills_the_old_snap_back():
+	var waits := ManualWaits.new()
+	var main = _session(waits)
+	await _laid_out(main)
+	_mouse_on(main, true, "e2")
+	_mouse_on(main, false, "e5")
+	assert_true(main.board_view._snapping, "e2 is snapping back")
+	_flag_and_rematch(main)
+	main.uci.policy_ready.emit({"e2e4": 1.0})
+	_finish(waits, 0)
+	_mouse_on(main, true, "e7")
+	assert_eq(main.board_view._drag_from, "e7", "e7 is held in the new game")
+	await Engine.get_main_loop().create_timer(main.board_view.SNAP_BACK_SECONDS * 3).timeout
+	assert_eq(main.board_view._drag_from, "e7", "the old snap-back's end does not drop e7")
+	main.free()
+
+
 func test_two_rematches_drop_a_stale_white_move_legal_in_the_current_game():
 	var waits := ManualWaits.new()
 	var main = _session(waits)
