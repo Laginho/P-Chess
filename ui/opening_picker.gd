@@ -37,7 +37,7 @@ func _ready() -> void:
 func present(selection := "") -> void:
 	_requested_selection = selection
 	popup_centered(Vector2i(680, 540))
-	if not _loaded and book.entries.is_empty():
+	if not _loaded:
 		_status.text = "Loading opening catalog…"
 		_search.editable = false
 		_save.disabled = true

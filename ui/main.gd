@@ -161,7 +161,9 @@ func _start(new_settings: Dictionary) -> void:
 		return
 	_starting = true
 	setup.hide()
+	setup.get_node("OpeningPicker").hide()
 	review.hide()
+	board_view.mouse_filter = MOUSE_FILTER_IGNORE
 	result_label.text = "Loading opening catalog…"
 	var error: String = await setup.get_node("OpeningPicker").ensure_catalog()
 	if error.is_empty() and new_settings.opening == "Catalog":
