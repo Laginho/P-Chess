@@ -29,6 +29,7 @@ func _ready() -> void:
 	_spin("tau", "Threshold τ (%)", 0.1, 100.0)
 	_spin("temperature", "Temperature T", 0.1)
 	_choice("panic", "Panic intensity", Settings.CHOICES.panic)
+	_choice("book_intensity", "Book intensity", Settings.CHOICES.book_intensity)
 	_check("auto_claim", "Auto-claim threefold")
 
 

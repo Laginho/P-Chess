@@ -25,6 +25,9 @@ var latencies_ms := []
 var tau := MovePicker.DEFAULT_TAU
 var temperature := MovePicker.DEFAULT_TEMPERATURE
 var panic := "medium"
+var book
+var book_intensity := "medium"
+var target_id := ""
 
 var _bridge
 var _game
@@ -49,9 +52,10 @@ static func net_path(level: String) -> String:
 
 # Invalidate policies and waits even when the new game starts with the human's turn. Keep pending
 # snapshots: each obsolete entry must still consume its own eventual FIFO policy reply.
-func begin_game(game) -> void:
+func begin_game(game, mode := "Free", counts := {}, side := "") -> void:
 	_generation += 1
 	_game = game
+	target_id = book.begin_game(counts, rng, side) if book != null and mode != "Free" else ""
 
 
 # move_ready follows once the bridge answers. Maia's clock, in ms, drives the panic; a start_time of
@@ -62,8 +66,10 @@ func think(game, time_left := 0, start_time := 0) -> void:
 	var picker := {"temperature": temperature, "tau": tau}
 	if start_time > 0:
 		picker = MovePicker.panic(temperature, tau, panic, time_left, start_time)
+	var weights: Dictionary = book.weights(game.board, game.moves.size(), book_intensity) \
+			if book != null and not target_id.is_empty() else {}
 	_pending.append({"generation": _generation, "game": game, "ply": game.moves.size(),
-			"asked_usec": Time.get_ticks_usec(), "picker": picker, "clock": clock,
+			"asked_usec": Time.get_ticks_usec(), "picker": picker, "weights": weights, "clock": clock,
 			"control": control, "level": level, "time_table": time_table})
 	# shortcut: every game starts from the initial position; keep the start FEN in Game when one does not.
 	_bridge.request_policy(Game.START, game.moves)
@@ -96,7 +102,7 @@ func _on_policy(policy: Dictionary) -> void:
 		# Nothing legal to sample from: any legal move beats Maia never answering.
 		for move in legal:
 			usable[move] = 1.0
-	var move := MovePicker.pick(usable, rng, {}, request.picker.tau, request.picker.temperature)
+	var move := MovePicker.pick(usable, rng, request.weights, request.picker.tau, request.picker.temperature)
 	var compute_ms: float = (Time.get_ticks_usec() - request.asked_usec) / 1000.0
 	latencies_ms.append(compute_ms)
 	var request_clock = request.clock
