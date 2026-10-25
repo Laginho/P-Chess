@@ -1,5 +1,5 @@
 # OPEN-003: Repertoire import and My repertoire mode
-Stage: to-implement
+Stage: implementing
 Blocked by: CORE-006, OPEN-002
 Review: agent
 Difficulty: normal

@@ -35,6 +35,45 @@ func _folder() -> String:
 	return "user://test_repertoire_%d" % Time.get_ticks_usec()
 
 
+func test_chapter_leading_comments_merge_without_duplicates_and_survive_reload():
+	var repertoire = _repertoire()
+	if repertoire == null:
+		return
+	var folder := _folder()
+	repertoire.storage_dir = folder
+	var study := """[Event "Chapter one"]
+{Chapter one guidance} 1. e4 {Central space} e5 $1 ({Sicilian guidance} 1... c5) *
+[Event "Chapter two"]
+{Chapter two guidance} 1. e4 e5 2. Nf3 *
+[Event "Duplicate guidance"]
+{Chapter one guidance} 1. e4 *
+[Event "No guidance"]
+1. e4 *
+[Event "Different root"]
+[SetUp "1"]
+[FEN "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"]
+{Black to move guidance} 1... e5 *
+"""
+	assert_eq(repertoire.import_pgn(study, "w", "Annotated study"), "")
+	var loaded = _repertoire()
+	loaded.storage_dir = folder
+	assert_eq(loaded.load_saved("Annotated study"), "")
+	for imported in [repertoire, loaded]:
+		var root: Dictionary = imported.tree[Board.from_fen(Book.START).position_key()]
+		assert_eq(root.comments, ["Chapter one guidance", "Chapter two guidance"],
+				"distinct chapter guidance survives import and reload, once per comment")
+		assert_eq(root.children.e2e4.comments, ["Central space"])
+		assert_eq(root.children.e2e4.children.e7e5.nags, [1])
+		assert_eq(root.children.e2e4.children.c7c5.comments_before, ["Sicilian guidance"])
+		var other_position = Board.from_fen(Book.START)
+		other_position.make_move("e2e4")
+		assert_eq(imported.tree[other_position.position_key()].comments, ["Black to move guidance"],
+				"chapter comments stay with their own starting position")
+		assert_eq(imported.lines.size(), 3, "annotations and duplicate chapters do not add paths")
+	assert_eq(loaded.lines, repertoire.lines, "reload preserves paths and stable IDs")
+	_clean(folder)
+
+
 func _clean(folder: String) -> void:
 	for child in DirAccess.get_directories_at(folder):
 		_clean(folder.path_join(child))
