@@ -102,8 +102,9 @@ func test_repertoire_book_uses_existing_targets_weights_and_actual_maia_side():
 	board.make_move("e2e4")
 	for intensity in {"weak": [5.0, 2.0], "medium": [20.0, 5.0], "strong": [100.0, 15.0]}:
 		var weights: Dictionary = book.weights(board, 1, intensity)
-		assert_eq(weights.e7e5, Book.INTENSITIES[intensity][0])
-		assert_eq(weights.c7c5, Book.INTENSITIES[intensity][1])
+		var expected: Array = {"weak": [5.0, 2.0], "medium": [20.0, 5.0], "strong": [100.0, 15.0]}[intensity]
+		assert_eq(weights.e7e5, expected[0])
+		assert_eq(weights.c7c5, expected[1])
 		assert_eq(weights.d7d5, 1.0, "catalog doesn't leak into repertoire")
 	assert_eq(book.weights(board, 11).e7e5, 10.5)
 	for weight in book.weights(board, 16).values():
@@ -289,4 +290,31 @@ func test_failed_repertoire_load_does_not_start_clock_or_policy_and_can_retry():
 	assert_true(main.clock != null, "successful retry starts a fresh game")
 	assert_true(main.maia.target_id.begins_with("repertoire:"))
 	main.free()
+	_clean(folder)
+
+
+func test_setup_keeps_engine_guidance_and_clears_repertoire_errors_when_changing_mode():
+	var setup = load("res://ui/setup.tscn").instantiate()
+	var folder := _folder()
+	setup.repertoire.storage_dir = folder
+	setup.book.selection_dir = folder.path_join("openings")
+	assert_eq(setup.repertoire.import_pgn("1. e4 e5 *", "w", "Study"), "")
+	Engine.get_main_loop().root.add_child(setup)
+	var opening: OptionButton = setup.get_node("Center/Form/Opening")
+	var status: Label = setup.get_node("Center/Form/Missing")
+	var file := FileAccess.open(folder.path_join("Study.json"), FileAccess.WRITE)
+	file.store_string("bad JSON")
+	file.close()
+	opening.select(2)
+	opening.item_selected.emit(2)
+	assert_true(status.visible and "JSON" in status.text)
+	opening.select(0)
+	opening.item_selected.emit(0)
+	assert_true(not status.visible, "Free clears the irrelevant repertoire load error")
+	assert_eq(setup.repertoire.import_pgn("1. e4 e5 *", "w", "Study"), "")
+	setup.show_missing("Engine unavailable")
+	opening.select(2)
+	opening.item_selected.emit(2)
+	assert_true(status.visible and "Engine unavailable" in status.text, "repertoire colour loading must preserve missing-engine guidance")
+	setup.free()
 	_clean(folder)
