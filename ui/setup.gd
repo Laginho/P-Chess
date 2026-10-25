@@ -16,6 +16,7 @@ const LEVELS := ["maia-1100", "maia-1200", "maia-1300", "maia-1400", "maia-1500"
 const OPENINGS := ["Free", "Catalog", "My repertoire"]
 var book = Book.new()
 var repertoire = Repertoire.new()
+var _engine_missing := false
 
 @onready var _colour: OptionButton = $Center/Form/Colour
 @onready var _level: OptionButton = $Center/Form/Level
@@ -70,6 +71,8 @@ func _refresh_selections(preferred := "") -> void:
 
 
 func _on_opening_selected(index: int) -> void:
+	if not _engine_missing:
+		_missing.hide()
 	_catalog_controls.visible = OPENINGS[index] == "Catalog"
 	_repertoire_controls.visible = OPENINGS[index] == "My repertoire"
 	_colour.disabled = _repertoire_controls.visible
@@ -79,8 +82,9 @@ func _on_opening_selected(index: int) -> void:
 		if not _start.disabled:
 			var error: String = repertoire.load_saved(_repertoires.get_item_text(_repertoires.selected))
 			_start.disabled = not error.is_empty()
-			_missing.text = error
-			_missing.visible = not error.is_empty()
+			if not _engine_missing:
+				_missing.text = error
+				_missing.visible = not error.is_empty()
 			if error.is_empty():
 				_colour.select(0 if repertoire.colour == "w" else 1)
 
@@ -103,6 +107,7 @@ func _open_catalog() -> void:
 
 # The engine is missing: how to fetch it replaces Start.
 func show_missing(message: String) -> void:
+	_engine_missing = true
 	_start.hide()
 	_missing.text = message + "\n\npowershell -NoProfile -File scripts/fetch-engine.ps1"
 	_missing.show()
