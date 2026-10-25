@@ -1,5 +1,5 @@
 # OPEN-002: Book weight in Catalog mode
-Stage: to-review
+Stage: done
 Blocked by: BOT-003, HIST-001, OPEN-001
 Review: agent
 Difficulty: hard
@@ -146,3 +146,35 @@ Caller inspection: Main passes `History.practice_counts()` to `MaiaPlayer.begin_
 Acceptance: passed | [Practice and real-scene regressions](../../../tests/test_book.gd) pass in the 240/240 gate, including recovery, target selection, durable counts and visible Catalog/Free result warnings. Earlier full-catalog acceptance remains recorded above. This retry used headless automation; visual and hands-on acceptance were not repeated.
 
 Gate evidence: C:\Users\Lage\AppData\Local\Temp\OPEN-002-corrupt-practice-4016678-gate.json
+
+#### Resolution (2026-10-25, corrupt-practice re-review)
+
+Verdict: Approve
+
+Independent Standards (`/root/standards_review`) and Spec (`/root/spec_review`) agents reviewed the complete retry diff `f564149996e1d4d2570d74016826368080a18571...a83ce202067d6d18085d407ee1b8a50bd39a8ff5` and all six commit boundaries. This stage authored no production or test changes and made no contract amendment or proxy decision.
+
+##### Standards
+
+No documented-standard violations or actionable baseline smells. Changes remain within `core/history.gd`, `tests/test_book.gd` and permitted tracker metadata. Three regression commits are test-only, with ticket metadata allowed in the first; both production commits contain no test changes. The existing shared corruption-reporting helper is reused without unrelated refactoring. Tests exercise production interfaces with isolated storage and the existing fake engine.
+
+##### Spec
+
+The session review's blocking practice-count finding is resolved. Non-integer and negative persisted counts become zero before target selection or saving; valid zero/positive counts survive. The saved selected target increments from zero to one, and unrelated practice and result records remain intact. Validation after `save` clears `error` restores every corruption warning through HIST-001's existing reporting path, which Main displays in Catalog and Free result/review screens. Repeated reads do not duplicate warnings, and repeated terminal callbacks still save once. Original criteria 5, 6 and 10 remain satisfied; this repair preserves the earlier approval of criteria 1-4 and 7-9.
+
+Standards: 0 findings. Spec: 0 findings. No unresolved finding or accepted deferral remains on OPEN-002. The original unchecked-practice-count defect was the earlier-review miss already recorded in the session reopen.
+
+Examined: the complete retry diff and commit separation; History initialization, validation, warning deduplication, save/error reset and storage-failure paths; Main-to-Maia-to-Book target selection; Main result/review presentation, rematches and once-only terminal guard; missing sections/ids, empty selections, Free saves, strings, negatives, floats, booleans and containers; persistence of valid counts and unrelated results. Visual layout, hands-on play, exported builds, concurrent processes and additional induced filesystem failures were not experimentally examined.
+
+Red/green: retained read logs show **11 passed, 1 failed -> 12 passed, 0 failed** (`2a760a4` -> `e5d040f`); save logs show **12 passed, 1 failed -> 13 passed, 0 failed** (`0b54517` -> `322010a`). The separate scene-test commit `4016678` was proved red against the original raw save read: **12 passed, 2 failed**, including visible Catalog/Free warning failures. All **14 Book tests** pass with the committed implementation. The inspected logs are `OPEN-002-practice-{read,save}-{red,green}.log` and `OPEN-002-practice-ui-red.log` under `C:\Users\Lage\AppData\Local\Temp\`.
+
+Gate: installed `Assert-GateEvidence` verified the receipt, SHA-256 log hash, exit marker, tested commit availability and unchanged production at both the reviewed tip and merged session tree. Bound command `godot --headless -s tests/run.gd`, tested commit `4016678d7989058bfa7309258e6c31441812563f`: **240 passed, 0 failed**, exit 0, no SKIP lines or script errors; live Lc0 completed 30 legal moves at median **15.1 ms**. Expected malformed-time-table warnings remain. Receipt: `C:\Users\Lage\AppData\Local\Temp\OPEN-002-corrupt-practice-4016678-gate.json`; log SHA-256: `F0C1B1BEF8570B3320116CA578921EFCFFA5D2458D5869A905D3205BAFA650B6`. Only permitted tracker metadata follows tested code, so no repeated gate was needed. Final `git diff --check` passed.
+
+Integration: rebase onto `sweatshop/core/2026-10-25-0159` was up to date. Merge `6e059c5f8728c3644c71478dab59c81d046450b8` preserves the six retry commits without squash or conflicts; its tree exactly matches the reviewed tip. Stage and ledger close together on the session branch. This approval resolves OPEN-002's practice-count finding from session PR #10; it does not decide other tickets or the session PR's overall integration status.
+
+Proxy review: all three existing proxy amendments remain satisfied and unchanged: Main lifecycle wiring with positional re-entry; one shared public catalog-readiness operation; tiny preloaded catalogs in the four existing scene-test helpers. No new proxy decision was needed.
+
+Acceptance: passed | [Book and real-Main regressions](../../../tests/test_book.gd) pass in the verified 240/240 gate, including target selection, durable recovery, preserved counts/results and visible Catalog/Free warnings. Earlier full-catalog acceptance remains recorded above. This re-review used retained headless evidence; visual and hands-on acceptance were not repeated.
+
+Disclosure: decision | none | The existing proxy amendment for Main lifecycle wiring and positional re-entry remains satisfied; this repair adds no contract change or integration/release condition.
+Disclosure: decision | none | The existing proxy amendment for one shared Main/picker catalog-loading operation remains satisfied and unchanged.
+Disclosure: decision | none | The existing proxy amendment for tiny preloaded catalogs in four scene-test helpers remains satisfied, with their assertions unchanged.
