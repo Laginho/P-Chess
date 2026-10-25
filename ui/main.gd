@@ -40,6 +40,7 @@ var history
 var _move_clocks := []
 var _history_saved := false
 var _recording_move := false
+var _starting := false
 
 
 # Esc resigns on a second press within 2 s of the first (§7). The time source returns milliseconds.
@@ -156,15 +157,32 @@ func _unhandled_key_input(event: InputEvent) -> void:
 
 
 func _start(new_settings: Dictionary) -> void:
+	if _starting:
+		return
+	_starting = true
 	setup.hide()
 	review.hide()
+	result_label.text = "Loading opening catalog…"
+	var error: String = await setup.get_node("OpeningPicker").ensure_catalog()
+	if error.is_empty() and new_settings.opening == "Catalog":
+		error = setup.book.load_selection(new_settings.get("selection", ""))
+	_starting = false
+	if not error.is_empty():
+		setup.show()
+		var status: Label = setup.get_node("Center/Form/Missing")
+		status.text = error
+		status.show()
+		return
+	setup.get_node("Center/Form/Missing").hide()
 	_move_clocks.clear()
 	_history_saved = false
-	settings = new_settings
+	settings = new_settings.duplicate()
 	human = settings.colour
 	uci.set_level(MaiaPlayer.net_path(settings.level))
 	var game = Game.new()
-	maia.begin_game(game)
+	maia.book = setup.book
+	history.book = setup.book
+	maia.begin_game(game, settings.opening, history.practice_counts(), "b" if human == "w" else "w")
 	board_view.game = game
 	board_view.human_side = human
 	board_view.game.auto_claim = preferences.get_value("auto_claim")
@@ -223,6 +241,8 @@ func _apply(key: String, value) -> void:
 			maia.temperature = value
 		"panic":
 			maia.panic = value
+		"book_intensity":
+			maia.book_intensity = value
 		"auto_claim":
 			board_view.game.auto_claim = value
 
@@ -288,7 +308,7 @@ func _show_result() -> void:
 	result_label.text = "%s by %s (%s)\nSpace for a rematch" % [WINNERS[game.result], game.reason, game.result]
 	if not _history_saved:
 		_history_saved = true
-		history.save(game, _move_clocks, settings)
+		history.save(game, _move_clocks, settings, "", maia.target_id)
 	if history.error:
 		result_label.text += "\nHistory: " + history.error
 	review.present(game, _move_clocks, settings, result_label.text)
