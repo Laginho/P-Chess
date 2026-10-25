@@ -91,14 +91,14 @@ func test_a_resign_disarms_the_key():
 	assert_true(not key.press(), "a third Esc starts over")
 
 
-# The board scene on an 800 px board, playing `fen`. The runner calls tests before the root enters
-# the tree, so the scene never gets _ready (nor does Main): the picker is wired by hand and nothing
-# slides, since a tween needs the tree.
+# An off-tree 800 px board playing `fen`: the picker is wired by hand and slides are off. The
+# integration tests below use _session instead, which readies the real Main in the active tree.
 func _board(fen: String):
 	var board = BoardView.instantiate()
 	board._picker = board.get_node("PromotionPicker")
 	board.set_piece_theme("cburnett")
 	board.slide_seconds = 0
+	board.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
 	board.size = Vector2(800, 800)
 	board.game = Game.new(fen)
 	return board
