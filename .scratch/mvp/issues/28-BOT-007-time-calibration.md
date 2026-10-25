@@ -41,6 +41,8 @@ Offline tests establish script behavior before download approval. The real `data
 
 ## Comments
 
+- 2026-10-25 Additional regression coverage starts green: seeded reservoir bounds/reproducibility (including empty and undersized input) and an engine that exits before `uciok`, which must return an error without replacing the previous output. The reservoir test fails with a first-N mutant; no production fix was needed. Fixture-based pipeline checks `Range`, exact consumed bytes, all three sampled Maia nets, `go nodes 1`, legal-move filtering and BOT-006 JSON keys. Six Python tests pass. python-chess emits its upstream Python 3.14 `DefaultEventLoopPolicy` deprecation warning; it does not affect these results.
+
 - Proxy decided (gpt-6-astra high, fallback): Approve CLI, reservoir and local UCI-fake tests in the existing Primary test file, with real calibration pending Bruno's download approval — they verify existing criteria without expanding production scope or authorizing a download.
 - 2026-10-25 Coverage chronology: CLI/engine/sampling implementation already existed uncommitted before the proxy approved these additional seams. It was preserved outside the repository and the committed production restored before committing the additional tests. Their subsequent red/green evidence verifies behavior, but is not evidence that those tests preceded initial authoring. Separate real-Lc0 smoke on the fixture evaluated 8 moves with maia-1100/1500/1900, top P 0.1968–0.4014, producing 6 buckets at a demonstration-only minimum of 1; no fixture table was committed.
 

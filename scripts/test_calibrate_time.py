@@ -180,3 +180,45 @@ for line in sys.stdin:
     assert commands.count("go nodes 1") == 8
     assert not any("PolicyTemperature" in command for command in commands)
     assert commands[-1] == "quit"
+
+
+def test_reservoir_keeps_a_bounded_seeded_sample_from_the_whole_prefix():
+    from calibrate_time import sample_positions
+
+    with FIXTURE.open(encoding="utf-8") as pgn:
+        samples = list(extract_samples(pgn))
+    result = sample_positions(iter(samples), 3, seed=7)
+    assert len(result) == 3
+    assert result == sample_positions(iter(samples), 3, seed=7)
+    # A reservoir is not merely the first N positions: later games can enter.
+    assert any(sample not in samples[:3] for sample in result)
+    assert all(sample in samples for sample in result)
+    assert len(sample_positions(iter(samples), 100, seed=7)) == 8
+    assert sample_positions(iter([]), 3, seed=7) == []
+
+
+def test_uci_stop_while_bucketing_leaves_the_previous_table_untouched(tmp_path, monkeypatch):
+    # External engine failures are visible; they must not replace an existing table.
+    import calibrate_time as calibration
+    import zstandard
+
+    class Response(io.BytesIO):
+        status = 200  # Servers may ignore Range; the local byte cap still applies.
+
+    compressed = zstandard.ZstdCompressor().compress(FIXTURE.read_bytes())
+    monkeypatch.setattr(calibration, "urlopen", lambda *a, **kw: Response(compressed))
+    engine = tmp_path / "lc0.exe"
+    engine.touch()
+    for rating in range(1100, 1901, 100):
+        (tmp_path / f"maia-{rating}.pb.gz").touch()
+    real_popen = subprocess.Popen
+    monkeypatch.setattr(calibration.subprocess, "Popen",
+                        lambda command, **kwargs: real_popen([sys.executable, "-c", "pass"], **kwargs))
+    output = tmp_path / "time_model.json"
+    output.write_text("previous table", encoding="utf-8")
+    with pytest.raises(SystemExit) as stopped:
+        calibration.main(["--url", "https://example.invalid/month.pgn.zst", "--max-bytes",
+                          str(len(compressed)), "--engine", str(engine), "--weights", str(tmp_path),
+                          "--output", str(output), "--download-approved"])
+    assert stopped.value.code == 1
+    assert output.read_text(encoding="utf-8") == "previous table"
