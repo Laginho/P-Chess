@@ -4,6 +4,9 @@ const PremoveQueue = preload("res://ui/premove_queue.gd")
 const Game = preload("res://core/game.gd")
 const Clock = preload("res://core/clock.gd")
 const MainScene = preload("res://ui/main.tscn")
+const BoardScene = preload("res://ui/board_view.tscn")
+const Settings = preload("res://core/settings.gd")
+const SETTINGS_PATH := "user://test_ui007_settings.cfg"
 
 
 class FakeTime:
@@ -27,14 +30,14 @@ class HeldEngine extends "res://engine/uci.gd":
 		requests.append(moves.duplicate())
 
 
-func _session(time: FakeTime, colour := "w", control := "1+0"):
+func _session(time: FakeTime, colour := "w", control := "1+0", preferences = null):
 	var main = MainScene.instantiate()
 	# Callable keeps a weak reference; keep temporary fake clocks alive with their scene.
 	main.set_meta("test_time", time)
 	main.uci.free()
 	main.uci = HeldEngine.new()
 	main.maia = main.MaiaPlayer.new(main.uci)
-	main.preferences = main.Settings.new("res://tests/fixtures/no_ui007_settings.cfg")
+	main.preferences = preferences if preferences != null else main.Settings.new("res://tests/fixtures/no_ui007_settings.cfg")
 	Engine.get_main_loop().root.add_child(main)
 	main.board_view.slide_seconds = 0
 	main.sound_player.select_theme("__ui007_silent__")
@@ -184,6 +187,108 @@ func test_a_reply_cancels_an_unfinished_drag_before_running_the_due_premove():
 	_drag(board, "f3", "g5")
 	assert_eq(board.premoves.moves, PackedStringArray(["f3g5"]), "new input still works")
 	main.free()
+
+
+func _promotion_board():
+	var board = BoardScene.instantiate()
+	board.game = Game.new("4k3/P7/8/8/8/8/7P/4K3 b - - 0 1")
+	board.human_side = "w"
+	board.slide_seconds = 0
+	Engine.get_main_loop().root.add_child(board)
+	board.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	board.size = Vector2(800, 800)
+	return board
+
+
+func test_premove_promotions_follow_auto_queen_and_alt_allows_underpromotion():
+	for mode in ["off", "on", "only on premoves"]:
+		for alt in [false, true]:
+			var board = _promotion_board()
+			board.auto_queen = mode
+			_drag(board, "a7", "a8", alt)
+			var automatic: bool = mode != "off" and not alt
+			assert_eq(board.get_node("PromotionPicker").visible, not automatic, "%s Alt=%s" % [mode, alt])
+			if not automatic:
+				board.get_node("PromotionPicker").get_child(3).pressed.emit()
+			assert_eq(board.premoves.moves, PackedStringArray(["a7a8q" if automatic else "a7a8n"]))
+			assert_eq(board.game.moves, PackedStringArray(), "a promotion choice queues, never plays early")
+			assert_eq(board.premoves.position(board.game.board).piece_at("a8"), "Q" if automatic else "N")
+			board.free()
+
+
+func test_maia_reply_closes_an_open_premove_promotion_picker():
+	var board = _promotion_board()
+	_drag(board, "a7", "a8")
+	assert_true(board.get_node("PromotionPicker").visible)
+	assert_true(board.play("e8f8"))
+	assert_true(not board.get_node("PromotionPicker").visible, "no stale picker after Maia's reply")
+	assert_eq(board.premoves.moves, PackedStringArray())
+	assert_eq(board.game.moves, PackedStringArray(["e8f8"]))
+	_drag(board, "h2", "h4")
+	assert_eq(board.game.moves[-1], "h2h4", "ordinary input is unblocked")
+	board.free()
+
+
+func test_right_click_on_the_promotion_overlay_also_cancels_the_queue():
+	var board = _promotion_board()
+	_drag(board, "h2", "h4")
+	_drag(board, "a7", "a8")
+	assert_true(board.get_node("PromotionPicker").visible)
+	var event := InputEventMouseButton.new()
+	event.button_index = MOUSE_BUTTON_RIGHT
+	event.pressed = true
+	event.position = board.global_position + Vector2(450, 450)
+	board.get_viewport().push_input(event, true)
+	assert_eq(board.premoves.moves, PackedStringArray())
+	assert_true(not board.get_node("PromotionPicker").visible)
+	board.free()
+
+
+func _row_control(form, label: String):
+	for i in range(0, form.get_child_count(), 2):
+		if form.get_child(i).text == label:
+			return form.get_child(i + 1)
+	return null
+
+
+func test_premove_setting_persists_and_screen_changes_apply_immediately():
+	DirAccess.remove_absolute(SETTINGS_PATH)
+	var settings = Settings.new(SETTINGS_PATH)
+	assert_eq(settings.get_value("premove_style"), "Chess.com")
+	for style in ["off", "Chess.com", "Lichess"]:
+		assert_true(settings.set_value("premove_style", style))
+		assert_eq(Settings.new(SETTINGS_PATH).get_value("premove_style"), style)
+	assert_true(not settings.set_value("premove_style", "checkers"))
+	var main = _session(FakeTime.new(), "w", "1+0", settings)
+	var board = main.board_view
+	assert_eq(board.premoves.style, "Lichess", "stored choice applies on startup")
+	board.play("e2e4")
+	_drag(board, "g1", "f3")
+	_drag(board, "b1", "c3")
+	assert_eq(board.premoves.moves, PackedStringArray(["b1c3"]))
+	var control = _row_control(main.settings_screen.get_node("Panel/Center/Box/Form"), "Premove style")
+	assert_true(control != null, "the style has a settings control")
+	if control != null:
+		control.select(2)
+		control.item_selected.emit(2)
+		assert_eq(board.premoves.style, "Chess.com")
+		_drag(board, "g1", "f3")
+		assert_eq(board.premoves.moves.size(), 2)
+		_mouse(board, true, "h2")
+		control.select(0)
+		control.item_selected.emit(0)
+		_mouse(board, false, "h4")
+		_drag(board, "d2", "d4")
+		assert_eq(board.premoves.style, "off")
+		assert_eq(board.premoves.moves, PackedStringArray())
+		assert_eq(board.game.moves, PackedStringArray(["e2e4"]), "off allows no opponent-turn moves")
+		assert_eq(Settings.new(SETTINGS_PATH).get_value("premove_style"), "off")
+	main.free()
+	var config := ConfigFile.new()
+	config.set_value("settings", "premove_style", "invalid")
+	assert_eq(config.save(SETTINGS_PATH), OK)
+	assert_eq(Settings.new(SETTINGS_PATH).get_value("premove_style"), "Chess.com")
+	DirAccess.remove_absolute(SETTINGS_PATH)
 
 
 func test_queued_moves_use_the_ghost_position_without_changing_the_game():
