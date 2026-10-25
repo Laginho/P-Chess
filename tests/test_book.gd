@@ -120,6 +120,62 @@ func test_finished_games_persist_target_practice_counts_without_changing_result_
 	_clean(folder)
 
 
+func test_corrupt_practice_counts_report_zero_and_allow_target_selection():
+	var book = _sample()
+	var target: String = book.entries[0].id
+	var other: String = book.entries[1].id
+	var unchecked: String = book.entries[2].id
+	for invalid in ["invalid", "4", -1, 1.0, 1.5, true, false, [], {}]:
+		var folder := _folder()
+		assert_eq(DirAccess.make_dir_recursive_absolute(folder), OK)
+		var stored := ConfigFile.new()
+		stored.set_value("practice", target, invalid)
+		stored.set_value("practice", other, 4)
+		stored.set_value("practice", unchecked, 0)
+		assert_eq(stored.save(folder.path_join("stats.cfg")), OK)
+		var history = History.new(folder)
+		var counts: Dictionary = history.practice_counts()
+		assert_eq(counts, {target: 0, other: 4, unchecked: 0}, var_to_str(invalid))
+		assert_true(history.error.contains("Corrupt") and history.error.contains("practice/" + target),
+				"report the corrupt practice id through the shared history warning")
+		assert_eq(book.begin_game(counts, RandomNumberGenerator.new()), target,
+				"the corrupt count is zero when choosing the least-practiced line")
+		var warning: String = history.error
+		assert_eq(history.practice_counts(), counts)
+		assert_eq(history.error, warning, "reading again does not duplicate the warning")
+		_clean(folder)
+
+
+func test_saving_a_corrupt_practice_target_increments_from_zero_and_keeps_valid_stats():
+	var book = _sample()
+	var target: String = book.entries[0].id
+	var other: String = book.entries[1].id
+	var unchecked: String = book.entries[2].id
+	var results := {"wins": 3, "draws": 2, "losses": 1, "flag_wins": 1, "flag_losses": 0}
+	for invalid in ["invalid", "4", -1, 1.0, 1.5, true, false, [], {}]:
+		var folder := _folder()
+		assert_eq(DirAccess.make_dir_recursive_absolute(folder), OK)
+		var stored := ConfigFile.new()
+		stored.set_value("practice", target, invalid)
+		stored.set_value("practice", other, 4)
+		stored.set_value("practice", unchecked, 0)
+		stored.set_value("maia-1700", "1+0", results)
+		assert_eq(stored.save(folder.path_join("stats.cfg")), OK)
+		var history = History.new(folder)
+		var game = Game.new()
+		game.resign("w")
+		var path: String = history.save(game, [], SETTINGS, "", target)
+		assert_true(not path.is_empty(), "saving uses validated counts: " + var_to_str(invalid))
+		assert_true(history.error.contains("Corrupt") and history.error.contains("practice/" + target),
+				"saving reports recovery through the shared history warning")
+		var reloaded = History.new(folder)
+		assert_eq(reloaded.practice_counts(), {target: 1, other: 4, unchecked: 0})
+		assert_eq(reloaded.error, "", "the saved target is now a valid count")
+		assert_eq(reloaded.stats("maia-1700", "1+0"), results, "unrelated results survive")
+		assert_eq(reloaded.stats("maia-1500", "3+2").losses, 1)
+		_clean(folder)
+
+
 class FakeBridge:
 	signal policy_ready(policy: Dictionary)
 	var immediate := true
@@ -320,6 +376,47 @@ func test_main_uses_named_selection_counts_once_rematches_and_recognizes_free_op
 			"both Catalog and Free recognize the opening")
 	main.free()
 	_clean(folder)
+
+
+func test_main_reports_corrupt_practice_in_catalog_and_free_without_duplicate_saves():
+	for mode in ["Catalog", "Free"]:
+		var folder := _folder()
+		var book = _sample()
+		var target: String = book.entries[0].id
+		var other: String = book.entries[1].id
+		var unchecked: String = book.entries[2].id
+		assert_eq(DirAccess.make_dir_recursive_absolute(folder), OK)
+		var stored := ConfigFile.new()
+		stored.set_value("practice", target, "invalid")
+		stored.set_value("practice", other, 4)
+		stored.set_value("practice", unchecked, -3)
+		assert_eq(stored.save(folder.path_join("stats.cfg")), OK)
+		var main = _session(folder, book)
+		assert_eq(book.save_selection("Practice"), "")
+		var settings := SETTINGS.duplicate()
+		settings.opening = mode
+		settings.selection = "Practice"
+		main.setup.started.emit(settings)
+		assert_true(main.clock != null, "corrupt practice does not prevent starting " + mode)
+		assert_eq(main.maia.target_id, target if mode == "Catalog" else "")
+		main.board_view.game.resign("w")
+		main._show_result()
+		main._show_result()
+		assert_true(main.history.error.contains("Corrupt")
+				and main.history.error.contains("practice/" + target)
+				and main.history.error.contains("practice/" + unchecked),
+				"saving retains the warning for every corrupt practice id, including in Free")
+		assert_true(main.result_label.text.contains("History: " + main.history.error))
+		var review = main.get_node("Review")
+		assert_true(review.visible)
+		assert_true(review.get_node("Margin/Content/Result").text.contains("History: " + main.history.error),
+				"the visible review reports practice corruption through the existing error path")
+		assert_eq(_saved_games(folder).size(), 1, "repeated terminal callbacks save once")
+		var reloaded = History.new(folder)
+		assert_eq(reloaded.practice_counts(), {target: 1 if mode == "Catalog" else 0, other: 4, unchecked: 0})
+		assert_eq(reloaded.stats("maia-1500", "3+2").losses, 1)
+		main.free()
+		_clean(folder)
 
 
 # The external catalog I/O boundary is held by semaphores, without timing assumptions.

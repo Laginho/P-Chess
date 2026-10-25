@@ -1,5 +1,5 @@
 # OPEN-002: Book weight in Catalog mode
-Stage: to-implement
+Stage: to-review
 Blocked by: BOT-003, HIST-001, OPEN-001
 Review: agent
 Difficulty: hard
@@ -126,3 +126,23 @@ Scope for this ticket: validate practice counts before use (non-negative integer
 Regressions to write first (own commit, red), in `tests/test_book.gd` or `tests/test_history.gd`: a string practice count and a negative one in `stats.cfg`: `practice_counts()` drops them to 0 and keeps the valid ids, the book's target selection runs without a script error, and the corruption is reported.
 
 Next action: stage 2 (Difficulty: hard, so the hard implementer).
+
+#### Stage 2 retry: corrupt practice counts (2026-10-25)
+
+Resumed the existing `OPEN-002-book-weight` branch by fast-forwarding it to session commit `f564149`, which includes the completed HIST-001 recovery and its shared `_report_corrupt_stats` warning path. This retry addresses only the session review's practice-count finding.
+
+Caller inspection: Main passes `History.practice_counts()` to `MaiaPlayer.begin_game`, which forwards the counts to `Book.begin_game`; the book expects non-negative integers. `History.save` also reads a target count directly before incrementing, so both reading and saving require validated values. `save` clears `history.error` at entry; corruption must therefore be reported again during saving for Main's existing result/review UI to show it. Preserve valid zero/positive counts, unrelated result records, missing-section behavior, and Free saves without a target. Tests remain at the approved History/Book/Main seams in `tests/test_book.gd`.
+
+#### Stage 2 retry handoff (2026-10-25)
+
+- `core/history.gd` now validates every stored practice count as a non-negative integer. Invalid values are returned as zero, valid zero/positive values remain intact, and the existing HIST-001 `_report_corrupt_stats` path reports each affected id without duplicate warnings. `save` uses those validated counts before incrementing the target, re-reporting corruption after its existing error reset so Main's result and review display the warning in Catalog and Free. A successfully saved corrupt target persists as 1; other valid practice and result records survive. No other production file changed.
+- `tests/test_book.gd` adds three regressions at the approved production interfaces: persisted invalid counts and real Book target selection; direct History saves and reloads preserving unrelated results; real Main Catalog/Free sessions with multiple corrupt ids, visible result/review warnings, valid-count persistence and one save despite repeated terminal callbacks. Cases include nonnumeric/numeric strings, negative integers, integral/fractional floats, booleans, arrays and dictionaries. Fixtures use isolated storage and the existing fake engine.
+- Read cycle: test-only `2a760a4` was red with **11 passed, 1 failed**, including actual String/Array/Dictionary-to-int errors in `Book.begin_game`; production-only `e5d040f` made it green with **12 passed, 0 failed**. Logs: `C:\Users\Lage\AppData\Local\Temp\OPEN-002-practice-read-red.log` and `OPEN-002-practice-read-green.log` in the same directory.
+- Save cycle: test-only `0b54517` was red with **12 passed, 1 failed**, including actual invalid assignments in `History.save`, incorrect increments and missing warnings; production-only `322010a` made it green with **13 passed, 0 failed**. Logs: `C:\Users\Lage\AppData\Local\Temp\OPEN-002-practice-save-red.log` and `OPEN-002-practice-save-green.log`.
+- Scene regression: test-only `4016678` was proved red by temporarily restoring the original raw target read in `History.save`: **12 passed, 2 failed**, including the save regression and missing Catalog/Free review warnings. The source was restored byte-for-byte in `finally`, and `git diff --exit-code -- core/history.gd` confirmed restoration. Log: `C:\Users\Lage\AppData\Local\Temp\OPEN-002-practice-ui-red.log`. All **14 book tests** pass with the actual committed implementation in the final gate. Both production commits contain no test edits.
+- Bound gate ran once through `gate-evidence.ps1` on clean committed `4016678d7989058bfa7309258e6c31441812563f`: `godot --headless -s tests/run.gd` -> **240 passed, 0 failed**, exit 0, no SKIP lines or script errors. Live Lc0 completed 30 legal moves with median policy latency **15.1 ms**. Existing malformed-time-table tests emitted their expected warnings. Log: `C:\Users\Lage\AppData\Local\Temp\OPEN-002-corrupt-practice-4016678-gate.log`; SHA-256 `F0C1B1BEF8570B3320116CA578921EFCFFA5D2458D5869A905D3205BAFA650B6`.
+- Final diff and every retry commit's file separation were inspected; `git diff --check f564149..HEAD` passed. The retry changes only this ticket, `core/history.gd` and `tests/test_book.gd`. No new contract amendment, proxy decision or unresolved defect was introduced. Independent stage-3 re-review and integration remain next.
+
+Acceptance: passed | [Practice and real-scene regressions](../../../tests/test_book.gd) pass in the 240/240 gate, including recovery, target selection, durable counts and visible Catalog/Free result warnings. Earlier full-catalog acceptance remains recorded above. This retry used headless automation; visual and hands-on acceptance were not repeated.
+
+Gate evidence: C:\Users\Lage\AppData\Local\Temp\OPEN-002-corrupt-practice-4016678-gate.json

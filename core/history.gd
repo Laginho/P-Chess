@@ -75,7 +75,7 @@ func save(game, clocks: Array, settings: Dictionary, opening_name := "", target_
 		if game.reason == "time":
 			counts["flag_wins" if won else "flag_losses"] += 1
 	_results.set_value(settings.level, settings.control, counts)
-	var practiced: int = _results.get_value("practice", target_id, 0)
+	var practiced: int = practice_counts().get(target_id, 0)
 	if not target_id.is_empty():
 		_results.set_value("practice", target_id, practiced + 1)
 	status = _results.save(_root.path_join("stats.cfg"))
@@ -111,9 +111,14 @@ func _report_corrupt_stats(section: String, key: String) -> void:
 		error += ("\n" if not error.is_empty() else "") + warning
 
 
+# Invalid stored counts are zero for target selection; retain every valid line.
 func practice_counts() -> Dictionary:
 	var counts := {}
 	if _results.has_section("practice"):
 		for id in _results.get_section_keys("practice"):
-			counts[id] = _results.get_value("practice", id, 0)
+			var count = _results.get_value("practice", id, 0)
+			if typeof(count) != TYPE_INT or count < 0:
+				_report_corrupt_stats("practice", id)
+				count = 0
+			counts[id] = count
 	return counts
