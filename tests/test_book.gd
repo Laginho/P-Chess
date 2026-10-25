@@ -378,6 +378,47 @@ func test_main_uses_named_selection_counts_once_rematches_and_recognizes_free_op
 	_clean(folder)
 
 
+func test_main_reports_corrupt_practice_in_catalog_and_free_without_duplicate_saves():
+	for mode in ["Catalog", "Free"]:
+		var folder := _folder()
+		var book = _sample()
+		var target: String = book.entries[0].id
+		var other: String = book.entries[1].id
+		var unchecked: String = book.entries[2].id
+		assert_eq(DirAccess.make_dir_recursive_absolute(folder), OK)
+		var stored := ConfigFile.new()
+		stored.set_value("practice", target, "invalid")
+		stored.set_value("practice", other, 4)
+		stored.set_value("practice", unchecked, -3)
+		assert_eq(stored.save(folder.path_join("stats.cfg")), OK)
+		var main = _session(folder, book)
+		assert_eq(book.save_selection("Practice"), "")
+		var settings := SETTINGS.duplicate()
+		settings.opening = mode
+		settings.selection = "Practice"
+		main.setup.started.emit(settings)
+		assert_true(main.clock != null, "corrupt practice does not prevent starting " + mode)
+		assert_eq(main.maia.target_id, target if mode == "Catalog" else "")
+		main.board_view.game.resign("w")
+		main._show_result()
+		main._show_result()
+		assert_true(main.history.error.contains("Corrupt")
+				and main.history.error.contains("practice/" + target)
+				and main.history.error.contains("practice/" + unchecked),
+				"saving retains the warning for every corrupt practice id, including in Free")
+		assert_true(main.result_label.text.contains("History: " + main.history.error))
+		var review = main.get_node("Review")
+		assert_true(review.visible)
+		assert_true(review.get_node("Margin/Content/Result").text.contains("History: " + main.history.error),
+				"the visible review reports practice corruption through the existing error path")
+		assert_eq(_saved_games(folder).size(), 1, "repeated terminal callbacks save once")
+		var reloaded = History.new(folder)
+		assert_eq(reloaded.practice_counts(), {target: 1 if mode == "Catalog" else 0, other: 4, unchecked: 0})
+		assert_eq(reloaded.stats("maia-1500", "3+2").losses, 1)
+		main.free()
+		_clean(folder)
+
+
 # The external catalog I/O boundary is held by semaphores, without timing assumptions.
 class DelayedBook extends "res://bot/book.gd":
 	var entered := Semaphore.new()
