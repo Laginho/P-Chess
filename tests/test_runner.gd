@@ -77,6 +77,28 @@ func test_fails_after_a_timer():
 	assert_true("0 passed, 1 failed" in run.output, run.output)
 
 
+func test_a_never_emitted_signal_times_out_and_the_run_continues():
+	var source := """extends "res://tests/run.gd".Test
+signal never
+func test_waits_forever():
+	await never
+"""
+	var run := _run(_case("timeout", source))
+	assert_eq(run.code, 1, run.output)
+	assert_true("test_case.gd::test_waits_forever: timed out after 10 s" in run.output, run.output)
+	assert_true("0 passed, 1 failed" in run.output, run.output)
+	assert_true(run.elapsed_ms >= 10000 and run.elapsed_ms < 12000, "wall-clock: %d ms" % run.elapsed_ms)
+	if run.code != 1:
+		return
+	run = _run(_case("timeout_then_pass", source + """
+func test_runs_next():
+	assert_true(true)
+"""))
+	assert_eq(run.code, 1, run.output)
+	assert_true("PASS" in run.output and "::test_runs_next" in run.output, run.output)
+	assert_true("1 passed, 1 failed" in run.output, run.output)
+
+
 func test_default_run_skips_fixtures():
 	var files: PackedStringArray = load("res://tests/run.gd").find_tests("res://tests")
 	assert_true("res://tests/test_runner.gd" in files, str(files))
@@ -94,10 +116,30 @@ func test_tests_can_ready_nodes_in_the_active_tree():
 
 
 func _run(dir: String) -> Dictionary:
-	var output := []
 	var args := ["--headless", "--path", ProjectSettings.globalize_path("res://"), "-s", "res://tests/run.gd", "--", dir]
-	var code := OS.execute(OS.get_executable_path(), args, output, true)
-	return {"code": code, "output": "".join(output)}
+	var started := Time.get_ticks_msec()
+	var child := OS.execute_with_pipe(OS.get_executable_path(), args, false)
+	if child.is_empty():
+		return {"code": -1, "output": "Could not start child Godot", "elapsed_ms": Time.get_ticks_msec() - started}
+	var output := PackedByteArray()
+	var errors := PackedByteArray()
+	var code := -1
+	while true:
+		output.append_array(child.stdio.get_buffer(65536))
+		errors.append_array(child.stderr.get_buffer(65536))
+		if not OS.is_process_running(child.pid):
+			code = OS.get_process_exit_code(child.pid)
+			break
+		if Time.get_ticks_msec() - started >= 60000:
+			OS.kill(child.pid)
+			errors.append_array("Child Godot timed out after 60 s".to_utf8_buffer())
+			break
+		OS.delay_msec(5)
+	output.append_array(child.stdio.get_buffer(65536))
+	errors.append_array(child.stderr.get_buffer(65536))
+	child.stdio.close()
+	child.stderr.close()
+	return {"code": code, "output": output.get_string_from_utf8() + errors.get_string_from_utf8(), "elapsed_ms": Time.get_ticks_msec() - started}
 
 
 func _case(name: String, source: String) -> String:
