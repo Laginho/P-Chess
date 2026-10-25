@@ -1,5 +1,5 @@
 # HIST-001: Game history and stats
-Stage: implementing
+Stage: to-review
 Blocked by: CORE-006, UI-004
 Review: agent
 Difficulty: normal
@@ -63,7 +63,7 @@ Disclosure: decision | none | HIST-001 Comments: approved test isolation and Mai
 - Full bound gate on committed code `24085c8344288fbba0aea60a6a2164710d4cdca0`: `godot --headless -s tests/run.gd` => `180 passed, 0 failed`, `ExitCode: 0`. Includes all 9 new history tests, existing session/premove tests, and real Lc0 integration (no skips). Expected warnings are existing malformed-theme/time-model fixtures; no script errors. Log: `C:\Users\Lage\AppData\Local\Temp\HIST-001-24085c8-gate.log`.
 - Final diff checked for Primary-files scope, test/production commit separation, whitespace, unintended artifacts and unrelated changes. Stage 2 stops here for independent stage-3 review.
 
-Gate evidence: C:\Users\Lage\AppData\Local\Temp\HIST-001-24085c8-gate.json
+Gate evidence: C:\Users\Lage\AppData\Local\Temp\HIST-001-isolation-623-gate.json
 
 Acceptance: pending | Automated real-Main games and saved-PGN inspection pass in tests/test_history.gd; the ticket's manual check of playing two games in the interactive app and opening their user://games/ files has not been performed.
 Disclosure: pending | release | HIST-001 Verification and Stage 2 handoff: interactive two-game acceptance remains; headless tests cover all end paths, clocks, persistence, rematch and visible write errors.
@@ -104,3 +104,16 @@ Acceptance: pending | Criterion 7 must be repaired and independently reviewed be
 Disclosure: decision | none | The existing proxy-approved history-test isolation and Main integration seams remain the contract; this review makes no contract changes.
 Disclosure: pending | integration | The criterion-7 finding is scheduled on this reopened HIST-001 ticket. Stage 2 must resolve the missing Primary-file scope through the stage-1/proxy workflow, isolate the remaining Main test, preserve its settings assertions and return with valid gate evidence.
 Disclosure: pending | release | Interactive play of two games and inspection of their user://games/ PGNs remains as recorded in Verification and the Stage 2 handoff.
+
+#### Stage 2 repair handoff (2026-10-25)
+
+- Repaired the first review's criterion-7 finding in `tests/test_input_modes.gd`. The settings scene receives a real History rooted at a unique owned test directory before entering the tree, and startup must retain that same instance. Teardown removes only that test directory and its files. Every existing settings assertion is unchanged; no production file changed in this repair.
+- The pre-tree regression guard fails closed if injection is omitted, freeing the off-tree scene and its unparented nodes before Main can construct default History or read the player's normal history. This also makes the negative proof safe for player data.
+- Committed red/green harness cycle: `ddbac01` adds the regression assertion and proxy-approved scope amendment; the focused input-mode suite reports **14 passed, 1 failed**, with the sole failure naming missing isolated History before tree entry. `b4f0e89` injects the isolated store and adds its cleanup; the same suite reports **15 passed, 0 failed**. Logs: `build/HIST-001-isolation-red.log` and `build/HIST-001-isolation-green.log` (ignored local evidence). The initial restricted red run also failed existing settings-file writes; rerunning with authorized Godot filesystem access produced the clean red result above. Both repair commits are test-only, with tracker metadata permitted; there is no production change to pair with this harness-only correction.
+- Full bound gate on clean committed code `b4f0e896c059fbb0c3b65f42029b08b1869417d6`: `godot --headless -s tests/run.gd` => **180 passed, 0 failed**, `ExitCode: 0`, including the settings scene, all 9 history tests and real Lc0 integration. Expected malformed-fixture warnings only; no script errors. The Gate evidence line above now points to this run's receipt, replacing the pre-repair receipt.
+- Final diff against reopened commit `89b5635` contains only this ticket and the narrowly approved settings-test harness. `git diff --check` passes. The branch is preserved for independent re-review of the prior criterion-7 failure; no merge or new review verdict was performed in stage 2.
+
+Acceptance: pending | Automated criterion-7 repair and full gate pass; independent stage-3 re-review remains before integration. Interactive two-game acceptance remains pending for release.
+Disclosure: decision | none | Proxy amendment under Comments authorizes only the omitted settings-test harness; criterion 7 and production behavior are unchanged.
+Disclosure: pending | integration | The first-review criterion-7 finding is repaired on this branch and awaits independent re-review on HIST-001.
+Disclosure: pending | release | The original Verification step to play two games interactively and inspect their user://games/ PGNs has not been performed.
