@@ -1,5 +1,5 @@
 # OPEN-003: Repertoire import and My repertoire mode
-Stage: to-review
+Stage: done
 Blocked by: CORE-006, OPEN-002
 Review: agent
 Difficulty: normal
@@ -110,3 +110,33 @@ Disclosure: pending | integration | This Resolution's P2 criterion-1 finding mus
 
 Acceptance: passed | `C:\Users\Lage\AppData\Local\Temp\OPEN-003-chapter-comments-green.log` verifies the repaired annotation acceptance case through production import/reload; the earlier real-Maia acceptance log remains evidence for continuations, saved colour, counts and rematches. Verification remains headless; visual layout and native file-dialog interaction were not assessed.
 Disclosure: pending | integration | The previous Resolution's criterion-1 defect is repaired with red/green evidence above; independent stage-3 re-review of that finding and the added diff remains required before integration. OPEN-003 is handed off at `to-review` on its retained branch.
+
+#### Resolution (2026-10-25)
+
+Verdict: Approve
+
+Independent re-review by `/root/standards_review` and `/root/spec_review` examined `7cd608529f85a22f5784bca13865f752cf2798f3...828808024b1284eaaccf44f067c46cc1c5797590`: the previously failed criterion 1 and every change since the reopen. The earlier complete review remains the record for unchanged criteria 2–5. This review authored no production behavior, tests, contract amendments or proxy decisions.
+
+##### Standards
+
+No documented-standard violations or actionable baseline smells. The repair changes only approved `bot/repertoire.gd`, `tests/test_repertoire.gd` and ticket metadata. Test-only `24aeb8f` commits the regression and `Stage: implementing`; production-only `416693c` adds two lines; metadata-only `8288080` records the verified handoff at `to-review`. The existing annotation-merging pattern remains simple and consistent.
+
+##### Spec
+
+1. ✅ The reopened chapter-comment defect is resolved. Each non-empty `Pgn.parse` chapter comment merges once into its starting-position root. Distinct shared-root guidance survives; identical guidance is deduplicated; separate FEN roots retain their own comments. The public import/reload regression also preserves move comments, variation-opening comments, NAGs, path count and stable line IDs.
+2. ✅ Prior approval retained: saved human colour, Setup adoption/display and swapped-colour rematches are unchanged.
+3. ✅ Prior approval retained: root-to-leaf path construction is unchanged and the added regression protects its count and stable IDs.
+4. ✅ Prior approval retained: Maia-side book routing, target/count/weight behavior, load-before-start, mode switching, history recognition and retry lifecycle are unchanged.
+5. ✅ Prior approval retained: illegal-move diagnostics and validation before publication/saving are unchanged.
+
+Standards: **0 findings**. Spec: **0 findings**. No unresolved finding remains; the previous criterion-1 integration condition and its independent-review condition are satisfied.
+
+Examined: all three repair commits and changed files; production PGN annotation contract; repertoire parsing, merging, collection, candidate-before-save publication and reload; UI import, Setup selection/start and Main load callers; repeated/empty chapter guidance, duplicate shorter lines, distinct FEN roots, annotations and paths; invalid colour/PGN/FEN, empty input, missing/corrupt saves and existing save-error paths. The change mutates only candidate roots before publication. Not independently exercised: visual layout, native file-dialog interaction, hands-on play, exported builds, large-study performance or additional induced filesystem failures.
+
+Verification: retained focused red log on test-only `24aeb8f`: **7 passed, 1 failed**, specifically empty root-comment arrays after import and reload. Production-only `416693c`: **8 passed, 0 failed**. Bound gate `godot --headless -s tests/run.gd` on `416693cce7d37a0118f522a55bf0740b38b3bf1b`: **218 passed, 0 failed**, exit 0. The root reviewer read the red/green logs and verified the gate receipt, log SHA-256 `E0595CAD605E460BD47F36F8E37F7C9BD6D3A9525445FD6512946E045251ABC2`, exit marker and identical production with `Assert-GateEvidence`, both before and after merge. No full gate rerun was needed for unchanged code. `git diff --check` passes. The earlier real-Maia acceptance log was also inspected: imported Black reply `e7e5`, rematched White move `e2e4`, saved human colour unchanged, target counted once and **0 acceptance failures**.
+
+Integration: the ticket branch was already current with `sweatshop/core/2026-10-25-0159`; merged locally without squashing as `d2e1085`. This closing commit changes only this ticket and `.scratch/core/ledger.md`, with `Stage: done` and its ledger entry together. No PR or push is part of this session-stage handoff.
+
+Acceptance: passed | `C:\Users\Lage\AppData\Local\Temp\OPEN-003-chapter-comments-green.log` covers the repaired annotation acceptance through production import/reload; `C:\Users\Lage\AppData\Local\Temp\OPEN-003-acceptance.log` covers real Maia continuations, saved colour, practice count and swapped-colour rematch. Evidence is headless; visual layout and native file-dialog interaction remain unassessed.
+Disclosure: decision | none | The recorded `Proxy decided (gpt-6-astra high, fallback)` Main lifecycle/actual-colour amendment remains within the approved contract; the repair does not change it and adds no integration or release condition.
+Disclosure: decision | none | The recorded `Proxy decided (gpt-6-astra high, fallback)` legacy Catalog assertion migration remains within scope and preserves all Catalog/Free assertions; the repair does not change it and adds no integration or release condition.
