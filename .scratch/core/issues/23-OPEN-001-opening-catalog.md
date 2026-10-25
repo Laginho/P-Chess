@@ -1,5 +1,5 @@
 # OPEN-001: Opening catalog picker
-Stage: to-implement
+Stage: implementing
 Blocked by: UI-004
 Review: agent
 Difficulty: normal
@@ -36,3 +36,5 @@ The opening catalog from Lichess's TSVs as a searchable tree with checkboxes, an
 - `tests/test_catalog.gd`: row count, the name tree for three sample names, search, check propagation, save and load of a selection. Red because the catalog code does not exist.
 
 ## Comments
+
+- 2026-10-25 Stage 2: approved seams are the catalog/selection API in `bot/book.gd` and the real picker/setup scenes, tested in `tests/test_catalog.gd`. Existing callers of setup's `started(settings)` are `Main._start` and tests; Free must keep its settings shape, and Catalog adds the saved selection name. `Book` and the picker are new, with no existing callers. Boundaries to cover: invalid SAN among valid rows, duplicate name paths, partial/empty selection, filtered check propagation, unsafe save names, missing/corrupt selection files, and Catalog with no saved selection. UI-004 is done on the session base.
