@@ -64,6 +64,25 @@ func test_names_form_a_tree_and_search_keeps_matching_branches_and_their_ancesto
 	assert_eq(book.search("").size(), 5)
 
 
+func test_search_matches_original_punctuation_and_keeps_normalized_paths_and_ancestors():
+	var book = Book.new()
+	book.load_tsv("eco\tname\tpgn\n"
+			+ "C25\tVienna Gambit, with Max Lange Defense: Cunningham Defense\t1. e4 e5 2. Nc3 Nc6 3. f4\n"
+			+ "A00\tPolish Opening, with d5\t1. b4 d5\n"
+			+ "B20\tSicilian Defense\t1. e4 c5\n")
+	assert_eq(book.errors, [])
+	var vienna := ["Vienna Gambit", "Vienna Gambit: with Max Lange Defense",
+			"Vienna Gambit: with Max Lange Defense, Cunningham Defense"]
+	for query in ["Vienna Gambit, with Max Lange Defense: Cunningham Defense",
+			"mAx LaNgE dEfEnSe: cUnNiNgHaM", "Gambit, with", "Cunningham",
+			"Vienna Gambit: with Max Lange Defense, Cunningham Defense"]:
+		assert_eq(book.search(query), vienna, query)
+	for query in ["Polish Opening, with d5", "oPeNiNg, WiTh", "Polish Opening: with d5"]:
+		assert_eq(book.search(query), ["Polish Opening", "Polish Opening: with d5"], query)
+	assert_eq(book.search("unmatched"), [])
+	assert_eq(book.search("").size(), 6)
+
+
 func test_checks_propagate_to_descendants_and_parents_show_partial_state():
 	var book = _sample()
 	var family := "Sicilian Defense"
