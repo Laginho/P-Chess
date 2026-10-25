@@ -5,6 +5,8 @@ extends SceneTree
 # Runs every test_* method of every tests/test_*.gd (not recursive, so tests/fixtures/
 # stays out of the default run) and exits 1 when any test fails or a script fails to load.
 
+const TEST_TIMEOUT_MS := 10000
+
 
 # Base class for test scripts: extends "res://tests/run.gd".Test
 class Test extends RefCounted:
@@ -83,8 +85,17 @@ func _run() -> void:
 				failed += 1
 				break
 			log.errors.clear()
-			# A test that awaits returns at its first await: wait for its end before reading its failures.
-			await test.call(name)
+			var finished := [false]
+			var run_test := func():
+				await test.call(name)
+				finished[0] = true
+			var deadline := Time.get_ticks_msec() + TEST_TIMEOUT_MS
+			run_test.call()
+			while not finished[0] and Time.get_ticks_msec() < deadline:
+				await process_frame
+			if not finished[0]:
+				# shortcut: late signals may log errors in a later test; isolate processes if cancellation is needed.
+				test.failures.append("timed out after 10 s")
 			for error in log.errors:
 				test.failures.append("script error: " + error)
 			if test.failures.is_empty():
