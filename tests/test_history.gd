@@ -41,3 +41,34 @@ func test_finished_game_saves_one_pgn_with_headers_moves_and_exact_clocks():
 		assert_eq(saved.moves.map(func(move): return move.uci), ["f2f3", "e7e5", "g2g4", "d8h4"])
 		assert_eq(saved.moves.map(func(move): return move.clock_ms), [180000, 180000, 179534, 181001])
 	_clean(folder)
+
+
+func test_stats_survive_reload_and_separate_level_control_and_human_colour():
+	var folder := _folder()
+	var history = History.new(folder)
+	var flag_win = Game.new()
+	flag_win.flag("b")
+	history.save(flag_win, [], SETTINGS)
+	var draw = Game.new()
+	for move in ["g1f3", "g8f6", "f3g1", "f6g8", "g1f3", "g8f6", "f3g1", "f6g8"]:
+		assert_true(draw.play(move))
+	draw.claim_draw()
+	history.save(draw, [180000, 180000, 180000, 180000, 180000, 180000, 180000, 180000], SETTINGS)
+	var as_black := SETTINGS.duplicate()
+	as_black.colour = "b"
+	var loss = Game.new()
+	loss.flag("b")
+	history.save(loss, [], as_black)
+	var normal_win = Game.new()
+	normal_win.resign("b")
+	history.save(normal_win, [], SETTINGS)
+	var other := SETTINGS.duplicate()
+	other.level = "maia-1700"
+	other.control = "1+0"
+	history.save(normal_win, [], other)
+	var reloaded = History.new(folder)
+	assert_eq(reloaded.stats("maia-1500", "3+2"), {"wins": 2, "draws": 1, "losses": 1, "flag_wins": 1, "flag_losses": 1})
+	assert_eq(reloaded.stats("maia-1700", "1+0"), {"wins": 1, "draws": 0, "losses": 0, "flag_wins": 0, "flag_losses": 0})
+	assert_eq(reloaded.stats("maia-1500", "1+0"), {"wins": 0, "draws": 0, "losses": 0, "flag_wins": 0, "flag_losses": 0})
+	assert_eq(DirAccess.get_files_at(folder.path_join("games")).size(), 5, "rapid saves never overwrite a PGN")
+	_clean(folder)
