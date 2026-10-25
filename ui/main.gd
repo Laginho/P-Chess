@@ -78,6 +78,9 @@ func _start(colour: String, level: String, control: String) -> void:
 	uci.set_level(MaiaPlayer.net_path(level))
 	board_view.game = Game.new()
 	clock = Clock.new(control, Time.get_ticks_msec)
+	maia.clock = clock
+	maia.control = control
+	maia.level = level
 	clock.flagged.connect(_on_flagged)
 	clock.low_time.connect(func(side: String) -> void:
 		if side == human:
@@ -126,7 +129,7 @@ func _show_result() -> void:
 	var game = board_view.game
 	result_label.text = "%s, %s" % [game.result, game.reason]
 	sound_player.play("game_end")
-	print("Maia: median %.1f ms from your move to its move, over %d moves"
+	print("Maia: median %.1f ms from your move to Lc0's answer, over %d moves"
 			% [maia.median_ms(), maia.latencies_ms.size()])
 
 
