@@ -1,5 +1,5 @@
 # OPEN-004: Review badges and repertoire check
-Stage: to-review
+Stage: done
 Blocked by: HIST-002, OPEN-003
 Review: agent
 Difficulty: normal
@@ -124,3 +124,35 @@ Next action: stage 2.
 Acceptance: passed | Real Main/Setup/Settings/Review regression covers the reported race and repaired retry; the full 241-test gate passes. No manual real-engine game or new visual acceptance run is claimed for this behavioral correction.
 
 Gate evidence: C:\Users\Lage\AppData\Local\Temp\p-chess-OPEN-004-reopen\gate.json
+
+#### Resolution (2026-10-25)
+
+Verdict: Approve
+
+Independent Standards and Spec sub-agents re-reviewed the reopened finding and the complete new diff `cd4fefc88356dd969445a5a575e1036e19957827...b729262de9d6fa375c9641f145583646d5e0746b`. This review authored no production or test changes. Rebase onto `sweatshop/core/2026-10-25-0159` was already up to date; merge `77a9274` preserves all three commits and has the identical tree to the reviewed ticket HEAD.
+
+##### Standards
+
+0 hard documented-standard violations; 0 actionable smell judgments. Retaining `repertoire_error` and rechecking the live preference after catalog loading is cohesive and narrowly scoped. The repeated requirement check serves the asynchronous boundary; extracting it would add unnecessary indirection. The catalog and engine doubles hold external boundaries while exercising real Main, Setup, Settings and Review behavior. Assertions cover rejection before game/clock/request creation and repaired retry with preserved colour/mode and fresh repertoire paths.
+
+Commit separation verified: `c08d33a` changes tests plus permitted ticket metadata; `712de3d` changes production only; `b729262` changes metadata only. All changed files fall within Primary files or ticket metadata. No scope creep, generated artifacts, unrequested refactor or stale documentation was found.
+
+##### Spec
+
+0 missing/partial requirements, 0 scope-creep findings, 0 incorrect implementations. The reopened prior-review miss is corrected:
+
+2. ✅ Criterion 2 requires a required saved-repertoire load failure to report an error and permit retry without stale repertoire data. Main retains the selected repertoire's load error and rechecks the live preference after catalog loading, before creating the game, clock or Maia request. Failure restores Setup with the error and releases the start guard. Retry reloads the repaired repertoire. Catalog errors retain precedence and My repertoire remains mandatory.
+3. ✅ The regression enables checking through the real Settings checkbox during the real catalog await, repairs the saved PGN to different paths and verifies successful Black/Free play and repaired-path Review badges. The correction preserves the required start-time snapshot when checking is enabled later during play, actual rematch colour and opening-mode composition.
+
+Criteria 1, 4 and 5 retain their previous approval; the correction does not change the pure badge evaluator or badge presentation.
+
+Examined: the entire three-file diff and issue history; numbered criteria and spec sections 6.4/9.3; Main start/rematch/result callers; Setup and Settings wiring; catalog completion/error/retry; repertoire load/snapshot semantics; related badge and Review code and tests. Not experimentally examined in this re-review: a real-engine play-through, exported builds or physical storage failures. No new visual verification was needed for the behavioral correction.
+
+Red/green evidence: inspected the retained logs and separate committed cycle. Test-only `c08d33a` reports **11 passed, 1 failed**, with the intended failure observing a created clock, an unwanted Maia request, a replaced game and absent Setup error. Production-only `712de3d` reports **12 passed, 0 failed**. The ignored focused test copy matches the tracked test file by SHA-256; the full gate exercises the tracked file and its new regression.
+
+Gate: `Assert-GateEvidence` validates the receipt at the reviewed HEAD and merge `77a9274`: `godot --headless -s tests/run.gd`, tested commit `712de3d5c503e2dc6523380b023b4724d52cc3da`, **241 passed, 0 failed**, exit 0. Log SHA-256 `2E6CE7A04DDC3A8D55A5E22CFFD7C98C882772DDDBB4638C0BCCD8724ACCA547` and the exit marker match. No ERROR, SCRIPT ERROR, FAIL or SKIP lines occur; malformed time-model fixture warnings are expected. Only permitted tracker metadata differs from the tested code, so the valid green run is reused. `git diff --check` passes.
+
+Proxy review: the existing Proxy decided (gpt-6-astra high, fallback) amendment remains satisfied by the scoped Main wiring; Book remains independent of checking, the sole human exit/no-continuation semantics are unchanged, and existing bot modes, history and swapped-colour rematches are preserved. No new contract decision or unresolved finding remains.
+
+Acceptance: passed | The real Main/Setup/Settings/Review regression, repaired retry, independently approved correction and validated 241-test gate satisfy the reopened criteria. No manual real-engine play-through or new visual acceptance run is claimed.
+Disclosure: decision | none | Existing OPEN-004 proxy scope/badge clarification remains approved; the reopened start race is corrected without a contract amendment, migration or additional integration/release condition.
