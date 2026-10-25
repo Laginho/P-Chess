@@ -12,6 +12,7 @@ var volume_counts := {}
 var roots: Array[String] = []
 # A node groups all rows under its name, including a row named after the family itself.
 var nodes := {}
+var selection_dir := "user://openings"
 var _checked := {}
 var _prefixes := {}
 var _numbers := RegEx.create_from_string(r"\d+\.+\s*")
@@ -140,3 +141,71 @@ func selected_ids() -> Array[String]:
 		if _checked.has(entry.id):
 			ids.append(entry.id)
 	return ids
+
+
+func selection_names() -> Array[String]:
+	var names: Array[String] = []
+	if not DirAccess.dir_exists_absolute(selection_dir):
+		return names
+	for file in DirAccess.get_files_at(selection_dir):
+		if file.ends_with(".json") and _valid_name(file.trim_suffix(".json")):
+			names.append(file.trim_suffix(".json"))
+	names.sort()
+	return names
+
+
+# Return a user-facing error, or "" on success. Failed loads leave the checks untouched.
+func save_selection(name: String) -> String:
+	if not _valid_name(name):
+		return "Choose a filename without slashes, reserved names or trailing dots."
+	if DirAccess.make_dir_recursive_absolute(selection_dir) != OK:
+		return "Cannot create the openings folder."
+	var path := selection_dir.path_join(name + ".json")
+	var temporary := path + ".tmp"
+	var file := FileAccess.open(temporary, FileAccess.WRITE)
+	if file == null:
+		return "Cannot write the selection."
+	file.store_string(JSON.stringify({"version": 1, "lines": selected_ids()}))
+	file.flush()
+	var error := file.get_error()
+	file.close()
+	if error != OK or DirAccess.rename_absolute(temporary, path) != OK:
+		DirAccess.remove_absolute(temporary)
+		return "Cannot save the selection."
+	return ""
+
+
+func load_selection(name: String) -> String:
+	if not _valid_name(name):
+		return "Invalid selection name."
+	var file := FileAccess.open(selection_dir.path_join(name + ".json"), FileAccess.READ)
+	if file == null:
+		return "Cannot read the selection."
+	var json := JSON.new()
+	if json.parse(file.get_as_text()) != OK:
+		return "The selection is not valid JSON."
+	var data = json.data
+	if not data is Dictionary or data.get("version") != 1 or not data.get("lines") is Array:
+		return "Unknown selection format."
+	var known := {}
+	for entry in entries:
+		known[entry.id] = true
+	var checked := {}
+	for id in data.lines:
+		if not id is String or not known.has(id):
+			return "The selection contains a line missing from this catalog."
+		checked[id] = true
+	_checked = checked
+	return ""
+
+
+static func _valid_name(name: String) -> bool:
+	if name.is_empty() or name.length() > 100 or name != name.strip_edges() or name.ends_with("."):
+		return false
+	for character in name:
+		if character in '/\\:*?"<>|' or character.unicode_at(0) < 32:
+			return false
+	var base := name.get_slice(".", 0).to_upper()
+	return not base in ["CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5",
+			"COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6",
+			"LPT7", "LPT8", "LPT9"]
