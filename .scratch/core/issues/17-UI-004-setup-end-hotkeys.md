@@ -1,5 +1,5 @@
 # UI-004: Setup, game end, rematch and hotkeys
-Stage: blocked
+Stage: done
 Blocked by: CLOCK-001
 Review: agent
 Difficulty: normal
@@ -145,5 +145,3 @@ Disclosure: decision | none | Proxy decided (opus), see ## Comments: in focus mo
 Disclosure: decision | none | Proxy decided (opus), see the Reopen block: `ui/board_view.gd` joins Primary files, limited to the reset in the `game` setter and the `_snap` field it kills.
 Disclosure: deferred | none | no committed test drives the real `Main` rematch or the snap-back kill; it waits on a runner that hosts scenes in the tree. Not accepted by a person: the open destination is `.scratch/core/issues/32-CLOCK-002-move-after-flag.md` ## Comments (the same seam question). The behaviour was checked in this review by the probe above.
 Disclosure: pending | release | dropping Maia's stale reply after a rematch mid-think has no test, because it needs a window and Lc0. Check it by hand by rematching while Maia thinks.
-
-- 2026-10-24 Stage stopped (incomplete handoff): Invalid committed handoff: UI-004: code changed after gate (.scratch/core/issues/32-CLOCK-002-move-after-flag.md); reuse evidence only for identical code. See D:\Desktop\Projects\P-Chess\.artifacts-build\lanes\core\.scratch\run-log\UI-004-review-20261024-212143.txt.runtime.json and run-log/recovery.txt; inspect the saved work before retrying.
