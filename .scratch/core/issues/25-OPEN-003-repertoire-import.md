@@ -1,5 +1,5 @@
 # OPEN-003: Repertoire import and My repertoire mode
-Stage: to-review
+Stage: to-implement
 Blocked by: CORE-006, OPEN-002
 Review: agent
 Difficulty: normal
@@ -65,3 +65,36 @@ Disclosure: decision | none | OPEN-003 Comments, legacy setup assertion migratio
 Acceptance: passed | C:\Users\Lage\AppData\Local\Temp\OPEN-003-acceptance.log — production import/setup/game controls with real Maia-1500, merged study, imported-colour start, imported replies, durable practice count and swapped-colour rematch; headless acceptance, without visual assessment.
 
 Gate evidence: C:\Users\Lage\AppData\Local\Temp\OPEN-003-green-gate.json
+
+#### Resolution (2026-10-25)
+
+Verdict: Reopen — criterion 1 drops chapter-leading comments from the merged tree.
+
+Independent Standards (`/root/standards_review`) and Spec (`/root/spec_review`) agents reviewed the complete `68cf56977b5659061fe3cd8c9c81c0ae07304be0...ddaf48b` diff. The root reviewer inspected all sixteen commit stats, the retained red/green logs, the gate receipt and the real-engine acceptance log. This review changes ticket metadata only; it authors no production behavior, test changes, contract amendments or proxy decisions.
+
+##### Standards
+
+No documented-standard violations or actionable baseline smells. Changes remain inside the amended Primary files. Test-only commits and their separate harness corrections precede production-only commits; the final handoff is metadata only. The one-line legacy Catalog assertion migration preserves all other assertions. Dictionary-based tree/line data, isolated storage and fake UCI follow existing project patterns.
+
+##### Spec
+
+1. ❌ **P2 — Chapter-leading comments are omitted** (`bot/repertoire.gd:79–86`). Criterion 1 requires a PGN containing comments, NAGs and several chapters to merge everything into one move tree. `Pgn.parse` returns comments before a chapter's first move as `game.comment`, but `Repertoire.parse` calls `_merge` only on `game.moves`. Importing two shared-root chapters with `{Chapter one guidance}` and `{Chapter two guidance}` before `1. e4` succeeds and merges their moves, while root `comments` is empty and neither annotation exists anywhere in `tree`. Keeping the original PGN in the saved JSON preserves source text but does not merge these annotations into the tree. Move comments, variation-opening comments and NAGs otherwise follow the merge path.
+2. ✅ Import saves the human colour under `user://`; Setup adopts and displays it, while rematches retain their swapped game colour without modifying the saved colour.
+3. ✅ Each line is one merged root-to-leaf path; duplicate prefixes do not add leaves and nested variations remain distinct.
+4. ✅ Main loads the saved repertoire before clock creation or policy requests, uses a separate practice book for Maia's actual side, retains target/count/weight behavior and restores Catalog/Free behavior. Shared-catalog history recognition, colour-swapped rematches and failed-load retry are connected and covered.
+5. ✅ Illegal moves report their chapter and move number before saving; failed imports preserve previous live data and saved files.
+
+Standards: **0 findings**. Spec: **1 finding**, P2 criterion 1. No other contract failures or scope creep were found in this pass. No ledger entry is removed because OPEN-003 has not been closed or integrated.
+
+Examined: complete diff and commit boundaries; import controls, PGN validation, merge, persistence and reload; nested/sibling variations, duplicate prefixes and starting-position roots; Setup saved selection/colour/start; Main setup, review/Space rematches, mode changes, clock/policy sequencing and catalog readiness; actual Maia-side Book eligibility and weighting; history recognition and once-only practice counts; empty PGNs/books, invalid names/colours, corrupt/missing saves, state preservation and retry. Not independently exercised: visual layout, native file-dialog interaction, hands-on play, exported builds, large-study performance or additional induced filesystem failures.
+
+Regression evidence: `C:\Users\Lage\AppData\Local\Temp\OPEN-003-review-root-comments.gd`, run against the production parser and Repertoire with Godot headless. Both parser/import errors are empty; parsed chapter comments are `["Chapter one guidance", "Chapter two guidance"]`; merged root comments are `[]`; a move annotation and NAG survive; neither chapter comment occurs in the serialized tree. The probe reports `Criterion 1 chapter comments preserved: false` and exits 1. Log: `C:\Users\Lage\AppData\Local\Temp\OPEN-003-review-root-comments.log`. The sandbox additionally logs a root-certificate-store access error; there is no script error and the annotation assertions execute to completion.
+
+Remaining stage-2 work: add a test-only red regression in the approved `tests/test_repertoire.gd` seam for distinct chapter-leading comments in shared-root chapters, then preserve those comments in the merged root via a production-only change to `bot/repertoire.gd`. Verify that reload retains them and existing move comments/NAGs, paths and lifecycle behavior remain green. Continue on the retained `OPEN-003-repertoire-import` branch; criteria 2–5 need no repair unless the new diff affects them.
+
+Verification: the installed `Assert-GateEvidence` helper verified the existing receipt, log hash, exit marker, available tested commit and identical production at the reviewed tip. Bound gate: `godot --headless -s tests/run.gd`; tested commit `e2702c13ea2cb37359e99ae70d28571330f6d6ee`; **217 passed, 0 failed**, exit 0. Log SHA-256: `DBF7D5DFBF1733CE603970B31F89C2DC9EFA427693320C7AD2AC8525886A3E8B`. Retained red logs independently confirm the six reported red cycles; harness corrections are separate test-only commits. The existing suite lacks the failing chapter-comment case, so its green result does not resolve this finding. No repeated full gate was needed for a metadata-only review. `git diff --check` passes.
+
+Acceptance: pending | Criterion 1 requires repair and a regression for chapter-leading comments. The earlier real-Maia acceptance log remains valid for imported continuations, saved colour, counts and swapped-colour rematches, but did not cover these annotations.
+Disclosure: decision | none | The recorded proxy decision adding the Main lifecycle seam and actual-colour/rematch coverage is within the amended contract and independently reviewed above; no further integration or release condition comes from that decision.
+Disclosure: decision | none | The recorded proxy decision migrating OPEN-001's temporary disabled-mode assertion is within scope and preserves Catalog/Free assertions; no further integration or release condition comes from that decision.
+Disclosure: pending | integration | This Resolution's P2 criterion-1 finding must be repaired and reviewed before OPEN-003 integrates; the ticket remains open at `to-implement`, with its implementation preserved on the existing branch.
