@@ -1,5 +1,5 @@
 # OPEN-004: Review badges and repertoire check
-Stage: implementing
+Stage: to-review
 Blocked by: HIST-002, OPEN-003
 Review: agent
 Difficulty: normal
@@ -111,3 +111,16 @@ Next action: stage 2.
 #### Reopened stage 2 caller inspection (2026-10-25)
 
 `Main._start` is reached from Setup.started, Review.rematch_requested and the Space rematch hotkey. Its catalog await permits live Settings changes before clock/game creation. Preserve the pre-game repertoire snapshot (including checking enabled later during play), existing catalog failures, Free/Catalog colour and bot mode, and My repertoire's required load. The agreed regression seam is the real Main/Setup/Settings/Review session in `tests/test_badges.gd`; hold only external catalog I/O and engine requests. Cover checking off at Start, enabling it during loading with corrupt saved PGN, rejecting the start before any game/clock/policy request, and retrying with different repaired paths.
+
+#### Reopened stage 2 handoff (2026-10-25)
+
+- Addressed the session-review blocking finding against criteria 2 and 3. `Main._start` retains the saved repertoire load error across the catalog await and re-evaluates the current checking preference before creating the game, clock or engine request. It preserves the original PGN snapshot behavior for checking enabled later during play and does not reload or alter the repertoire during the await.
+- Test-only commit `c08d33a`: the new regression uses the real Start button and Settings checkbox, a semaphore-held catalog I/O boundary and a held engine. With a corrupt saved Study and checking initially off, enabling checking during loading must return to setup with the JSON error and leave the game, clock and policy requests untouched. Repairing Study with different PGN paths permits retry; Black/Free mode remains selected and Review badges use the repaired paths rather than stale data.
+- Red on `c08d33a`: **11 passed, 1 failed**, exit 1; the new test observed an incorrectly created clock, one unwanted Maia request, a replaced game and no visible setup error. Existing tests passed. Log: `C:\Users\Lage\AppData\Local\Temp\OPEN-004-reopen-red.log`.
+- Production-only commit `712de3d`: **12 passed, 0 failed**, exit 0, with the same tests. Log: `C:\Users\Lage\AppData\Local\Temp\OPEN-004-reopen-green.log`. Focused runs use an ignored copy of the tracked badge suite under `build/open004-reopen-tests`, since the runner selects directories. The first sandboxed attempt lacked user-storage access and was discarded; the red/green evidence above uses the required storage access.
+- Full bound gate on committed production `712de3d5c503e2dc6523380b023b4724d52cc3da`: `godot --headless -s tests/run.gd` → **241 passed, 0 failed**, exit 0. The gate exercised the tracked new regression, all existing badge tests, catalog cold-start/failure/retry, repertoire, history, rematch, settings and engine suites. No ERROR, SCRIPT ERROR or FAIL lines in the gate log. Receipt SHA-256: `2E6CE7A04DDC3A8D55A5E22CFFD7C98C882772DDDBB4638C0BCCD8724ACCA547`.
+- Final diff inspection: only contracted Main wiring, badge tests and this ticket changed; test and production commits remain separate. `git diff --check` passes; no generated artifact is tracked. No new contract decision or known unresolved implementation defect. Independent stage-3 review is next; no merge or push performed.
+
+Acceptance: passed | Real Main/Setup/Settings/Review regression covers the reported race and repaired retry; the full 241-test gate passes. No manual real-engine game or new visual acceptance run is claimed for this behavioral correction.
+
+Gate evidence: C:\Users\Lage\AppData\Local\Temp\p-chess-OPEN-004-reopen\gate.json
