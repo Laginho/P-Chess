@@ -1,0 +1,56 @@
+[Event "Increment and unequal ratings"]
+[WhiteElo "1450"]
+[BlackElo "1900"]
+[TimeControl "180+2"]
+[Result "1-0"]
+
+1. e4 {[%clk 0:03:00]} e5 {[%clk 0:03:00]}
+2. Nf3 {[%clk 0:02:59]} Nc6 {[%clk 0:02:58]}
+3. Bb5 {[%clk 0:02:56]} a6 {[%clk 0:02:57]} 1-0
+
+[Event "Bullet boundary ratings"]
+[WhiteElo "1100"]
+[BlackElo "1099"]
+[TimeControl "60+0"]
+[Result "0-1"]
+
+1. d4 {[%clk 0:01:00]} d5 {[%clk 0:01:00]}
+2. c4 {[%clk 0:00:57]} e6 {[%clk 0:00:56]} 0-1
+
+[Event "Blitz upper boundary"]
+[WhiteElo "1901"]
+[BlackElo "1850"]
+[TimeControl "300+0"]
+[Result "1/2-1/2"]
+
+1. e4 {[%clk 0:05:00]} c5 {[%clk 0:05:00]}
+2. Nf3 {[%clk 0:04:59]} d6 {[%clk 0:04:56]} 1/2-1/2
+
+[Event "Unsupported control"]
+[WhiteElo "1500"]
+[BlackElo "1500"]
+[TimeControl "180+0"]
+[Result "1-0"]
+
+1. e4 {[%clk 0:03:00]} e5 {[%clk 0:03:00]}
+2. Nf3 {[%clk 0:02:55]} Nc6 {[%clk 0:02:55]} 1-0
+
+[Event "Missing clock breaks the interval"]
+[WhiteElo "1500"]
+[BlackElo "?"]
+[TimeControl "60+0"]
+[Result "1-0"]
+
+1. e4 {[%clk 0:01:00]} e5
+2. Nf3 Nc6
+3. Bb5 {[%clk 0:00:50]} a6
+4. Ba4 {[%clk 0:00:48]} Nf6 1-0
+
+[Event "Invalid clock gain is not think time"]
+[WhiteElo "1500"]
+[BlackElo "1500"]
+[TimeControl "180+2"]
+[Result "1-0"]
+
+1. e4 {[%clk 0:03:00]} e5 {[%clk 0:03:00]}
+2. Nf3 {[%clk 0:03:05]} Nc6 {[%clk 0:03:01]} 1-0
