@@ -1,5 +1,5 @@
 # CLEAN-005: Reject Maia's move when its clock has already expired
-Stage: to-review
+Stage: done
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -36,3 +36,23 @@ Retain the known programmatic-move race from [BOT-005](../../bot/issues/16-BOT-0
 - 2026-10-25 Stage 2 (opus-5.5): `_on_maia_move` now ticks the clock before `BoardView.play`, the same order `_input` gives human drops. Tests in `tests/test_clock_input_order.gd` drive real Main: `HeldEngine` records requests, each queued request is answered FIFO (the ply-0 and ply-2 requests from setup are stale and dropped), and `HeldWaits` completes Maia's think time only when the test emits it, with no frame tick in between. Red at 234d62c against the old arrival order: 243 passed, 1 failed (late Qh5# played, mate stood, clock snapshot 0 appended). Green at ce5eee4: 244 passed, 0 failed (4 Lc0 tests skip without the engine). The 1 ms and processed-flag tests pass before and after: they guard criterion 2. Criterion 3 rests on the existing tests: untimed first moves (`test_clock_input_order`), premoves (`test_premove`), stale replies after rematch (`test_session`), all green. Callers examined: `_on_maia_move` has one, the `maia.move_ready` connection in `_ready`; `clock` is null-guarded like `_input`; Maia's untimed first move ticks a stopped clock, a no-op.
 
 Gate evidence: C:\Users\bruno\AppData\Local\Temp\p-chess-gate-evidence\CLEAN-005-gate.json
+
+#### Resolution (2026-10-25)
+
+Verdict: Approve
+
+Stage 3 (opus-5.5), review of PR #12 (`56f6416` test, `0e44047` fix, `f75f24d` handoff; rebased from `234d62c`/`ce5eee4`/`e403dff` onto `a5fbc5b`, which touched only `AGENTS.md`).
+
+- Criterion 1 ✅ `test_a_mating_reply_arriving_at_zero_loses_on_time_before_the_move_is_played`: with White at 0 and no frame tick, the Qh5# reply leaves board, moves, SAN and `_move_clocks` unchanged, emits no `move_played` and no move sound, and the game ends `0-1, time`; a later `_process` does not repeat the flag.
+- Criterion 2 ✅ `test_a_mating_reply_with_one_millisecond_left_still_plays_once` (plays once, mates, +2 s increment, snapshot 2001); `test_a_reply_after_a_processed_flag_is_ignored_without_a_repeated_result` (one `game_end`, reply never plays).
+- Criterion 3 ✅ on existing tests, all green: untimed first moves `test_clock_input_order.gd::test_input_before_start_and_untimed_first_moves_remain_available`; premove accounting `test_premove.gd` (`test_main_queues_human_moves_and_executes_one_per_maia_reply`, `test_black_premoves_include_first_move_cost_and_later_increment`, `test_a_premove_that_flags_is_not_played_and_discards_the_whole_queue`, `test_premove_cannot_be_saved_from_flag_by_the_increment`, `test_first_move_premove_still_costs_100_ms_without_first_move_increment`); stale replies after rematch `test_session.gd` (`test_an_old_policy_after_rematch_is_dropped_before_a_wait_is_scheduled`, `test_two_rematches_drop_a_stale_white_move_legal_in_the_current_game`). No new test for criterion 3; by inspection the added `clock.tick()` is a no-op when no clock runs (`Clock.tick` returns on empty `_running`), which covers Maia's untimed first move and a game already over.
+- Test-first: `56f6416` touches only the test and the ticket; `0e44047` only `ui/main.gd`; `f75f24d` only the ticket. Primary files respected.
+- Examined: the one caller (`maia.move_ready` in `_ready`); `tick` → `stop` clears `_running` before `flagged`, so `_process` cannot flag twice; `_recording_move` is false on entry, so `_on_flagged` shows the result at once; `BoardView.play` refuses on `is_over()`. A stale reply that reaches `_on_maia_move` after a rematch now ticks the new game's clock first: the same tick `_process` runs each frame, so no behaviour change. The tick can also emit `low_time` before Maia's move, as `_input` already does for the human. Not examined: a real Lc0 game (engine absent here).
+- Red-green, reproduced in review: `ui/main.gd` reverted to `234d62c` → 243 passed, 1 failed (the late Qh5# played, mate stood, snapshot 0 appended). Green after rebase: 244 passed, 0 failed, gate exit 0 on `f75f24d` (4 `test_uci.gd` tests skip without `engine/lc0/lc0.exe`; the `time_model.gd` stack trace in the log is the expected warning of `test_a_malformed_table_warns_and_is_empty`).
+- Proxy decided lines: none.
+- Merge: PR #12 merged as `5224e8e` after CLEAN-002 (`5e74015`) had landed on `main`; the merged `main` was gated again: 245 passed, 0 failed, exit 0 on `5224e8e` (CLEAN-002 adds one test). CI `test` passed on the PR.
+
+Acceptance: pending | real-Main headless tests prove the path; no person has yet lost on time to a late Maia reply with the real engine (manual check owed by CLOCK-001's Verification)
+Disclosure: decision | none | closes the Maia-at-zero race BOT-005 (`deferred | release`) and CLOCK-002 (`pending | release`) pointed here; fixed in `0e44047`, tests in `tests/test_clock_input_order.gd`
+Gate evidence (merged main): C:\Users\bruno\AppData\Local\Temp\claude\C--Users-bruno-Desktop-Pastinha-Programas-Projects-P-Chess--claude-worktrees-clean-005-review-778209\93fa2355-6de3-41b8-878c-faf54892cbc9\scratchpad\CLEAN-005-main-gate.json
+Gate evidence (PR head): C:\Users\bruno\AppData\Local\Temp\claude\C--Users-bruno-Desktop-Pastinha-Programas-Projects-P-Chess--claude-worktrees-clean-005-review-778209\93fa2355-6de3-41b8-878c-faf54892cbc9\scratchpad\CLEAN-005-review-gate.json
