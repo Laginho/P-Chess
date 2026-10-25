@@ -1,5 +1,5 @@
 # CI-003: Release on v* tags
-Stage: blocked
+Stage: implementing
 Blocked by: BOT-001, CI-002
 Review: human
 Difficulty: normal
@@ -31,6 +31,7 @@ A `v*` tag produces a downloadable zip that runs: the Windows build plus Lc0 and
 - None at a GDScript seam: release workflow. The evidence is the release link and the manual game.
 
 ## Comments
+- 2026-10-25 Stage 2 starts from session commit `1db4142`; BOT-001 and CI-002 are done. The ticket exempts GDScript tests. Scope: the release workflow and packaging notes only; no runtime function changes. Inspected the existing export job/preset, `fetch-engine.ps1`, `UCI.search_dirs`/`engine_path`, and Maia's weights lookup. Package root must contain the exe/PCK and sibling `engine/lc0/` and `engine/weights/`; download, import, export, licence and archive failures must stop publication. Verification uses a test tag, downloaded ZIP checks, the bound gate and the separate clean-Windows game acceptance.
 - 2026-10-25 CI-002 review: with no engine beside the exe, the exported app says "Run scripts/fetch-engine.ps1 to download it", but an export does not ship that script. The release zip carries the engine, so the message should not show; if it ever does (a broken zip), the text points at a file the user does not have. A note, not a criterion.
 
 - 2026-10-25 Review ended at blocked (exit 0); branch ci-003 holds the review; left for a human
