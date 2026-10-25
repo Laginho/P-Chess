@@ -1,4 +1,6 @@
 from pathlib import Path
+from dataclasses import replace
+import math
 
 import pytest
 
@@ -29,3 +31,33 @@ def test_fixture_extracts_consecutive_clocks_for_each_players_rating():
     assert samples[0].fen == (
         "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2"
     )
+
+
+def test_buckets_match_game_edges_and_omit_sparse_groups():
+    from calibrate_time import build_table
+
+    with FIXTURE.open(encoding="utf-8") as pgn:
+        example = next(extract_samples(pgn))
+    # A worked log-normal sample: logs 0, ln(2), ln(4), so median=2
+    # and population log-sigma=sqrt(2/3)*ln(2).
+    samples = [replace(example, clock_fraction=0.5, seconds=s) for s in (1, 2, 4)]
+    samples += [replace(example, level="maia-1100", seconds=99)]
+    table = build_table(samples, lambda sample: 0.6, min_samples=3)
+    assert table["clock_bins"] == [0, 0.15, 0.5, 1]
+    assert table["top_p_bins"] == [0, 0.3, 0.6, 1]
+    assert len(table["buckets"]) == 1
+    assert table["buckets"][0] == {
+        "control": "3+2", "level": "maia-1500", "clock_bin": 2,
+        "top_p_bin": 2, "median": 2,
+        "log_sigma": pytest.approx(math.sqrt(2 / 3) * math.log(2)),
+    }
+    # Increment can lift clocks above their starting time. Both end bins clamp.
+    for fraction, top_p, expected in [(1.1, 1, (2, 2)), (0, 0, (0, 0)),
+                                       (0.15, 0.3, (1, 1))]:
+        table = build_table([replace(example, clock_fraction=fraction, seconds=0)],
+                            lambda sample: top_p, min_samples=1)
+        bucket = table["buckets"][0]
+        assert (bucket["clock_bin"], bucket["top_p_bin"]) == expected
+        assert bucket["median"] == 0.05
+        assert bucket["log_sigma"] == 0
+    assert build_table([], lambda sample: 0.6)["buckets"] == []
