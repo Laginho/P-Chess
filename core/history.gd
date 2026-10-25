@@ -2,7 +2,6 @@ extends RefCounted
 
 # Finished games and per-level/control results (§9.4). A different root isolates tests.
 const Pgn = preload("res://core/pgn.gd")
-const Clock = preload("res://core/clock.gd")
 
 var error := ""
 # Shared loaded catalog; recognition applies in every mode, independently of its checks.
@@ -28,22 +27,8 @@ func save(game, clocks: Array, settings: Dictionary, opening_name := "", target_
 	if not game.is_over() or clocks.size() != game.moves.size():
 		error = "History needs a finished game and one clock per move."
 		return ""
-	var maia_name: String = "Maia " + settings.level.trim_prefix("maia-")
-	var control: Array = Clock.CONTROLS[settings.control]
-	var headers := {
-		"White": "You" if settings.colour == "w" else maia_name,
-		"Black": maia_name if settings.colour == "w" else "You",
-		"TimeControl": "%d+%d" % [control[0] / 1000, control[1] / 1000],
-		"Result": game.result,
-		"Termination": "Time forfeit" if game.reason == "time" else "Normal",
-	}
 	if opening_name.is_empty() and book != null:
 		opening_name = book.opening_name(game.moves)
-	if opening_name:
-		headers.Opening = opening_name
-	var moves := []
-	for i in game.moves.size():
-		moves.append({"uci": game.moves[i], "clock_ms": clocks[i]})
 	var folder := _root.path_join("games")
 	var status := DirAccess.make_dir_recursive_absolute(folder)
 	if status != OK:
@@ -59,7 +44,7 @@ func save(game, clocks: Array, settings: Dictionary, opening_name := "", target_
 	if file == null:
 		error = "Could not save game PGN (%s)." % error_string(FileAccess.get_open_error())
 		return ""
-	file.store_string(Pgn.write({"headers": headers, "moves": moves, "result": game.result}))
+	file.store_string(Pgn.write(Pgn.finished_game(game, clocks, settings, opening_name)))
 	file.flush()
 	status = file.get_error()
 	file.close()

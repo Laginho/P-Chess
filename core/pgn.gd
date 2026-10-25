@@ -7,6 +7,7 @@ extends RefCounted
 # is the comment that opens a variation, kept on its first move; "" everywhere else.
 
 const Board = preload("res://core/board.gd")
+const Clock = preload("res://core/clock.gd")
 
 const START := "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 # Move suffixes as the NAGs they stand for (PGN standard §10).
@@ -139,6 +140,26 @@ static func write(game: Dictionary) -> String:
 			tokens.append("{ [%%clk %s] }" % _clock_text(clock))
 	tokens.append(game.get("result", "*"))
 	return text + "\n" + " ".join(tokens) + "\n"
+
+
+# The game write() takes for a finished game against Maia: player names, time control, result,
+# termination and one clock per move, then the Opening header when one is named.
+static func finished_game(game, clocks: Array, settings: Dictionary, opening_name := "") -> Dictionary:
+	var maia_name: String = "Maia " + settings.level.trim_prefix("maia-")
+	var control: Array = Clock.CONTROLS[settings.control]
+	var headers := {
+		"White": "You" if settings.colour == "w" else maia_name,
+		"Black": maia_name if settings.colour == "w" else "You",
+		"TimeControl": "%d+%d" % [control[0] / 1000, control[1] / 1000],
+		"Result": game.result,
+		"Termination": "Time forfeit" if game.reason == "time" else "Normal",
+	}
+	if opening_name:
+		headers.Opening = opening_name
+	var moves := []
+	for i in game.moves.size():
+		moves.append({"uci": game.moves[i], "clock_ms": clocks[i]})
+	return {"headers": headers, "moves": moves, "result": game.result}
 
 
 static func _error(message: String) -> Dictionary:
