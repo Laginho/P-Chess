@@ -6,6 +6,8 @@ extends RefCounted
 
 signal changed(key: String, value)
 
+const ThemeLoader = preload("res://ui/theme_loader.gd")
+
 const SECTION := "settings"
 # The settings whose features exist; later tickets add their own rows.
 const DEFAULTS := {
@@ -24,6 +26,8 @@ const DEFAULTS := {
 # Inclusive bounds of the numeric settings.
 const RANGES := {"animation_ms": [0, 1000], "volume": [0, 100], "tau": [0.0, 0.2], "temperature": [0.1, 3.0]}
 const CHOICES := {"panic": ["off", "low", "medium", "high"]}
+# Theme settings and the folder kind each names.
+const THEMES := {"board_theme": "boards", "piece_theme": "pieces", "sound_theme": "sounds"}
 
 var path: String
 var _values := DEFAULTS.duplicate()
@@ -57,7 +61,8 @@ func set_value(key: String, value) -> bool:
 	return true
 
 
-# Numbers may be int or float; NaN fails both bounds.
+# Numbers may be int or float; NaN fails both bounds. A theme must exist now, bundled or user's,
+# or a deleted folder would leave the board unstyled or every sound silent.
 static func valid(key: String, value) -> bool:
 	if not DEFAULTS.has(key):
 		return false
@@ -68,4 +73,6 @@ static func valid(key: String, value) -> bool:
 		return false
 	if CHOICES.has(key):
 		return value in CHOICES[key]
-	return not (value is String and value.is_empty())
+	if THEMES.has(key):
+		return ThemeLoader.new().list_themes(THEMES[key]).has(value)
+	return true
