@@ -1,5 +1,14 @@
 # Third-party assets
 
+## Opening catalog: Lichess
+
+`data/openings/a.tsv` through `e.tsv` are unchanged files from
+[`lichess-org/chess-openings`, commit a6189a30dc273ccb21fc2536a9a2fefd5592a67a](https://github.com/lichess-org/chess-openings/tree/a6189a30dc273ccb21fc2536a9a2fefd5592a67a).
+The collection is released under the
+[CC0-1.0 Public Domain Dedication](https://github.com/lichess-org/chess-openings/blob/a6189a30dc273ccb21fc2536a9a2fefd5592a67a/COPYING.txt).
+The five files contain 823, 781, 1,250, 644 and 367 rows respectively (3,865 total,
+excluding headers). Preserve the raw TSV files in exports; the catalog reads them at runtime.
+
 ## Engine: Leela Chess Zero (Lc0)
 
 `scripts/fetch-engine.ps1` downloads the unmodified Windows CPU dnnl archive
