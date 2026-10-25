@@ -4,6 +4,8 @@ const Book = preload("res://bot/book.gd")
 const Game = preload("res://core/game.gd")
 const History = preload("res://core/history.gd")
 const Pgn = preload("res://core/pgn.gd")
+const MaiaPlayer = preload("res://bot/maia_player.gd")
+const Settings = preload("res://core/settings.gd")
 const SETTINGS := {"colour": "w", "level": "maia-1500", "control": "3+2", "opening": "Catalog"}
 
 
@@ -113,6 +115,89 @@ func test_finished_games_persist_target_practice_counts_without_changing_result_
 	assert_eq(History.new(folder).stats("maia-1500", "3+2").losses, 1)
 	assert_true(not history.save(game, [], SETTINGS).is_empty(), "Free has no target")
 	assert_eq(History.new(folder).practice_counts(), {target: 1})
+	_clean(folder)
+
+
+class FakeBridge:
+	signal policy_ready(policy: Dictionary)
+	var immediate := true
+	var requests := []
+	var policy := {"e2e4": 0.995, "g1f3": 0.005}
+
+
+	func request_policy(fen: String, moves: PackedStringArray) -> void:
+		requests.append([fen, moves])
+		if immediate:
+			policy_ready.emit(policy)
+
+
+func test_maia_weights_before_the_cut_and_free_never_samples_the_half_percent_move():
+	var bridge := FakeBridge.new()
+	var maia = MaiaPlayer.new(bridge)
+	assert_true("book_intensity" in maia, "Maia accepts book settings")
+	if not "book_intensity" in maia:
+		return
+	maia.book = _sample()
+	maia.book_intensity = "strong"
+	var played := []
+	maia.move_ready.connect(func(move): played.append(move))
+	for mode in ["Catalog", "Free"]:
+		played.clear()
+		for seed_value in 1000:
+			maia.rng.seed = seed_value
+			var game = Game.new()
+			maia.call("begin_game", game, mode, {}, "w")
+			maia.think(game)
+		assert_eq(played.size(), 1000, "one first move per seeded game")
+		assert_true(played.count("g1f3") > 0 if mode == "Catalog" else played.count("g1f3") == 0, mode)
+	# A delayed reply uses its request's intensity; obsolete games still consume FIFO replies.
+	bridge.immediate = false
+	var game = Game.new()
+	maia.call("begin_game", game, "Catalog", {}, "w")
+	maia.book_intensity = "strong"
+	maia.think(game)
+	maia.call("begin_game", Game.new())
+	var before := played.size()
+	bridge.policy_ready.emit(bridge.policy)
+	assert_eq(played.size(), before, "stale policy is dropped")
+	var seen := {}
+	for seed_value in 80:
+		maia.rng.seed = seed_value
+		game = Game.new()
+		maia.call("begin_game", game, "Catalog", {}, "w")
+		maia.book_intensity = "strong"
+		maia.think(game)
+		maia.book_intensity = "weak"
+		bridge.policy_ready.emit(bridge.policy)
+		seen[played[-1]] = true
+	assert_true(seen.has("g1f3"), "request snapshots strong weights before a later setting change")
+
+
+func test_book_intensity_defaults_persists_validates_and_has_a_working_settings_row():
+	assert_true(Settings.DEFAULTS.has("book_intensity"), "book intensity is a stored setting")
+	if not Settings.DEFAULTS.has("book_intensity"):
+		return
+	var folder := _folder()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var path := folder.path_join("settings.cfg")
+	var store = Settings.new(path)
+	assert_eq(store.get_value("book_intensity"), "medium")
+	assert_true(not store.set_value("book_intensity", "extreme"))
+	var screen = load("res://ui/settings.tscn").instantiate()
+	screen.store = store
+	Engine.get_main_loop().root.add_child(screen)
+	var rows: Array = screen.get_node("Panel/Center/Box/Form").get_children()
+	var choice: OptionButton
+	for index in rows.size():
+		if rows[index] is Label and rows[index].text == "Book intensity":
+			choice = rows[index + 1]
+	assert_true(choice != null, "visible book intensity row")
+	if choice != null:
+		assert_eq(choice.get_item_text(choice.selected), "medium")
+		choice.select(2)
+		choice.item_selected.emit(2)
+		assert_eq(Settings.new(path).get_value("book_intensity"), "strong")
+	screen.free()
 	_clean(folder)
 
 
