@@ -1,7 +1,8 @@
 extends Control
 
 # A game against Maia (BOT-004): the setup screen, the board, the clocks (CLOCK-001), the move list
-# and the result, then the hotkeys around it (UI-004, §9.2): Space rematch, Esc Esc resign, F11 focus.
+# and the post-game review (HIST-002), then the hotkeys (UI-004, §9.2): Space rematch,
+# Esc Esc resign, F11 focus.
 # The settings screen (UI-005, §10) sits on top, and each setting applies the moment it changes.
 
 const Game = preload("res://core/game.gd")
@@ -12,6 +13,7 @@ const MaiaPlayer = preload("res://bot/maia_player.gd")
 const Settings = preload("res://core/settings.gd")
 const SettingsScreen = preload("res://ui/settings.tscn")
 const History = preload("res://core/history.gd")
+const ReviewScreen = preload("res://ui/review.tscn")
 
 const WINNERS := {"1-0": "White wins", "0-1": "Black wins", "1/2-1/2": "Draw"}
 
@@ -28,6 +30,7 @@ var settings := {}
 var preferences := Settings.new()
 # Their screen, over everything else; hidden in focus mode.
 var settings_screen := SettingsScreen.instantiate()
+var review := ReviewScreen.instantiate()
 var resign_key := ResignKey.new(Time.get_ticks_msec)
 # Only the board and the clocks show (§8.7).
 var focus := false
@@ -115,6 +118,9 @@ func _ready() -> void:
 	setup.started.connect(_start)
 	settings_screen.store = preferences
 	add_child(settings_screen)
+	add_child(review)
+	review.rematch_requested.connect(func(): _start(rematch(settings)))
+	review.setup_requested.connect(_show_setup)
 	preferences.changed.connect(_apply)
 	for key in Settings.DEFAULTS:
 		_apply(key, preferences.get_value(key))
@@ -151,6 +157,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 
 func _start(new_settings: Dictionary) -> void:
 	setup.hide()
+	review.hide()
 	_move_clocks.clear()
 	_history_saved = false
 	settings = new_settings
@@ -179,6 +186,14 @@ func _start(new_settings: Dictionary) -> void:
 	_set_flipped(human == "b")
 	sound_player.play("game_start")
 	_next_turn()
+
+
+func _show_setup() -> void:
+	review.hide()
+	clock = null
+	white_clock.clock = null
+	black_clock.clock = null
+	setup.show()
 
 
 # One setting to whatever reads it; the next move, sound or game picks it up.
@@ -276,6 +291,7 @@ func _show_result() -> void:
 		history.save(game, _move_clocks, settings)
 	if history.error:
 		result_label.text += "\nHistory: " + history.error
+	review.present(game, _move_clocks, settings, result_label.text)
 	sound_player.play("game_end")
 	print("Maia: median %.1f ms from your move to Lc0's answer, over %d moves"
 			% [maia.median_ms(), maia.latencies_ms.size()])
