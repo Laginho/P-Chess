@@ -81,7 +81,7 @@ func test_position_matching_allows_transpositions_and_reentry_with_the_actual_pl
 		assert_eq(weight, 1.0, "no checked continuation")
 	for move in ["b8c6", "c3b1", "c6b8"]:
 		assert_true(game.play(move))
-	assert_eq(book.weights(game.board, game.moves.size()).f1g2, 16.2, "ply 8, not line ply 4")
+	assert_true(is_equal_approx(book.weights(game.board, game.moves.size()).f1g2, 16.2), "ply 8, not line ply 4")
 
 
 func _folder() -> String:
@@ -105,10 +105,10 @@ func test_finished_games_persist_target_practice_counts_without_changing_result_
 	var target: String = _sample().entries[0].id
 	assert_eq(history.practice_counts(), {})
 	var game = Game.new()
-	assert_eq(history.save(game, [], SETTINGS, "", target), "", "unfinished games don't count")
+	assert_eq(history.call("save", game, [], SETTINGS, "", target), "", "unfinished games don't count")
 	assert_eq(history.practice_counts(), {})
 	game.resign("w")
-	assert_true(not history.save(game, [], SETTINGS, "", target).is_empty(), history.error)
+	assert_true(not history.call("save", game, [], SETTINGS, "", target).is_empty(), history.error)
 	assert_eq(History.new(folder).practice_counts(), {target: 1})
 	assert_eq(History.new(folder).stats("maia-1500", "3+2").losses, 1)
 	assert_true(not history.save(game, [], SETTINGS).is_empty(), "Free has no target")
