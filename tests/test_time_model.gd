@@ -266,7 +266,9 @@ func test_a_malformed_table_warns_and_is_empty():
 		var table := TimeModel.load_table(MALFORMED)
 		OS.remove_logger(warnings)
 		assert_eq(table, {}, name)
-		assert_true(warnings.seen.size() == 1, "%s: one warning, got %s" % [name, warnings.seen])
+		# The parser warns of its own on 1e999 ("Exponent too high"); count the loader's.
+		var loader_warnings := warnings.seen.filter(func(w): return MALFORMED in w)
+		assert_true(loader_warnings.size() == 1, "%s: one warning, got %s" % [name, warnings.seen])
 	DirAccess.remove_absolute(MALFORMED)
 
 
