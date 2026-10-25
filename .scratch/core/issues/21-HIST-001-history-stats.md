@@ -1,5 +1,5 @@
 # HIST-001: Game history and stats
-Stage: to-implement
+Stage: implementing
 Blocked by: CORE-006, UI-004
 Review: agent
 Difficulty: normal
@@ -9,6 +9,8 @@ Difficulty: normal
   - core/pgn.gd (writer, if a header or clock case is missing)
   - ui/main.gd
   - New: tests/test_history.gd
+  - tests/test_session.gd (only isolated History injection in the session harness and necessary test-directory lifecycle; preserve existing behavior assertions)
+  - tests/test_premove.gd (only isolated History injection in the session harness and necessary test-directory lifecycle; preserve existing behavior assertions)
 
 #### What to build
 
@@ -16,11 +18,13 @@ Every finished game is saved as PGN with clocks, and per-level stats are kept (Â
 
 #### Acceptance criteria
 
-1. At game end the game is saved to `user://games/` as one PGN file, with `[%clk]` after every move giving that side's clock after the move.
+1. At game end the game is saved to `user://games/` as one PGN file, with `[%clk]` after every played move giving that side's clock after applicable move accounting. This includes the final move, increments and premoves under the existing clock rules.
 2. Headers: the players are "Maia 1500" (the net's level) and "You"; `TimeControl` is `60+0`, `180+2` or `300+0`; `Result`; `Termination` (`Normal` or `Time forfeit`); `Opening` when a name is known (filled by OPEN-002). No rating headers.
 3. Stats per (level, time control): wins, draws, losses, flag wins and flag losses, updated at each game end and persisted under `user://`.
 4. A saved PGN parses back with `core/pgn.gd` to the same moves and clocks.
-5. A failed write is reported and does not crash the app.
+5. A failed write is reported visibly in the game's result UI and does not crash the app.
+6. Flag, resignation, checkmate and draw each trigger one save and one stats update for the finished game. Repeated result handling does not duplicate either; a rematch starts with fresh move-clock snapshots and save state.
+7. Automated Main session tests use isolated history storage and do not read or modify the player's normal game-history or stats files.
 
 #### Verification
 
@@ -29,6 +33,14 @@ Every finished game is saved as PGN with clocks, and per-level stats are kept (Â
 
 ## Tests stage 2 writes (own commit, red)
 
-- `tests/test_history.gd`: saving a finished game to a temp folder and parsing it back; stats after a flag win and a draw. Red because `core/history.gd` does not exist.
+- `tests/test_history.gd`, History persistence seam: save a finished game to isolated test storage and parse it back; verify moves, clocks and headers; verify persisted stats after a flag win and a draw, and failed-write reporting. Red because `core/history.gd` does not exist.
+- `tests/test_history.gd`, Main session integration seam: instantiate the real `ui/main.tscn` using the existing session-test pattern, replacing only the external UCI/timer boundary, injecting a fake time source into the real Clock and an isolated History store. Exercise flag, resignation, checkmate and draw through their Main paths; inspect saved PGNs and stats to verify one save/update, per-move clocks including final moves, applicable increments and premoves, fresh state after rematch, and a visible result-UI error on write failure. Red because Main does not yet persist finished games or capture move clocks.
+- `tests/test_session.gd` and `tests/test_premove.gd`: isolate History storage in their session helpers before Main can access normal history storage, with necessary test-directory lifecycle only. Keep existing behavior assertions unchanged; these are harness adaptations, not new behavior seams.
 
 ## Comments
+
+- Proxy decided (gpt-6-astra high, fallback): Approve isolated History harnesses in test_session.gd and test_premove.gd plus the real-Main history integration seam â€” existing scene tests finish games, and persistence-only tests cannot verify clock capture, save-once behavior or visible write failures. Contract amendments above are the proxy's draft; no additional product scope or release dependency.
+- Read-around before red: Main's `_show_result` is reached from claim, resignation, terminal moves and clock flags. `_on_move_played` is called synchronously by BoardView for human, Maia and premoves; `_next_turn` charges premoves before playing them. Clock flags may re-enter result handling during move accounting. Preserve terminal-move precedence, capture the last move before saving, and reset state on rematch. Degenerate cases: no moves before resignation/flag, a first untimed move, final moves, repeated result handling, and failed PGN/stats writes. PGN's existing writer/reader already support exact millisecond clocks and need no change.
+- First red: focused runner (`godot --headless -s tests/run.gd -- res://build/hist-tests`, a disposable copy of test_history.gd) reports `0 passed, 1 failed`: `res://core/history.gd` does not exist. The unprivileged full run also encounters unrelated user:// write denials; subsequent filesystem tests will run with authorized Godot access.
+
+Disclosure: decision | none | HIST-001 Comments: approved test isolation and Main integration coverage for existing history requirements; no added release dependency.
