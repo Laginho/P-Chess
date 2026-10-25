@@ -1,5 +1,5 @@
 # CI-003: Release on v* tags
-Stage: to-implement
+Stage: blocked
 Blocked by: BOT-001, CI-002
 Review: human
 Difficulty: normal
@@ -32,3 +32,5 @@ A `v*` tag produces a downloadable zip that runs: the Windows build plus Lc0 and
 
 ## Comments
 - 2026-10-25 CI-002 review: with no engine beside the exe, the exported app says "Run scripts/fetch-engine.ps1 to download it", but an export does not ship that script. The release zip carries the engine, so the message should not show; if it ever does (a broken zip), the text points at a file the user does not have. A note, not a criterion.
+
+- 2026-10-25 Review ended at blocked (exit 0); branch ci-003 holds the review; left for a human
