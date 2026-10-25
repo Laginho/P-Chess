@@ -14,6 +14,7 @@ const ONE_MOVE := "k7/8/8/8/8/8/1r6/K7 w - - 0 1"
 # Clock bins [0, 0.15), [0.15, 0.5), [0.5, ...); top-p bins [0, 0.3), [0.3, 0.6), [0.6, 1].
 const SMALL := "res://tests/fixtures/time_model_small.json"
 const MALFORMED := "user://time_model_malformed.json"
+const OVERFLOW := "1e999"
 
 
 class FakeTime:
@@ -253,6 +254,10 @@ func test_a_malformed_table_warns_and_is_empty():
 		"clock bin past the last": _bucket_with(good, "clock_bin", 2),
 		"negative top-p bin": _bucket_with(good, "top_p_bin", -1),
 		"fractional bin": _bucket_with(good, "clock_bin", 0.5),
+		"an overflowing median": _overflowing(_bucket_with(good, "median", OVERFLOW)),
+		"an overflowing log-sigma": _overflowing(_bucket_with(good, "log_sigma", OVERFLOW)),
+		"an overflowing last edge": _overflowing(_with(good, "clock_bins", [0.0, 0.5, OVERFLOW])),
+		"an overflowing first edge": _overflowing(_with(good, "top_p_bins", ["-" + OVERFLOW, 1.0])),
 	}
 	for name in cases:
 		_write(cases[name])
@@ -281,6 +286,12 @@ func _with(table: Dictionary, key: String, value) -> String:
 	var copy := table.duplicate(true)
 	copy[key] = value
 	return JSON.stringify(copy)
+
+
+# JSON.stringify cannot write a number past a float, so the cases quote it and this unquotes it:
+# Godot's parser reads 1e999 as inf.
+func _overflowing(text: String) -> String:
+	return text.replace("\"-%s\"" % OVERFLOW, "-" + OVERFLOW).replace("\"%s\"" % OVERFLOW, OVERFLOW)
 
 
 # null erases the key.

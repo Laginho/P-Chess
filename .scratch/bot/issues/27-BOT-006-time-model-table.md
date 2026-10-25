@@ -1,5 +1,5 @@
 # BOT-006: Time-model table
-Stage: to-implement
+Stage: implementing
 Blocked by: BOT-005
 Review: agent
 Difficulty: normal
