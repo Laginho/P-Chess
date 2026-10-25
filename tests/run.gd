@@ -83,7 +83,8 @@ func _run() -> void:
 				failed += 1
 				break
 			log.errors.clear()
-			test.call(name)
+			# A test that awaits returns at its first await: wait for its end before reading its failures.
+			await test.call(name)
 			for error in log.errors:
 				test.failures.append("script error: " + error)
 			if test.failures.is_empty():
