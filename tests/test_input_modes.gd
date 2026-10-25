@@ -106,6 +106,33 @@ func test_click_click_is_off_by_default():
 	board.free()
 
 
+func test_a_selected_piece_can_still_be_dragged():
+	var board = _board()
+	board.click_click = true
+	_click(board, "e2")
+	_mouse(board, true, "e2")
+	var motion := InputEventMouseMotion.new()
+	motion.position = Vector2(450, 450)
+	motion.button_mask = MOUSE_BUTTON_MASK_LEFT
+	board._gui_input(motion)
+	_mouse(board, false, "e4")
+	assert_eq(board.game.moves, PackedStringArray(["e2e4"]), "selecting a piece must not disable dragging it")
+	board.free()
+
+
+func test_disabling_click_click_clears_an_existing_selection():
+	var board = _board()
+	board.click_click = true
+	_click(board, "e2")
+	board.click_click = false
+	_click(board, "e4")
+	assert_eq(board.game.moves, PackedStringArray(), "the setting takes effect with a piece selected")
+	_mouse(board, true, "e2")
+	_mouse(board, false, "e4")
+	assert_eq(board.game.moves, PackedStringArray(["e2e4"]), "dragging stays available")
+	board.free()
+
+
 func test_a_flag_or_replacement_game_cannot_play_a_stale_selection():
 	var board = _board()
 	board.click_click = true
