@@ -170,3 +170,22 @@ func test_external_exit_reports_stopped_and_discards_queued_requests():
 	uci.poll()
 	assert_eq(stops.size(), 1, "intentional stop() does not emit stopped")
 	uci.free()
+
+
+func test_missing_net_reports_stopped_instead_of_waiting_for_readyok():
+	if _live_engine("test_missing_net_reports_stopped_instead_of_waiting_for_readyok") == "":
+		return
+	var uci = UCI.new()
+	var stops := []
+	var policies := []
+	uci.stopped.connect(func(): stops.append(true))
+	uci.policy_ready.connect(func(policy): policies.append(policy))
+	assert_true(uci.start(), uci.error)
+	var missing := OS.get_user_data_dir().path_join("BOT-008-no-such-net.pb.gz")
+	assert_true(not FileAccess.file_exists(missing), "the live test net must not exist")
+	uci.set_level(missing)
+	uci.request_policy(START, PackedStringArray())
+	_wait_for_stop(uci, stops)
+	assert_true(policies.is_empty(), "a failed net emits no policy")
+	uci.free()
+	assert_eq(stops.size(), 1, "freeing a failed bridge does not emit stopped again")
