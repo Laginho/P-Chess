@@ -1,6 +1,6 @@
 extends Control
 
-# The board (§8.1): draws the position of `game` and turns drags into moves on it.
+# The board (§8.1, §8.3): draws the position, handles moves and square annotations.
 # Always square and centred in the control, so it scales with the window.
 
 signal move_played(san: String)
@@ -12,6 +12,7 @@ const SNAP_BACK_SECONDS := 0.15
 const LAST_MOVE := Color(0.61, 0.78, 0, 0.41)
 const CHECK := Color(1, 0, 0, 0.6)
 const TARGET := Color(0.08, 0.33, 0.12, 0.5)
+const DRAWING := Color(0.12, 0.65, 0.22, 0.75)
 
 # How long a move that was not dragged (the bot's, a premove) slides; 0 is instant.
 @export var slide_seconds := 0.12
@@ -32,6 +33,9 @@ var game:
 		if _snap:
 			_snap.kill()
 		_held_moves.clear()
+		drawings.clear()
+		_drawing_from = ""
+		_drawing_to = ""
 		_promoting = ""
 		# Null on a board built outside a scene.
 		if _picker and _picker.visible:
@@ -69,6 +73,10 @@ var _slide_pos := Vector2.ZERO:
 var _slide: Tween
 # From and to of the promotion waiting on the picker.
 var _promoting := ""
+# Square pairs, independent of board orientation/size. Equal endpoints represent a circle.
+var drawings: Array[PackedStringArray] = []
+var _drawing_from := ""
+var _drawing_to := ""
 
 @onready var _picker = $PromotionPicker
 
@@ -157,6 +165,23 @@ func _draw() -> void:
 		_draw_piece(game.board.piece_at(_slide_to), _slide_pos - cell / 2, cell)
 	if _drag_from:
 		_draw_piece(game.board.piece_at(_drag_from), _drag_pos - cell / 2, cell)
+	for drawing in drawings:
+		_draw_annotation(drawing[0], drawing[1], cell.x)
+	if _drawing_from and _drawing_to:
+		_draw_annotation(_drawing_from, _drawing_to, cell.x)
+
+
+func _draw_annotation(from: String, to: String, cell: float) -> void:
+	var start := _centre(from)
+	var end := _centre(to)
+	if from == to:
+		draw_arc(start, cell * 0.43, 0, TAU, 64, DRAWING, cell * 0.07, true)
+	else:
+		var direction := (end - start).normalized()
+		var base := end - direction * cell * 0.3
+		var wing := direction.orthogonal() * cell * 0.2
+		draw_line(start, base, DRAWING, cell * 0.12, true)
+		draw_colored_polygon(PackedVector2Array([end, base + wing, base - wing]), DRAWING)
 
 
 # Files along the bottom edge, ranks along the left edge, in the other square colour.
@@ -181,7 +206,23 @@ func _draw_piece(piece: String, at: Vector2, cell: Vector2) -> void:
 
 
 func _gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT:
+		var square := square_at(event.position - _corner(), _side(), flipped)
+		if event.pressed:
+			_drawing_from = square
+			_drawing_to = square
+		else:
+			if _drawing_from and square:
+				drawings.append(PackedStringArray([_drawing_from, square]))
+			_drawing_from = ""
+			_drawing_to = ""
+		queue_redraw()
+	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if event.pressed:
+			drawings.clear()
+			_drawing_from = ""
+			_drawing_to = ""
+			queue_redraw()
 		if _snapping or _promoting:
 			return
 		if event.pressed:
@@ -199,9 +240,13 @@ func _gui_input(event: InputEvent) -> void:
 				queue_redraw()
 			else:
 				_drop(event.position, false, event.alt_pressed)
-	elif event is InputEventMouseMotion and _drag_from and not _snapping:
-		_dragged = _dragged or event.position.distance_to(_press_pos) >= 8
-		_drag_pos = event.position
+	elif event is InputEventMouseMotion:
+		if _drawing_from:
+			_drawing_to = square_at(event.position - _corner(), _side(), flipped)
+			queue_redraw()
+		elif _drag_from and not _snapping and not _promoting:
+			_dragged = _dragged or event.position.distance_to(_press_pos) >= 8
+			_drag_pos = event.position
 
 
 # Only a piece of the side to move, and never once the game is over.
