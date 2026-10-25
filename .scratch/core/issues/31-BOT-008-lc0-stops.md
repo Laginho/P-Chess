@@ -16,9 +16,9 @@ If Lc0 dies during a game (a crash, or a net it cannot load), the player is told
 #### Acceptance criteria
 
 1. When the Lc0 process exits on its own, the next `poll()` leaves `available` false, `error` set to a message saying Lc0 stopped, the queue empty, and emits `stopped`. The app's own `stop()` does not emit it.
-2. A net Lc0 cannot load (`set_level` with a path that does not exist) ends the same way, not in a wait for `readyok` that never comes.
+2. If Lc0 reports a stdout line beginning `error `, including failure to load the requested net after `readyok`, the bridge stops the child and reaches c1's unavailable/error/empty-queue/`stopped` state. It discards remaining buffered responses and emits no policy from the failed request. A missing net is exercised with `set_level` followed by `request_policy`, since loading may fail only when searching.
 3. On `stopped`, `ui/main.gd` ends the game and shows the setup screen with `error` in place of Start, as BOT-004 c6 does when Lc0 is missing.
-4. Tested live, skipped where `engine/` lacks Lc0 as in BOT-002 c7: killing Lc0's `pid` outside `stop()`, and a missing net path, each give `stopped` within 10 s of polling.
+4. Tested live, skipped where `engine/` lacks Lc0 as in BOT-002 c7: killing Lc0's `pid` outside `stop()` gives exactly one `stopped` within 10 s of polling. Separately, start Lc0, select a known absent absolute net path, queue a policy request, and poll: exactly one `stopped` arrives within 10 s, with no policy emitted.
 
 #### Verification
 
@@ -35,3 +35,4 @@ If Lc0 dies during a game (a crash, or a net it cannot load), the player is told
 - The proxy did not check what Lc0 v0.32.1 does with a `WeightsFile` that does not exist (exit, an `error` line, or silence), so c2 states the outcome, not the mechanism. If Lc0 instead finds another net and answers `readyok`, c2 cannot hold: stage 2 stops and asks.
 - If Bruno answers PolicyTemperature (BOT-007 ## Comments) before this ticket starts, stage 1 may fold its `setoption` line into a criterion here, since `start()` is in this file.
 - 2026-10-25 Stage 2 pre-test inspection: `ui/main.gd` owns the bridge and starts/loads it; `bot/maia_player.gd` queues policies and may emit a delayed move after a timer. The live UCI seam approved above covers external process death, repeated polling, queued requests, restart, and intentional shutdown. UI handling must freeze clocks, invalidate delayed Maia moves, cancel board interaction, and account for an engine exit while `_start()` awaits the opening catalog. BOT-007 leaves PolicyTemperature at the shared Lc0 default; no setting change is authorized here.
+- 2026-10-25 Proxy decided (gpt-6-astra high, fallback): fail closed on Lc0 stdout `error ` even after `readyok`, and exercise missing weights through the next policy request — installed Lc0 v0.32.1 explicitly rejects the requested file but remains alive and returns a policy, so readiness cannot prove the selected net loaded. This supersedes the earlier fallback/readyok uncertainty. Clarified c2/c4 as drafted by the proxy; no new files or seams and no production timeout.

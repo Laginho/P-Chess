@@ -118,16 +118,20 @@ func request_policy(start_fen: String, moves: PackedStringArray) -> void:
 
 
 func poll() -> void:
-	if available and not OS.is_process_running(pid):
-		stop()
-		error = "Lc0 stopped. Restart the app to play again."
-		stopped.emit()
+	if not available:
+		return
+	if not OS.is_process_running(pid):
+		_report_stopped("Lc0 stopped. Restart the app to play again.")
 		return
 	_mutex.lock()
 	var lines := _lines.duplicate()
 	_lines.clear()
 	_mutex.unlock()
 	for line in lines:
+		# A failed WeightsFile can produce readyok, then error, then a fallback bestmove.
+		if line.begins_with("error "):
+			_report_stopped("Lc0 stopped: " + line.trim_prefix("error "))
+			return
 		if _awaiting == "bestmove" and line.begins_with("info string "):
 			_info.append(line)
 		elif _awaiting != "" and line.begins_with(_awaiting):
@@ -135,6 +139,12 @@ func poll() -> void:
 			if line.begins_with("bestmove"):
 				policy_ready.emit(parse_policy(_info, _board))
 			_send()
+
+
+func _report_stopped(message: String) -> void:
+	stop()
+	error = message
+	stopped.emit()
 
 
 func stop() -> void:
