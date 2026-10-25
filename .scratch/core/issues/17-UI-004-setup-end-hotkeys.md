@@ -1,5 +1,5 @@
 # UI-004: Setup, game end, rematch and hotkeys
-Stage: done
+Stage: to-implement
 Blocked by: CLOCK-001
 Review: agent
 Difficulty: normal
@@ -50,43 +50,55 @@ Proxy decided (opus): `ui/move_list.gd` joins Primary files, scoped to a new `re
 
 Proxy decided (opus): in focus mode the Esc hint stays and the game-end result shows; criterion 2 failed in focus mode only because result_label was in _set_focus's list, fixed in review by removing it — focus mode hides the persistent panels during play (move list, material, Claim draw); criteria 2 and 4 have no focus exception, the result label is empty during play so criterion 6 holds, and hiding either message drops a required output (the only warning before a resign, the result and its reason).
 
-Gate evidence: C:\Users\Lage\AppData\Local\Temp\claude\D--Desktop-Projects-P-Chess--artifacts-build-lanes-core\8af4bc7b-c9e7-43b9-8742-e8033e03765a\scratchpad\UI-004-review-gate.json
+> Gate evidence: C:\Users\Lage\AppData\Local\Temp\claude\D--Desktop-Projects-P-Chess--artifacts-build-lanes-core\8af4bc7b-c9e7-43b9-8742-e8033e03765a\scratchpad\UI-004-review-gate.json
+>
+> #### Resolution (2026-10-24)
+>
+> Verdict: Approve
+>
+> Stage 3 (opus-5.5). The Standards and Spec axes ran as separate sub-agents. Standards: no violation; one judgement call, `FakeTime` is duplicated in `tests/test_session.gd` and `tests/test_clock.gd` (4 lines, and the shared home `tests/run.gd` is outside Primary files). Not scheduled. Spec: one finding, criterion 2 in focus mode (below), fixed in review; no scope creep. I read the whole diff and the code around it.
+>
+> Examined: every caller of `_show_result` (game-ending move, flag, Esc resign, Claim draw) runs it exactly once per game, and `Clock.stop` is idempotent, so the flag path's second stop is harmless. `setup.started` has one listener (`main._start`). `maia.move_ready` has one listener (`_on_maia_move`). The `_replies_owed` / `_stale_replies` counters hold because `UCI.request_policy` queues FIFO and emits exactly one `policy_ready` per request, so the old game's reply always arrives before the new game's. `BoardView.play` and `Game.play` refuse moves once the game is over. `Game.resign` and `Game.claim_draw` are guarded. `auto_claim` is set after `Game.new()`, which is harmless because the start position cannot repeat. Not examined: the app in a window, and a live Lc0 stale reply.
+>
+> Criteria:
+>
+> 1. ✅ `ui/setup.gd` adds colour, level, control and an Opening option (Free, Catalog, My repertoire) with every item except Free disabled; Free is index 0, so it is the default. Random is drawn before `started` emits.
+> 2. ✅ after the review fix. `_show_result` writes "<White wins|Black wins|Draw> by <reason> (<result>)" plus "Space for a rematch", with `reason` taken from `core/game.gd`, which covers all seven. Before the fix, F11 hid `result_label`, so a game that ended in focus mode showed no result. Fixed in c4bd40f (below).
+> 3. ✅ `Space` rematches only when a clock exists and the game is over, so it does nothing on the setup screen or during play. `rematch()` swaps `settings.colour`, which holds the colour actually played (`test_rematch_swaps_colours_and_keeps_the_rest`, `test_rematch_of_a_rematch_is_the_first_game_and_leaves_the_input_alone`).
+> 4. ✅ `ResignKey`: a first press arms the key and `_process` shows the hint while it is armed. A second press within 2000 ms resigns and disarms; after the window the next press starts over (tests at 1.9 s and 2.1 s on a fake clock). Esc works only while a game is on. Edge, not a criterion: if the game ends some other way within 2 s of a first Esc, the hint stays for the rest of those 2 s while Esc does nothing.
+> 5. ✅ `claim_draw.disabled = not game.can_claim_draw()` after every move, disabled again at game end, and `AUTO_CLAIM` is a commented shortcut constant. Maia's path never calls `claim_draw`. With auto-claim on, a threefold ends the game at once, so the button cannot be enabled until UI-005 adds the setting (disclosed below).
+> 6. ✅ F11 hides the move list, material and Claim draw. During play `result_label` is empty (`_start` clears it and `_show_result` is its only writer), so only the board and the clocks show. The transient Esc hint and the game-end result stay visible (Proxy decided, Comments).
+> 7. ✅ no abort control in `ui/` (grep for "abort" finds nothing).
+> 8. ✅ `tests/test_session.gd` calls production `Main.rematch` and `Main.ResignKey` with an injected time source. No window and no waiting.
+>
+> Rules: test-only 7fce98b (with ticket metadata) comes before production-only a12bbfe; 95f7fdf touches only the ticket. Review fix c4bd40f: `ui/main.gd` plus ticket metadata. Only Primary files changed (`core/game.gd` needed none; `ui/move_list.gd`'s `reset()` was added by Proxy decided). No rebase was needed: the branch sat on the session tip 427da7a. Merged as 39fa0fd.
+>
+> Review fix c4bd40f: author stage 3 (opus-5.5). Independent reviewer: a separate Haiku sub-agent, which examined `git show c4bd40f -- ui/main.gd` against criteria 2 and 6 and `ui/main.tscn`'s side-panel children. Its verdict was Approve: `result_label` is empty during play, including on a rematch, and nothing else reads it.
+>
+> Red-green: stage 2's red 7fce98b gave `102 passed, 1 failed` (`test_session.gd` failed to load because `Main.rematch` and `Main.ResignKey` were missing). Green a12bbfe gave `107 passed, 0 failed`. Mutation check in review, run in a throwaway worktree: `rematch()` without the swap, `armed()` without the window, and `press()` without the disarm together gave `104 passed, 3 failed`, one failing test per mutant. One mutant cannot be separated: `<=` against `<` at exactly 2000 ms. The criterion's "within 2 s" does not fix the boundary, so this mutant is equivalent. The fix itself has no test: criterion 8 does not cover focus mode, and F11 is on the manual Verification list.
+>
+> Gate: rerun after the fix, on c4bd40f: exit 0, `107 passed, 0 failed` (receipt in the `Gate evidence:` line above). The merge 39fa0fd has the same tree as c4bd40f.
+>
+> Not findings (no criterion, no regression): `maia.latencies_ms` now accumulates across rematches, so the console's median covers the whole app session, and a dropped stale reply adds one sample timed from the newer `think()`. This is a diagnostic print only.
+>
+> `Proxy decided` lines: two, both (opus), under Comments. The first adds `ui/move_list.gd`'s `reset()` to Primary files. The second keeps the Esc hint and shows the result in focus mode.
+>
+> Acceptance: pending | the manual checks in Verification (Esc Esc resign, Space rematch swapping colours, F11 focus mode, claiming a threefold) have not been run by a person. So far: gate 107/107 on c4bd40f, and stage 2's headless `--quit-after 30` launch of the main scene loaded with no script error (Comments).
+> Disclosure: decision | none | Proxy decided (opus), see ## Comments: `ui/move_list.gd` joins Primary files for a `reset()` that the rematch calls.
+> Disclosure: decision | none | Proxy decided (opus), see ## Comments: in focus mode the Esc hint stays visible and the game-end result shows. Fixed in review as c4bd40f, which removes `result_label` from `_set_focus`'s list; independently reviewed (above).
+> Disclosure: pending | release | with `AUTO_CLAIM` on, the Claim draw button can never be enabled, so "claim a threefold" cannot be checked until UI-005 (`.scratch/core/issues/18-UI-005-settings.md`, criterion 2: auto-claim threefold setting) lets auto-claim be turned off.
+> Foreman acceptance check (integrated session 09f8153, after UI-005 merged): auto-claim is now the `auto_claim` setting (default on, `core/settings.gd:22`), applied in `ui/main.gd:154` and `:193`, so "claim a threefold" is now checkable by hand: turn auto-claim off in Settings, repeat a position three times, click Claim draw. Not run by a person; the pending above stays until then.
+> Disclosure: pending | release | dropping Maia's stale reply after a rematch mid-think has no test (it needs a window and Lc0); check it by hand by rematching while Maia thinks.
+> Disclosure: pending | release | the manual checks in Verification have not been run by a person (Acceptance above).
 
-#### Resolution (2026-10-24)
+#### Reopen (2026-10-24, session PR #8 review)
 
-Verdict: Approve
+Reviewer: independent review of session PR #8 by gpt-6.1-sol xhigh (verdict "do not merge"), relayed by the supervisor foreman. Its gate run was green, 113/0/0; the finding is a regression the suite does not cover.
 
-Stage 3 (opus-5.5). The Standards and Spec axes ran as separate sub-agents. Standards: no violation; one judgement call, `FakeTime` is duplicated in `tests/test_session.gd` and `tests/test_clock.gd` (4 lines, and the shared home `tests/run.gd` is outside Primary files). Not scheduled. Spec: one finding, criterion 2 in focus mode (below), fixed in review; no scope creep. I read the whole diff and the code around it.
+3. ❌ regression: `rematch` (`ui/main.gd:153`) swaps in the new game without clearing BoardView's interaction state from the old one. Repro A: lose on time with the promotion picker open, press Space: the old picker stays over the new game. Repro B: rematch while holding the e5 pawn: the stale target `e5e6` survives, and a legal `e7e6` in the new game is rejected.
 
-Examined: every caller of `_show_result` (game-ending move, flag, Esc resign, Claim draw) runs it exactly once per game, and `Clock.stop` is idempotent, so the flag path's second stop is harmless. `setup.started` has one listener (`main._start`). `maia.move_ready` has one listener (`_on_maia_move`). The `_replies_owed` / `_stale_replies` counters hold because `UCI.request_policy` queues FIFO and emits exactly one `policy_ready` per request, so the old game's reply always arrives before the new game's. `BoardView.play` and `Game.play` refuse moves once the game is over. `Game.resign` and `Game.claim_draw` are guarded. `auto_claim` is set after `Game.new()`, which is harmless because the start position cannot repeat. Not examined: the app in a window, and a live Lc0 stale reply.
+What is left: before the game is swapped, clear the drag, held/queued moves, the pending promotion, the picker and any running tweens; add rematch lifecycle tests that drive the real `Main`/`BoardView` path through both repros (today's rematch tests only exercise the settings-dictionary helper). The fix likely needs a reset on `ui/board_view.gd`, which is not in Primary files: ask the proxy before touching it. Every other criterion verdict above stands.
 
-Criteria:
+Note for stage 2: the block quoted above is the previous review's record, kept for history; the live fields are the ones below it. Write the new receipt as `Gate evidence: <path>` at the very start of its own line, with no list dash and nothing after the path: the installed driver misses a `- Gate evidence:` line (fix pending in Agent-Skills#4).
 
-1. ✅ `ui/setup.gd` adds colour, level, control and an Opening option (Free, Catalog, My repertoire) with every item except Free disabled; Free is index 0, so it is the default. Random is drawn before `started` emits.
-2. ✅ after the review fix. `_show_result` writes "<White wins|Black wins|Draw> by <reason> (<result>)" plus "Space for a rematch", with `reason` taken from `core/game.gd`, which covers all seven. Before the fix, F11 hid `result_label`, so a game that ended in focus mode showed no result. Fixed in c4bd40f (below).
-3. ✅ `Space` rematches only when a clock exists and the game is over, so it does nothing on the setup screen or during play. `rematch()` swaps `settings.colour`, which holds the colour actually played (`test_rematch_swaps_colours_and_keeps_the_rest`, `test_rematch_of_a_rematch_is_the_first_game_and_leaves_the_input_alone`).
-4. ✅ `ResignKey`: a first press arms the key and `_process` shows the hint while it is armed. A second press within 2000 ms resigns and disarms; after the window the next press starts over (tests at 1.9 s and 2.1 s on a fake clock). Esc works only while a game is on. Edge, not a criterion: if the game ends some other way within 2 s of a first Esc, the hint stays for the rest of those 2 s while Esc does nothing.
-5. ✅ `claim_draw.disabled = not game.can_claim_draw()` after every move, disabled again at game end, and `AUTO_CLAIM` is a commented shortcut constant. Maia's path never calls `claim_draw`. With auto-claim on, a threefold ends the game at once, so the button cannot be enabled until UI-005 adds the setting (disclosed below).
-6. ✅ F11 hides the move list, material and Claim draw. During play `result_label` is empty (`_start` clears it and `_show_result` is its only writer), so only the board and the clocks show. The transient Esc hint and the game-end result stay visible (Proxy decided, Comments).
-7. ✅ no abort control in `ui/` (grep for "abort" finds nothing).
-8. ✅ `tests/test_session.gd` calls production `Main.rematch` and `Main.ResignKey` with an injected time source. No window and no waiting.
-
-Rules: test-only 7fce98b (with ticket metadata) comes before production-only a12bbfe; 95f7fdf touches only the ticket. Review fix c4bd40f: `ui/main.gd` plus ticket metadata. Only Primary files changed (`core/game.gd` needed none; `ui/move_list.gd`'s `reset()` was added by Proxy decided). No rebase was needed: the branch sat on the session tip 427da7a. Merged as 39fa0fd.
-
-Review fix c4bd40f: author stage 3 (opus-5.5). Independent reviewer: a separate Haiku sub-agent, which examined `git show c4bd40f -- ui/main.gd` against criteria 2 and 6 and `ui/main.tscn`'s side-panel children. Its verdict was Approve: `result_label` is empty during play, including on a rematch, and nothing else reads it.
-
-Red-green: stage 2's red 7fce98b gave `102 passed, 1 failed` (`test_session.gd` failed to load because `Main.rematch` and `Main.ResignKey` were missing). Green a12bbfe gave `107 passed, 0 failed`. Mutation check in review, run in a throwaway worktree: `rematch()` without the swap, `armed()` without the window, and `press()` without the disarm together gave `104 passed, 3 failed`, one failing test per mutant. One mutant cannot be separated: `<=` against `<` at exactly 2000 ms. The criterion's "within 2 s" does not fix the boundary, so this mutant is equivalent. The fix itself has no test: criterion 8 does not cover focus mode, and F11 is on the manual Verification list.
-
-Gate: rerun after the fix, on c4bd40f: exit 0, `107 passed, 0 failed` (receipt in the `Gate evidence:` line above). The merge 39fa0fd has the same tree as c4bd40f.
-
-Not findings (no criterion, no regression): `maia.latencies_ms` now accumulates across rematches, so the console's median covers the whole app session, and a dropped stale reply adds one sample timed from the newer `think()`. This is a diagnostic print only.
-
-`Proxy decided` lines: two, both (opus), under Comments. The first adds `ui/move_list.gd`'s `reset()` to Primary files. The second keeps the Esc hint and shows the result in focus mode.
-
-Acceptance: pending | the manual checks in Verification (Esc Esc resign, Space rematch swapping colours, F11 focus mode, claiming a threefold) have not been run by a person. So far: gate 107/107 on c4bd40f, and stage 2's headless `--quit-after 30` launch of the main scene loaded with no script error (Comments).
-Disclosure: decision | none | Proxy decided (opus), see ## Comments: `ui/move_list.gd` joins Primary files for a `reset()` that the rematch calls.
-Disclosure: decision | none | Proxy decided (opus), see ## Comments: in focus mode the Esc hint stays visible and the game-end result shows. Fixed in review as c4bd40f, which removes `result_label` from `_set_focus`'s list; independently reviewed (above).
-Disclosure: pending | release | with `AUTO_CLAIM` on, the Claim draw button can never be enabled, so "claim a threefold" cannot be checked until UI-005 (`.scratch/core/issues/18-UI-005-settings.md`, criterion 2: auto-claim threefold setting) lets auto-claim be turned off.
-Foreman acceptance check (integrated session 09f8153, after UI-005 merged): auto-claim is now the `auto_claim` setting (default on, `core/settings.gd:22`), applied in `ui/main.gd:154` and `:193`, so "claim a threefold" is now checkable by hand: turn auto-claim off in Settings, repeat a position three times, click Claim draw. Not run by a person; the pending above stays until then.
-Disclosure: pending | release | dropping Maia's stale reply after a rematch mid-think has no test (it needs a window and Lc0); check it by hand by rematching while Maia thinks.
-Disclosure: pending | release | the manual checks in Verification have not been run by a person (Acceptance above).
+Verdict: Reopen — criterion 3: a rematch keeps the old game's BoardView interaction state (promotion picker, held move)
