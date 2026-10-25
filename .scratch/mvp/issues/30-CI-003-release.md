@@ -1,5 +1,5 @@
 # CI-003: Release on v* tags
-Stage: to-review
+Stage: blocked
 Blocked by: BOT-001, CI-002
 Review: human
 Difficulty: normal
@@ -53,3 +53,36 @@ Acceptance: pending | Criteria 1-4 verified by the release/run and downloaded-pa
 Disclosure: pending | integration | CI-003 criterion 5 above: startup and engine discovery passed on the current machine, but UI access was refused and clean-machine gameplay is unverified. Retain this check for human review before integration.
 
 Gate evidence: C:/Users/bruno/AppData/Local/Temp/P-Chess-CI-003/gate.json
+
+#### Resolution (2026-10-25)
+Verdict: Needs your call: Criterion 5 requires a completed game against Maia from the downloaded release on clean Windows; that integration evidence is unavailable.
+
+- Reviewed `1db4142a1c24b8e9eb25b8b57fab62ca9fa3d8f6...2fd783170ca12df6ea675bc75a6b23f52d2c86c9`, including the full diff and every commit's file separation. Production changes are limited to the two Primary files; the other changes are ticket metadata. The ticket explicitly exempts GDScript tests in favor of the test-tag release and manual game. No production or test changes were authored during review.
+
+##### Standards
+
+- **0 findings.** The independent Standards reviewer found no documented-standard violations or actionable baseline smells. The workflow follows the existing export conventions, reuses `scripts/fetch-engine.ps1`, and preserves executable-relative engine/network paths. No extraction or refactoring is warranted.
+
+##### Spec
+
+- **0 confirmed implementation defects or scope-creep findings.** The independent Spec reviewer checked the full diff and connected packaging/runtime paths.
+- Criterion 1 passes: a `v*` push triggers Windows export, then the production fetch script with the export directory as `-Root`, then ZIP creation. The ZIP contains the executable/PCK and sibling `engine/lc0/` and `engine/weights/`.
+- Criterion 2 passes: [the published release](https://github.com/Laginho/P-Chess/releases/tag/v0.0.1-rc1) is titled `v0.0.1-rc1` and attaches `P-Chess-windows-x86_64.zip`.
+- Criterion 3 passes: all 19 extracted engine/network files match the fetch script's SHA-256 pins; the retained Lc0 archive and Maia `COPYING` also match their pins. Lc0's pinned files include its unmodified `COPYING` and dependency notices.
+- Criterion 4 passes: the checkout, bundled notices and release notes retain the exact Lc0 `v0.32.1` and Maia `v1.0` source-tag links. The ZIP's notices match the checkout as UTF-8 text after normalizing line endings.
+- Criterion 5 remains **pending product acceptance**, not a demonstrated implementation defect. The recorded exported-app launch with isolated `APPDATA` and its bundled Lc0 child supports engine discovery; it does not demonstrate a completed game on clean Windows.
+
+##### Verification and review coverage
+
+- Independently fetched current GitHub metadata: [release workflow run 40238838163](https://github.com/Laginho/P-Chess/actions/runs/40238838163) completed successfully for production commit `8027b7c5d008c7bb13ac3d51460e946216755855`, triggered by the test-tag push. Release asset size is 99,662,189 bytes; its API digest and the local downloaded ZIP both equal SHA-256 `a8ac37351dccc13df4798a139edf49e16c8b801e34bf2b471fb720b1c2d506d2`.
+- Read the ZIP directly and independently verified its 19 pinned engine/network entries, retained upstream archive, Maia licence and bundled notices. Parsed all seven multiline PowerShell workflow blocks successfully. Reviewed the stage-2 successful Actions log and missing-package failure evidence; `git diff --check` passed.
+- Validated the existing receipt with `Assert-GateEvidence`: exit 0, log hash unchanged, tested commit available, and no production changes since that commit. Reused its **254 passed, 0 failed** result without rerunning the unchanged gate. Log/receipt remain at `C:/Users/bruno/AppData/Local/Temp/P-Chess-CI-003/gate.log` and `gate.json`.
+- Callers and interactions examined: existing CI Windows export and export preset, raw theme preservation/ThemeLoader, fetch-script payload verification, licence packaging, `UCI.search_dirs`/`engine_path`, Maia network-path resolution and UI startup. Failure paths examined: download/hash/extraction/import/export failure propagation, missing required package files and publication ordering. No runtime functions changed. Clean-Windows gameplay was not performed; previous UI access was refused and was not bypassed. No new test tag or public release was created during review.
+- No existing `Proxy decided` contract change appears in this ticket. The proxy was consulted only about disposition of the pending integration evidence; no criterion amendment or waiver was proposed.
+
+- 2026-10-25 Proxy escalated (gpt-6-astra high, fallback): Preserve criterion 5 and block CI-003 pending clean-Windows gameplay evidence; isolated APPDATA, successful engine startup, package verification and the passing gate do not demonstrate the required game on a clean machine. No available environment can supply that evidence, and the proxy cannot waive the integration condition.
+- Human question: Can you extract the ZIP from [release v0.0.1-rc1](https://github.com/Laginho/P-Chess/releases/tag/v0.0.1-rc1) on clean Windows, complete one game against Maia, and report the Windows version and result; or provide an authorized clean Windows environment for that check? Existing evidence of this test is sufficient if it has already been performed.
+- Disposition: `Stage: blocked` on `ci-003`; no session merge or completion ledger entry. Once criterion-5 evidence arrives, restore `to-review` for focused acceptance review. Production remains unchanged.
+
+Acceptance: pending | Implementation review has 0 Standards findings and 0 confirmed Spec defects. Criteria 1-4 pass; criterion 5 still needs clean-Windows gameplay evidence as detailed in this Resolution.
+Disclosure: pending | integration | CI-003 criterion 5 and this Resolution: confirm a completed game against Maia from the downloaded release on clean Windows before integration. The branch and all verification evidence are preserved.
