@@ -1,5 +1,5 @@
 # OPEN-001: Opening catalog picker
-Stage: to-review
+Stage: done
 Blocked by: UI-004
 Review: agent
 Difficulty: normal
@@ -100,3 +100,30 @@ Disclosure: pending | integration | This Resolution, criterion 4: original-punct
 
 Acceptance: passed | The original-punctuation regression and all 199 tests pass on `ec26eac`; prior real-scene Sicilian/Najdorf acceptance remains recorded above. Independent stage-3 re-review is next.
 Disclosure: pending | integration | Criterion-4 correction in `24ba0df` and `ec26eac` has red/green evidence; independent stage-3 re-review must confirm the repair before session integration.
+
+#### Resolution (2026-10-25)
+
+Verdict: Approve
+
+Independent Standards (`/root/standards_review`) and Spec (`/root/spec_review`) sub-agents re-reviewed `0e05af227ed3d162d5e8eae3311200092d91e4af...53c255e31111b0ecc16ea4df5657706799ec830a`, including the criterion-4 finding and every intervening commit. This review authored no production or test changes and made no contract changes or proxy decisions.
+
+##### Standards
+
+No documented-standard violations or meaningful baseline smells. The correction touches only `bot/book.gd`, `tests/test_catalog.gd` and permitted ticket metadata. `8566c4e` contains tests and ticket metadata; `24ba0df` and `ec26eac` contain production only; `53c255e` contains the handoff only. The regression exercises public loader/search APIs with independent expected paths. No unrelated refactor or dependency was introduced.
+
+##### Spec
+
+4. ✅ Original names and punctuation-spanning mixed-case substrings now match, including both reported Vienna and Polish examples. Normalized-path queries remain compatible; matching nodes and ancestors retain parent-before-child order. Empty searches show all nodes, unmatched searches show none, and unrelated branches remain excluded.
+
+Criteria 1, 2, 3, 5, 6 and 7 retain their prior ✅ verdicts: their behavior is unchanged by this correction. The original-name index is populated only for successfully parsed rows, accumulates across TSV volumes and resets with a catalog reload. Duplicate names map to their existing deterministic tree path. Tree structure, checkbox state and saved selection IDs remain unchanged. No missing requirement, scope creep, incorrect implementation or previous-pass miss was found. Standards: 0 findings. Spec: 0 findings.
+
+Examined: the incremental production/test/ticket diff, every commit stat, original-name normalization and index lifecycle, family/variation/empty/unmatched search behavior, picker `_rebuild` ordering, setup callers and existing catalog tests. Manual mouse/keyboard interaction, visual layout, exported builds and live Lc0 were not repeated in this re-review; the earlier full-catalog Sicilian/Najdorf acceptance and screenshot remain recorded above. Book weighting remains OPEN-002.
+
+Red/green: inspected the retained authorized red log for `8566c4e`: **9 passed, 1 failed**, with five failed original-punctuation queries in the new regression. The committed correction's bound gate reports **199 passed, 0 failed**, exit 0, including all ten catalog tests and the real picker/setup tests, with no SKIP lines. The separate production follow-up `ec26eac` restores the empty-query guard after the recorded intermediate gate failure.
+
+Gate: `Assert-GateEvidence` verified the receipt against reviewed HEAD, after rebase and against the merged session tree. Command: `godot --headless -s tests/run.gd`; tested commit: `ec26eacdb160fdfd9e09b7cf8b58cd1d3fc8beba`; receipt: `C:\Users\Lage\AppData\Local\Temp\OPEN-001-search-green-gate.json`; log SHA-256: `747A6805554B9989375AA7D8A224DC6560C7152E8E4F03A690CCBCB976996023`. Hash and exit marker match; production is identical, so the existing green run was reused. `git diff --check` passes.
+
+Integration: rebase onto `sweatshop/core/2026-10-25-0159` was already up to date. Merged without conflicts or squash as `36cfe6b961d09f6208cf069b1c4ad39051968d69`; its tree exactly matches the reviewed ticket tip. Stage and ledger are closed together on the session branch. No PR or push is part of this stage.
+
+Acceptance: passed | [Catalog regression and real-scene tests](../../../tests/test_catalog.gd) pass in the 199/199 gate; the earlier Sicilian/Najdorf selection scenario remains valid. Independent re-review confirms the original-punctuation repair.
+Disclosure: decision | none | The earlier criterion-4 integration condition is resolved by [this independent re-review](#resolution-2026-10-25-1) and unchanged-code gate verification. No unresolved finding or accepted deferral remains on OPEN-001.
