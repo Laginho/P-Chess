@@ -12,6 +12,7 @@ Difficulty: hard
   - New: tests/test_book.gd
   - ui/main.gd (OPEN-002 lifecycle wiring only: supply opening mode, saved selection and Maia's side at game start/rematch; connect the shared catalog and practice counts; apply book intensity; record the target once at game end and supply the deepest reached catalog Opening to history)
   - ui/opening_picker.gd (shared asynchronous catalog readiness only: expose a public ensure_catalog entry point, reuse it from present(), share the existing worker, join it once after completion, and preserve picker selection/display behavior)
+  - tests/test_history.gd, tests/test_premove.gd, tests/test_review.gd, tests/test_session.gd (existing _session helpers only: inject a tiny preloaded catalog before Main enters the scene tree; preserve all existing behavior assertions)
 
 #### What to build
 
@@ -40,6 +41,7 @@ In Catalog mode Maia leans toward the checked lines and drifts off them as the g
 - `tests/test_book.gd`: weights at plies 4, 11 and 18; a transposition; target-line choice with counts and a seeded tie; weights after leaving the book; the Opening header name; the picker integration of criterion 9. Red because the book weight does not exist.
 - `tests/test_book.gd` also exercises the real Main scene with a fake engine and isolated settings, selections and history storage: Catalog/Free setup-to-Maia wiring, saved selection versus residual checks, rematch target choice, live intensity routing, one practice increment despite repeated terminal callbacks, persisted counts, and Opening headers in Catalog and Free. Include a catalog-not-yet-loaded lifecycle case and leave/re-enter position matching. These tests call production code; they do not duplicate its weighting or lifecycle logic.
 - `tests/test_book.gd`: exercise the public catalog-readiness lifecycle, including an already loaded catalog, a cold start without opening the picker, joining an existing load without starting another, and startup failure with no clock or Maia request. Verify Main remains responsive while waiting and starts only after readiness. Keep storage isolated and external engine behavior fake.
+- Existing scene-test helpers in test_history.gd, test_premove.gd, test_review.gd and test_session.gd receive a tiny catalog through the real Book.load_tsv API before Main enters the tree. This keeps their established already-loaded, synchronous setup while cold loading remains covered in test_book.gd. No production test-detection shortcut, weakened assertion or full-catalog parse per fixture.
 
 ## Comments
 
@@ -52,3 +54,7 @@ Proxy decided (gpt-6-astra high, fallback): Add opening_picker.gd solely for a s
 Disclosure: decision | none | OPEN-002 Comments, shared catalog-loader amendment: preserves one catalog and responsive loading while completing existing criteria; no separate integration or release dependency.
 
 Stage-2 caller inspection: Book's catalog/search/selection APIs feed opening_picker and setup; retain their entry format and checks. Maia.begin_game is called by Main and think's implicit new-game path; existing one-argument calls must retain Free behavior and invalidate stale policies. Main owns preferences, rematches, clock creation and the once-only history guard. History.save's explicit Opening argument and existing stats callers remain supported. Boundary coverage includes empty selections, unchecked lines, no matching continuation, re-entry with a larger game ply, completed lines, no known opening, stale replies, failed storage and catalog readiness before a game starts.
+
+Proxy decided (gpt-6-astra high, fallback): Allow tiny preloaded-catalog injection in the existing _session helpers of test_history.gd, test_premove.gd, test_review.gd and test_session.gd, preserving their assertions — asynchronous cold loading otherwise invalidates their synchronous setup and repeats expensive catalog parsing; test_book.gd retains dedicated cold-load coverage.
+
+Disclosure: decision | none | OPEN-002 Comments, existing scene-fixture amendment: test setup only, with unchanged behavior assertions and no separate integration or release dependency.

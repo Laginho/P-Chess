@@ -146,6 +146,7 @@ func test_a_rematch_drops_the_piece_held_when_the_game_ended():
 
 func _session(waits):
 	var main = MainScene.instantiate()
+	main.get_node("Setup").book.load_tsv("eco\tname\tpgn\nA00\tFixture\t1. h3\n")
 	var folder := "user://test_session_history_%d" % Time.get_ticks_usec()
 	main.history = load("res://core/history.gd").new(folder)
 	main.tree_exiting.connect(func():

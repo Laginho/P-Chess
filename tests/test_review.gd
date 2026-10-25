@@ -29,6 +29,7 @@ class HeldEngine extends "res://engine/uci.gd":
 
 func _session(time: FakeTime):
 	var main = MainScene.instantiate()
+	main.get_node("Setup").book.load_tsv("eco\tname\tpgn\nA00\tFixture\t1. h3\n")
 	var folder := "user://test_review_%d" % Time.get_ticks_usec()
 	main.history = History.new(folder)
 	main.tree_exiting.connect(func():

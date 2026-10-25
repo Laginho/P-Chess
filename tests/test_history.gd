@@ -32,6 +32,7 @@ class HeldEngine extends "res://engine/uci.gd":
 
 func _session(folder: String, time: FakeTime, settings := SETTINGS):
 	var main = MainScene.instantiate()
+	main.get_node("Setup").book.load_tsv("eco\tname\tpgn\nA00\tFixture\t1. h3\n")
 	main.history = History.new(folder)
 	main.uci.free()
 	main.uci = HeldEngine.new()

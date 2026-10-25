@@ -6,15 +6,17 @@ const History = preload("res://core/history.gd")
 const Pgn = preload("res://core/pgn.gd")
 const MaiaPlayer = preload("res://bot/maia_player.gd")
 const Settings = preload("res://core/settings.gd")
+const MainScene = preload("res://ui/main.tscn")
+const CATALOG := "eco\tname\tpgn\n" \
+		+ "A04\tTarget\t1. Nf3 Nf6 2. g3 g6 3. Bg2 Bg7\n" \
+		+ "A04\tOther\t1. Nf3 Nf6 2. g3 g6 3. d3 d6\n" \
+		+ "A04\tUnchecked\t1. Nf3 Nf6 2. g3 g6 3. c4 c5\n"
 const SETTINGS := {"colour": "w", "level": "maia-1500", "control": "3+2", "opening": "Catalog"}
 
 
 func _sample():
 	var book = Book.new()
-	book.load_tsv("eco\tname\tpgn\n"
-			+ "A04\tTarget\t1. Nf3 Nf6 2. g3 g6 3. Bg2 Bg7\n"
-			+ "A04\tOther\t1. Nf3 Nf6 2. g3 g6 3. d3 d6\n"
-			+ "A04\tUnchecked\t1. Nf3 Nf6 2. g3 g6 3. c4 c5\n")
+	book.load_tsv(CATALOG)
 	book.set_checked("Target", true)
 	book.set_checked("Other", true)
 	assert_eq(book.errors, [])
@@ -226,4 +228,188 @@ func test_opening_header_names_only_the_deepest_catalog_endpoint_reached_in_any_
 		assert_true(not path.is_empty(), history.error)
 		var parsed := Pgn.parse(FileAccess.get_file_as_string(path))
 		assert_eq(parsed.games[0].headers.get("Opening"), "Target", mode)
+	_clean(folder)
+
+
+class HeldEngine extends "res://engine/uci.gd":
+	var requests := []
+
+
+	func start(_dirs := PackedStringArray()) -> bool:
+		return true
+
+
+	func set_level(_net_path: String) -> void:
+		pass
+
+
+	func request_policy(_fen: String, moves: PackedStringArray) -> void:
+		requests.append(moves.duplicate())
+
+
+func _session(folder: String, book):
+	DirAccess.make_dir_recursive_absolute(folder)
+	var main = MainScene.instantiate()
+	main.history = History.new(folder)
+	main.preferences = Settings.new(folder.path_join("settings.cfg"))
+	book.selection_dir = folder.path_join("openings")
+	main.get_node("Setup").book = book
+	main.uci.free()
+	main.uci = HeldEngine.new()
+	main.maia = MaiaPlayer.new(main.uci)
+	Engine.get_main_loop().root.add_child(main)
+	main.board_view.slide_seconds = 0
+	main.sound_player.select_theme("__book_silent__")
+	return main
+
+
+func _saved_games(folder: String) -> Array:
+	var games := []
+	for file in DirAccess.get_files_at(folder.path_join("games")):
+		var parsed := Pgn.parse(FileAccess.get_file_as_string(folder.path_join("games").path_join(file)))
+		assert_eq(parsed.error, "")
+		games.append_array(parsed.games)
+	return games
+
+
+func test_main_uses_named_selection_counts_once_rematches_and_recognizes_free_openings():
+	var folder := _folder()
+	var book = _sample()
+	var main = _session(folder, book)
+	book.set_checked("Other", false)
+	assert_eq(book.save_selection("Practice"), "")
+	book.set_checked("Target", false)
+	book.set_checked("Other", true)
+	var settings := SETTINGS.duplicate()
+	settings.selection = "Practice"
+	main.setup.started.emit(settings)
+	assert_eq(main.maia.target_id, book.entries[0].id, "load the saved name, not residual picker checks")
+	assert_eq(main.maia.book, book, "one shared catalog")
+	assert_true(main.preferences.set_value("book_intensity", "strong"))
+	assert_eq(main.maia.book_intensity, "strong", "live preference routing")
+	for move in ["g1f3", "g8f6", "g2g3", "g7g6", "f1g2", "f8g7"]:
+		assert_true(main.board_view.play(move))
+	main.board_view.game.resign("w")
+	main._show_result()
+	main._show_result()
+	assert_eq(History.new(folder).practice_counts(), {book.entries[0].id: 1})
+	var games := _saved_games(folder)
+	assert_eq(games.size(), 1, "terminal callbacks save exactly once")
+	assert_eq(games[0].headers.get("Opening"), "Target")
+	book.set_checked("Other", true)
+	assert_eq(book.save_selection("Practice"), "")
+	main._start(main.rematch(main.settings))
+	assert_eq(main.human, "b")
+	assert_eq(main.maia.target_id, book.entries[1].id, "rematch uses persisted least-practiced target")
+	assert_eq(main.uci.requests[-1], PackedStringArray(), "Maia now plays White first")
+	main.board_view.game.resign("b")
+	main._show_result()
+	var counts: Dictionary = History.new(folder).practice_counts()
+	assert_eq(counts, {book.entries[0].id: 1, book.entries[1].id: 1})
+	settings.opening = "Free"
+	main._start(settings)
+	assert_eq(main.maia.target_id, "", "Free clears the previous target")
+	for move in ["g1f3", "g8f6", "g2g3", "g7g6", "f1g2", "f8g7"]:
+		assert_true(main.board_view.play(move))
+	main.board_view.game.resign("w")
+	main._show_result()
+	assert_eq(History.new(folder).practice_counts(), counts, "Free doesn't increment a target")
+	games = _saved_games(folder)
+	assert_eq(games.size(), 3)
+	assert_eq(games.filter(func(game): return game.headers.get("Opening") == "Target").size(), 2,
+			"both Catalog and Free recognize the opening")
+	main.free()
+	_clean(folder)
+
+
+# The external catalog I/O boundary is held by semaphores, without timing assumptions.
+class DelayedBook extends "res://bot/book.gd":
+	var entered := Semaphore.new()
+	var release := Semaphore.new()
+	var loads := 0
+
+
+	func load_catalog(_folder := "res://data/openings") -> void:
+		loads += 1
+		entered.post()
+		release.wait()
+		load_tsv(CATALOG)
+
+
+func _watch_catalog(picker, ready: Array) -> void:
+	ready.append(await picker.ensure_catalog())
+
+
+func test_cold_main_and_picker_share_one_loader_and_wait_responsively_before_start():
+	var folder := _folder()
+	var book := DelayedBook.new()
+	var main = _session(folder, book)
+	var picker = main.setup.get_node("OpeningPicker")
+	assert_true(picker.has_method("ensure_catalog"), "public shared catalog readiness")
+	if not picker.has_method("ensure_catalog"):
+		main.free()
+		_clean(folder)
+		return
+	var selection = _sample()
+	selection.selection_dir = book.selection_dir
+	selection.set_checked("Other", false)
+	assert_eq(selection.save_selection("Practice"), "")
+	var settings := SETTINGS.duplicate()
+	settings.colour = "b"
+	settings.selection = "Practice"
+	main.setup.started.emit(settings)
+	book.entered.wait()
+	assert_eq(main.clock, null, "no clock during loading")
+	assert_eq(main.uci.requests.size(), 0, "no engine request during loading")
+	assert_true(main.result_label.text.contains("Loading"), "visible loading status")
+	assert_true(not picker.visible, "starting a game doesn't open the picker")
+	var ready := []
+	_watch_catalog(picker, ready)
+	_watch_catalog(picker, ready)
+	main._process(0)
+	picker._process(0)
+	assert_eq(ready.size(), 0, "responsiveness doesn't publish a partly loaded catalog")
+	book.release.post()
+	var deadline := Time.get_ticks_msec() + 5000
+	while ready.size() < 2 and Time.get_ticks_msec() < deadline:
+		picker._process(0)
+		OS.delay_msec(1)
+	assert_eq(ready, ["", ""], "all waiters resume after joining one worker")
+	assert_eq(book.loads, 1)
+	assert_true(main.clock != null)
+	assert_eq(main.uci.requests.size(), 1)
+	assert_eq(main.maia.target_id, book.entries[0].id, "cold start loads current saved selection")
+	_watch_catalog(picker, ready)
+	assert_eq(ready.size(), 3, "already loaded readiness completes immediately")
+	assert_eq(book.loads, 1)
+	main.free()
+	_clean(folder)
+
+
+func test_loader_startup_failure_reports_an_error_without_a_game_and_allows_retry():
+	var folder := _folder()
+	var book = Book.new()
+	var main = _session(folder, book)
+	var picker = main.setup.get_node("OpeningPicker")
+	assert_true("start_catalog_worker" in picker, "thread-start system boundary can report failure")
+	if not "start_catalog_worker" in picker:
+		main.free()
+		_clean(folder)
+		return
+	picker.start_catalog_worker = func(_worker, _load): return ERR_CANT_CREATE
+	var settings := SETTINGS.duplicate()
+	settings.opening = "Free"
+	settings.colour = "b"
+	main.setup.started.emit(settings)
+	assert_eq(main.clock, null)
+	assert_eq(main.uci.requests.size(), 0)
+	assert_true(main.setup.visible, "setup remains available to retry")
+	var status: Label = main.setup.get_node("Center/Form/Missing")
+	assert_true(status.visible and status.text.contains("Cannot start catalog loading"))
+	book.load_tsv(CATALOG)
+	main.setup.started.emit(settings)
+	assert_true(main.clock != null, "a corrected retry starts")
+	assert_eq(main.uci.requests.size(), 1)
+	assert_eq(main.maia.target_id, "", "Free mode stays free after a load error")
+	main.free()
 	_clean(folder)
