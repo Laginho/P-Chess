@@ -1,5 +1,5 @@
 # CI-002: Windows export on every push
-Stage: implementing
+Stage: to-review
 Blocked by: CI-001
 Review: agent
 Difficulty: normal
@@ -44,3 +44,5 @@ Export implementation may proceed after CI-001. Criterion 5 additionally depends
 Acceptance: pending | Criterion 5 requires BOT-002 and BOT-004 integration, followed by a fresh Actions artifact download and Windows verification. Startup/theme evidence: not yet run.
 Disclosure: decision | integration | Proxy decision in CI-002 Comments: exporter implementation may proceed separately; pending criterion 5 prevents CI-002 closure and session integration. See BOT-004 criterion 6 and BOT-002's final foreman comment.
 Disclosure: pending | integration | CI-002 criterion 5: no missing-engine UI exists in the current app. Resolve after BOT-002 and BOT-004 integration; preserve and rerun the original downloaded-artifact acceptance check.
+- 2026-10-25 Stage 3 (opus-5.5) resumed the stalled handoff: rebased ci-002 onto main (af8997c), committed one review fix to export_presets.cfg (data/* in include_filter, adf2acf), then ran the gate on adf2acf: 253 passed, 0 failed.
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\claude\C--Users-bruno-Desktop-Pastinha-Programas-Projects-P-Chess\3da8f19c-6a93-4fff-b0c6-6bfbd2688adf\scratchpad\ci002-gate.json
