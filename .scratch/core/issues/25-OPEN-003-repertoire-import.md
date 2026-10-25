@@ -39,3 +39,5 @@ Import your repertoire as a PGN, choose its colour, and practise it in My repert
 Proxy decided (gpt-6-astra high, fallback): Add narrowly scoped Main repertoire lifecycle wiring and real-scene tests in test_repertoire.gd; use the imported human colour for setup starts and the actual game colour for rematches — OPEN-003 requires replacing Maia's catalog book, while OPEN-002 preserves catalog-based history recognition and §9.1 requires swapped-colour rematches.
 
 Disclosure: decision | none | OPEN-003 Comments, proxy scope/colour amendment: adds the existing Main lifecycle seam and scene tests, preserves shared-catalog history and swapped-colour rematches; no migration or additional release condition.
+
+- Stage-2 harness correction: `Bh6` is legal after `1. d4 d5`; the illegal-move sample now uses `Bh5`. The correction is a separate test-only commit; the missing-import API red proof still applies, and the corrected test is rerun against the committed parser before restoring persistence implementation.
