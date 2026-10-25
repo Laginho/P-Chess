@@ -65,3 +65,5 @@
 | 2026-10-24 21:34 | UI-004 | review | opus-5.5 xhigh | 2 | failed (incomplete handoff), blocked | sweatshop/core/2026-10-24-1911 | 13m | 5.1M in (96% cached), 56k out | $2.821 | 0.783 |
 | 2026-10-24 21:39 | UI-005 | implement | opus-5.5 high | 1 | to-review | sweatshop/core/2026-10-24-1911 | 4m | 1.6M in (96% cached), 12k out | $1.034 | 0.520 |
 | 2026-10-24 21:45 | UI-005 | review | opus-5.5 xhigh | 1 | merged | sweatshop/core/2026-10-24-1911 | 6m | 3.6M in (96% cached), 32k out | $1.699 | 0.521 |
+| 2026-10-25 00:30 | UI-004 | implement | gpt-6.1-sol xhigh | 2 | to-review | sweatshop/core/2026-10-24-1911 | 13m | 3.9M in (96% cached), 24k out | $1.330 | 1.581 |
+| 2026-10-25 00:36 | UI-004 | review | gpt-6.1-sol xhigh | 2 | merged | sweatshop/core/2026-10-24-1911 | 6m | 2.3M in (93% cached), 11k out | $0.870 | 1.571 |
