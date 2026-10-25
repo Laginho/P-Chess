@@ -162,10 +162,19 @@ func _start(new_settings: Dictionary) -> void:
 	_starting = true
 	setup.hide()
 	setup.get_node("OpeningPicker").hide()
+	setup.get_node("RepertoireImport").hide()
 	review.hide()
 	board_view.mouse_filter = MOUSE_FILTER_IGNORE
 	result_label.text = "Loading opening catalog…"
-	var error: String = await setup.get_node("OpeningPicker").ensure_catalog()
+	var error := ""
+	var practice_book = setup.book
+	if new_settings.opening == "My repertoire":
+		error = setup.repertoire.load_saved(new_settings.get("repertoire", ""))
+		if error.is_empty():
+			practice_book = setup.Book.new()
+			practice_book.load_repertoire(setup.repertoire.lines, "b" if new_settings.colour == "w" else "w")
+	if error.is_empty():
+		error = await setup.get_node("OpeningPicker").ensure_catalog()
 	if error.is_empty() and new_settings.opening == "Catalog":
 		error = setup.book.load_selection(new_settings.get("selection", ""))
 	_starting = false
@@ -182,7 +191,7 @@ func _start(new_settings: Dictionary) -> void:
 	human = settings.colour
 	uci.set_level(MaiaPlayer.net_path(settings.level))
 	var game = Game.new()
-	maia.book = setup.book
+	maia.book = practice_book
 	history.book = setup.book
 	maia.begin_game(game, settings.opening, history.practice_counts(), "b" if human == "w" else "w")
 	board_view.game = game
