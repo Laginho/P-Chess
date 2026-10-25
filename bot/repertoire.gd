@@ -2,12 +2,68 @@ extends RefCounted
 
 const Board = preload("res://core/board.gd")
 const Pgn = preload("res://core/pgn.gd")
+const Book = preload("res://bot/book.gd")
 
 # One virtual root holds starting positions, so FEN chapters cannot merge unrelated moves.
 # Each real node has position, children keyed by UCI, and merged annotations.
 var tree := {}
 var lines: Array = []
 var colour := "w"
+var storage_dir := "user://repertoires"
+
+
+func names() -> Array[String]:
+	var saved: Array[String] = []
+	for file in DirAccess.get_files_at(storage_dir):
+		if file.ends_with(".json") and Book._valid_name(file.trim_suffix(".json")):
+			saved.append(file.trim_suffix(".json"))
+	saved.sort()
+	return saved
+
+
+# Store the original PGN with its annotations. Reloading validates it through the same parser.
+# Publish the new tree only after the complete import has been saved successfully.
+func import_pgn(text: String, human_colour: String, name: String) -> String:
+	if not Book._valid_name(name):
+		return "Choose a filename without slashes, reserved names or trailing dots."
+	var candidate = get_script().new()
+	var error: String = candidate.parse(text, human_colour)
+	if not error.is_empty():
+		return error
+	if DirAccess.make_dir_recursive_absolute(storage_dir) != OK:
+		return "Cannot create the repertoires folder."
+	var path := storage_dir.path_join(name + ".json")
+	var temporary := path + ".tmp"
+	var file := FileAccess.open(temporary, FileAccess.WRITE)
+	if file == null:
+		return "Cannot write the repertoire."
+	file.store_string(JSON.stringify({"version": 1, "colour": human_colour, "pgn": text}))
+	file.flush()
+	var status := file.get_error()
+	file.close()
+	if status != OK or DirAccess.rename_absolute(temporary, path) != OK:
+		DirAccess.remove_absolute(temporary)
+		return "Cannot save the repertoire."
+	tree = candidate.tree
+	lines = candidate.lines
+	colour = candidate.colour
+	return ""
+
+
+func load_saved(name: String) -> String:
+	if not Book._valid_name(name):
+		return "Invalid repertoire name."
+	var file := FileAccess.open(storage_dir.path_join(name + ".json"), FileAccess.READ)
+	if file == null:
+		return "Cannot read the repertoire."
+	var json := JSON.new()
+	if json.parse(file.get_as_text()) != OK:
+		return "The repertoire is not valid JSON."
+	var data = json.data
+	if not data is Dictionary or data.get("version") != 1 \
+			or not data.get("colour") is String or not data.get("pgn") is String:
+		return "Unknown repertoire format."
+	return parse(data.pgn, data.colour)
 
 
 # Validate every chapter before publishing any tree. Errors keep the previous repertoire.
