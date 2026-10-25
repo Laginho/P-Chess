@@ -24,7 +24,16 @@ var _board_style := {"light": ThemeLoader.BROWN_LIGHT, "dark": ThemeLoader.BROWN
 var game:
 	set(value):
 		game = value
-		queue_redraw()
+		# A new game (a rematch) keeps nothing held, sliding or promoting from the old one.
+		_end_slide()
+		if _snap:
+			_snap.kill()
+		_held_moves.clear()
+		_promoting = ""
+		# Null on a board built outside a scene.
+		if _picker and _picker.visible:
+			_picker._close("")
+		_end_snap_back()
 # Black at the bottom.
 var flipped := false:
 	set(value):
@@ -41,6 +50,7 @@ var _drag_pos := Vector2.ZERO:
 		_drag_pos = value
 		queue_redraw()
 var _snapping := false
+var _snap: Tween
 # The held piece's legal moves, UCI.
 var _held_moves := PackedStringArray()
 # The sliding piece's destination; "" when nothing slides.
@@ -201,9 +211,9 @@ func _drop(point: Vector2) -> void:
 		_commit(moves[0], false)
 	else:
 		_snapping = true
-		var tween := create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-		tween.tween_property(self, "_drag_pos", _centre(_drag_from), SNAP_BACK_SECONDS)
-		tween.tween_callback(_end_snap_back)
+		_snap = create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		_snap.tween_property(self, "_drag_pos", _centre(_drag_from), SNAP_BACK_SECONDS)
+		_snap.tween_callback(_end_snap_back)
 
 
 # The pawn waits on the promotion square; the picker covers the board until it is answered.
