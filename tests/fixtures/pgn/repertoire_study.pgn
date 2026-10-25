@@ -1,0 +1,11 @@
+[Event "Chapter one"]
+
+1. e4 {Main repertoire} e5 $1 (1... c5 {Sicilian} 2. Nf3 (2. Nc3) d6) 2. Nf3 Nc6 *
+
+[Event "Chapter two"]
+
+1. e4 e5 2. Nf3 Nf6!? *
+
+[Event "Duplicate prefix"]
+
+1. e4 e5 *

@@ -24,6 +24,25 @@ var _prefixes := {}
 var _numbers := RegEx.create_from_string(r"\d+\.+\s*")
 
 
+# A game's repertoire replaces catalog selections, using the same target/weight machinery.
+# Use a separate Book so the shared catalog remains available for history recognition.
+func load_repertoire(lines: Array, side: String) -> void:
+	entries = lines.duplicate(true)
+	errors.clear()
+	volume_counts.clear()
+	roots.clear()
+	nodes.clear()
+	_checked.clear()
+	_name_paths.clear()
+	_prefixes.clear()
+	_endings.clear()
+	_book_moves.clear()
+	target_id = ""
+	for entry in entries:
+		entry["colour"] = side
+		_checked[entry.id] = true
+
+
 func load_catalog(folder := "res://data/openings") -> void:
 	entries.clear()
 	errors.clear()
