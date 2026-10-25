@@ -22,6 +22,9 @@ func enqueue(board, move: String) -> bool:
 	var ghost = input_position(board)
 	if ghost == null or not move in ghost.legal_moves():
 		return false
+	# Repeated human turns can put the opposing king in reach of Board's move generator.
+	if ghost.piece_at(move.substr(2, 2)).to_lower() == "k":
+		return false
 	if style == "Lichess":
 		clear()
 	moves.append(move)
