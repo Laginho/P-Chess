@@ -6,6 +6,8 @@
 title = "Opening catalog"
 size = Vector2i(680, 540)
 exclusive = true
+transparent = false
+transparent_bg = false
 script = ExtResource("1")
 
 [node name="Margin" type="MarginContainer" parent="."]

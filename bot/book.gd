@@ -74,7 +74,10 @@ func load_tsv(text: String, source := "TSV") -> void:
 			moves.append(_prefixes[next].move)
 			positions.append(_prefixes[next].key)
 			prefix = next
-		if not valid or moves.is_empty():
+		if not valid:
+			continue
+		if moves.is_empty():
+			errors.append(where + ": no SAN moves")
 			continue
 		entries.append({"id": fields[0] + ":" + fields[2], "eco": fields[0],
 				"name": fields[1], "pgn": fields[2], "moves": moves, "positions": positions})
