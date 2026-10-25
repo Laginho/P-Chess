@@ -1,5 +1,5 @@
 # CLEAN-007: Consider the shared History cleanup in the remaining scene-test harnesses
-Stage: to-implement
+Stage: implementing
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -39,3 +39,4 @@ Each file gains `const HistoryStorage = preload("res://tests/history_storage.gd"
 - Proxy decided (opus): do it, low priority (not wontfix) — the owner's CLEAN-003 reason (the same fix had to be repeated across copies) applies to these two remaining identical copies.
 - Proxy decided (opus): Status ready-for-agent, Stage to-implement, Blocked by none, Review agent, Difficulty normal — scope and validation settled; CLEAN-003 done.
 - Disclosure: decision | none | test-only harness refactor; the Proxy decided lines above record the scope.
+- 2026-10-25 Stage 2: replaced only the two inline `tree_exiting` cleanup loops with the existing `HistoryStorage.clean(folder)` and matching preload. The same isolated roots are captured; missing-directory handling and child-first removal remain in the unchanged helper. All `_session` callers still use the same setup, injections and assertions. `tests/test_badges.gd`, `tests/test_book.gd`, fixtures, runner and production are unchanged. No new or red test, per the explicit test-only refactor exception above.

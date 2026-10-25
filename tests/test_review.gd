@@ -4,6 +4,7 @@ const Review = preload("res://ui/review.gd")
 const Game = preload("res://core/game.gd")
 const MainScene = preload("res://ui/main.tscn")
 const History = preload("res://core/history.gd")
+const HistoryStorage = preload("res://tests/history_storage.gd")
 const Clock = preload("res://core/clock.gd")
 const Pgn = preload("res://core/pgn.gd")
 const SETTINGS := {"colour": "w", "level": "maia-1500", "control": "3+2", "opening": "Free"}
@@ -32,12 +33,7 @@ func _session(time: FakeTime):
 	main.get_node("Setup").book.load_tsv("eco\tname\tpgn\nA00\tFixture\t1. h3\n")
 	var folder := "user://test_review_%d" % Time.get_ticks_usec()
 	main.history = History.new(folder)
-	main.tree_exiting.connect(func():
-		for subdir in [folder.path_join("games"), folder]:
-			if DirAccess.dir_exists_absolute(subdir):
-				for file in DirAccess.get_files_at(subdir):
-					DirAccess.remove_absolute(subdir.path_join(file))
-				DirAccess.remove_absolute(subdir))
+	main.tree_exiting.connect(func(): HistoryStorage.clean(folder))
 	main.uci.free()
 	main.uci = HeldEngine.new()
 	main.maia = main.MaiaPlayer.new(main.uci)
