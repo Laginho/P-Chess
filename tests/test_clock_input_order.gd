@@ -4,6 +4,7 @@ extends "res://tests/run.gd".Test
 # CLEAN-005: Maia's delayed reply, its think time completed explicitly.
 const MainScene = preload("res://ui/main.tscn")
 const Clock = preload("res://core/clock.gd")
+const HistoryStorage = preload("res://tests/history_storage.gd")
 const SETTINGS := {"colour": "b", "level": "maia-1700", "control": "3+2", "opening": "Free"}
 
 
@@ -50,12 +51,7 @@ func _session(time: FakeTime, waits := HeldWaits.new(), moves := ["f2f3", "e7e5"
 	main.get_node("Setup").book.load_tsv("eco\tname\tpgn\nA00\tFixture\t1. h3\n")
 	var folder := "user://test_clock_input_order_%d" % Time.get_ticks_usec()
 	main.history = main.History.new(folder)
-	main.tree_exiting.connect(func():
-		for subdir in [folder.path_join("games"), folder]:
-			if DirAccess.dir_exists_absolute(subdir):
-				for file in DirAccess.get_files_at(subdir):
-					DirAccess.remove_absolute(subdir.path_join(file))
-				DirAccess.remove_absolute(subdir))
+	main.tree_exiting.connect(func(): HistoryStorage.clean(folder))
 	main.uci.free()
 	main.uci = HeldEngine.new()
 	main.maia = main.MaiaPlayer.new(main.uci, waits.start)
