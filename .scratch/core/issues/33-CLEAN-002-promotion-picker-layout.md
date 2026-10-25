@@ -1,5 +1,5 @@
 # CLEAN-002: Keep an open promotion picker aligned on flip and resize
-Stage: to-implement
+Stage: implementing
 Status: ready-for-agent
 Blocked by: none
 Review: agent
