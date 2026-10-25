@@ -1,5 +1,5 @@
 # OPEN-001: Opening catalog picker
-Stage: implementing
+Stage: to-review
 Blocked by: UI-004
 Review: agent
 Difficulty: normal
@@ -55,7 +55,7 @@ The opening catalog from Lichess's TSVs as a searchable tree with checkboxes, an
 
 Acceptance: passed | full-catalog setup/picker scenario described above; bound gate 198/198 on `1ccbe622f0f2090c44474775a2cbbb9aa387b133`; visual layout inspected. Independent stage-3 review remains next.
 
-Gate evidence: C:\Users\Lage\AppData\Local\Temp\OPEN-001-final-gate.json
+Gate evidence: C:\Users\Lage\AppData\Local\Temp\OPEN-001-search-green-gate.json
 
 #### Resolution (2026-10-25)
 
@@ -89,3 +89,14 @@ Gate: the installed `Assert-GateEvidence` helper verified the existing receipt a
 
 Acceptance: pending | The recorded Sicilian/Najdorf real-scene scenario passes with 33 selected lines and the chosen setup name; general substring acceptance fails for original names as reproduced above.
 Disclosure: pending | integration | This Resolution, criterion 4: original-punctuation substring searches must pass regression tests and independent re-review before integration. The unresolved defect remains scheduled on this reopened ticket.
+
+#### Stage 2 re-review handoff (2026-10-25)
+
+- Corrected the criterion-4 finding on the preserved `OPEN-001-opening-catalog` branch. `Book` now maps original opening names to their existing terminal tree paths and includes those name matches in search results. The normalized tree paths, ancestor ordering, checkbox state and selection IDs remain unchanged. Matching stays case insensitive; normalized-path queries remain supported.
+- Test-only commit `8566c4e` adds a public-API regression for both reported names: Vienna's comma-before-colon name and Polish's comma-only name. It checks full names, punctuation-spanning mixed-case substrings, normalized-path compatibility, unrelated-branch exclusion and empty search. Authorized red run: **9 passed, 1 failed**, exit 1; only the new regression failed, on five original-punctuation queries. Log: `C:\Users\Lage\AppData\Local\Temp\OPEN-001-search-red-authorized.log`. A preliminary restricted run reproduced the same search failure but also denied existing `user://` persistence tests; its **5 passed, 5 failed** result is not the isolated red proof.
+- Production-only commit `24ba0df` repaired original-name matching. Its first full gate exposed removal of the empty-query guard (**195 passed, 4 failed**, including cascading picker failures). Production-only follow-up `ec26eac` restores the guard; the existing and new empty-search assertions catch this behavior. Failed gate log: `C:\Users\Lage\AppData\Local\Temp\OPEN-001-search-final-gate.log`.
+- Final bound gate ran through `gate-evidence.ps1` on clean committed tip `ec26eacdb160fdfd9e09b7cf8b58cd1d3fc8beba`: `godot --headless -s tests/run.gd` -> **199 passed, 0 failed**, exit 0, including all ten catalog tests and the real picker/setup tests. No SKIP lines. Log: `C:\Users\Lage\AppData\Local\Temp\OPEN-001-search-green-gate.log`; SHA-256 `747A6805554B9989375AA7D8A224DC6560C7152E8E4F03A690CCBCB976996023`. The current Gate evidence line points to its receipt.
+- Final diff and `git diff --check` pass; tests and production changes remain in separate commits and within Primary files. Only this tracker handoff follows tested production. No contract changes, proxy decisions or new dependencies. This correction changes no visual layout; manual mouse/keyboard acceptance was not repeated. The previous full-catalog Sicilian/Najdorf scenario remains recorded above.
+
+Acceptance: passed | The original-punctuation regression and all 199 tests pass on `ec26eac`; prior real-scene Sicilian/Najdorf acceptance remains recorded above. Independent stage-3 re-review is next.
+Disclosure: pending | integration | Criterion-4 correction in `24ba0df` and `ec26eac` has red/green evidence; independent stage-3 re-review must confirm the repair before session integration.
