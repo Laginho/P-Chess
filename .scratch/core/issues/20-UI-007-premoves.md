@@ -1,5 +1,5 @@
 # UI-007: Premoves
-Stage: implementing
+Stage: to-review
 Blocked by: UI-005
 Review: agent
 Difficulty: hard
@@ -71,7 +71,7 @@ Focused command: `godot --headless --log-file build/ui007-tests.log -s tests/run
 
 Full bound gate through `gate-evidence.ps1`, on committed clean code `e6d776b`: `godot --headless -s tests/run.gd` → **169 passed, 0 failed**, exit 0. Final diff and every commit's file separation checked. Log: `C:\Users\Lage\AppData\Local\Temp\UI-007-stage2-gate.log`.
 
-Gate evidence: C:\Users\Lage\AppData\Local\Temp\UI-007-stage2-gate.json
+Gate evidence: C:\Users\Lage\AppData\Local\Temp\UI-007-stage2-king-capture-gate.json
 
 Acceptance: pending | The automated 1+0 scene scenario queues three moves, executes one, then drops the remaining queue after Maia captures the pawn required by the next move (`test_main_queues_human_moves_and_executes_one_per_maia_reply`). A person has not yet played the manual Verification game or checked the ghost rendering and premove audio.
 Disclosure: pending | release | Manual visual/audio acceptance remains as described above; headless tests validate input, move order, signals, settings, clock boundaries and promotion interruption, but do not judge appearance or sound quality.
@@ -119,3 +119,26 @@ Disclosure: pending | release | Manual visual/audio acceptance remains pending a
 #### Stage 2 reopen work (2026-10-25)
 
 The remaining scope is the criterion-2 king-capture finding. The confirmed test seam remains the public PremoveQueue API in `tests/test_premove.gd`, backed by the real Game/Board. Before the red test, inspected `enqueue` (BoardView `_submit`), `input_position` (BoardView `_pick_up` through `_input_position`), `position` (BoardView `_draw` and queue projection), and `take` (Main's due-move execution). Repeated human turns can offer opposing-king captures through Board.legal_moves; rejecting an append must preserve the accepted prefix, both kings, and the live position/history. Both colours are covered. Due-move validation on the live board remains in scope for regression checks.
+
+#### Stage 2 re-review handoff (2026-10-25)
+
+The criterion-2 finding is corrected on the preserved `UI-007` branch. Production tip: `e9c1b1667ddc7ab694b7ff765afc13bb9f301742`.
+
+- `enqueue` rejects moves onto either king before changing the queue. The regression reproduces the original White sequence and its Black counterpart, preserving the accepted prefix, both kings, and the live position/history.
+- `position` applies the same restriction when replaying queued moves on an updated board. If Maia's king has moved onto a later queued destination, the preview returns null rather than rendering a captured king. Projection leaves the queue intact; `take` still validates each due move on the live board, with its existing illegal-tail behavior unchanged.
+- Production changes are limited to four added/changed lines in `ui/premove_queue.gd`; the two regressions are in the confirmed `tests/test_premove.gd` seam. No other production files, contract changes, or new proxy decisions.
+
+Red/green evidence, with each test committed before its separate production fix:
+
+| Test commit | Red result / reason | Production commit | Focused green |
+|---|---|---|---|
+| `cbbc577` | 17 passed, 1 failed: White and Black ghost queues accept opposing-king captures, change the accepted prefix and remove a king | `8427406` | 18 passed, 0 failed |
+| `97164d6` | 18 passed, 1 failed: reprojection after `c4b3` returns a board without the black king instead of null | `e9c1b16` | 19 passed, 0 failed |
+
+Focused runs used `godot --headless --log-file build/<cycle>.log -s tests/run.gd -- build/ui007-tests` with an ignored copy of the current test file, as in the original implementation. They required filesystem access to Godot's test `user://` storage; a preliminary sandboxed run also failed the existing settings test for denied writes. The red counts above come from runs with that access, where only the intended regression failed.
+
+The bound gate ran once through `gate-evidence.ps1` on committed, clean production tip `e9c1b16`: `godot --headless -s tests/run.gd` → **171 passed, 0 failed**, exit 0. It used the original test files. Log: `C:\Users\Lage\AppData\Local\Temp\UI-007-stage2-king-capture-gate.log`; receipt is the current Gate evidence line above. Final diff, test/production commit separation and `git diff --check` checked. Only this tracker handoff follows the tested code.
+
+Acceptance: pending | Automated regressions and the full gate pass. Independent stage-3 re-review of the criterion-2 repair remains; the original manual 1+0 game, ghost appearance and premove audio checks have not been performed.
+Disclosure: pending | integration | The reopened criterion-2 finding now has a tested correction in `8427406` and `e9c1b16`; independent stage-3 review must confirm it before session integration.
+Disclosure: pending | release | The original manual visual/audio acceptance remains pending; this scoped repair does not assess rendering or sound quality.
