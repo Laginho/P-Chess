@@ -1,5 +1,5 @@
 # OPEN-001: Opening catalog picker
-Stage: to-review
+Stage: to-implement
 Blocked by: UI-004
 Review: agent
 Difficulty: normal
@@ -54,3 +54,36 @@ The opening catalog from Lichess's TSVs as a searchable tree with checkboxes, an
 Acceptance: passed | full-catalog setup/picker scenario described above; bound gate 198/198 on `1ccbe622f0f2090c44474775a2cbbb9aa387b133`; visual layout inspected. Independent stage-3 review remains next.
 
 Gate evidence: C:\Users\Lage\AppData\Local\Temp\OPEN-001-final-gate.json
+
+#### Resolution (2026-10-25)
+
+Verdict: Reopen — criterion 4 misses substrings of committed opening names after tree-path normalization.
+
+Independent Standards and Spec sub-agents reviewed `4b9fdebcbecad17b0c3becdb88bccd8d2788731b...41d9b06`, the full ticket and the opening/setup sections of `docs/spec.md`. This review authored no production or test changes. The ticket branch remains `OPEN-001-opening-catalog`; it has not been merged into `sweatshop/core/2026-10-25-0159`. No ledger line exists to remove.
+
+##### Standards
+
+No hard documented-standard violations or baseline smells worth flagging. Every commit stat preserves separate test-only and production-only changes; ticket metadata is the only additional scope. Source, scenes, data, attribution and tests stay within Primary files. The tests call production APIs and real scenes. Catalog dictionaries and check states fit the approved seam without additional abstractions.
+
+##### Spec
+
+1. ✅ All five TSV files are committed, and `docs/THIRD_PARTY.md` identifies upstream commit `a6189a30dc273ccb21fc2536a9a2fefd5592a67a` and CC0. The pinned upstream README and COPYING agree with the attribution.
+2. ✅ The production loader and test cover all 3,865 rows, with exact per-volume counts and unique selection IDs. All committed rows have nonempty fields.
+3. ✅ The documented Family → Variation → Sub-variation pattern forms a tree, with shared name nodes retaining transposed entries.
+4. ❌ **P2: substring search loses original punctuation.** `bot/book.gd:88` replaces every colon-space with comma-space; line 91 then reconstructs paths with a colon after the first label. Line 107 searches only those reconstructed paths. The committed row at `data/openings/c.tsv:306`, `Vienna Gambit, with Max Lange Defense: Cunningham Defense`, loads without errors but becomes `Vienna Gambit: with Max Lange Defense, Cunningham Defense`. Both the original full-name query and its literal substring `Max Lange Defense: Cunningham` return `[]`; `Cunningham` finds the row. Comma-only names are affected too: `Polish Opening, with d5` becomes `Polish Opening: with d5`, and its original full-name query returns `[]`. Forty-six committed rows have a comma before any colon, including comma-only names. Search must retain case-insensitive matching of the original names while keeping matching nodes and ancestors visible. Add regressions for both punctuation patterns in the already-approved `tests/test_catalog.gd` seam before repairing production code.
+5. ✅ Checks include hidden descendants and a family's own row; ancestors show partial state. Real Tree checkbox editing is covered.
+6. ✅ Named selections round-trip, replace existing saves and support empty selections. Unsafe names and corrupt/missing selections fail without losing current checks. Setup lists new saves immediately, passes the selected name for Catalog, preserves Free settings and blocks Catalog Start when no selection exists.
+7. ✅ The loader calls the existing SAN parser, records start/intermediate/final position keys, reports invalid SAN or move-number-only rows and retains valid neighbours.
+
+Standards: 0 findings. Spec: 1 P2 finding, criterion 4. No other missing requirement, incorrect implementation or material scope creep was found. Book weighting and repertoire import remain assigned to OPEN-002/003. No proxy decision or contract amendment was made in this review.
+
+Examined: the full production/test/scene diff and every commit stat; all data-row shapes and IDs; Book's loader, prefix cache, tree/check/search and persistence paths; real picker controls, worker ownership/join and shutdown; Setup's started/settings signal, Main's start/rematch/setup callers and Free compatibility; Board's SAN/copy/position-key APIs; filtered check propagation, duplicate name paths, empty selections, malformed SAN and JSON, unsafe filenames and missing selection files. Not experimentally examined: actual mouse/keyboard interaction, minimum-size layout, exported builds, live Lc0, worker-start failure or disk-full/permission failures. The existing 1280×800 screenshot was inspected and the recorded full-catalog acceptance script/log were checked.
+
+Reproduction: `C:\Users\Lage\AppData\Local\Temp\OPEN-001-spec-search.gd` calls the production `load_tsv` and `search` methods with the exact committed Vienna and Polish rows. `C:\Users\Lage\AppData\Local\Temp\OPEN-001-spec-search.log` records successful loading, the normalized paths, both failed Vienna queries, the successful simple query and the failed Polish full-name query. Godot also logs restricted root-certificate-store access; the production calls complete with no catalog errors, so that environment warning does not explain the search results.
+
+Red/green: inspected the five retained red logs and the committed test/production separation. Missing loader: **189 passed, 1 failed**. Missing tree/check API: **2 passed, 2 failed**. Missing persistence: **4 passed, 2 failed**. Missing picker/setup integration: **6 passed, 3 failed**. Unreported move-number-only row: **8 passed, 1 failed**. The final gate is green, but these tests do not cover the original-punctuation queries above; stage 2 must add that regression in its own red test commit.
+
+Gate: the installed `Assert-GateEvidence` helper verified the existing receipt against reviewed HEAD. Command `godot --headless -s tests/run.gd`, tested commit `1ccbe622f0f2090c44474775a2cbbb9aa387b133`, **198 passed, 0 failed**, exit 0. Log SHA-256 `820586DC89C525FA8841DE4ACB2910CB711F6AE69EC6EC2BCD765E0776ECB4B6` and exit marker match; only permitted ticket metadata differs from tested code. No full-gate repeat was needed. `git diff --check` passes.
+
+Acceptance: pending | The recorded Sicilian/Najdorf real-scene scenario passes with 33 selected lines and the chosen setup name; general substring acceptance fails for original names as reproduced above.
+Disclosure: pending | integration | This Resolution, criterion 4: original-punctuation substring searches must pass regression tests and independent re-review before integration. The unresolved defect remains scheduled on this reopened ticket.
