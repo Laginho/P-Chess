@@ -158,6 +158,9 @@ func _start(new_settings: Dictionary) -> void:
 		label.text = ""
 	claim_draw.disabled = true
 	clock = Clock.new(settings.control, Time.get_ticks_msec)
+	maia.clock = clock
+	maia.control = settings.control
+	maia.level = settings.level
 	clock.flagged.connect(_on_flagged)
 	clock.low_time.connect(func(side: String) -> void:
 		if side == human:
@@ -250,7 +253,7 @@ func _show_result() -> void:
 	claim_draw.disabled = true
 	result_label.text = "%s by %s (%s)\nSpace for a rematch" % [WINNERS[game.result], game.reason, game.result]
 	sound_player.play("game_end")
-	print("Maia: median %.1f ms from your move to its move, over %d moves"
+	print("Maia: median %.1f ms from your move to Lc0's answer, over %d moves"
 			% [maia.median_ms(), maia.latencies_ms.size()])
 
 
