@@ -1,5 +1,5 @@
 # CLOCK-002: A move dropped after the time ran out
-Stage: to-review
+Stage: done
 Blocked by: CLOCK-001
 Review: agent
 Difficulty: normal
@@ -54,3 +54,29 @@ When the human's time runs out, a piece they drop in that same frame is not play
 Gate evidence: C:\Users\Lage\AppData\Local\Temp\CLOCK-002-core-gate.json
 
 Acceptance: passed | numbered criteria 1–3 exercised through real Main and viewport input in `tests/test_clock_input_order.gd`; full gate 235/235 on `63345fc`.
+
+#### Resolution (2026-10-25)
+Verdict: Approve
+
+##### Standards
+
+No documented-standard breaches or meaningful baseline smells found. The production change stays within `ui/main.gd` and explains the input-order requirement. Tests cover the regression and threshold boundaries through real viewport delivery using established scene-fixture conventions. Commit separation and changed-file scope match the ticket-flow constraints. Independent axis: `standards_review`.
+
+##### Spec
+
+No missing requirements, scope creep or incorrect implementation found. Independent axis: `spec_review`.
+
+1. ✅ `Main._input` ticks before GUI delivery. The late mating-drop test verifies a time loss on the pre-drop position, unchanged position/history/SAN, no move signal or move sound, and cleared held-piece state. Later ticks and input do not repeat the flag.
+2. ✅ The 3+2 test crosses from 10.001 s to 10 s on the drop, verifies `low_time` before `move`, the increment to 12 s, and no repeated warning at a second threshold crossing.
+3. ✅ The same mating drop with 1 ms left commits exactly once, updates SAN, emits the expected sounds and earns the increment. Setup with no clock and untimed first moves remain available.
+
+- Review scope: all four ticket commits and their full diffs; Main's global/frame/key input, setup/start/rematch, flag/result/move handlers and clock wiring; BoardView's GUI delivery, cancellation, promotion, submit/commit and programmatic play; `Clock.tick`, `moved`, `stop` and warning/flag idempotence; `Game.flag` and its pre-move material rule; premove charging and Maia's delayed programmatic reply. Boundary cases examined: no clock, untimed/stopped clocks, exactly zero, 1 ms remaining and repeated low-time crossings. No windowed, exported-build or physical-audio check was performed.
+- Files: `ui/main.gd` adds only the pre-GUI tick; `tests/test_clock_input_order.gd` adds four real-Main viewport tests. No production or test changes were authored in stage 3.
+- Test-first evidence checked: `c46c44c` changes tests/tracker only (red log: **231 passed, 1 failed**, late `Qh4#` incorrectly stood); `169364a` changes production only (focused green: **1 passed, 0 failed**, recorded at handoff); `63345fc` strengthens tests only plus tracker metadata (focused green: **4 passed, 0 failed**; wrong-order `_unhandled_input` mutation log: **1 passed, 3 failed**, restored). `98852bd` is tracker-only handoff. No test/production mixed commit.
+- Gate evidence reused: bound command `godot --headless -s tests/run.gd`, tested commit `63345fc182c3f7b3a91fb1e2a10d6be38b44d389`, **235 passed, 0 failed**, exit 0. The receipt's command, commit, exit status and log SHA256 were checked using `Assert-GateEvidence`; the log contains all four new tests passing and no FAIL/script-error records. SHA256: `73A0A9F7B62B539F4187D40A590C9056A3249D393AB15A82280E369E1220D787`. Production/tests remain identical after the no-op rebase and local session merge. The unchanged gate was not rerun.
+- Both axes: **0 findings**. Final scope/whitespace checks passed. Integrated locally into `sweatshop/core/2026-10-25-0159` without squash; the ledger points to the merge commit. No PR or push in this session flow.
+- Inherited notes remain open elsewhere before this ticket closes: Maia's late programmatic move goes to [CLEAN-005](36-CLEAN-005-maia-move-after-flag.md); UI-004's additional real-Main promotion/held-piece/snap-back lifecycle coverage goes to [CLEAN-006](37-CLEAN-006-main-rematch-lifecycle-tests.md). These were comments, not numbered CLOCK-002 requirements. No deferral was accepted on the human's behalf.
+
+Disclosure: pending | release | [CLEAN-005](36-CLEAN-005-maia-move-after-flag.md) retains BOT-005/CLOCK-001's known Maia-at-zero race. This human-input fix does not tick before `_on_maia_move`; a delayed programmatic move can still land before the frame tick. Stage-1 scope/criteria approval and a fix remain required; no accepted deferral.
+
+Disclosure: pending | none | [CLEAN-006](37-CLEAN-006-main-rematch-lifecycle-tests.md) retains UI-004's owed committed real-Main rematch/promotion/held-piece/snap-back coverage. Prior review probes and BoardView tests are evidence, but these lifecycle tests were not added by CLOCK-002.
