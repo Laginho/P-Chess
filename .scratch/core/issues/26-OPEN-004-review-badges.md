@@ -1,5 +1,5 @@
 # OPEN-004: Review badges and repertoire check
-Stage: implementing
+Stage: to-review
 Blocked by: HIST-002, OPEN-003
 Review: agent
 Difficulty: normal
@@ -43,3 +43,22 @@ Disclosure: decision | none | OPEN-004 proxy scope and badge clarification: pres
 - Repertoire fixture correction: the transposition fixture originally did not cover the intermediate black Nf6, so it required a valid earlier exit. Extend that fixture chapter through Nf6; Bg7 still requires matching the other chapter by position. The corrected tests are red against the Book-only implementation and green with repertoire evaluation.
 
 - Stage 2 caller inspection: `ui/main.gd` is the caller of `review.present` and owns game start, rematches, settings and the setup catalog/repertoire. Existing review/export/time and setup colour/error behavior must remain intact. The new pure seam takes UCI moves and book paths; boundaries include empty games/books, unchecked lines, first exit and later transpositions back into the catalog. Tests live in `tests/test_badges.gd` as contracted.
+
+#### Stage 2 handoff (2026-10-25)
+
+- Implementation: pure `Badges.evaluate` indexes every catalog/repertoire position and returns one badge record per ply. Book stops permanently at the first catalog exit. Only actual human moves receive repertoire badges, ending at the sole human exit with distinct expected SAN moves or explicit no-continuation text.
+- Integration: the default-off boolean is persisted and editable; Setup supplies a repertoire in all modes while only My repertoire fixes the initial colour. Main snapshots the selected PGN before play, preserves Maia's mode/history catalog, uses the live check preference at review and rejects required load failures before starting the game. Rematches check the actual swapped human side.
+- Red/green cycles, with separate test-only and production-only commits:
+  - `6738d1f` against the missing module: 0 passed, 1 failed; `9ea630d`: 1 passed, 0 failed.
+  - Corrected fixture `48b0e44` against Book-only `9ea630d`: 1 passed, 3 failed; `7dfbf89`: 4 passed, 0 failed.
+  - `4ae7498`: 4 passed, 2 failed; `6247ef9`: 6 passed, 0 failed.
+  - `4d015e1`: 6 passed, 4 failed; `cf5a29a`: 10 passed, 0 failed.
+  - `0c2ef20`: 10 passed, 1 failed; `430edbe`: 11 passed, 0 failed.
+- Focused runs used an ignored copy of `tests/test_badges.gd` under `build/open004-tests`, because the existing runner selects directories. The full gate exercised the tracked test file. Local focused logs: `C:\Users\Lage\AppData\Local\Temp\OPEN-004-focused-{red,green}*.log`.
+- Gate on committed production `430edbe47b154659aa067f67d644fd098c109397`: `godot --headless -s tests/run.gd` → **229 passed, 0 failed**, exit 0. Existing review/time/export, repertoire/import, opening modes, history, settings and all other suites pass. The initial unprivileged full attempt was stopped after sandbox-denied user-storage writes; the evidenced run had the required storage access.
+- Visual verification: rendered Settings and Review at the 800×600 minimum size. All settings and action buttons remain inside the window. The badge column can truncate long text; the new wrapping exit detail line shows the complete expected moves without hovering and clears on rematch. Scripted production-review fixture `1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. c3 Nf6 5. d4` against a PGN ending in `5. d3` displays Repertoire through move 4 and `5. White: Left repertoire — expected: d3`. Local captures: `build/open004-settings.png`, `build/open004-review-move5.png` (ignored verification artifacts).
+- Final scope/whitespace inspection passed; no generated artifacts are tracked. No known unresolved implementation defect. Independent stage-3 review remains next; no merge or push performed.
+
+Acceptance: passed | `tests/test_badges.gd` (11 pure/UI/session tests) and the rendered move-5 production-review fixture described above; no real-engine play-through claimed.
+
+Gate evidence: C:\Users\Lage\AppData\Local\Temp\p-chess-OPEN-004\gate.json
