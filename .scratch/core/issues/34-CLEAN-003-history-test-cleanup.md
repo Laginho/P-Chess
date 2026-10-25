@@ -1,5 +1,5 @@
 # CLEAN-003: Consider shared cleanup for isolated history tests
-Stage: to-implement
+Stage: implementing
 Status: ready-for-agent
 Blocked by: none
 Review: agent

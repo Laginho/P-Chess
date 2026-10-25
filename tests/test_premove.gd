@@ -6,6 +6,7 @@ const Clock = preload("res://core/clock.gd")
 const MainScene = preload("res://ui/main.tscn")
 const BoardScene = preload("res://ui/board_view.tscn")
 const Settings = preload("res://core/settings.gd")
+const HistoryStorage = preload("res://tests/history_storage.gd")
 const SETTINGS_PATH := "user://test_ui007_settings.cfg"
 
 
@@ -35,12 +36,7 @@ func _session(time: FakeTime, colour := "w", control := "1+0", preferences = nul
 	main.get_node("Setup").book.load_tsv("eco\tname\tpgn\nA00\tFixture\t1. h3\n")
 	var folder := "user://test_premove_history_%d" % Time.get_ticks_usec()
 	main.history = load("res://core/history.gd").new(folder)
-	main.tree_exiting.connect(func():
-		for subdir in [folder.path_join("games"), folder]:
-			if DirAccess.dir_exists_absolute(subdir):
-				for file in DirAccess.get_files_at(subdir):
-					DirAccess.remove_absolute(subdir.path_join(file))
-				DirAccess.remove_absolute(subdir))
+	main.tree_exiting.connect(func(): HistoryStorage.clean(folder))
 	# Callable keeps a weak reference; keep temporary fake clocks alive with their scene.
 	main.set_meta("test_time", time)
 	main.uci.free()
