@@ -6,6 +6,7 @@ const BoardScene = preload("res://ui/board_view.tscn")
 const Game = preload("res://core/game.gd")
 const Settings = preload("res://core/settings.gd")
 const MainScene = preload("res://ui/main.tscn")
+const History = preload("res://core/history.gd")
 const PROMOTION := "4k3/P7/8/8/8/8/8/4K3 w - - 0 1"
 const SETTINGS_PATH := "user://test_ui006_settings.cfg"
 
@@ -263,12 +264,24 @@ func test_settings_screen_changes_reach_the_board_and_survive_reload():
 	var preferences = Settings.new(SETTINGS_PATH)
 	preferences.set_value("click_click", true)
 	preferences.set_value("auto_queen", "on")
+	var history_folder := "user://test_input_modes_history_%d" % Time.get_ticks_usec()
+	var isolated_history = History.new(history_folder)
 	var main = MainScene.instantiate()
 	main.uci.free()
 	main.uci = NoEngine.new()
 	main.maia = main.MaiaPlayer.new(main.uci)
 	main.preferences = preferences
+	# Fail before _ready can open the player's history if this harness loses its injection.
+	assert_eq(main.history, isolated_history, "history is isolated before Main enters the tree")
+	if main.history != isolated_history:
+		main.uci.free()
+		main.sound_player.free()
+		main.settings_screen.free()
+		main.free()
+		DirAccess.remove_absolute(SETTINGS_PATH)
+		return
 	Engine.get_main_loop().root.add_child(main)
+	assert_eq(main.history, isolated_history, "startup retains the isolated History")
 	assert_eq(main.board_view.click_click, true, "stored values apply on startup")
 	assert_eq(main.board_view.auto_queen, "on")
 	var form = main.settings_screen.get_node("Panel/Center/Box/Form")

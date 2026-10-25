@@ -1,5 +1,5 @@
 # HIST-001: Game history and stats
-Stage: to-implement
+Stage: implementing
 Blocked by: CORE-006, UI-004
 Review: agent
 Difficulty: normal
@@ -11,6 +11,7 @@ Difficulty: normal
   - New: tests/test_history.gd
   - tests/test_session.gd (only isolated History injection in the session harness and necessary test-directory lifecycle; preserve existing behavior assertions)
   - tests/test_premove.gd (only isolated History injection in the session harness and necessary test-directory lifecycle; preserve existing behavior assertions)
+  - tests/test_input_modes.gd (only isolated History injection before Main enters the tree in test_settings_screen_changes_reach_the_board_and_survive_reload, necessary test-directory lifecycle, and a startup assertion retaining that injected History; preserve all existing settings assertions)
 
 #### What to build
 
@@ -33,11 +34,17 @@ Every finished game is saved as PGN with clocks, and per-level stats are kept (�
 
 ## Tests stage 2 writes (own commit, red)
 
+- `tests/test_input_modes.gd`: construct real History with a unique isolated test-storage root and assign it before adding Main to the tree. Assert after startup that Main retains that same History instance; clean up only the owned test storage. Preserve every existing settings assertion. This repairs the existing Main integration harness for criterion 7 and adds no new production seam.
 - `tests/test_history.gd`, History persistence seam: save a finished game to isolated test storage and parse it back; verify moves, clocks and headers; verify persisted stats after a flag win and a draw, and failed-write reporting. Red because `core/history.gd` does not exist.
 - `tests/test_history.gd`, Main session integration seam: instantiate the real `ui/main.tscn` using the existing session-test pattern, replacing only the external UCI/timer boundary, injecting a fake time source into the real Clock and an isolated History store. Exercise flag, resignation, checkmate and draw through their Main paths; inspect saved PGNs and stats to verify one save/update, per-move clocks including final moves, applicable increments and premoves, fresh state after rematch, and a visible result-UI error on write failure. Red because Main does not yet persist finished games or capture move clocks.
 - `tests/test_session.gd` and `tests/test_premove.gd`: isolate History storage in their session helpers before Main can access normal history storage, with necessary test-directory lifecycle only. Keep existing behavior assertions unchanged; these are harness adaptations, not new behavior seams.
 
 ## Comments
+
+- Proxy decided (gpt-6-astra high, fallback): Approve isolated History injection, necessary storage lifecycle and a startup identity assertion in test_input_modes.gd, preserving its settings assertions — this closes the omitted Main harness under existing criterion 7 without production changes or another seam.
+- Reopened stage-2 read-around: the settings test is the only remaining real-Main caller without isolated History; History reads stats in its constructor and Main constructs the default only when history is null. The repair changes the test harness only. A pre-tree identity guard must fail closed before Main can load normal history, and the startup assertion must verify Main retains the injected instance. Existing settings assertions remain unchanged.
+
+Disclosure: decision | none | HIST-001 proxy amendment: narrowly authorizes the omitted settings-test harness repair; no added integration or release dependency.
 
 - Proxy decided (gpt-6-astra high, fallback): Approve isolated History harnesses in test_session.gd and test_premove.gd plus the real-Main history integration seam — existing scene tests finish games, and persistence-only tests cannot verify clock capture, save-once behavior or visible write failures. Contract amendments above are the proxy's draft; no additional product scope or release dependency.
 - Read-around before red: Main's `_show_result` is reached from claim, resignation, terminal moves and clock flags. `_on_move_played` is called synchronously by BoardView for human, Maia and premoves; `_next_turn` charges premoves before playing them. Clock flags may re-enter result handling during move accounting. Preserve terminal-move precedence, capture the last move before saving, and reset state on rematch. Degenerate cases: no moves before resignation/flag, a first untimed move, final moves, repeated result handling, and failed PGN/stats writes. PGN's existing writer/reader already support exact millisecond clocks and need no change.
