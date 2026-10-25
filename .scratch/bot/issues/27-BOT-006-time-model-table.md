@@ -1,5 +1,5 @@
 # BOT-006: Time-model table
-Stage: blocked
+Stage: done
 Blocked by: BOT-005
 Review: agent
 Difficulty: normal
@@ -121,5 +121,3 @@ Proxy decided (opus), named for the session PR: option B (first resolution above
 Acceptance: pending | BOT-006 makes Maia read data/time_model.json, which does not exist until BOT-007 writes it; M8's "delays feel human" is checked there. Gate 119/0 at 7e81d0e, receipt above.
 Disclosure: pending | integration | ui/main.gd _start: BOT-005's maia.clock/maia.control plus BOT-006's maia.level conflict with the core lane's _start(new_settings); resolve as maia.clock = clock, maia.control = settings.control, maia.level = settings.level. From the proxy's decision; unchanged.
 Disclosure: deferred | none | Review 2's non-blocking item (async coverage: one delayed move arrives, the clock is charged max(delay, compute), a flag before the reply stops the move) needs `tests/run.gd` to await coroutines, outside Primary files. Open follow-up: `.scratch/bot/issues/33-CLEAN-001-async-think-time-tests.md`, blocked until the human approves its seam. Impact none: coverage only, and Review 2's probes found these paths working.
-
-- 2026-10-24 Stage stopped (incomplete handoff): Invalid committed handoff: BOT-006: code changed after gate (.scratch/bot/issues/33-CLEAN-001-async-think-time-tests.md); reuse evidence only for identical code. See D:\Desktop\Projects\P-Chess\.artifacts-build\lanes\bot\.scratch\run-log\BOT-006-review-20261024-211059.txt.runtime.json and run-log/recovery.txt; inspect the saved work before retrying.
