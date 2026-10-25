@@ -5,6 +5,12 @@ const Clock = preload("res://core/clock.gd")
 const Pgn = preload("res://core/pgn.gd")
 const Board = preload("res://core/board.gd")
 
+# System boundaries stay replaceable for headless tests.
+var copy_text: Callable = DisplayServer.clipboard_set
+var open_browser: Callable = OS.shell_open
+var _pgn := ""
+var _url := ""
+
 @onready var _result: Label = $Margin/Content/Result
 @onready var _moves: Tree = $Margin/Content/Moves
 
@@ -15,6 +21,8 @@ func _ready() -> void:
 	_moves.set_column_title(2, "Black · time spent")
 	_moves.set_column_expand(0, false)
 	_moves.set_column_custom_minimum_width(0, 60)
+	$Margin/Content/Actions/CopyPgn.pressed.connect(func(): copy_text.call(_pgn))
+	$Margin/Content/Actions/Lichess.pressed.connect(func(): open_browser.call(_url))
 
 
 func present(game, clocks: Array, settings: Dictionary, result_text: String) -> void:
@@ -30,6 +38,8 @@ func present(game, clocks: Array, settings: Dictionary, result_text: String) -> 
 			row.set_text(0, "%d." % (i / 2 + 1))
 		row.set_text(i % 2 + 1, "%s (%.3f s)" % [board.san(game.moves[i]), times[i] / 1000.0])
 		board.make_move(game.moves[i])
+	_pgn = _game_pgn(game, clocks, settings)
+	_url = lichess_url(game)
 	show()
 
 
@@ -52,3 +62,19 @@ static func lichess_url(game) -> String:
 		moves.append({"uci": move})
 	var text := Pgn.write({"headers": {}, "moves": moves, "result": game.result}).strip_edges()
 	return "https://lichess.org/analysis/pgn/" + text.uri_encode()
+
+
+static func _game_pgn(game, clocks: Array, settings: Dictionary) -> String:
+	var maia_name: String = "Maia " + settings.level.trim_prefix("maia-")
+	var control: Array = Clock.CONTROLS[settings.control]
+	var headers := {
+		"White": "You" if settings.colour == "w" else maia_name,
+		"Black": maia_name if settings.colour == "w" else "You",
+		"TimeControl": "%d+%d" % [control[0] / 1000, control[1] / 1000],
+		"Result": game.result,
+		"Termination": "Time forfeit" if game.reason == "time" else "Normal",
+	}
+	var moves := []
+	for i in game.moves.size():
+		moves.append({"uci": game.moves[i], "clock_ms": clocks[i]})
+	return Pgn.write({"headers": headers, "moves": moves, "result": game.result})
