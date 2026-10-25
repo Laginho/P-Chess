@@ -2,6 +2,14 @@ extends "res://tests/run.gd".Test
 
 const PremoveQueue = preload("res://ui/premove_queue.gd")
 const Game = preload("res://core/game.gd")
+const Clock = preload("res://core/clock.gd")
+
+
+class FakeTime:
+	var now := 0
+
+	func ms() -> int:
+		return now
 
 
 func test_queued_moves_use_the_ghost_position_without_changing_the_game():
@@ -43,6 +51,52 @@ func test_styles_default_to_chess_com_and_lichess_replaces_from_the_live_positio
 	assert_eq(queue.moves, PackedStringArray(["g1f3"]), "changing style keeps at most one")
 	queue.clear()
 	assert_eq(queue.moves, PackedStringArray())
+
+
+func test_premove_costs_exactly_100_ms_and_adds_the_usual_increment():
+	var time := FakeTime.new()
+	var clock = Clock.new("3+2", time.ms)
+	clock.moved("w")
+	clock.moved("b")
+	time.now += 7
+	clock.moved("w", true)
+	assert_eq(clock.left("w"), 181900, "fixed cost, independent of frame/animation time")
+	time.now += 500
+	assert_eq(clock.left("w"), 181900, "human clock stops")
+	assert_eq(clock.left("b"), 179500, "opponent clock starts")
+	clock.moved("b")
+	assert_eq(clock.left("b"), 181500, "ordinary moves still use elapsed time")
+
+
+func test_first_move_premove_still_costs_100_ms_without_first_move_increment():
+	var time := FakeTime.new()
+	var clock = Clock.new("3+2", time.ms)
+	clock.moved("w")
+	clock.moved("b", true)
+	assert_eq(clock.left("b"), 179900)
+	assert_eq(clock.left("w"), 180000)
+	time.now += 200
+	assert_eq(clock.left("w"), 179800)
+
+
+func test_premove_cannot_be_saved_from_flag_by_the_increment():
+	for remaining in [0, 50, 100, 101]:
+		var time := FakeTime.new()
+		var clock = Clock.new("3+2", time.ms)
+		clock.moved("w")
+		clock.moved("b")
+		time.now += 180000 - remaining
+		clock.moved("w")
+		clock.moved("b")
+		# White has its increment but then spends it on an ordinary move.
+		time.now += 2000
+		clock.stop()
+		clock.moved("b")
+		var flags := []
+		clock.flagged.connect(func(side): flags.append(side))
+		clock.moved("w", true)
+		assert_eq(flags, ["w"] if remaining <= 100 else [], "remaining=%d" % remaining)
+		assert_eq(clock.left("w"), 0 if remaining <= 100 else 2001)
 
 
 func test_one_premove_per_reply_and_an_illegal_premove_drops_the_tail():
