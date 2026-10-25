@@ -316,7 +316,11 @@ func _set_focus(on: bool) -> void:
 		node.visible = not on
 
 
+# Like _input: Maia's think-time timer can fire after its clock hit zero but before the next
+# frame tick, and the flag must precede the move.
 func _on_maia_move(move: String) -> void:
+	if clock:
+		clock.tick()
 	board_view.play(move)
 
 
