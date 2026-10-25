@@ -61,7 +61,7 @@ func position(board):
 	var ghost = board.copy()
 	for move in moves:
 		_human_turn(ghost)
-		if not move in ghost.legal_moves():
+		if not move in ghost.legal_moves() or ghost.piece_at(move.substr(2, 2)).to_lower() == "k":
 			return null
 		ghost.make_move(move)
 	_human_turn(ghost)
