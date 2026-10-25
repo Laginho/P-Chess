@@ -1,5 +1,5 @@
 # UI-004: Setup, game end, rematch and hotkeys
-Stage: to-implement
+Stage: implementing
 Blocked by: CLOCK-001
 Review: agent
 Difficulty: normal
@@ -11,6 +11,9 @@ Difficulty: normal
   - ui/move_list.gd (reset only)
   - ui/board_view.gd (scope: the `game` setter clears the held piece, its targets, the pending promotion, the open picker and the slide and snap-back tweens)
   - New: tests/test_session.gd
+  - bot/maia_player.gd (request-local state, generation invalidation, stale guards before policy processing and after the wait, injectable wait completion)
+  - tests/run.gd (defer test execution until the root enters the tree)
+  - tests/test_runner.gd (runner lifecycle and existing failure reporting)
 
 #### What to build
 
@@ -20,7 +23,7 @@ The full game loop of §9.1 and §9.2: the complete setup screen, a clear game-e
 
 1. The setup screen picks colour (white / black / random), time control, Maia level and opening mode. Only Free is enabled until the opening tickets land.
 2. At game end the result and its reason are shown (checkmate, stalemate, time, resignation, 50-move, repetition, insufficient material).
-3. `Space` after the game starts a rematch with the same settings and the colours swapped (from the colours actually played, also after random). During a game `Space` does nothing.
+3. `Space` after the game starts a rematch with the same settings and the colours swapped (from the colours actually played, also after random). During a game `Space` does nothing. A rematch invalidates all previous-game Maia requests: old policies are discarded before sampling or scheduling a delay, and already waiting replies are discarded before emitting a move. The current reply plays exactly once regardless of completion order, including after two rematches when an old move becomes legal again.
 4. The first `Esc` shows a hint; a second `Esc` within 2 s resigns. After 2 s the hint goes away and the next press starts over.
 5. A Claim draw button is enabled only when CORE-004 reports a threefold claim; auto-claim is on (a constant until UI-005 makes it a setting). Maia never claims.
 6. `F11` toggles focus mode: only the board and the clocks are visible.
@@ -35,6 +38,8 @@ The full game loop of §9.1 and §9.2: the complete setup screen, a clear game-e
 ## Tests stage 2 writes (own commit, red)
 
 - `tests/test_session.gd`: rematch swaps colours and keeps settings; the double-`Esc` window at 1.9 s and 2.1 s with a fake clock. Red because the session logic does not exist.
+- Reopen integration seam: real `ui/main.tscn` in the headless tree, a fake UCI bridge and manually completed timer signals. Drive Esc/Space through Main and assert the current game's moves for an old policy arriving after rematch, reversed wait completion and two rematches with a legal stale move. Red because Main matches replies by arrival order and Maia shares request state across games.
+- `tests/test_runner.gd`: tests can add a node to the active tree and receive `_ready`; existing subprocess cases still prove assertion, script-load and runtime failures exit nonzero. Red because tests currently run inside `_initialize`.
 
 ## Comments
 
@@ -159,3 +164,5 @@ Reopen diagnosis: new defect at integration, not an earlier review miss of UI-00
 Note for stage 2: the block quoted above is the previous review's record, kept for history; the live fields are the ones below it. Write the new receipt as `Gate evidence: <path>` at the very start of its own line, with no list dash and nothing after the path. A stage 3 that adds notes to other tickets after the gate makes the driver park a valid approval; put such notes before the gate commit.
 
 Verdict: Reopen — criterion 3: Maia's out-of-order late replies after a rematch are matched by arrival order, so the current reply is dropped and a stale move is played
+
+Proxy decided (gpt-6-astra high, fallback): add `bot/maia_player.gd` for request snapshots, generation cancellation and stale guards, plus narrowly scoped runner support for real Main lifecycle tests — UCI policies remain FIFO, but Maia's waits can complete out of order, so cancellation belongs before and after that wait. Preserve `policy_ready(policy)` and `move_ready(move)`; retain cancelled FIFO snapshots until their policies arrive. Scope and criterion 3 were updated above from this read-only proxy decision.
