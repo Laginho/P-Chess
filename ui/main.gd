@@ -174,6 +174,8 @@ func _start(new_settings: Dictionary) -> void:
 # One setting to whatever reads it; the next move, sound or game picks it up.
 func _apply(key: String, value) -> void:
 	match key:
+		"premove_style":
+			board_view.premove_style = value
 		"click_click":
 			board_view.click_click = value
 		"auto_queen":

@@ -29,6 +29,13 @@ const DRAWING := Color(0.12, 0.65, 0.22, 0.75)
 @export_enum("off", "on", "only on premoves") var auto_queen := "off"
 
 var premoves := PremoveQueue.new("w")
+@export_enum("off", "Lichess", "Chess.com") var premove_style := "Chess.com":
+	set(value):
+		premove_style = value
+		premoves.style = value
+		if _is_premove_input():
+			_cancel_interaction()
+		queue_redraw()
 # Empty preserves the standalone board's two-human input.
 var human_side := "":
 	set(value):
@@ -121,7 +128,7 @@ func _ready() -> void:
 	set_piece_theme(piece_theme)
 	texture_filter = TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	resized.connect(queue_redraw)
-	_picker.picked.connect(func(piece: String) -> void: _commit(_promoting + piece, false))
+	_picker.picked.connect(func(piece: String) -> void: _submit(_promoting + piece, false))
 	_picker.cancelled.connect(_end_snap_back)
 
 
@@ -167,6 +174,9 @@ func _draw() -> void:
 		if last and square in [last.substr(0, 2), last.substr(2, 2)]:
 			draw_rect(Rect2(at, cell), LAST_MOVE)
 		var piece: String = position.piece_at(square) if position else ""
+		# A Lichess replacement is picked from the live position, so keep its source visible.
+		if game and premoves.style == "Lichess" and piece == "":
+			piece = game.board.piece_at(square)
 		if checked and piece == checked:
 			draw_circle(at + cell / 2, cell.x / 2, CHECK)
 		if square != _drag_from and square != _slide_to:
@@ -178,7 +188,7 @@ func _draw() -> void:
 			if move.length() == 5 and move[4] != "q":
 				continue
 			var to := move.substr(2, 2)
-			if game.board.piece_at(to):
+			if position.piece_at(to):
 				draw_arc(_centre(to), cell.x * 0.45, 0, TAU, 48, TARGET, cell.x * 0.08)
 			else:
 				draw_circle(_centre(to), cell.x * 0.15, TARGET)
@@ -224,6 +234,13 @@ func _draw_coordinates(cell: float) -> void:
 func _draw_piece(piece: String, at: Vector2, cell: Vector2, opacity := 1.0) -> void:
 	if piece and _textures.get(piece):
 		draw_texture_rect(_textures[piece], Rect2(at, cell), false, Color(1, 1, 1, opacity))
+
+
+# The promotion overlay consumes GUI events, so catch its right click before GUI dispatch.
+func _input(event: InputEvent) -> void:
+	if _picker.visible and event is InputEventMouseButton and event.pressed \
+			and event.button_index == MOUSE_BUTTON_RIGHT and get_global_rect().has_point(event.position):
+		cancel_premoves()
 
 
 func _gui_input(event: InputEvent) -> void:
@@ -312,7 +329,7 @@ func _drop(point: Vector2, clicked := false, alt := false) -> void:
 			moves.append(move)
 	_held_moves.clear()
 	if moves.size() > 1:
-		if PromotionPicker.should_auto_queen(auto_queen, false, alt):
+		if PromotionPicker.should_auto_queen(auto_queen, _is_premove_input(), alt):
 			_submit(_drag_from + to + "q", clicked)
 		else:
 			_open_picker(to)
@@ -332,7 +349,7 @@ func _open_picker(to: String) -> void:
 	_promoting = _drag_from + to
 	_drag_pos = _centre(to)
 	var at := square_position(to, _side(), flipped)
-	_picker.open(_textures, game.board.side_to_move == "w", _corner() + at, _side() / 8, at.y < _side() / 2)
+	_picker.open(_textures, _held_piece == "P", _corner() + at, _side() / 8, at.y < _side() / 2)
 
 
 # shortcut: only the moving piece slides, a castling rook jumps; slide it too if it looks wrong.
@@ -342,10 +359,7 @@ func _commit(move: String, slide: bool, premove := false) -> void:
 	if not game.play(move):
 		_end_snap_back()
 		return
-	_drag_from = ""
-	_selected = ""
-	_held_moves.clear()
-	_promoting = ""
+	_cancel_interaction()
 	if slide and slide_seconds > 0:
 		_end_slide()
 		_slide_to = move.substr(2, 2)
@@ -391,6 +405,9 @@ func _input_position():
 
 
 func _submit(move: String, slide: bool) -> void:
+	if game.is_over():
+		_cancel_interaction()
+		return
 	if _is_premove_input():
 		premoves.enqueue(game.board, move)
 		_end_snap_back()
@@ -400,6 +417,10 @@ func _submit(move: String, slide: bool) -> void:
 
 func cancel_premoves() -> void:
 	premoves.clear()
+	_cancel_interaction()
+
+
+func _cancel_interaction() -> void:
 	if _snap:
 		_snap.kill()
 	if _picker and _picker.visible:

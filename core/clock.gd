@@ -43,6 +43,7 @@ func left(side: String) -> int:
 
 # After `side` moved: its clock stops and gains the increment, or flags when the time ran out
 # before the move; the other side's clock starts once that side has made its first move.
+# A premove costs exactly 100 ms, even on the untimed first move; increment still starts later.
 func moved(side: String, premove := false) -> void:
 	var timed := side == _running
 	if timed:
