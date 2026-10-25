@@ -1,5 +1,5 @@
 # UI-004: Setup, game end, rematch and hotkeys
-Stage: to-review
+Stage: done
 Blocked by: CLOCK-001
 Review: agent
 Difficulty: normal
@@ -183,3 +183,32 @@ Disclosure: pending | release | original manual product acceptance remains pendi
 Disclosure: deferred | none | the earlier missing committed Main promotion-picker/snap-back lifecycle tests still have their open destination in `.scratch/core/issues/32-CLOCK-002-move-after-flag.md`; this runner now supports that in-tree seam, but this reopen only addresses Maia reply cancellation.
 
 Gate evidence: C:\Users\Lage\AppData\Local\Temp\p-chess-ui004-20261025\UI-004-9af1609-gate.json
+
+#### Resolution (2026-10-25, integration re-review)
+
+Verdict: Approve
+
+Stage 3 re-reviewed the last criterion 3 failure and every change from session base `cd10e33` to handoff `6bcc2e5`. The Standards and Spec axes ran as independent, read-only sub-agents. No production or test fixes were needed during review. Earlier criterion verdicts stand.
+
+##### Standards
+
+No documented standards violations or actionable baseline smells found. Cancellation is owned by MaiaPlayer, Main's arrival counters are removed, existing signal signatures remain intact, and deterministic integration tests cover queued policies, reversed wait completion and two rematches. The runner change is limited to enabling the lifecycle those tests require. The request snapshot is created and consumed within one module; a separate request type would add an abstraction without a concrete benefit. `_is_current` centralizes the cancellation predicate. The review inspected the full diff, Main's lifecycle and callbacks, UCI's FIFO dispatch, and existing Maia callers; tooling-enforced rules were excluded.
+
+##### Spec
+
+No missing or partial requirements, incorrect implementation, or scope creep found in the integration-reopen diff. Criterion 3 requires obsolete policies to be discarded before sampling or scheduling a delay, and waiting replies to be discarded before emitting. Maia consumes each FIFO snapshot and rejects obsolete requests before filtering, sampling, latency recording or delay calculation; it checks generation, game, ply and game-over state again after the wait. Cancelled pending snapshots remain queued to consume their own eventual policies. Main invalidates the prior generation on every new game, including when the human has the opening turn. UCI's serial queue supports the retained FIFO policy matching. Each snapshot is removed before awaiting and resumes once; Main advances the game synchronously when a current reply arrives. Enqueuing before invoking the bridge preserves synchronous replies, and replies without a clock still emit immediately. The three real-Main regressions cover the reopened failure. Runner argument handling, assertion/load/runtime failures and exit codes remain intact.
+
+Standards: 0 findings; Spec: 0 findings.
+
+- Criterion 3: ✅ `Main._start` starts a new generation before replacing the board game. A queued stale policy cannot displace the current policy, and a stale wait cannot play even if its move becomes legal after two rematches. The new tests drive real Main Esc/Space handlers and Maia's production await through fake bridge policies and manually completed timer signals. Criteria 1, 2 and 4–8 retain their prior approvals; manual acceptance remains separate below.
+- Callers and failure paths examined: Main's `_start`, `_next_turn`, `_on_maia_move`, move/flag/resign paths; UCI `request_policy`, queue dispatch and `poll`; all Maia/settings/time-model test callers, including synchronous bridges and the no-clock path; empty pending queues, ended games and changed plies; runner assertion, script-load and runtime-error subprocess fixtures. The clock-before-input defect and additional BoardView lifecycle coverage remain tracked by [CLOCK-002](32-CLOCK-002-move-after-flag.md#comments). No live-window input/visual checks were performed in this review.
+- Files and commit rules: inspected every commit's file statistics. Test-only `b6ceb92` precedes runner-only `6075057`; test-only `2b2222a` precedes production-only `6b5d3a4`; `8d688bd` and `9af1609` are test-only additions/corrections with the behavioral red proof recorded below. `6bcc2e5` changes only ticket metadata. All changed source/test files are within the proxy-approved Primary files. No squash or unrelated refactor.
+- Red-green evidence from stage 2: runner `b6ceb92` was `8 passed, 1 failed`, then `6075057` was `9 passed, 0 failed`. Reply-cycle `2b2222a` was `9 passed, 1 failed`, then `6b5d3a4` was `17 passed, 0 failed` focused. On the final tests, removing the pre-policy guard produced `18 passed, 1 failed`; removing the post-wait guard produced `17 passed, 2 failed`. Both mutations were restored before the committed gate. This review checked the tests against the actual guard placement and callers; it did not rerun the mutations.
+- Gate: reused the existing successful `godot --headless -s tests/run.gd` run on `9af1609`: exit 0, `137 passed, 0 failed`, no skips or script errors, including 30 live Lc0 plies. Verified the receipt with the installed `Assert-GateEvidence`, SHA-256 of its log, recorded exit status and equality of tested code with the reviewed handoff. Only expected malformed-table warnings occur. No code changed during review, so no repeat gate was needed.
+- Integration: the ticket branch was already based on session tip `cd10e33`; rebase was a no-op. Merged without conflicts into `sweatshop/core/2026-10-24-1911` as `b30c724`; its tree matches reviewed handoff `6bcc2e5`. This close changes only the ticket and ledger. No push or PR is part of this session-stage handoff.
+- Proxy decisions reviewed: the three `(opus)` decisions add the move-list reset, preserve the transient Esc hint/result in focus mode, and scope BoardView's interaction reset. The `(gpt-6-astra high, fallback)` decision adds generation cancellation, request snapshots and the minimal active-tree test seam while preserving signal signatures and FIFO policy snapshots. The implementation stays within those decisions; no additional contract decision was made in review.
+
+Acceptance: pending | automated criterion 3 acceptance passes in the committed real-Main tests and the verified 137/0 gate. Original visual/manual Verification (Esc Esc, Space colour swap, F11, Claim draw with auto-claim off) and a live-window rematch while Lc0 thinks have not been checked by a person.
+Disclosure: decision | none | four proxy decisions preserved under Comments and reviewed above: three opus decisions for move-list reset, focus messages and BoardView reset; one gpt-6-astra high fallback decision for request cancellation and runner scope. No saved-data or signal/protocol migration.
+Disclosure: pending | release | original visual/manual acceptance remains pending as recorded in Verification and the Acceptance line. The historical claim that stale replies have no automated test is superseded by the three committed real-Main regressions.
+Disclosure: deferred | none | committed Main promotion-picker/held-piece/snap-back lifecycle coverage remains an open follow-up under [CLOCK-002 Comments](32-CLOCK-002-move-after-flag.md#comments); this review does not claim that coverage was added. The active-tree runner prerequisite is now available.
