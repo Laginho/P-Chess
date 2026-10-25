@@ -153,6 +153,7 @@ func _session(waits):
 	main.preferences = Main.Settings.new("res://tests/fixtures/no_session_settings.cfg")
 	Engine.get_main_loop().root.add_child(main)
 	main.board_view.slide_seconds = 0
+	main.sound_player.select_theme("__ui004_silent__")
 	main._start(SETTINGS.duplicate())
 	return main
 
@@ -191,4 +192,42 @@ func test_a_new_reply_plays_before_an_old_games_wait_finishes():
 	_finish(waits, 0)
 	# e7e5 would be legal here, but belongs to the game that was resigned.
 	assert_eq(main.board_view.game.moves, PackedStringArray(["e2e4"]), "the old reply cannot play as the human")
+	main.free()
+
+
+func test_an_old_policy_after_rematch_is_dropped_before_a_wait_is_scheduled():
+	var waits := ManualWaits.new()
+	var main = _session(waits)
+	assert_true(main.board_view.play("e2e4"))
+	_resign_and_rematch(main)
+	assert_eq(main.uci.requests, [[Game.START, PackedStringArray(["e2e4"])],
+			[Game.START, PackedStringArray()]], "the old and current policies are queued FIFO")
+	main.uci.policy_ready.emit({"e7e5": 1.0})
+	assert_eq(waits.pending.size(), 0, "no think time scheduled for an obsolete policy")
+	assert_eq(main.maia.latencies_ms, [], "obsolete policies are not processed as current samples")
+	main.uci.policy_ready.emit({"d2d4": 1.0})
+	assert_eq(waits.pending.size(), 1, "the old entry consumed only its own policy")
+	_finish(waits, 0)
+	assert_eq(main.board_view.game.moves, PackedStringArray(["d2d4"]), "the current policy still plays")
+	main.free()
+
+
+func test_two_rematches_drop_a_stale_white_move_legal_in_the_current_game():
+	var waits := ManualWaits.new()
+	var main = _session(waits)
+	assert_true(main.board_view.play("a2a3"))
+	main.uci.policy_ready.emit({"a7a6": 1.0})
+	_resign_and_rematch(main)
+	main.uci.policy_ready.emit({"d2d4": 1.0})
+	_resign_and_rematch(main)
+	assert_eq(main.human, "w", "two rematches restore the original colours")
+	assert_eq(main.settings, SETTINGS, "the other settings survive both rematches")
+	assert_eq(waits.pending.size(), 2, "no new Maia request on the human's first turn")
+	_finish(waits, 1)
+	assert_eq(main.board_view.game.moves, PackedStringArray(), "stale d2d4 cannot play as the human")
+	assert_true(main.board_view.play("g1f3"))
+	main.uci.policy_ready.emit({"e7e5": 1.0})
+	_finish(waits, 2)
+	_finish(waits, 0)
+	assert_eq(main.board_view.game.moves, PackedStringArray(["g1f3", "e7e5"]), "only the current reply plays")
 	main.free()
