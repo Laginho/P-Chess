@@ -1,6 +1,7 @@
 extends PopupPanel
 
 signal saved(name: String)
+signal catalog_ready(error: String)
 
 const Book = preload("res://bot/book.gd")
 var book = Book.new()
@@ -8,6 +9,9 @@ var _items := {}
 var _worker: Thread
 var _loaded := false
 var _requested_selection := ""
+# Optional system boundary for thread-start failures; normal callers use Thread.start.
+var start_catalog_worker := Callable()
+var _catalog_error := ""
 
 @onready var _search: LineEdit = $Margin/Form/Search
 @onready var _tree: Tree = $Margin/Form/Tree
@@ -33,28 +37,43 @@ func _ready() -> void:
 func present(selection := "") -> void:
 	_requested_selection = selection
 	popup_centered(Vector2i(680, 540))
-	if _worker == null and not book.entries.is_empty():
-		_loaded = true
-	if not _loaded and _worker == null:
+	if not _loaded:
 		_status.text = "Loading opening catalog…"
 		_search.editable = false
 		_save.disabled = true
 		_load.disabled = true
-		# Only this worker touches the book until it is joined; the UI stays responsive.
-		_worker = Thread.new()
-		if _worker.start(book.load_catalog) != OK:
-			_worker = null
-			_status.text = "Cannot start catalog loading. Close and try again."
-	elif _loaded:
+	var error: String = await ensure_catalog()
+	if not error.is_empty():
+		_status.text = error
+	elif visible:
 		_catalog_ready()
+
+
+# Main can await the same load without opening this popup or applying an old selection.
+# A nonempty catalog supplied before loading is already ready (including imported fixtures).
+func ensure_catalog() -> String:
+	if _worker == null and not book.entries.is_empty():
+		_loaded = true
+	if _loaded:
+		return ""
+	if _worker == null:
+		_worker = Thread.new()
+		var status: int = start_catalog_worker.call(_worker, book.load_catalog) \
+				if start_catalog_worker.is_valid() else _worker.start(book.load_catalog)
+		if status != OK:
+			_worker = null
+			return "Cannot start catalog loading. Close and try again."
+	await catalog_ready
+	return _catalog_error
 
 
 func _process(_delta: float) -> void:
 	if _worker != null and not _worker.is_alive():
 		_worker.wait_to_finish()
 		_worker = null
-		_loaded = true
-		_catalog_ready()
+		_loaded = not book.entries.is_empty()
+		_catalog_error = "" if _loaded else "Cannot load opening catalog. " + "\n".join(book.errors)
+		catalog_ready.emit(_catalog_error)
 
 
 func _exit_tree() -> void:

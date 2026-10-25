@@ -1,10 +1,11 @@
 extends RefCounted
 
 # Catalog lines keep every position (including the start and final position), with one UCI
-# move between adjacent keys. OPEN-002 can match transpositions without parsing SAN again.
+# move between adjacent keys. Runtime weights match positions, including transpositions.
 const Board = preload("res://core/board.gd")
 const START := "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 const VOLUMES := ["a", "b", "c", "d", "e"]
+const INTENSITIES := {"weak": [5.0, 2.0], "medium": [20.0, 5.0], "strong": [100.0, 15.0]}
 
 var entries: Array = []
 var errors: Array[String] = []
@@ -13,6 +14,10 @@ var roots: Array[String] = []
 # A node groups all rows under its name, including a row named after the family itself.
 var nodes := {}
 var selection_dir := "user://openings"
+var target_id := ""
+# Position -> continuation -> whether it belongs to this game's target.
+var _book_moves := {}
+var _endings := {}
 var _checked := {}
 var _name_paths := {}
 var _prefixes := {}
@@ -28,6 +33,7 @@ func load_catalog(folder := "res://data/openings") -> void:
 	_checked.clear()
 	_name_paths.clear()
 	_prefixes.clear()
+	_endings.clear()
 	for volume in VOLUMES:
 		var path: String = folder.path_join(volume + ".tsv")
 		var file := FileAccess.open(path, FileAccess.READ)
@@ -83,6 +89,9 @@ func load_tsv(text: String, source := "TSV") -> void:
 			continue
 		entries.append({"id": fields[0] + ":" + fields[2], "eco": fields[0],
 				"name": fields[1], "pgn": fields[2], "moves": moves, "positions": positions})
+		var ending: String = positions[-1]
+		if not _endings.has(ending) or moves.size() > _endings[ending].depth:
+			_endings[ending] = {"name": fields[1], "depth": moves.size()}
 		_add_name(entries.back())
 
 
@@ -152,6 +161,65 @@ func selected_ids() -> Array[String]:
 		if _checked.has(entry.id):
 			ids.append(entry.id)
 	return ids
+
+
+# Catalog lines have no colour; imported repertoire lines may belong to just one side.
+# Snapshot the checked continuations for this game, independently of later picker edits.
+func begin_game(counts: Dictionary, rng: RandomNumberGenerator, side := "") -> String:
+	var selected := []
+	var least := []
+	var minimum := 0x7FFFFFFFFFFFFFFF
+	for entry in entries:
+		if not _checked.has(entry.id) or entry.get("colour", side) != side:
+			continue
+		selected.append(entry)
+		var count: int = counts.get(entry.id, 0)
+		if count < minimum:
+			minimum = count
+			least.clear()
+		if count == minimum:
+			least.append(entry.id)
+	target_id = ""
+	if not least.is_empty():
+		target_id = least[0] if least.size() == 1 else least[rng.randi_range(0, least.size() - 1)]
+	_book_moves.clear()
+	for entry in selected:
+		for index in entry.moves.size():
+			var key: String = entry.positions[index]
+			var move: String = entry.moves[index]
+			if not _book_moves.has(key):
+				_book_moves[key] = {}
+			_book_moves[key][move] = _book_moves[key].get(move, false) or entry.id == target_id
+	return target_id
+
+
+# The actual game's ply drives the fade; the matching line's move order need not agree.
+func weights(board, ply: int, intensity := "medium") -> Dictionary:
+	var result := {}
+	var continuations: Dictionary = _book_moves.get(board.position_key(), {})
+	var fade := clampf((16.0 - ply) / 10.0, 0.0, 1.0)
+	var bonuses: Array = INTENSITIES.get(intensity, INTENSITIES.medium)
+	for move in board.legal_moves():
+		result[move] = 1.0
+		if continuations.has(move):
+			var bonus: float = bonuses[0 if continuations[move] else 1]
+			result[move] += (bonus - 1.0) * fade
+	return result
+
+
+# Only a catalog entry's endpoint earns its name; shared prefixes do not identify
+# an unplayed variation. Keep the deepest reached name even after leaving the book.
+func opening_name(moves: PackedStringArray) -> String:
+	var board = Board.from_fen(START)
+	var name := ""
+	var depth := 0
+	for move in moves:
+		board.make_move(move)
+		var ending: Dictionary = _endings.get(board.position_key(), {})
+		if not ending.is_empty() and ending.depth > depth:
+			name = ending.name
+			depth = ending.depth
+	return name
 
 
 func selection_names() -> Array[String]:

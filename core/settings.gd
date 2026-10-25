@@ -24,6 +24,7 @@ const DEFAULTS := {
 	"tau": 0.02,
 	"temperature": 1.0,
 	"panic": "medium",
+	"book_intensity": "medium",
 	"auto_claim": true,
 }
 # Inclusive bounds of the numeric settings.
@@ -31,6 +32,7 @@ const RANGES := {"animation_ms": [0, 1000], "volume": [0, 100], "tau": [0.0, 0.2
 const CHOICES := {
 	"premove_style": ["off", "Lichess", "Chess.com"],
 	"panic": ["off", "low", "medium", "high"],
+	"book_intensity": ["weak", "medium", "strong"],
 	"auto_queen": ["off", "on", "only on premoves"],
 }
 # Theme settings and the folder kind each names.
