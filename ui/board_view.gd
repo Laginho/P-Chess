@@ -7,6 +7,7 @@ signal move_played(san: String)
 signal sound_requested(event: String)
 
 const ThemeLoader = preload("res://ui/theme_loader.gd")
+const PromotionPicker = preload("res://ui/promotion_picker.gd")
 const SNAP_BACK_SECONDS := 0.15
 const LAST_MOVE := Color(0.61, 0.78, 0, 0.41)
 const CHECK := Color(1, 0, 0, 0.6)
@@ -19,6 +20,7 @@ const TARGET := Color(0.08, 0.33, 0.12, 0.5)
 @export var board_theme := "brown"
 @export var piece_theme := "cburnett"
 @export var click_click := false
+@export_enum("off", "on", "only on premoves") var auto_queen := "off"
 
 var _board_style := {"light": ThemeLoader.BROWN_LIGHT, "dark": ThemeLoader.BROWN_DARK, "texture": null}
 
@@ -186,7 +188,7 @@ func _gui_input(event: InputEvent) -> void:
 			if _selected:
 				_drag_from = _selected
 				_selected = ""
-				_drop(event.position, true)
+				_drop(event.position, true, event.alt_pressed)
 			else:
 				_pick_up(event.position)
 		elif _drag_from and not _snapping:
@@ -196,7 +198,7 @@ func _gui_input(event: InputEvent) -> void:
 				_drag_from = ""
 				queue_redraw()
 			else:
-				_drop(event.position)
+				_drop(event.position, false, event.alt_pressed)
 	elif event is InputEventMouseMotion and _drag_from and not _snapping:
 		_dragged = _dragged or event.position.distance_to(_press_pos) >= 8
 		_drag_pos = event.position
@@ -219,7 +221,7 @@ func _pick_up(point: Vector2) -> void:
 				_held_moves.append(move)
 
 
-func _drop(point: Vector2, clicked := false) -> void:
+func _drop(point: Vector2, clicked := false, alt := false) -> void:
 	var to := square_at(point - _corner(), _side(), flipped)
 	var moves := PackedStringArray()
 	for move in _held_moves:
@@ -227,7 +229,10 @@ func _drop(point: Vector2, clicked := false) -> void:
 			moves.append(move)
 	_held_moves.clear()
 	if moves.size() > 1:
-		_open_picker(to)
+		if PromotionPicker.should_auto_queen(auto_queen, false, alt):
+			_commit(_drag_from + to + "q", clicked)
+		else:
+			_open_picker(to)
 	elif moves:
 		_commit(moves[0], clicked)
 	elif clicked:

@@ -172,6 +172,10 @@ func _start(new_settings: Dictionary) -> void:
 # One setting to whatever reads it; the next move, sound or game picks it up.
 func _apply(key: String, value) -> void:
 	match key:
+		"click_click":
+			board_view.click_click = value
+		"auto_queen":
+			board_view.auto_queen = value
 		"legal_dots":
 			board_view.show_targets = value
 		"animation_ms":
