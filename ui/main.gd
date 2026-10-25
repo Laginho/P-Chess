@@ -139,6 +139,13 @@ func _process(_delta: float) -> void:
 	resign_hint.visible = resign_key.armed()
 
 
+# Global input runs before GUI input: a flag or low-time warning must precede the drop
+# and its increment, even when the threshold was crossed since the last frame tick.
+func _input(_event: InputEvent) -> void:
+	if clock:
+		clock.tick()
+
+
 func _unhandled_key_input(event: InputEvent) -> void:
 	if not event.is_pressed() or event.is_echo():
 		return
