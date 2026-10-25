@@ -111,9 +111,14 @@ func _report_corrupt_stats(section: String, key: String) -> void:
 		error += ("\n" if not error.is_empty() else "") + warning
 
 
+# Invalid stored counts are zero for target selection; retain every valid line.
 func practice_counts() -> Dictionary:
 	var counts := {}
 	if _results.has_section("practice"):
 		for id in _results.get_section_keys("practice"):
-			counts[id] = _results.get_value("practice", id, 0)
+			var count = _results.get_value("practice", id, 0)
+			if typeof(count) != TYPE_INT or count < 0:
+				_report_corrupt_stats("practice", id)
+				count = 0
+			counts[id] = count
 	return counts
