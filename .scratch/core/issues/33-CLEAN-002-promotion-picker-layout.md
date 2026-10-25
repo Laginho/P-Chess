@@ -1,6 +1,6 @@
 # CLEAN-002: Keep an open promotion picker aligned on flip and resize
-Stage: blocked
-Status: needs-triage
+Stage: to-implement
+Status: ready-for-agent
 Blocked by: none
 Review: agent
 Difficulty: normal
@@ -33,3 +33,4 @@ An open promotion picker should remain aligned with its promotion square when th
 
 - Created by UI-007 stage 3 on 2026-10-25 from the confirmed cosmetic issue recorded in [UI-002](../../side/issues/09-UI-002-board-feedback.md), Resolution / Examined, and inherited by UI-007. Source inspection still shows `BoardView.flipped` and `resized` only request redraws, while `PromotionPicker.open` sets button geometry once. No repair or new runtime behavior was authored during this review.
 - Blocked for stage 1 to confirm the proposed criteria and scene-backed test seam before implementation. This follow-up does not block integration of UI-007 and adds no release condition to its contract.
+- 2026-10-25 Stage 1 (human, Bruno): approved criteria 1-3 and the scene-backed `tests/test_board_view.gd` seam as written. Reposition the open picker on flip/resize (not close it). Low priority: cosmetic.
