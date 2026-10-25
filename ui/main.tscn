@@ -47,6 +47,17 @@ theme_override_font_sizes/font_size = 20
 layout_mode = 2
 autowrap_mode = 3
 
+[node name="ResignHint" type="Label" parent="Layout/Side"]
+visible = false
+layout_mode = 2
+text = "Press Esc again to resign"
+
+[node name="ClaimDraw" type="Button" parent="Layout/Side"]
+layout_mode = 2
+focus_mode = 0
+disabled = true
+text = "Claim draw"
+
 [node name="MoveList" parent="Layout/Side" instance=ExtResource("3")]
 layout_mode = 2
 

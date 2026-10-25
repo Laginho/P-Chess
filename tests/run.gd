@@ -49,6 +49,11 @@ static func find_tests(dir: String) -> PackedStringArray:
 
 
 func _initialize() -> void:
+	# Scene-backed session tests need _ready, input and tweens, which require the root in the tree.
+	call_deferred("_run")
+
+
+func _run() -> void:
 	var args := OS.get_cmdline_user_args()
 	var dir: String = args[0] if args else "res://tests"
 	if not "://" in dir:

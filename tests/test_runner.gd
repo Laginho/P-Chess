@@ -72,6 +72,15 @@ func test_default_run_skips_fixtures():
 		assert_true(not f.begins_with("res://tests/fixtures/"), f)
 
 
+func test_tests_can_ready_nodes_in_the_active_tree():
+	var tree = Engine.get_main_loop()
+	var node := Node.new()
+	tree.root.add_child(node)
+	assert_true(node.is_inside_tree(), "tests run after the root enters the tree")
+	assert_true(node.is_node_ready(), "scene lifecycle runs before test assertions")
+	node.free()
+
+
 func _run(dir: String) -> Dictionary:
 	var output := []
 	var args := ["--headless", "--path", ProjectSettings.globalize_path("res://"), "-s", "res://tests/run.gd", "--", dir]
