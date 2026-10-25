@@ -333,6 +333,22 @@ func test_ghost_moves_reject_king_captures_without_changing_the_accepted_prefix(
 		assert_eq(game.moves, live_moves)
 
 
+func test_ghost_projection_rejects_a_king_moving_onto_a_queued_destination():
+	var game = Game.new("8/8/8/8/2k5/8/R7/K7 b - - 0 1")
+	var queue = PremoveQueue.new("w")
+	assert_true(queue.enqueue(game.board, "a2a3"))
+	assert_true(queue.enqueue(game.board, "a3b3"))
+	assert_true(queue.position(game.board) != null, "the original projection is valid")
+	assert_true(game.play("c4b3"), "Maia's king enters a later queued destination")
+	var live_fen: String = game.board.to_fen()
+	assert_eq(queue.position(game.board), null, "an updated preview must not capture Maia's king")
+	assert_eq(queue.moves, PackedStringArray(["a2a3", "a3b3"]), "projection leaves execution to the due-move check")
+	assert_eq(game.board.to_fen(), live_fen)
+	assert_eq(game.board.squares.count("K"), 1)
+	assert_eq(game.board.squares.count("k"), 1)
+	assert_eq(queue.take(game.board), "a2a3", "a valid due move still executes")
+
+
 func test_styles_default_to_chess_com_and_lichess_replaces_from_the_live_position():
 	var game = Game.new()
 	game.play("e2e4")
