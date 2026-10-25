@@ -4,6 +4,60 @@ const Book = preload("res://bot/book.gd")
 const Game = preload("res://core/game.gd")
 const Repertoire = preload("res://bot/repertoire.gd")
 const Settings = preload("res://core/settings.gd")
+const MainScene = preload("res://ui/main.tscn")
+const History = preload("res://core/history.gd")
+const STUDY := "1. e4 e5 2. Nf3 (2. Nc3) Nc6 *"
+const CONFIG := {"colour": "w", "level": "maia-1500", "control": "3+2",
+		"opening": "Free", "repertoire": "Study", "selection": "Fixture"}
+
+
+class HeldEngine extends "res://engine/uci.gd":
+	func start(_dirs := PackedStringArray()) -> bool:
+		return true
+
+
+	func set_level(_net_path: String) -> void:
+		pass
+
+
+	func request_policy(_fen: String, _moves: PackedStringArray) -> void:
+		pass
+
+
+func _session(folder: String):
+	DirAccess.make_dir_recursive_absolute(folder)
+	var main = MainScene.instantiate()
+	main.history = History.new(folder)
+	main.preferences = Settings.new(folder.path_join("settings.cfg"))
+	var setup = main.get_node("Setup")
+	setup.book.selection_dir = folder.path_join("openings")
+	setup.book.load_tsv("eco\tname\tpgn\nC00\tFixture\t1. e4 e5 2. Nf3 Nc6\n")
+	setup.book.set_checked("Fixture", true)
+	assert_eq(setup.book.save_selection("Fixture"), "")
+	setup.repertoire.storage_dir = folder.path_join("repertoires")
+	assert_eq(setup.repertoire.import_pgn(STUDY, "w", "Study"), "")
+	main.uci.free()
+	main.uci = HeldEngine.new()
+	main.maia = main.MaiaPlayer.new(main.uci)
+	Engine.get_main_loop().root.add_child(main)
+	main.board_view.slide_seconds = 0
+	main.sound_player.select_theme("__badges_silent__")
+	return main
+
+
+func _marks(main, ply: int) -> String:
+	var tree: Tree = main.review.get_node("Margin/Content/Moves")
+	assert_eq(tree.columns, 5, "review exposes separate badge columns for both sides")
+	if tree.columns < 5:
+		return ""
+	var rows := tree.get_root().get_children()
+	assert_true(rows.size() > ply / 2, "review contains the fixture move")
+	return rows[ply / 2].get_text(3 + ply % 2) if rows.size() > ply / 2 else ""
+
+
+func _finish(main) -> void:
+	main.board_view.game.resign(main.human)
+	main._show_result()
 
 
 func _folder() -> String:
@@ -158,3 +212,94 @@ func test_setup_selects_check_repertoire_in_every_mode_without_changing_free_or_
 			assert_eq(started[index].opening, setup.OPENINGS[index])
 	setup.free()
 	_clean(folder)
+
+
+func test_real_games_show_badges_only_in_review_in_every_mode_and_keep_book_when_checking_is_off():
+	for mode in ["Free", "Catalog", "My repertoire"]:
+		for checking in [false, true]:
+			var folder := _folder()
+			var main = _session(folder)
+			assert_true(main.preferences.set_value("check_repertoire", checking))
+			var config := CONFIG.duplicate()
+			config.opening = mode
+			main.setup.started.emit(config)
+			assert_eq(main.settings.opening, mode)
+			assert_true(main.history.book == main.setup.book, "history keeps the catalog")
+			if mode == "Free":
+				assert_eq(main.maia.target_id, "", "checking does not enable Maia's book")
+			for move in ["e2e4", "e7e5", "d2d4", "b8c6", "g1f3"]:
+				assert_true(main.board_view.play(move))
+			assert_true(not main.review.visible, "review stays hidden during play")
+			assert_true(not main.setup.visible, "the repertoire picker stays hidden during play")
+			assert_eq(main.move_list.get_parsed_text(), "1. e4   e5\n2. d4   Nc6\n3. Nf3", "no live book or repertoire hints")
+			_finish(main)
+			assert_true(main.review.visible)
+			assert_eq(_marks(main, 0), "Book · Repertoire" if checking else "Book")
+			assert_eq(_marks(main, 1), "Book", "opponent has no repertoire badge")
+			assert_eq(_marks(main, 2), "Left repertoire — expected: Nc3, Nf3" if checking else "")
+			assert_eq(_marks(main, 4), "", "neither badge resumes after the exit")
+			main.free()
+			_clean(folder)
+
+
+func test_rematch_checks_actual_black_moves_and_no_continuation_is_explicit():
+	var folder := _folder()
+	var main = _session(folder)
+	main.preferences.set_value("check_repertoire", true)
+	main.setup.started.emit(CONFIG.duplicate())
+	_finish(main)
+	main.review.rematch_requested.emit()
+	assert_eq(main.human, "b")
+	for move in ["e2e4", "e7e5", "g1f3", "h7h6"]:
+		assert_true(main.board_view.play(move))
+	_finish(main)
+	assert_eq(_marks(main, 0), "Book", "White is now the opponent")
+	assert_eq(_marks(main, 1), "Book · Repertoire", "check the actual Black player")
+	assert_eq(_marks(main, 3), "Left repertoire — expected: Nc6")
+	main._start(CONFIG.duplicate())
+	for move in ["e2e4", "c7c5", "g1f3"]:
+		assert_true(main.board_view.play(move))
+	_finish(main)
+	assert_eq(_marks(main, 2), "Left repertoire — No continuation in repertoire")
+	main.free()
+	_clean(folder)
+
+
+func test_game_snapshots_repertoire_and_uses_live_check_preference_at_review():
+	var folder := _folder()
+	var main = _session(folder)
+	# Start with checking off; enabling it during play uses this game's PGN,
+	# even if a saved study was replaced after the game started.
+	main.setup.started.emit(CONFIG.duplicate())
+	assert_eq(main.setup.repertoire.import_pgn("1. d4 d5 *", "w", "Study"), "")
+	main.preferences.set_value("check_repertoire", true)
+	assert_true(main.board_view.play("e2e4"))
+	_finish(main)
+	assert_eq(_marks(main, 0), "Book · Repertoire", "use the game's immutable repertoire snapshot")
+	main.free()
+	_clean(folder)
+
+
+func test_required_repertoire_load_failure_prevents_new_game_and_retry_uses_repaired_study():
+	for mode in ["Free", "Catalog", "My repertoire"]:
+		var folder := _folder()
+		var main = _session(folder)
+		main.preferences.set_value("check_repertoire", true)
+		var path: String = main.setup.repertoire.storage_dir.path_join("Study.json")
+		var file := FileAccess.open(path, FileAccess.WRITE)
+		file.store_string("corrupt")
+		file.close()
+		var config := CONFIG.duplicate()
+		config.opening = mode
+		main.setup.started.emit(config)
+		assert_eq(main.clock, null, "failed checking load does not start " + mode)
+		assert_true(main.setup.visible, "failed load returns to setup")
+		assert_true(main.setup.get_node("Center/Form/Missing").visible, "show the load error")
+		assert_eq(main.setup.repertoire.import_pgn(STUDY, "w", "Study"), "")
+		main.setup.started.emit(config)
+		assert_true(main.clock != null, "repaired repertoire permits retry")
+		assert_true(main.board_view.play("e2e4"))
+		_finish(main)
+		assert_eq(_marks(main, 0), "Book · Repertoire")
+		main.free()
+		_clean(folder)
