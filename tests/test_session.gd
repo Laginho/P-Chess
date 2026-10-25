@@ -1,11 +1,13 @@
 extends "res://tests/run.gd".Test
 
 # The game loop around a game (UI-004, §9.1, §9.2): the rematch settings and the double-Esc resign,
-# on a fake time source, so nothing here opens a window or waits.
+# on a fake time source. Scene tests use the real Main with a fake engine and manually completed
+# timer signals, so neither Lc0 nor elapsed wall-clock time decides their outcome.
 
 const Main = preload("res://ui/main.gd")
 const BoardView = preload("res://ui/board_view.tscn")
 const Game = preload("res://core/game.gd")
+const MainScene = preload("res://ui/main.tscn")
 
 
 class FakeTime:
@@ -13,6 +15,33 @@ class FakeTime:
 
 	func ms() -> int:
 		return now
+
+
+# The engine boundary: policies are delivered explicitly, in UCI request order.
+class HeldBridge extends "res://engine/uci.gd":
+	var requests := []
+
+	func start(_dirs := PackedStringArray()) -> bool:
+		return true
+
+	func set_level(_net_path: String) -> void:
+		pass
+
+	func request_policy(start_fen: String, moves: PackedStringArray) -> void:
+		requests.append([start_fen, moves.duplicate()])
+
+
+class PendingWait extends RefCounted:
+	signal timeout
+
+
+class ManualWaits:
+	var pending := []
+
+	func start(_seconds: float) -> Signal:
+		var wait := PendingWait.new()
+		pending.append(wait)
+		return wait.timeout
 
 
 const SETTINGS := {"colour": "w", "level": "maia-1700", "control": "3+2", "opening": "Free"}
@@ -113,3 +142,53 @@ func test_a_rematch_drops_the_piece_held_when_the_game_ended():
 	_mouse(board, false, "e6")
 	assert_eq(board.game.moves, PackedStringArray(["e2e4", "e7e6"]), "e7e6 plays in the new game")
 	board.free()
+
+
+func _session(waits):
+	var main = MainScene.instantiate()
+	main.uci.free()
+	main.uci = HeldBridge.new()
+	main.maia = Main.MaiaPlayer.new(main.uci, waits.start)
+	# Ignore the person's preferences without saving or changing them.
+	main.preferences = Main.Settings.new("res://tests/fixtures/no_session_settings.cfg")
+	Engine.get_main_loop().root.add_child(main)
+	main.board_view.slide_seconds = 0
+	main._start(SETTINGS.duplicate())
+	return main
+
+
+func _key(main, code: Key) -> void:
+	var event := InputEventKey.new()
+	event.keycode = code
+	event.pressed = true
+	main._unhandled_key_input(event)
+
+
+func _resign_and_rematch(main) -> void:
+	_key(main, KEY_ESCAPE)
+	_key(main, KEY_ESCAPE)
+	_key(main, KEY_SPACE)
+
+
+func _finish(waits, index: int) -> void:
+	assert_true(index < waits.pending.size(), "think time was scheduled")
+	if index < waits.pending.size():
+		waits.pending[index].timeout.emit()
+
+
+func test_a_new_reply_plays_before_an_old_games_wait_finishes():
+	var waits := ManualWaits.new()
+	var main = _session(waits)
+	assert_true(main.board_view.play("e2e4"))
+	main.uci.policy_ready.emit({"e7e5": 1.0})
+	_resign_and_rematch(main)
+	assert_eq(main.human, "b", "Space swaps the colour actually played")
+	main.uci.policy_ready.emit({"e2e4": 1.0})
+	assert_eq(waits.pending.size(), 2, "both policies have entered their waits")
+	_finish(waits, 1)
+	assert_eq(main.board_view.game.moves, PackedStringArray(["e2e4"]), "the current reply plays first")
+	assert_eq(main.board_view.mouse_filter, Control.MOUSE_FILTER_STOP, "the human can answer Maia")
+	_finish(waits, 0)
+	# e7e5 would be legal here, but belongs to the game that was resigned.
+	assert_eq(main.board_view.game.moves, PackedStringArray(["e2e4"]), "the old reply cannot play as the human")
+	main.free()
