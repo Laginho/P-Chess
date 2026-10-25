@@ -14,6 +14,7 @@ var roots: Array[String] = []
 var nodes := {}
 var selection_dir := "user://openings"
 var _checked := {}
+var _name_paths := {}
 var _prefixes := {}
 var _numbers := RegEx.create_from_string(r"\d+\.+\s*")
 
@@ -25,6 +26,7 @@ func load_catalog(folder := "res://data/openings") -> void:
 	roots.clear()
 	nodes.clear()
 	_checked.clear()
+	_name_paths.clear()
 	_prefixes.clear()
 	for volume in VOLUMES:
 		var path: String = folder.path_join(volume + ".tsv")
@@ -97,14 +99,20 @@ func _add_name(entry: Dictionary) -> void:
 				nodes[parent].children.append(path)
 		nodes[path].lines.append(entry.id)
 		parent = path
+	_name_paths[entry.name] = parent
 
 
 # Return visible paths in tree order. Full paths include ancestor labels, so searching a
 # family keeps its descendants, while a variation match brings its ancestors back into view.
+# Match original names too: tree paths normalize comma/colon separators.
 func search(query: String) -> Array[String]:
+	var needle := query.to_lower()
 	var visible := {}
+	for name in _name_paths:
+		if needle in name.to_lower():
+			visible[_name_paths[name]] = true
 	for path in nodes:
-		if not query.is_empty() and not query.to_lower() in path.to_lower():
+		if not visible.has(path) and not needle in path.to_lower():
 			continue
 		var ancestor: String = path
 		while not ancestor.is_empty():
