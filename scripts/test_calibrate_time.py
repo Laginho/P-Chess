@@ -75,7 +75,11 @@ def test_fixture_extraction_from_a_capped_zstandard_stream():
     assert source.tell() == len(compressed)
 
     # A cap can cut a zstd frame and a PGN game. Earlier data stays usable.
-    prefix = compressed[:-10]
+    compressor = zstandard.ZstdCompressor().compressobj()
+    prefix = compressor.compress(FIXTURE.read_bytes())
+    prefix += compressor.flush(zstandard.COMPRESSOBJ_FLUSH_BLOCK)
+    tail = compressor.compress(FIXTURE.read_bytes()) + compressor.flush()
+    prefix += tail[:-10]
     source = io.BytesIO(prefix + b"must not be read")
     with pgn_stream(source, len(prefix)) as pgn:
         assert list(extract_samples(pgn))
