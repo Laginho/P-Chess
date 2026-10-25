@@ -1,5 +1,5 @@
 # BOT-007: Time-model calibration from Lichess data
-Stage: to-review
+Stage: to-implement
 Blocked by: BOT-001, BOT-006
 Review: human
 Difficulty: normal
@@ -74,3 +74,42 @@ Acceptance: pending | BOT-007 Verification above: approved real-data calibration
 Disclosure: decision | none | BOT-007 Comments, proxy decision (gpt-6-astra high, fallback): added offline CLI/reservoir/UCI test seams for existing criteria, without production scope expansion or download authorization.
 Disclosure: decision | none | BOT-007 Comments, proxy decision (opus): script sends no PolicyTemperature, matching the game's Lc0 v0.32.1 default 1.359; any different value remains Bruno's choice and must be coordinated with engine/uci.gd before calibration.
 Disclosure: pending | release | BOT-007 Verification: data/time_model.json remains absent until Bruno approves the download and the generated table is validated; the game uses its documented formula fallback meanwhile.
+
+#### Resolution (2026-10-25)
+
+Verdict: Reopen — criterion 5 measures a different Maia policy from the game's by dropping move history.
+
+##### Standards
+
+No confirmed findings. Independent Standards review covered all five changed files against AGENTS.md, the engineering workflow, tracker conventions and the code-review smell baseline. Scope, dependency isolation, usage documentation and offline tests are appropriate; no actionable standard violation or code smell was found.
+
+##### Spec
+
+- [P1] Criterion 5 fails at `scripts/calibrate_time.py:203`: `Sample` retains only the current FEN (lines 47–52, 110), and `lc0_policy` sends `position fen <current FEN>`. The game sends its initial FEN and preceding moves in `engine/uci.gd::request_policy()`. With the installed Lc0 v0.32.1, maia-1500, default PolicyTemperature and `go nodes 1`, the fixture position before `2.Nf3` gives top P **0.4694 with history, bin 1**, versus **0.2734 with the script's FEN-only request, bin 0**. The position before `3.Bb5` likewise gives 0.3439 versus 0.2189, crossing the same boundary. These are different inputs to BOT-006's table lookup for the same game position.
+- Repair criterion 5 within the existing Primary files: retain the initial FEN and preceding move sequence in each sample, send the same UCI position context as the game, and add a red regression at the already-approved extraction/local-UCI seam. Preserve the current position FEN for legal-move checks. No other criterion or Primary-file expansion is requested.
+- No additional Spec findings or scope creep after reading the whole diff. The missing real-data table is the explicitly documented pending product check, not another implementation finding.
+
+##### Criteria and examined interactions
+
+1. ✅ Required URL/byte cap and printed plan; planning returns before HTTP. No download was performed or authorized.
+2. ✅ Bounded streaming of compressed prefixes; local cap also applies when HTTP ignores Range. Truncation after a complete zstd block is covered.
+3. ✅ All three controls, mover-specific 1100–1900 ratings and nearest Maia bands, including boundaries and ties.
+4. ✅ Consecutive clocks per player plus increment; missing-clock intervals and negative elapsed times are excluded, first moves establish baselines.
+5. ❌ Lc0 uses the matching net but loses the PGN history, producing policy probabilities and bins different from the game's. Only this repair and its regression remain for stage 2.
+6. ✅ Offline output matches BOT-006's fields, bin edges and control names; sparse buckets are omitted. Real output remains pending approved calibration as stated in Verification.
+7. ✅ Python dependencies remain script-only.
+8. ✅ Extraction and bucketing use the local PGN fixture without network access.
+
+Reviewed callers and cross-feature paths: `main` → capped zstd stream → `extract_samples` → reservoir → `lc0_policy` → `build_table` → atomic replacement; consumers `bot/time_model.gd` and `bot/maia_player.gd`; and the game's UCI setup/request flow in `engine/uci.gd`. Examined empty/undersized samples, missing clocks, unsupported controls/variants, invalid clock intervals, rating/bin boundaries, engine EOF/timeouts, legal-move filtering and preservation of existing output after engine failure. Not examined: a real monthly dump, a generated production table or M8's human assessment; those still require the documented download approval and product verification.
+
+##### Verification and handoff
+
+- Independent Spec reviewer reproduced the policy mismatch with local Lc0; the stage-3 owner independently reproduced 0.2734/bin 0 versus 0.4694/bin 1 using the actual `lc0_policy` and changing only the outgoing position command to `position startpos moves e2e4 e7e5`. Each run used a fresh engine with the same weights/options. No download occurred.
+- Python suite rerun on reviewed commit `4a6e2db`: **6 passed**, one upstream python-chess Python 3.14 deprecation warning. A separate plan-only invocation printed the 2,000,000,000-byte limit and returned without HTTP.
+- Independently replayed historical red commits in temporary directories: `0d12400` fails collection for the absent module; `6b7fd87` gives **1 failed, 1 passed** for missing `build_table`; `727bf68` gives **1 failed, 2 passed** for missing `pgn_stream`; `3f173a0` gives **1 failed, 3 passed** for missing CLI HTTP boundary. Current green suite calls production code. Every commit's stat separates tests from production. The previously recorded limitation that the additional CLI implementation was authored before its tests remains disclosed; the replay proves their failure without the implementation, not original authoring order.
+- Existing gate receipt reused: SHA-256 matches its log, exit 0, **137 passed, 0 failed** at `aa5e1b1`; only this ticket changed since that tested commit. No production fix was authored during review, so the gate was not rerun.
+- Both existing proxy decisions were examined: the additional offline CLI/reservoir/UCI seams stay within the original criteria; omitting PolicyTemperature matches the game's default 1.359. Neither decision authorizes a download or resolves the newly demonstrated history mismatch.
+- Review totals: **Standards 0; Spec 1 (P1, criterion 5)**. Reopened on `BOT-007`; no ledger entry existed to remove. No merge or push. Stage 2 must repair criterion 5 test-first and produce fresh green gate evidence before returning to review.
+
+Acceptance: pending | Verification and this Resolution: real-data calibration and M8 remain outstanding; criterion 5 also needs the history-context repair.
+Disclosure: pending | integration | This Resolution, criterion 5: calibration policy bins differ from the game's because samples discard history; keep BOT-007 open until the implementation and regression are reviewed.
