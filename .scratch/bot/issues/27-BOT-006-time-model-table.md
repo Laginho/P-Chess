@@ -1,5 +1,5 @@
 # BOT-006: Time-model table
-Stage: done
+Stage: to-implement
 Blocked by: BOT-005
 Review: agent
 Difficulty: normal
@@ -73,3 +73,19 @@ Proxy decided (opus), named for the session PR: option B, which added `bot/maia_
 
 Acceptance: pending | BOT-006 makes Maia read data/time_model.json, which does not exist until BOT-007 writes it; M8's "delays feel human" is checked there. Gate 119/0 at 6b57c78, receipt above.
 Disclosure: pending | integration | ui/main.gd _start: BOT-005's maia.clock/maia.control plus BOT-006's maia.level conflict with the core lane's _start(new_settings); resolve as maia.clock = clock, maia.control = settings.control, maia.level = settings.level. From the proxy's decision above. Today origin/main and every pushed core lane still have `_start(colour, level, control)`, so the conflict is with core work not pushed yet.
+
+#### Review 2 (2026-10-24), independent: gpt-6.1-sol xhigh on PR #7 (head 8a980d2)
+
+Verdict: Reopen — criterion 4 (a table with non-finite numbers is accepted instead of falling back)
+
+Requested by the supervising session as part of the PR #7 merge rule; its gate run on the head gave 119 passed, 0 failed, live Lc0 included.
+
+Criteria:
+
+1. ✅ 2. ✅ 3. ✅ 5. ✅ 6. ✅
+4. ❌ `_number()` in `bot/time_model.gd:87` only checks the type (`TYPE_INT`/`TYPE_FLOAT`), so non-finite values pass. Godot's JSON parser reads `"median": 1e999` as `inf`; the loader keeps that bucket instead of warning and returning `{}`. Reproduced by the reviewer: with 10 s left, the delay is 10 s (the clamp to `clock_left`), where the formula fallback gives 1.679 s. An overflowing `log_sigma` fails the same way, sending the delay to the 0.05 s floor or to the whole clock. A malformed file that does not use the formula breaks criterion 4.
+
+Left for stage 2:
+
+- BLOCKING: require every number the loader reads (bin edges, `median`, `log_sigma`) to be finite, so a table with `inf` or `nan` logs one warning and falls back to the formula. Add regression cases to the malformed-file test for an overflowing median, an overflowing log-sigma and an overflowing bin edge (e.g. `1e999` in the JSON text), each red before the fix.
+- NON-BLOCKING (include it if it stays inside `tests/test_time_model.gd`): the timing integration tests at `tests/test_time_model.gd:58` (`_moves_at_once`) only look at what was emitted before `think()` returns, so they would still pass with a timer that is too long or a final move that never comes. Add async coverage: exactly one delayed move arrives, Maia's clock is charged `max(delay, compute)`, and a flag before the pending reply stops the move. The reviewer's probes say these paths already work today, so these tests may be green from the start; say so instead of forcing a red.
