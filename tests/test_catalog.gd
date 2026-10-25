@@ -139,3 +139,122 @@ func test_selection_errors_preserve_checks_and_cannot_escape_the_selection_folde
 		assert_true(not book.load_selection("broken").is_empty(), contents)
 		assert_eq(book.selected_ids(), selected, "failed load leaves current checks untouched")
 	_remove_folder(folder)
+
+
+func _find_item(item: TreeItem, path: String) -> TreeItem:
+	if item.get_metadata(0) == path:
+		return item
+	for child in item.get_children():
+		var found := _find_item(child, path)
+		if found != null:
+			return found
+	return null
+
+
+func test_picker_search_checks_partial_parents_and_save_load_buttons_use_the_catalog():
+	var scene = load("res://ui/opening_picker.tscn")
+	assert_true(scene != null, "the real opening picker scene exists")
+	if scene == null:
+		return
+	var picker = scene.instantiate()
+	var folder := _folder()
+	picker.book = _sample()
+	picker.book.selection_dir = folder
+	Engine.get_main_loop().root.add_child(picker)
+	picker.present()
+	var tree: Tree = picker.get_node("Margin/Form/Tree")
+	var search: LineEdit = picker.get_node("Margin/Form/Search")
+	search.text = "eNgLiSh"
+	search.text_changed.emit(search.text)
+	var family := "Sicilian Defense"
+	var najdorf := family + ": Najdorf Variation"
+	var english := najdorf + ", English Attack"
+	assert_true(_find_item(tree.get_root(), "King's Pawn Game") == null)
+	var item := _find_item(tree.get_root(), english)
+	assert_true(item != null, "search retains the matching variation")
+	if item == null:
+		picker.free()
+		return
+	item.select(0)
+	assert_true(tree.edit_selected(), "edit a real checkbox through Godot")
+	assert_eq(picker.book.check_state(english), 1)
+	assert_true(_find_item(tree.get_root(), family).is_indeterminate(0))
+	assert_true(_find_item(tree.get_root(), najdorf).is_indeterminate(0))
+	var names: Array = []
+	picker.saved.connect(func(name): names.append(name))
+	picker.get_node("Margin/Form/SaveRow/Name").text = "Najdorf"
+	picker.get_node("Margin/Form/SaveRow/Save").pressed.emit()
+	assert_eq(names, ["Najdorf"])
+	assert_eq(picker.book.selection_names(), ["Najdorf"])
+	# Checking a filtered family still selects its hidden descendants.
+	_find_item(tree.get_root(), family).select(0)
+	assert_true(tree.edit_selected())
+	assert_eq(picker.book.selected_ids().size(), 4)
+	picker.get_node("Margin/Form/LoadRow/Load").pressed.emit()
+	assert_eq(picker.book.selected_ids().size(), 2, "load restores the saved checks")
+	search.clear()
+	search.text_changed.emit("")
+	assert_true(_find_item(tree.get_root(), "King's Pawn Game") != null)
+	assert_true(_find_item(tree.get_root(), english).is_checked(0))
+	picker.get_node("Margin/Form/Done").pressed.emit()
+	assert_true(not picker.visible)
+	picker.free()
+	_remove_folder(folder)
+
+
+func test_setup_lists_saved_selections_and_emits_catalog_choice_while_free_stays_compatible():
+	var folder := _folder()
+	var book = _sample()
+	book.selection_dir = folder
+	book.set_checked("Sicilian Defense: Najdorf Variation", true)
+	assert_eq(book.save_selection("Najdorf"), "")
+	var setup = load("res://ui/setup.tscn").instantiate()
+	setup.book = book
+	Engine.get_main_loop().root.add_child(setup)
+	var modes: OptionButton = setup.get_node("Center/Form/Opening")
+	assert_true(not modes.is_item_disabled(1), "Catalog is enabled")
+	assert_true(modes.is_item_disabled(2), "repertoire still belongs to OPEN-003")
+	var settings: Array = []
+	setup.started.connect(func(choice): settings.append(choice))
+	setup.get_node("Center/Form/Start").pressed.emit()
+	assert_eq(settings[0], {"colour": "w", "level": "maia-1500", "control": "1+0", "opening": "Free"})
+	modes.select(1)
+	modes.item_selected.emit(1)
+	var selections: OptionButton = setup.get_node("Center/Form/CatalogControls/Selections")
+	assert_eq(selections.get_item_text(0), "Najdorf")
+	assert_true(selections.is_visible_in_tree())
+	setup.get_node("Center/Form/Start").pressed.emit()
+	assert_eq(settings[1].opening, "Catalog")
+	assert_eq(settings[1].selection, "Najdorf")
+	# The picker saves another name and setup immediately offers it without reopening setup.
+	setup.get_node("Center/Form/CatalogControls/Edit").pressed.emit()
+	var picker = setup.get_node("OpeningPicker")
+	assert_true(picker.visible)
+	picker.get_node("Margin/Form/SaveRow/Name").text = "New practice"
+	picker.get_node("Margin/Form/SaveRow/Save").pressed.emit()
+	assert_eq(selections.item_count, 2)
+	assert_eq(selections.get_item_text(selections.selected), "New practice")
+	setup.free()
+	_remove_folder(folder)
+
+
+func test_setup_without_saved_selections_blocks_catalog_start_but_allows_editing_and_free():
+	var setup = load("res://ui/setup.tscn").instantiate()
+	setup.book = _sample()
+	setup.book.selection_dir = _folder()
+	Engine.get_main_loop().root.add_child(setup)
+	var modes: OptionButton = setup.get_node("Center/Form/Opening")
+	var start: Button = setup.get_node("Center/Form/Start")
+	modes.select(1)
+	modes.item_selected.emit(1)
+	assert_true(start.disabled)
+	assert_true(not setup.get_node("Center/Form/CatalogControls/Edit").disabled)
+	var choices: Array = []
+	setup.started.connect(func(settings): choices.append(settings))
+	start.pressed.emit()
+	assert_eq(choices, [], "even a stale start signal cannot start Catalog without a selection")
+	modes.select(0)
+	modes.item_selected.emit(0)
+	assert_true(not start.disabled)
+	assert_true(not setup.get_node("Center/Form/CatalogControls").visible)
+	setup.free()
