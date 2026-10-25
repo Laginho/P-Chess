@@ -1,5 +1,5 @@
 # CLEAN-002: Keep an open promotion picker aligned on flip and resize
-Stage: done
+Stage: blocked
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -56,3 +56,5 @@ Stage 3 (Claude Opus 5.5), Standards + Spec against the numbered criteria. PR [L
 - Findings: none on either axis. No `Proxy decided` lines.
 
 Disclosure: pending | none | manual windowed check from Verification not run; deferred by stage 3 (this session) because stage 1 rated the defect cosmetic and low priority and the scene test covers every criterion.
+
+- 2026-10-25 Review ended at to-review (exit 0); branch clean-002 holds the review; left for a human
