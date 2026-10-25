@@ -116,3 +116,57 @@ func test_switching_from_maia_1100_to_1900_changes_the_policy():
 	for move in low:
 		changed = changed or absf(low[move] - high.get(move, 0.0)) > 0.0001
 	assert_true(changed, "maia-1900 answered with maia-1100's policy")
+
+
+func _live_engine(test_name: String) -> String:
+	var exe := UCI.engine_path(UCI.search_dirs())
+	if exe == "":
+		print("SKIP test_uci.gd::%s: no engine/lc0/lc0.exe, run scripts/fetch-engine.ps1" % test_name)
+	return exe
+
+
+func _wait_for_stop(uci, stops: Array) -> void:
+	var deadline := Time.get_ticks_msec() + 10000
+	while stops.is_empty() and Time.get_ticks_msec() < deadline:
+		uci.poll()
+		OS.delay_msec(10)
+	assert_eq(stops.size(), 1, "one stopped signal within 10 s of polling")
+	assert_eq(uci.available, false, "the dead engine is unavailable")
+	assert_true("Lc0" in uci.error and "stopped" in uci.error, uci.error)
+	uci.poll()
+	assert_eq(stops.size(), 1, "later polls do not repeat stopped")
+
+
+func test_external_exit_reports_stopped_and_discards_queued_requests():
+	var exe := _live_engine("test_external_exit_reports_stopped_and_discards_queued_requests")
+	if exe == "":
+		return
+	var uci = UCI.new()
+	if not uci.has_signal("stopped"):
+		assert_true(false, "the bridge must expose stopped for an unexpected Lc0 exit")
+		uci.free()
+		return
+	var stops := []
+	var policies := []
+	uci.stopped.connect(func(): stops.append(true))
+	uci.policy_ready.connect(func(policy): policies.append(policy))
+	assert_true(uci.start(), uci.error)
+	var weights := exe.get_base_dir().get_base_dir().path_join("weights/maia-1100.pb.gz")
+	uci.set_level(weights)
+	uci.request_policy(START, PackedStringArray())
+	uci.request_policy(START, ITALIAN.split(" "))
+	var pid: int = uci.pid
+	assert_eq(OS.kill(pid), OK, "kill Lc0 outside the bridge's stop()")
+	_wait_for_stop(uci, stops)
+	assert_true(not OS.is_process_running(pid), "the child process is gone")
+	assert_true(policies.is_empty(), "abandoned requests emit no policy")
+	# Restarting the same bridge must not replay requests or wait for the dead child's reply.
+	assert_true(uci.start(), uci.error)
+	assert_eq(uci.error, "", "a successful restart clears the old error")
+	uci.set_level(weights)
+	assert_true(not _policy(uci, ITALIAN).is_empty(), "a fresh request works after restart")
+	assert_eq(policies.size(), 1, "only the new request gets a policy")
+	uci.stop()
+	uci.poll()
+	assert_eq(stops.size(), 1, "intentional stop() does not emit stopped")
+	uci.free()

@@ -1,5 +1,5 @@
 # BOT-008: Say so when Lc0 stops
-Stage: to-implement
+Stage: implementing
 Blocked by: BOT-004
 Review: agent
 Difficulty: normal
@@ -34,3 +34,4 @@ If Lc0 dies during a game (a crash, or a net it cannot load), the player is told
 - 2026-10-24 Created at BOT-004's close (Proxy decided (opus), BOT-004 ## Comments). No general reply timeout is asked for: the first net load took 15.5 s on a loaded machine (BOT-004 Review), so a short one would kill a healthy Lc0. If c2 needs one, put it on the `readyok` wait only and record the value here.
 - The proxy did not check what Lc0 v0.32.1 does with a `WeightsFile` that does not exist (exit, an `error` line, or silence), so c2 states the outcome, not the mechanism. If Lc0 instead finds another net and answers `readyok`, c2 cannot hold: stage 2 stops and asks.
 - If Bruno answers PolicyTemperature (BOT-007 ## Comments) before this ticket starts, stage 1 may fold its `setoption` line into a criterion here, since `start()` is in this file.
+- 2026-10-25 Stage 2 pre-test inspection: `ui/main.gd` owns the bridge and starts/loads it; `bot/maia_player.gd` queues policies and may emit a delayed move after a timer. The live UCI seam approved above covers external process death, repeated polling, queued requests, restart, and intentional shutdown. UI handling must freeze clocks, invalidate delayed Maia moves, cancel board interaction, and account for an engine exit while `_start()` awaits the opening catalog. BOT-007 leaves PolicyTemperature at the shared Lc0 default; no setting change is authorized here.
