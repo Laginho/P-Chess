@@ -83,6 +83,8 @@ func parse(text: String, human_colour: String) -> String:
 		var key: String = board.position_key()
 		if not merged.has(key):
 			merged[key] = _node(key)
+		if not game.comment.is_empty() and game.comment not in merged[key].comments:
+			merged[key].comments.append(game.comment)
 		_merge(game.moves, merged[key], board)
 	if merged.is_empty():
 		return "The PGN contains no moves."
