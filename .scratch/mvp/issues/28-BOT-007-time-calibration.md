@@ -1,8 +1,9 @@
 # BOT-007: Time-model calibration from Lichess data
-Stage: implementing
+Stage: to-review
 Blocked by: BOT-001, BOT-006
 Review: human
 Difficulty: normal
+Gate evidence: C:\Users\Lage\AppData\Local\Temp\BOT-007-aa5e1b1-gate-permitted.json
 
 - Primary files:
   - New: scripts/calibrate_time.py
@@ -29,7 +30,8 @@ An offline script that measures how humans at 1100–1900 spend time in bullet a
 #### Verification
 
     python -m pytest scripts/test_calibrate_time.py
-    After Bruno approves the download: python scripts/calibrate_time.py --url <dump> --max-bytes <limit>
+    Plan only: python scripts/calibrate_time.py --url <dump> --max-bytes <limit>
+    After Bruno approves the download: python scripts/calibrate_time.py --url <dump> --max-bytes <limit> --download-approved
     godot --headless -s tests/run.gd
 
 Offline tests establish script behavior before download approval. The real `data/time_model.json` is generated only after Bruno approves the planned download in chat. Until then, real calibration and M8 product acceptance remain pending; fixture output must not be committed as calibrated data.
@@ -57,3 +59,18 @@ Offline tests establish script behavior before download approval. The real `data
 
 - 2026-10-25 Attempt 1 stopped to ask: I've blocked BOT-007 before writing any code (commit `26128d9` on `sweatshop/mvp/2026-10-25-0006`). This headless session isn't allowed to run Python, so I couldn't run the new tests or install the script's dependencies. /  / **Why it's blocked:** the driver's list of allowed commands (`driver.ps1` line 148) doesn't include `python`. Every `python -c` and `python -m pytest` call was refused; only `python --version` ran (3.14.6). Without pytest there's no proof that the tests fail before the change and pass after it, which the loop requires. I could have got past the refusal by wrapping `python` in the allowed `powershell` command. I didn't, and the proxy agreed that would get around the permission check. It sent this question back to you. /  / **What you need to decide (one of these):** / 1. Add `'python'` to the driver's allowed list. That lets every lane and repo the driver runs execute any Python code, the same exposure it already accepts for `node` and `powershell`. / 2. Run BOT-007 stage 2 yourself, in an attended session. /  / Either way, this machine needs pytest, python-chess and zstandard installed. I couldn't check whether they already are. After that, set the ticket back to `Stage: to-implement`. /  / **Also recorded for later:** the open question about the Lc0 setting that controls how spread out Maia's move probabilities are (`PolicyTemperature`). The proxy decided the script sends nothing, so it uses the same default (1.359) as the game. That keeps the script and the game matched without touching files outside the ticket. Answer only if you want a different value; it has to be settled before the download, which already waits for your go-ahead. /  / A `STOP` file appeared in `.scratch/run-log/` at 00:07, so the driver will probably end this run after this stage.
 - 2026-10-25 Bruno decided (relayed by the supervising foreman, in Bruno's words): "Pode: o foreman instala pytest, python-chess e zstandard no meu Python global, volta o BOT-007 pra to-implement e relança com gpt-6.1-sol." Answers the python escalation: stage 2 runs on the gpt-6.1-sol (Codex) lineup, outside the Claude allowlist; the dependencies go in Bruno's global Python.
+
+#### Stage 2 handoff (2026-10-25)
+
+- Branch: `BOT-007`, based on `sweatshop/mvp/2026-10-25-0006`. Only Primary files plus this ticket changed. No production game code or runtime dependencies changed. `data/time_model.json` has not been generated or committed.
+- Implemented required URL/byte-cap arguments and a printed plan by default; `--download-approved` enables HTTP streaming only after Bruno's chat approval. A Range request plus a capped reader bounds compressed bytes even when a server ignores Range. No monthly archive is saved. The script retains at most 10,000 seeded reservoir positions by default, evaluates them grouped by matching Maia net, and atomically writes BOT-006 JSON after successful evaluation. Default bins: clock `[0, .15, .5, 1]`, top-P `[0, .3, .6, 1]`; minimum 50 samples per bucket, configurable. Tied rating bands round upward. Zero-second observations use the game's 0.05 s floor for the logarithmic fit.
+- Red/green commits: `0d12400` missing extraction module → `fbf40e2` (1 Python pass); `6b7fd87` missing table builder → `3093152` (2 passes); `727bf68` missing bounded stream → `e52af8a` plus test-only harness correction `2983699` (3 passes; cap-disabled mutant fails). `3f173a0` missing CLI/HTTP boundary → `b6bcc13` (4 passes). Test-only `aa5e1b1` adds already-green reservoir/engine-stop regression checks (6 passes); first-N mutant fails. The chronology limitation for the additional CLI tests is recorded above. Every commit separates test and production files; tracker metadata accompanies some test commits.
+- Python validation: installed Python 3.14.6 invoked directly at `C:\Users\Lage\AppData\Local\Python\pythoncore-3.14-64\python.exe -B -m pytest -p no:cacheprovider scripts/test_calibrate_time.py`: **6 passed**, one upstream python-chess deprecation warning. The fixture-to-file test uses mocked HTTP and a real local fake UCI child process; it never contacts the dump server. A separate real Lc0 v0.32.1 smoke evaluated all 8 fixture positions across maia-1100/1500/1900; top P ranged 0.1968–0.4014. No fixture output was committed as calibrated data.
+- Bound gate: `godot --headless -s tests/run.gd`, tested commit `aa5e1b10b95b1b57964f3132f55205b91853b0e8`, **137 passed, 0 failed**, exit 0; maia-1500 median latency 9.7 ms over 30 moves. The first sandboxed attempt could not write existing tests' `user://` files and was terminated; the successful foreground run used approved filesystem access. The receipt above was produced by `gate-evidence.ps1`; log SHA-256 `BE06A7ABC033309ADB8CB4DDB7203756C4D267015758D4F5D0BD7E4CD2DCEC7E`. Only ticket metadata changes after this tested commit.
+- Final scope/whitespace review: clean; five changed files, all in the ticket boundary. No download, push, merge or stage-3 review performed.
+
+Acceptance: pending | BOT-007 Verification above: approved real-data calibration, generated table validation and M8's human assessment of delays remain outstanding.
+
+Disclosure: decision | none | BOT-007 Comments, proxy decision (gpt-6-astra high, fallback): added offline CLI/reservoir/UCI test seams for existing criteria, without production scope expansion or download authorization.
+Disclosure: decision | none | BOT-007 Comments, proxy decision (opus): script sends no PolicyTemperature, matching the game's Lc0 v0.32.1 default 1.359; any different value remains Bruno's choice and must be coordinated with engine/uci.gd before calibration.
+Disclosure: pending | release | BOT-007 Verification: data/time_model.json remains absent until Bruno approves the download and the generated table is validated; the game uses its documented formula fallback meanwhile.
