@@ -1,6 +1,8 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://ui/setup.gd" id="1"]
+[ext_resource type="PackedScene" path="res://ui/opening_picker.tscn" id="2"]
+[ext_resource type="PackedScene" path="res://ui/repertoire_import.tscn" id="3"]
 
 [node name="Setup" type="Control"]
 layout_mode = 3
@@ -51,6 +53,32 @@ layout_mode = 2
 [node name="Opening" type="OptionButton" parent="Center/Form"]
 layout_mode = 2
 
+[node name="CatalogControls" type="HBoxContainer" parent="Center/Form"]
+visible = false
+layout_mode = 2
+
+[node name="Selections" type="OptionButton" parent="Center/Form/CatalogControls"]
+layout_mode = 2
+size_flags_horizontal = 3
+tooltip_text = "Saved opening selection"
+
+[node name="Edit" type="Button" parent="Center/Form/CatalogControls"]
+layout_mode = 2
+text = "Choose openings…"
+
+[node name="RepertoireControls" type="HBoxContainer" parent="Center/Form"]
+visible = false
+layout_mode = 2
+
+[node name="Saved" type="OptionButton" parent="Center/Form/RepertoireControls"]
+layout_mode = 2
+size_flags_horizontal = 3
+tooltip_text = "Saved repertoire"
+
+[node name="Import" type="Button" parent="Center/Form/RepertoireControls"]
+layout_mode = 2
+text = "Import PGN…"
+
 [node name="Start" type="Button" parent="Center/Form"]
 layout_mode = 2
 text = "Start"
@@ -59,3 +87,7 @@ text = "Start"
 visible = false
 layout_mode = 2
 autowrap_mode = 3
+
+[node name="OpeningPicker" parent="." instance=ExtResource("2")]
+
+[node name="RepertoireImport" parent="." instance=ExtResource("3")]

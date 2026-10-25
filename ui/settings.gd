@@ -17,6 +17,9 @@ var store
 func _ready() -> void:
 	$Open.pressed.connect(func() -> void: _panel.visible = not _panel.visible)
 	$Panel/Center/Box/Close.pressed.connect(_panel.hide)
+	_choice("premove_style", "Premove style", Settings.CHOICES.premove_style)
+	_check("click_click", "Click-click moves")
+	_choice("auto_queen", "Auto-queen", Settings.CHOICES.auto_queen)
 	_check("legal_dots", "Legal-move dots")
 	_spin("animation_ms", "Animation length (ms)", 10)
 	_choice("board_theme", "Board", _themes("boards"))
@@ -26,7 +29,9 @@ func _ready() -> void:
 	_spin("tau", "Threshold τ (%)", 0.1, 100.0)
 	_spin("temperature", "Temperature T", 0.1)
 	_choice("panic", "Panic intensity", Settings.CHOICES.panic)
+	_choice("book_intensity", "Book intensity", Settings.CHOICES.book_intensity)
 	_check("auto_claim", "Auto-claim threefold")
+	_check("check_repertoire", "Check my moves against my repertoire")
 
 
 # While open, the screen keeps keys from the game: Esc closes it instead of resigning.

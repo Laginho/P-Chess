@@ -1,7 +1,8 @@
 extends Control
 
 # A game against Maia (BOT-004): the setup screen, the board, the clocks (CLOCK-001), the move list
-# and the result, then the hotkeys around it (UI-004, §9.2): Space rematch, Esc Esc resign, F11 focus.
+# and the post-game review (HIST-002), then the hotkeys (UI-004, §9.2): Space rematch,
+# Esc Esc resign, F11 focus.
 # The settings screen (UI-005, §10) sits on top, and each setting applies the moment it changes.
 
 const Game = preload("res://core/game.gd")
@@ -11,6 +12,8 @@ const UCI = preload("res://engine/uci.gd")
 const MaiaPlayer = preload("res://bot/maia_player.gd")
 const Settings = preload("res://core/settings.gd")
 const SettingsScreen = preload("res://ui/settings.tscn")
+const History = preload("res://core/history.gd")
+const ReviewScreen = preload("res://ui/review.tscn")
 
 const WINNERS := {"1-0": "White wins", "0-1": "Black wins", "1/2-1/2": "Draw"}
 
@@ -27,9 +30,18 @@ var settings := {}
 var preferences := Settings.new()
 # Their screen, over everything else; hidden in focus mode.
 var settings_screen := SettingsScreen.instantiate()
+var review := ReviewScreen.instantiate()
 var resign_key := ResignKey.new(Time.get_ticks_msec)
 # Only the board and the clocks show (§8.7).
 var focus := false
+var _playing_premove := false
+# Created at ready time so scene tests can supply isolated storage before any file is read.
+var history
+var _move_clocks := []
+var _history_saved := false
+var _recording_move := false
+var _starting := false
+var _review_repertoire: Array = []
 
 
 # Esc resigns on a second press within 2 s of the first (§7). The time source returns milliseconds.
@@ -90,12 +102,15 @@ static func material_balance(board) -> Dictionary:
 
 
 func _ready() -> void:
+	if history == null:
+		history = History.new()
 	get_window().min_size = Vector2i(800, 600)
 	sound_player.name = "Sounds"
 	add_child(sound_player)
 	# In the tree, so its _process reads Lc0 every frame without blocking the UI.
 	uci.name = "Engine"
 	add_child(uci)
+	uci.stopped.connect(_on_engine_stopped)
 	board_view.game = Game.new()
 	board_view.move_played.connect(_on_move_played)
 	board_view.sound_requested.connect(sound_player.play)
@@ -106,6 +121,9 @@ func _ready() -> void:
 	setup.started.connect(_start)
 	settings_screen.store = preferences
 	add_child(settings_screen)
+	add_child(review)
+	review.rematch_requested.connect(func(): _start(rematch(settings)))
+	review.setup_requested.connect(_show_setup)
 	preferences.changed.connect(_apply)
 	for key in Settings.DEFAULTS:
 		_apply(key, preferences.get_value(key))
@@ -119,6 +137,13 @@ func _process(_delta: float) -> void:
 	if clock:
 		clock.tick()
 	resign_hint.visible = resign_key.armed()
+
+
+# Global input runs before GUI input: a flag or low-time warning must precede the drop
+# and its increment, even when the threshold was crossed since the last frame tick.
+func _input(_event: InputEvent) -> void:
+	if clock:
+		clock.tick()
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
@@ -141,13 +166,60 @@ func _unhandled_key_input(event: InputEvent) -> void:
 
 
 func _start(new_settings: Dictionary) -> void:
+	if _starting or not uci.error.is_empty():
+		return
+	_starting = true
 	setup.hide()
-	settings = new_settings
+	setup.get_node("OpeningPicker").hide()
+	setup.get_node("RepertoireImport").hide()
+	review.hide()
+	board_view.mouse_filter = MOUSE_FILTER_IGNORE
+	result_label.text = "Loading opening catalog…"
+	var error := ""
+	var practice_book = setup.book
+	var review_repertoire: Array = []
+	var repertoire_name: String = new_settings.get("repertoire", "")
+	var repertoire_mode: bool = new_settings.opening == "My repertoire"
+	var repertoire_error := ""
+	if repertoire_mode or not repertoire_name.is_empty():
+		repertoire_error = setup.repertoire.load_saved(repertoire_name)
+		if repertoire_mode or preferences.get_value("check_repertoire"):
+			error = repertoire_error
+		if repertoire_error.is_empty():
+			# Snapshot even with checking off, so enabling it during play uses this PGN.
+			review_repertoire = setup.repertoire.lines.duplicate(true)
+		if repertoire_mode and error.is_empty():
+			practice_book = setup.Book.new()
+			practice_book.load_repertoire(setup.repertoire.lines, "b" if new_settings.colour == "w" else "w")
+	if error.is_empty():
+		error = await setup.get_node("OpeningPicker").ensure_catalog()
+	# Settings stay live while the catalog loads; checking may now require the saved PGN.
+	if error.is_empty() and (repertoire_mode or preferences.get_value("check_repertoire")):
+		error = repertoire_error
+	if error.is_empty() and new_settings.opening == "Catalog":
+		error = setup.book.load_selection(new_settings.get("selection", ""))
+	_starting = false
+	if not uci.error.is_empty():
+		return
+	if not error.is_empty():
+		setup.show()
+		var status: Label = setup.get_node("Center/Form/Missing")
+		status.text = error
+		status.show()
+		return
+	setup.get_node("Center/Form/Missing").hide()
+	_move_clocks.clear()
+	_history_saved = false
+	settings = new_settings.duplicate()
+	_review_repertoire = review_repertoire
 	human = settings.colour
 	uci.set_level(MaiaPlayer.net_path(settings.level))
 	var game = Game.new()
-	maia.begin_game(game)
+	maia.book = practice_book
+	history.book = setup.book
+	maia.begin_game(game, settings.opening, history.practice_counts(), "b" if human == "w" else "w")
 	board_view.game = game
+	board_view.human_side = human
 	board_view.game.auto_claim = preferences.get_value("auto_claim")
 	resign_key = ResignKey.new(Time.get_ticks_msec)
 	move_list.reset()
@@ -169,9 +241,37 @@ func _start(new_settings: Dictionary) -> void:
 	_next_turn()
 
 
+func _show_setup() -> void:
+	review.hide()
+	clock = null
+	white_clock.clock = null
+	black_clock.clock = null
+	setup.show()
+
+
+# Abort without recording a chess result, and invalidate Maia's already scheduled moves.
+func _on_engine_stopped() -> void:
+	if clock:
+		clock.stop()
+	maia.clock = null
+	maia.begin_game(null)
+	board_view.cancel_premoves()
+	board_view.mouse_filter = MOUSE_FILTER_IGNORE
+	claim_draw.disabled = true
+	resign_key = ResignKey.new(Time.get_ticks_msec)
+	_show_setup()
+	setup.show_missing(uci.error)
+
+
 # One setting to whatever reads it; the next move, sound or game picks it up.
 func _apply(key: String, value) -> void:
 	match key:
+		"premove_style":
+			board_view.premove_style = value
+		"click_click":
+			board_view.click_click = value
+		"auto_queen":
+			board_view.auto_queen = value
 		"legal_dots":
 			board_view.show_targets = value
 		"animation_ms":
@@ -190,6 +290,8 @@ func _apply(key: String, value) -> void:
 			maia.temperature = value
 		"panic":
 			maia.panic = value
+		"book_intensity":
+			maia.book_intensity = value
 		"auto_claim":
 			board_view.game.auto_claim = value
 
@@ -222,11 +324,16 @@ func _on_move_played(san: String) -> void:
 	move_list.add(san)
 	var game = board_view.game
 	claim_draw.disabled = not game.can_claim_draw()
+	var mover: String = "b" if game.board.side_to_move == "w" else "w"
+	_recording_move = true
+	if not _playing_premove:
+		# May flag, when the time ran out before the move landed.
+		# A terminal move keeps its existing result even if clock.moved emits a flag.
+		clock.moved(mover)
+	_move_clocks.append(clock.left(mover))
+	_recording_move = false
 	if game.is_over():
 		_show_result()
-	else:
-		# May flag, when the time ran out before the move landed.
-		clock.moved("b" if game.board.side_to_move == "w" else "w")
 	var balance := material_balance(board_view.game.board)
 	white_material.text = _captured(balance.w, BLACK_GLYPHS) + _lead(balance.diff)
 	black_material.text = _captured(balance.b, WHITE_GLYPHS) + _lead(-balance.diff)
@@ -236,28 +343,46 @@ func _on_move_played(san: String) -> void:
 # The clock has already stopped. Maia may still be thinking: its move then finds the game over.
 func _on_flagged(side: String) -> void:
 	board_view.game.flag(side)
-	_show_result()
+	# A flag during move accounting must wait for that move's clock snapshot.
+	if not _recording_move:
+		_show_result()
 
 
 # Every way a game ends lands here, after the game has its result.
 func _show_result() -> void:
 	var game = board_view.game
+	board_view.cancel_premoves()
 	clock.stop()
 	claim_draw.disabled = true
 	result_label.text = "%s by %s (%s)\nSpace for a rematch" % [WINNERS[game.result], game.reason, game.result]
+	if not _history_saved:
+		_history_saved = true
+		history.save(game, _move_clocks, settings, "", maia.target_id)
+	if history.error:
+		result_label.text += "\nHistory: " + history.error
+	review.present(game, _move_clocks, settings, result_label.text,
+			setup.book.entries, _review_repertoire, preferences.get_value("check_repertoire"))
 	sound_player.play("game_end")
 	print("Maia: median %.1f ms from your move to Lc0's answer, over %d moves"
 			% [maia.median_ms(), maia.latencies_ms.size()])
 
 
-# While Maia is to move the board takes no input, so the human cannot hold one of its pieces when
-# its move lands (BoardView.play does not drop a held piece).
+# Input stays available for human premoves while Maia thinks.
 func _next_turn() -> void:
 	var game = board_view.game
 	var maia_to_move: bool = not game.is_over() and game.board.side_to_move != human
-	board_view.mouse_filter = MOUSE_FILTER_IGNORE if maia_to_move else MOUSE_FILTER_STOP
+	board_view.mouse_filter = MOUSE_FILTER_STOP
 	if maia_to_move:
 		maia.think(game, clock.left(game.board.side_to_move), Clock.CONTROLS[settings.control][0])
+	elif not game.is_over():
+		var move: String = board_view.premoves.take(game.board)
+		if move:
+			# Charge before playing: the increment or a mating move cannot rescue a flag.
+			clock.moved(human, true)
+			if not game.is_over():
+				_playing_premove = true
+				board_view.play(move, true)
+				_playing_premove = false
 
 
 static func _captured(roles: String, glyphs: Dictionary) -> String:

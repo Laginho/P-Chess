@@ -1,16 +1,19 @@
 extends Control
 
-# The board (§8.1): draws the position of `game` and turns drags into moves on it.
+# The board (§8.1, §8.3): draws the position, handles moves and square annotations.
 # Always square and centred in the control, so it scales with the window.
 
 signal move_played(san: String)
 signal sound_requested(event: String)
 
 const ThemeLoader = preload("res://ui/theme_loader.gd")
+const PromotionPicker = preload("res://ui/promotion_picker.gd")
+const PremoveQueue = preload("res://ui/premove_queue.gd")
 const SNAP_BACK_SECONDS := 0.15
 const LAST_MOVE := Color(0.61, 0.78, 0, 0.41)
 const CHECK := Color(1, 0, 0, 0.6)
 const TARGET := Color(0.08, 0.33, 0.12, 0.5)
+const DRAWING := Color(0.12, 0.65, 0.22, 0.75)
 
 # How long a move that was not dragged (the bot's, a premove) slides; 0 is instant.
 @export var slide_seconds := 0.12
@@ -18,17 +21,42 @@ const TARGET := Color(0.08, 0.33, 0.12, 0.5)
 @export var show_targets := true
 @export var board_theme := "brown"
 @export var piece_theme := "cburnett"
+@export var click_click := false:
+	set(value):
+		click_click = value
+		if not value and _selected:
+			_end_snap_back()
+@export_enum("off", "on", "only on premoves") var auto_queen := "off"
+
+var premoves := PremoveQueue.new("w")
+@export_enum("off", "Lichess", "Chess.com") var premove_style := "Chess.com":
+	set(value):
+		premove_style = value
+		premoves.style = value
+		if _is_premove_input():
+			_cancel_interaction()
+		queue_redraw()
+# Empty preserves the standalone board's two-human input.
+var human_side := "":
+	set(value):
+		human_side = value
+		premoves.human = value
+		premoves.clear()
 
 var _board_style := {"light": ThemeLoader.BROWN_LIGHT, "dark": ThemeLoader.BROWN_DARK, "texture": null}
 
 var game:
 	set(value):
 		game = value
+		premoves.clear()
 		# A new game (a rematch) keeps nothing held, sliding or promoting from the old one.
 		_end_slide()
 		if _snap:
 			_snap.kill()
 		_held_moves.clear()
+		drawings.clear()
+		_drawing_from = ""
+		_drawing_to = ""
 		_promoting = ""
 		# Null on a board built outside a scene.
 		if _picker and _picker.visible:
@@ -44,6 +72,11 @@ var flipped := false:
 var _textures := {}
 # The held piece's square; "" when nothing is held.
 var _drag_from := ""
+# A piece selected by a completed click stays on its square until the next click.
+var _selected := ""
+var _reselected := false
+var _press_pos := Vector2.ZERO
+var _dragged := false
 # The held piece's centre, in control coordinates.
 var _drag_pos := Vector2.ZERO:
 	set(value):
@@ -53,6 +86,7 @@ var _snapping := false
 var _snap: Tween
 # The held piece's legal moves, UCI.
 var _held_moves := PackedStringArray()
+var _held_piece := ""
 # The sliding piece's destination; "" when nothing slides.
 var _slide_to := ""
 var _slide_pos := Vector2.ZERO:
@@ -62,6 +96,10 @@ var _slide_pos := Vector2.ZERO:
 var _slide: Tween
 # From and to of the promotion waiting on the picker.
 var _promoting := ""
+# Square pairs, independent of board orientation/size. Equal endpoints represent a circle.
+var drawings: Array[PackedStringArray] = []
+var _drawing_from := ""
+var _drawing_to := ""
 
 @onready var _picker = $PromotionPicker
 
@@ -90,7 +128,7 @@ func _ready() -> void:
 	set_piece_theme(piece_theme)
 	texture_filter = TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	resized.connect(queue_redraw)
-	_picker.picked.connect(func(piece: String) -> void: _commit(_promoting + piece, false))
+	_picker.picked.connect(func(piece: String) -> void: _submit(_promoting + piece, false))
 	_picker.cancelled.connect(_end_snap_back)
 
 
@@ -107,10 +145,10 @@ func set_piece_theme(name: String) -> void:
 
 
 # A move not dragged on the board (the bot's, a premove); false when it is illegal.
-func play(move: String) -> bool:
+func play(move: String, premove := false) -> bool:
 	if game.is_over() or not move in game.board.legal_moves():
 		return false
-	_commit(move, true)
+	_commit(move, true, premove)
 	return true
 
 
@@ -119,6 +157,11 @@ func _draw() -> void:
 	var cell := Vector2.ONE * side / 8
 	var last: String = game.moves[-1] if game and game.moves else ""
 	var checked := ""
+	var position = game.board if game else null
+	if game and not premoves.moves.is_empty():
+		var ghost = premoves.position(game.board)
+		if ghost != null:
+			position = ghost
 	if game and game.board.in_check():
 		checked = "K" if game.board.side_to_move == "w" else "k"
 	if _board_style.texture:
@@ -130,11 +173,14 @@ func _draw() -> void:
 			draw_rect(Rect2(at, cell), _board_style.light if _is_light(square) else _board_style.dark)
 		if last and square in [last.substr(0, 2), last.substr(2, 2)]:
 			draw_rect(Rect2(at, cell), LAST_MOVE)
-		var piece: String = game.board.piece_at(square) if game else ""
+		var piece: String = position.piece_at(square) if position else ""
+		# A Lichess replacement is picked from the live position, so keep its source visible.
+		if game and premoves.style == "Lichess" and piece == "":
+			piece = game.board.piece_at(square)
 		if checked and piece == checked:
 			draw_circle(at + cell / 2, cell.x / 2, CHECK)
 		if square != _drag_from and square != _slide_to:
-			_draw_piece(piece, at, cell)
+			_draw_piece(piece, at, cell, 0.5 if game and piece != game.board.piece_at(square) else 1.0)
 	_draw_coordinates(cell.x)
 	if show_targets:
 		for move in _held_moves:
@@ -142,14 +188,31 @@ func _draw() -> void:
 			if move.length() == 5 and move[4] != "q":
 				continue
 			var to := move.substr(2, 2)
-			if game.board.piece_at(to):
+			if position.piece_at(to):
 				draw_arc(_centre(to), cell.x * 0.45, 0, TAU, 48, TARGET, cell.x * 0.08)
 			else:
 				draw_circle(_centre(to), cell.x * 0.15, TARGET)
 	if _slide_to:
 		_draw_piece(game.board.piece_at(_slide_to), _slide_pos - cell / 2, cell)
 	if _drag_from:
-		_draw_piece(game.board.piece_at(_drag_from), _drag_pos - cell / 2, cell)
+		_draw_piece(_held_piece, _drag_pos - cell / 2, cell)
+	for drawing in drawings:
+		_draw_annotation(drawing[0], drawing[1], cell.x)
+	if _drawing_from and _drawing_to:
+		_draw_annotation(_drawing_from, _drawing_to, cell.x)
+
+
+func _draw_annotation(from: String, to: String, cell: float) -> void:
+	var start := _centre(from)
+	var end := _centre(to)
+	if from == to:
+		draw_arc(start, cell * 0.43, 0, TAU, 64, DRAWING, cell * 0.07, true)
+	else:
+		var direction := (end - start).normalized()
+		var base := end - direction * cell * 0.3
+		var wing := direction.orthogonal() * cell * 0.2
+		draw_line(start, base, DRAWING, cell * 0.12, true)
+		draw_colored_polygon(PackedVector2Array([end, base + wing, base - wing]), DRAWING)
 
 
 # Files along the bottom edge, ranks along the left edge, in the other square colour.
@@ -168,37 +231,97 @@ func _draw_coordinates(cell: float) -> void:
 				HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, _board_style.dark if _is_light(rank) else _board_style.light)
 
 
-func _draw_piece(piece: String, at: Vector2, cell: Vector2) -> void:
+func _draw_piece(piece: String, at: Vector2, cell: Vector2, opacity := 1.0) -> void:
 	if piece and _textures.get(piece):
-		draw_texture_rect(_textures[piece], Rect2(at, cell), false)
+		draw_texture_rect(_textures[piece], Rect2(at, cell), false, Color(1, 1, 1, opacity))
+
+
+# The promotion overlay consumes GUI events, so catch its right click before GUI dispatch.
+func _input(event: InputEvent) -> void:
+	if _picker.visible and event is InputEventMouseButton and event.pressed \
+			and event.button_index == MOUSE_BUTTON_RIGHT and get_global_rect().has_point(event.position):
+		cancel_premoves()
 
 
 func _gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT:
+		var square := square_at(event.position - _corner(), _side(), flipped)
 		if event.pressed:
-			_pick_up(event.position)
+			if not premoves.moves.is_empty() or _is_premove_input():
+				cancel_premoves()
+			_drawing_from = square
+			_drawing_to = square
+		else:
+			if _drawing_from and square:
+				drawings.append(PackedStringArray([_drawing_from, square]))
+			_drawing_from = ""
+			_drawing_to = ""
+		queue_redraw()
+	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if event.pressed:
+			drawings.clear()
+			_drawing_from = ""
+			_drawing_to = ""
+			queue_redraw()
+		if _snapping or _promoting:
+			return
+		if event.pressed:
+			if _selected:
+				_drag_from = _selected
+				_selected = ""
+				if square_at(event.position - _corner(), _side(), flipped) == _drag_from:
+					# A second click deselects on release, but can still become a drag.
+					_reselected = true
+					_press_pos = event.position
+					_drag_pos = event.position
+					_dragged = false
+				else:
+					_drop(event.position, true, event.alt_pressed)
+			else:
+				_pick_up(event.position)
 		elif _drag_from and not _snapping:
-			_drop(event.position)
-	elif event is InputEventMouseMotion and _drag_from and not _snapping:
-		_drag_pos = event.position
+			var to := square_at(event.position - _corner(), _side(), flipped)
+			if click_click and not _dragged and to == _drag_from:
+				if _reselected:
+					_end_snap_back()
+				else:
+					_selected = _drag_from
+					_drag_from = ""
+					queue_redraw()
+			else:
+				_drop(event.position, false, event.alt_pressed)
+	elif event is InputEventMouseMotion:
+		if _drawing_from:
+			_drawing_to = square_at(event.position - _corner(), _side(), flipped)
+			queue_redraw()
+		elif _drag_from and not _snapping and not _promoting:
+			_dragged = _dragged or event.position.distance_to(_press_pos) >= 8
+			_drag_pos = event.position
 
 
-# Only a piece of the side to move, and never once the game is over.
+# During Maia's turn only human pieces can be held, on the queued position.
 func _pick_up(point: Vector2) -> void:
 	if _drag_from or game == null or game.is_over():
 		return
 	var square := square_at(point - _corner(), _side(), flipped)
-	var piece: String = game.board.piece_at(square) if square else ""
-	if piece and (piece == piece.to_upper()) == (game.board.side_to_move == "w"):
+	var position = _input_position()
+	if position == null:
+		return
+	var piece: String = position.piece_at(square) if square else ""
+	if piece and (piece == piece.to_upper()) == (position.side_to_move == "w"):
 		_end_slide()
 		_drag_from = square
+		_held_piece = piece
 		_drag_pos = point
-		for move in game.board.legal_moves():
+		_press_pos = point
+		_dragged = false
+		_reselected = false
+		for move in position.legal_moves():
 			if move.begins_with(square):
 				_held_moves.append(move)
 
 
-func _drop(point: Vector2) -> void:
+func _drop(point: Vector2, clicked := false, alt := false) -> void:
 	var to := square_at(point - _corner(), _side(), flipped)
 	var moves := PackedStringArray()
 	for move in _held_moves:
@@ -206,9 +329,14 @@ func _drop(point: Vector2) -> void:
 			moves.append(move)
 	_held_moves.clear()
 	if moves.size() > 1:
-		_open_picker(to)
+		if PromotionPicker.should_auto_queen(auto_queen, _is_premove_input(), alt):
+			_submit(_drag_from + to + "q", clicked)
+		else:
+			_open_picker(to)
 	elif moves:
-		_commit(moves[0], false)
+		_submit(moves[0], clicked)
+	elif clicked:
+		_end_snap_back()
 	else:
 		_snapping = true
 		_snap = create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
@@ -221,17 +349,17 @@ func _open_picker(to: String) -> void:
 	_promoting = _drag_from + to
 	_drag_pos = _centre(to)
 	var at := square_position(to, _side(), flipped)
-	_picker.open(_textures, game.board.side_to_move == "w", _corner() + at, _side() / 8, at.y < _side() / 2)
+	_picker.open(_textures, _held_piece == "P", _corner() + at, _side() / 8, at.y < _side() / 2)
 
 
 # shortcut: only the moving piece slides, a castling rook jumps; slide it too if it looks wrong.
-func _commit(move: String, slide: bool) -> void:
+func _commit(move: String, slide: bool, premove := false) -> void:
 	var san: String = game.board.san(move)
 	# The game ended (a flag) while the piece was held or the promotion picker was open.
 	if not game.play(move):
 		_end_snap_back()
 		return
-	_drag_from = ""
+	_cancel_interaction()
 	if slide and slide_seconds > 0:
 		_end_slide()
 		_slide_to = move.substr(2, 2)
@@ -240,7 +368,7 @@ func _commit(move: String, slide: bool) -> void:
 		_slide.tween_property(self, "_slide_pos", _centre(_slide_to), slide_seconds)
 		_slide.tween_callback(_end_slide)
 	queue_redraw()
-	sound_requested.emit("castle" if san.begins_with("O-O") else "capture" if "x" in san else "move")
+	sound_requested.emit("premove" if premove else "castle" if san.begins_with("O-O") else "capture" if "x" in san else "move")
 	if "=" in san:
 		sound_requested.emit("promote")
 	if game.board.in_check():
@@ -257,8 +385,47 @@ func _end_slide() -> void:
 
 func _end_snap_back() -> void:
 	_snapping = false
+	_reselected = false
 	_drag_from = ""
+	_selected = ""
+	_held_moves.clear()
+	_held_piece = ""
+	_promoting = ""
 	queue_redraw()
+
+
+func _is_premove_input() -> bool:
+	return game != null and human_side != "" and game.board.side_to_move != human_side
+
+
+func _input_position():
+	if _is_premove_input():
+		return null if premoves.style == "off" else premoves.input_position(game.board)
+	return game.board
+
+
+func _submit(move: String, slide: bool) -> void:
+	if game.is_over():
+		_cancel_interaction()
+		return
+	if _is_premove_input():
+		premoves.enqueue(game.board, move)
+		_end_snap_back()
+	else:
+		_commit(move, slide)
+
+
+func cancel_premoves() -> void:
+	premoves.clear()
+	_cancel_interaction()
+
+
+func _cancel_interaction() -> void:
+	if _snap:
+		_snap.kill()
+	if _picker and _picker.visible:
+		_picker._close("")
+	_end_snap_back()
 
 
 func _side() -> float:

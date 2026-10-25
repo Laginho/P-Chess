@@ -5,6 +5,7 @@ extends Node
 # threads; poll(), called every frame, handles it on the main thread, which never waits on it.
 
 signal policy_ready(policy: Dictionary)
+signal stopped
 
 const Board = preload("res://core/board.gd")
 const ENGINE := "engine/lc0/lc0.exe"
@@ -92,6 +93,7 @@ func start(dirs := search_dirs()) -> bool:
 		reader.start(_read.bind(stream, _lines if stream == pipe.stdio else null, _mutex))
 		_readers.append(reader)
 	available = true
+	error = ""
 	_queue(["uci"], "uciok")
 	_queue(["setoption name VerboseMoveStats value true"], "")
 	return true
@@ -116,11 +118,20 @@ func request_policy(start_fen: String, moves: PackedStringArray) -> void:
 
 
 func poll() -> void:
+	if not available:
+		return
+	if not OS.is_process_running(pid):
+		_report_stopped("Lc0 stopped. Restart the app to play again.")
+		return
 	_mutex.lock()
 	var lines := _lines.duplicate()
 	_lines.clear()
 	_mutex.unlock()
 	for line in lines:
+		# A failed WeightsFile can produce readyok, then error, then a fallback bestmove.
+		if line.begins_with("error "):
+			_report_stopped("Lc0 stopped: " + line.trim_prefix("error "))
+			return
 		if _awaiting == "bestmove" and line.begins_with("info string "):
 			_info.append(line)
 		elif _awaiting != "" and line.begins_with(_awaiting):
@@ -130,10 +141,15 @@ func poll() -> void:
 			_send()
 
 
+func _report_stopped(message: String) -> void:
+	stop()
+	error = message
+	stopped.emit()
+
+
 func stop() -> void:
-	if pid == -1:
-		return
-	OS.kill(pid)
+	if pid != -1 and OS.is_process_running(pid):
+		OS.kill(pid)
 	# The readers return once the pipes break with the process.
 	for reader in _readers:
 		reader.wait_to_finish()
@@ -141,9 +157,18 @@ func stop() -> void:
 	_stdio = null
 	pid = -1
 	available = false
+	_steps.clear()
+	_awaiting = ""
+	_board = null
+	_info.clear()
+	_mutex.lock()
+	_lines.clear()
+	_mutex.unlock()
 
 
 func _queue(lines: PackedStringArray, reply: String, board = null) -> void:
+	if not available:
+		return
 	_steps.append([lines, reply, board])
 	_send()
 

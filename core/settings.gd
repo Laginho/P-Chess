@@ -11,6 +11,9 @@ const ThemeLoader = preload("res://ui/theme_loader.gd")
 const SECTION := "settings"
 # The settings whose features exist; later tickets add their own rows.
 const DEFAULTS := {
+	"premove_style": "Chess.com",
+	"click_click": false,
+	"auto_queen": "off",
 	"legal_dots": true,
 	"animation_ms": 120,
 	"board_theme": "brown",
@@ -21,11 +24,18 @@ const DEFAULTS := {
 	"tau": 0.02,
 	"temperature": 1.0,
 	"panic": "medium",
+	"book_intensity": "medium",
 	"auto_claim": true,
+	"check_repertoire": false,
 }
 # Inclusive bounds of the numeric settings.
 const RANGES := {"animation_ms": [0, 1000], "volume": [0, 100], "tau": [0.0, 0.2], "temperature": [0.1, 3.0]}
-const CHOICES := {"panic": ["off", "low", "medium", "high"]}
+const CHOICES := {
+	"premove_style": ["off", "Lichess", "Chess.com"],
+	"panic": ["off", "low", "medium", "high"],
+	"book_intensity": ["weak", "medium", "strong"],
+	"auto_queen": ["off", "on", "only on premoves"],
+}
 # Theme settings and the folder kind each names.
 const THEMES := {"board_theme": "boards", "piece_theme": "pieces", "sound_theme": "sounds"}
 
