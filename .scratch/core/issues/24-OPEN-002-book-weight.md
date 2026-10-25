@@ -1,5 +1,5 @@
 # OPEN-002: Book weight in Catalog mode
-Stage: to-implement
+Stage: implementing
 Blocked by: BOT-003, HIST-001, OPEN-001
 Review: agent
 Difficulty: hard
@@ -126,3 +126,9 @@ Scope for this ticket: validate practice counts before use (non-negative integer
 Regressions to write first (own commit, red), in `tests/test_book.gd` or `tests/test_history.gd`: a string practice count and a negative one in `stats.cfg`: `practice_counts()` drops them to 0 and keeps the valid ids, the book's target selection runs without a script error, and the corruption is reported.
 
 Next action: stage 2 (Difficulty: hard, so the hard implementer).
+
+#### Stage 2 retry: corrupt practice counts (2026-10-25)
+
+Resumed the existing `OPEN-002-book-weight` branch by fast-forwarding it to session commit `f564149`, which includes the completed HIST-001 recovery and its shared `_report_corrupt_stats` warning path. This retry addresses only the session review's practice-count finding.
+
+Caller inspection: Main passes `History.practice_counts()` to `MaiaPlayer.begin_game`, which forwards the counts to `Book.begin_game`; the book expects non-negative integers. `History.save` also reads a target count directly before incrementing, so both reading and saving require validated values. `save` clears `history.error` at entry; corruption must therefore be reported again during saving for Main's existing result/review UI to show it. Preserve valid zero/positive counts, unrelated result records, missing-section behavior, and Free saves without a target. Tests remain at the approved History/Book/Main seams in `tests/test_book.gd`.

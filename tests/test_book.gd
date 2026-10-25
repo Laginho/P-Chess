@@ -120,6 +120,32 @@ func test_finished_games_persist_target_practice_counts_without_changing_result_
 	_clean(folder)
 
 
+func test_corrupt_practice_counts_report_zero_and_allow_target_selection():
+	var book = _sample()
+	var target: String = book.entries[0].id
+	var other: String = book.entries[1].id
+	var unchecked: String = book.entries[2].id
+	for invalid in ["invalid", "4", -1, 1.0, 1.5, true, false, [], {}]:
+		var folder := _folder()
+		assert_eq(DirAccess.make_dir_recursive_absolute(folder), OK)
+		var stored := ConfigFile.new()
+		stored.set_value("practice", target, invalid)
+		stored.set_value("practice", other, 4)
+		stored.set_value("practice", unchecked, 0)
+		assert_eq(stored.save(folder.path_join("stats.cfg")), OK)
+		var history = History.new(folder)
+		var counts: Dictionary = history.practice_counts()
+		assert_eq(counts, {target: 0, other: 4, unchecked: 0}, var_to_str(invalid))
+		assert_true(history.error.contains("Corrupt") and history.error.contains("practice/" + target),
+				"report the corrupt practice id through the shared history warning")
+		assert_eq(book.begin_game(counts, RandomNumberGenerator.new()), target,
+				"the corrupt count is zero when choosing the least-practiced line")
+		var warning: String = history.error
+		assert_eq(history.practice_counts(), counts)
+		assert_eq(history.error, warning, "reading again does not duplicate the warning")
+		_clean(folder)
+
+
 class FakeBridge:
 	signal policy_ready(policy: Dictionary)
 	var immediate := true
