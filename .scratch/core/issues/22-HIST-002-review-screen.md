@@ -1,5 +1,5 @@
 # HIST-002: Review screen
-Stage: to-review
+Stage: done
 Blocked by: HIST-001
 Review: agent
 Difficulty: normal
@@ -60,3 +60,38 @@ Gate evidence: C:\Users\Lage\AppData\Local\Temp\hist002-gate.json
 
 Acceptance: pending | Automated session and payload checks pass. The Verification step to finish a game interactively, use the real clipboard, open Lichess and compare its moves has not been performed; visual layout has not been manually inspected.
 Disclosure: pending | release | HIST-002 Verification / Stage 2 handoff: interactive clipboard/browser and visual acceptance remain before release. Headless tests verify production action wiring and exact content through the proxy-approved system boundaries.
+
+#### Resolution (2026-10-25)
+
+Verdict: Approve
+
+Independent Standards and Spec sub-agents reviewed `396b21b5787357c3b3a9c604a2341dce2ffbe25f...9ec5a4cfb6b862a34f6b6b7388355527735e65cf`, the complete ticket and the relevant sections of docs/spec.md. This review authored no production or test changes. Rebase onto `sweatshop/core/2026-10-25-0159` was already up to date; the ticket was merged without squash as `30fb579`. The merge tree is identical to the reviewed ticket tree.
+
+##### Standards
+
+No hard documented-standard violations. All eleven commit stats preserve separate test-only and production-only commits; the initial contract amendment and final handoff change only permitted ticket metadata. All source and test changes stay within Primary files. No concrete new security or accessibility regression was found.
+
+One optional possible Duplicated Code observation: `ui/review.gd:_game_pgn` repeats the player/control/result/termination headers and clock-record construction in `core/history.gd:save`. Current outputs agree for the metadata Main supplies. Sharing this construction would touch History outside Primary files, so the observation is retained for stage-1 triage in [CLEAN-004](35-CLEAN-004-finished-game-pgn-builder.md). No refactor was performed during this review.
+
+##### Spec
+
+1. ✅ Main presents review from the existing result path for terminal moves, ordinary/reentrant flags, claimed draws and double-Esc resignation. The result and reason, including visible history-write errors, appear in review. Empty games and focus mode are covered.
+2. ✅ The tested pure function uses each side's previous post-move clock, the initial clock for its first move, and only awarded increments. Ordinary first moves show 0 ms; first and later premoves retain their 100 ms charge; zero snapshots receive no increment. The SAN table displays both sides' charged times in seconds.
+3. ✅ Copy PGN invokes the production clipboard callable with the current game's PGN, players, time control, result, termination and exact clock snapshots. Button-driven payload tests parse it through the real PGN reader. Actual system clipboard operation remains manual acceptance.
+4. ✅ The browser action receives the specified Lichess analysis URL plus URI-encoded SAN movetext and result. Exact mate and empty-game URLs are tested. Browser opening and Lichess's imported-move comparison remain manual acceptance.
+5. ✅ Review handles Space before focused GUI controls consume it. Rematch swaps colours with the same other settings and resets moves, clocks and export state. Return to setup hides review and clears the active clock; a new setup game starts normally.
+
+No missing/partial requirement, incorrect implementation or material scope creep was found. Badges remain assigned to OPEN-004. Standards: 0 hard violations and 1 optional cleanup observation. Spec: 0 findings.
+
+Examined: the entire diff and every commit stat; all callers of Main's `_start` and `_show_result`; BoardView's synchronous move emission and rejection after game end; Clock first moves, increments, premoves and zero snapshots; history save-once and error reporting; PGN writing/parsing; review's focus/input ordering, empty/odd move lists and export callables; setup/rematch state; and Maia's generation/game guards against stale replies. Not experimentally examined: interactive rendering at default/minimum window sizes, the real system clipboard/browser or Lichess import, exported builds, or real disk-full/permission failures.
+
+Red/green: inspected the five separate committed cycles and retained focused logs in `C:\Users\Lage\AppData\Local\Temp\hist002-{red,green}-*.log`. Missing review script: **0 passed, 1 failed** → **3 passed, 0 failed**. Missing URL function: **0 passed, 1 failed** → **4 passed, 0 failed**. Missing Main review: **4 passed, 2 failed** → **6 passed, 0 failed**. Missing export controls: **6 passed, 1 failed** → **7 passed, 0 failed**. Focused Space/setup navigation: **7 passed, 2 failed** → **9 passed, 0 failed**. Early pure-test logs also report restricted user-log/certificate access; their test failures identify the absent production script/function. Scene and final gate logs have no script errors.
+
+Gate: the installed `Assert-GateEvidence` helper validated the existing receipt against the reviewed HEAD and merge `30fb579`: bound command `godot --headless -s tests/run.gd`, tested commit `0a71f81b4ba8fb5ac6864a685982cb928a974610`, **189 passed, 0 failed**, exit 0. The log SHA-256 `3B7770A723C411C43925B6126AEF299415AE759AF15E46BBDE7A1C444623DDFF` and exit marker match; the tested commit exists. Only permitted tracker metadata differs from that code, so its green gate is reused. Expected malformed-fixture warnings only. `git diff --check` passes.
+
+Proxy review: the existing `Proxy decided (gpt-6-astra high, fallback)` amendment is satisfied: reconstruction preserves CLOCK-001/UI-007's first-move, premove and zero-clock semantics, and scene integration tests use isolated History/settings with replaceable external clipboard/browser boundaries. The older CLOCK-001 note is now reflected in criterion 2's awarded-increment wording. No new proxy decision or contract amendment was made during this review.
+
+Acceptance: pending | Automated session/payload checks and independent review pass. The Verification step to finish a game interactively, copy its PGN, open it in Lichess and compare moves, plus visual layout inspection, remains before release.
+Disclosure: decision | none | The existing proxy-approved clock exceptions and scene-test seams are implemented and independently approved; no additional integration dependency.
+Disclosure: deferred | none | [CLEAN-004](35-CLEAN-004-finished-game-pgn-builder.md) retains the optional repeated-PGN-construction observation for triage. It is not a demonstrated runtime defect or a release condition.
+Disclosure: pending | release | HIST-002 Verification / this Resolution: real clipboard/browser behavior, imported-move comparison and visual layout remain unverified.
