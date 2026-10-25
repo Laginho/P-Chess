@@ -1,5 +1,5 @@
 # HIST-001: Game history and stats
-Stage: implementing
+Stage: to-review
 Blocked by: CORE-006, UI-004
 Review: agent
 Difficulty: normal
@@ -48,3 +48,15 @@ Disclosure: decision | none | HIST-001 Comments: approved test isolation and Mai
 - Stage 2 red/green cycles: `7aef730` fails because History is missing; `8a93259` passes PGN round-trip (1/1). `b5ed8d4` fails because `History.stats` is missing; `7e5b8a4` passes persistence and PGN (2/2). `896b2e7` fails because Main has no history integration; `e5a4680` isolates existing scene harnesses and `b2ed7eb` passes Main's mate/rematch lifecycle (3/3). Each production commit changes only production files; test/contract commits are separate.
 - Additional boundary coverage: headers for all three controls and actual Maia level/colour, known Opening, ordinary flags, claimed draw, first/later premoves, reentrant flag during move accounting, terminal-move precedence at zero time, failed game-folder creation and failed stats write with a visible result-UI error. Focused runner: `9 passed, 0 failed`. The cleanup harness initially enumerated an absent games directory after an intentional write failure; corrected it to check directory existence, also in the existing scene harnesses. No production change was needed.
 - Mutation proof for the additional integration coverage, with original production restored in `finally`: zeroed clock snapshots => `6 passed, 3 failed`; disabled save-once guard => `6 passed, 3 failed`; hidden result-UI write errors => `8 passed, 1 failed`. Logs: `$TEMP/HIST-001-mutant-clock-snapshot.log`, `$TEMP/HIST-001-mutant-save-once.log`, `$TEMP/HIST-001-mutant-visible-write-error.log`.
+
+#### Stage 2 handoff (2026-10-25)
+
+- Implemented `History.new(root := "user://")`, `save(game, clocks, settings, opening_name := "") -> String` (PGN path or empty string with `error`), and `stats(level, control) -> Dictionary`. Games live under `<root>/games/`, stats under `<root>/stats.cfg`. Counts are from the human's perspective; flag wins/losses are subsets of wins/losses. OPEN-002 supplies the optional known opening name; setup's `Free` selection is not an opening name.
+- Main snapshots the mover's clock after move accounting, including the final move, and waits for a snapshot before handling a synchronous clock flag. Premoves retain their existing single charge. A per-game guard prevents duplicate PGNs/stats, and rematch resets snapshots and guard. Failed writes appear after the result and rematch hint. Test scene histories use isolated directories and remove their files on teardown.
+- Full bound gate on committed code `24085c8344288fbba0aea60a6a2164710d4cdca0`: `godot --headless -s tests/run.gd` => `180 passed, 0 failed`, `ExitCode: 0`. Includes all 9 new history tests, existing session/premove tests, and real Lc0 integration (no skips). Expected warnings are existing malformed-theme/time-model fixtures; no script errors. Log: `C:\Users\Lage\AppData\Local\Temp\HIST-001-24085c8-gate.log`.
+- Final diff checked for Primary-files scope, test/production commit separation, whitespace, unintended artifacts and unrelated changes. Stage 2 stops here for independent stage-3 review.
+
+Gate evidence: C:\Users\Lage\AppData\Local\Temp\HIST-001-24085c8-gate.json
+
+Acceptance: pending | Automated real-Main games and saved-PGN inspection pass in tests/test_history.gd; the ticket's manual check of playing two games in the interactive app and opening their user://games/ files has not been performed.
+Disclosure: pending | release | HIST-001 Verification and Stage 2 handoff: interactive two-game acceptance remains; headless tests cover all end paths, clocks, persistence, rematch and visible write errors.
