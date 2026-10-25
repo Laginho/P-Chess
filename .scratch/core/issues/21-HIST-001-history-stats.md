@@ -1,5 +1,5 @@
 # HIST-001: Game history and stats
-Stage: to-review
+Stage: done
 Blocked by: CORE-006, UI-004
 Review: agent
 Difficulty: normal
@@ -178,3 +178,34 @@ Gate evidence: C:\Users\Lage\AppData\Local\Temp\HIST-001-corrupt-stats-0c10154-g
 Acceptance: pending | Automated result-record recovery and real-Main result/review tests pass. Independent stage-3 re-review remains before integration; the original interactive two-game PGN inspection remains pending for release.
 Disclosure: pending | integration | The PR #10 result-record finding is repaired on HIST-001 and awaits independent re-review. [OPEN-002](24-OPEN-002-book-weight.md) remains open for the separate corrupt practice-count finding and must be resolved before integration of session PR #10.
 Disclosure: pending | release | The original Verification step to play two games interactively and inspect their user://games/ PGNs has not been performed.
+
+#### Resolution (2026-10-25, result-record corruption re-review)
+
+Verdict: Approve
+
+Independent Standards and Spec sub-agents reviewed the entire `24783fcce76f1a216bbb6c6f774a19b950da86ba...a385ed3e153da7dc0326c43967b483d649c0835a` repair and all five commit stats against the PR #10 finding, criteria 3 and 5, and docs/spec.md §9.4. This review authored no production or test changes. Rebase onto `sweatshop/core/2026-10-25-0159` was already up to date; merge `3e65bc2` preserves the ticket commits without squash, and its tree is identical to the reviewed tree. This closure and the restored ledger entry are committed together on the session branch.
+
+##### Standards
+
+No documented-standard violations or new optional smell findings. Changes stay within `core/history.gd`, `tests/test_history.gd` and permitted ticket metadata. `5dab0d9` contains tests and tracker metadata; `db7dd63` is production only; `d680b08` corrects the test harness with tracker metadata; `0c10154` adds tests only; `a385ed3` is the metadata handoff. Existing assertions are unchanged. The null-record fixture correction records why ConfigFile deletion represents a missing record and supplies corrected red/green evidence. The shared warning helper implements the explicitly requested reporting path for OPEN-002. The earlier optional repeated-cleanup observation remains scheduled on [CLEAN-003](34-CLEAN-003-history-test-cleanup.md).
+
+##### Spec
+
+3. ✅ Persisted result records are validated before dictionary access or arithmetic: all five counters must be present, non-negative integers. Missing records retain zero defaults; corrupt records supply complete zero counters and are replaced with the finished game's update. Valid records for other controls/levels and practice keys survive unchanged.
+5. ✅ The affected level/control is named in `history.error`. Successful recovery preserves the warning, which Main shows in both the result label and visible review screen. Partial and scalar records no longer raise script errors or prevent saving the game.
+
+Criteria 1, 2, 4, 6 and 7 retain their previous passing verdicts. Recovery coverage verifies one PGN and one update even after repeated result handling. No unasked behavior, additional earlier-review miss or new regression was found. Standards: 0 hard violations and 0 new optional findings. Spec: 0 findings.
+
+Examined: the complete repair diff; History initialization, stats validation, save accounting and write-failure paths; Main result callers, save-once guard, rematch reset and review presentation; existing stats/book callers; shared practice storage; missing records; the 35-record corruption matrix; and partial/scalar real-Main game ends. The original unchecked-record defect is the earlier-review miss already recorded in the session reopen. The separate corrupt-practice-count defect remains open on [OPEN-002](24-OPEN-002-book-weight.md). Interactive visual acceptance, exported builds, concurrent processes and real disk-full/permission failures were not experimentally examined.
+
+Red/green: inspected the separate test/production commits and retained logs. Corrected persistence tests fail against pre-repair production with **9 passed, 1 failed**, then pass with **10 passed, 0 failed**. Real-Main coverage fails against pre-repair production with **9 passed, 2 failed**, then passes with **11 passed, 0 failed**. Red logs identify the missing-counter/scalar production errors; green tests exercise the real History, Main and review screen.
+
+Gate: the installed `Assert-GateEvidence` helper validated the receipt against the reviewed HEAD, after rebase and on merge `3e65bc2`. Command: `godot --headless -s tests/run.gd`; tested commit `0c1015456fa79ce5163e4a9d311dfa4d0fa61bcf`; **237 passed, 0 failed**, exit 0, including all 11 history tests and live Lc0. The log hash is `5869A4DE24B9E73643E612717D43F12A42867EC33EA913A3BAF1E2C93575E124`; its exit marker matches, with no script errors, errors or skipped tests. Only permitted tracker metadata differs from the tested code, so this green gate is reused. `git diff --check` passes.
+
+Proxy review: both existing `Proxy decided (gpt-6-astra high, fallback)` amendments remain satisfied: session/premove isolation with real-Main integration coverage, and the settings-test isolation/startup identity assertion. This repair preserves those seams and adds no proxy decision or contract amendment. Approval resolves the HIST-001 result-record integration hold; it does not resolve OPEN-002's separate practice-count hold on session PR #10.
+
+Acceptance: pending | Automated result-record recovery and independent re-review pass. The original manual check of playing two games interactively and opening their user://games/ PGNs remains pending for release.
+Disclosure: decision | none | Both existing proxy-approved test amendments remain implemented and approved; this review makes no contract changes.
+Disclosure: deferred | none | [CLEAN-003](34-CLEAN-003-history-test-cleanup.md) retains the optional cleanup observation for triage, without an integration or release condition.
+Disclosure: pending | integration | [OPEN-002](24-OPEN-002-book-weight.md) must resolve the separate corrupt-practice-count finding before integration of session PR #10. HIST-001's result-record finding is resolved by this approval and session merge.
+Disclosure: pending | release | Interactive play of two games and inspection of their user://games/ PGNs remains as recorded in Verification.
