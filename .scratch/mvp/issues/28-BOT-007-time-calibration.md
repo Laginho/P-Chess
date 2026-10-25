@@ -1,5 +1,5 @@
 # BOT-007: Time-model calibration from Lichess data
-Stage: to-implement
+Stage: blocked
 Blocked by: BOT-001, BOT-006
 Review: human
 Difficulty: normal
@@ -39,3 +39,6 @@ An offline script that measures how humans at 1100–1900 spend time in bullet a
 ## Comments
 
 - 2026-10-24 From BOT-004's close (a note, not a criterion; Bruno's call, before the download): c5's top-move probability must come from the same Lc0 `PolicyTemperature` the game uses, or the table's top_p bins will not match the game's `top_p`. The game leaves Lc0 v0.32.1's default, 1.359, which is flatter than Maia's raw policy (1). Pick one value. If it is not 1.359, the game sets it with one `setoption name PolicyTemperature value <v>` in `engine/uci.gd` `start()` (BOT-008, if still open), and c5 sends the same. Proxy's reading, not a decision: spec §3.2 calls `P:` "Maia's policy", which points to 1. History: BOT-002 Resolution, BOT-004 ## Comments.
+- 2026-10-25 Stage 2 blocked before any code: BOT-007 stage 2 needs `python` (pytest for the red-green proof, plus `pip install -r scripts/requirements-calibrate.txt`), and the unattended driver's allowlist does not include it (`sweatshop/scripts/driver.ps1` line 148, source of truth in Agent-Skills). Every `python -c` / `python -m pytest` call was refused ("requires approval"); only `python --version` ran (3.14.6), so whether pytest, python-chess and zstandard are installed is unknown. Wrapping python in the allowed `powershell` prefix would get around the refusal, so it was not done. Pick one: (1) add `'python'` to that list (it allows any Python code, the same exposure the list already accepts with `node`/`npx`/`powershell`, and it applies to every lane and repo the driver runs); or (2) run BOT-007 stage 2 attended. Either way the machine needs pytest, zstandard and python-chess installed, or allowed to be installed. Then set `Stage: to-implement`.
+  Proxy escalated (opus): stage 2 cannot run python headless and must not work around the permission gate.
+- Proxy decided (opus): the script sends no PolicyTemperature, so c5 reads `P:` at the same Lc0 v0.32.1 default (1.359) that `engine/uci.gd` uses, with a one-line comment at the Lc0 start naming the coupling (`engine/uci.gd` `start()`, BOT-008, this note) — it keeps the "same value as the game" rule true without picking a value and touches no file outside Primary files. Picking a different value stays Bruno's call, at the download go-ahead c1 already requires; if it is not 1.359, BOT-008 adds the `setoption` in `start()` and the script sends the same line before the download run. Answer only if you want a value other than 1.359.
