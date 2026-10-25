@@ -1,5 +1,5 @@
 # CLEAN-008: A test that awaits forever fails instead of hanging the gate
-Stage: to-implement
+Stage: implementing
 Status: ready-for-agent
 Blocked by: CLEAN-001
 Review: agent
