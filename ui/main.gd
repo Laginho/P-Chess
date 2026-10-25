@@ -248,6 +248,7 @@ func _on_flagged(side: String) -> void:
 # Every way a game ends lands here, after the game has its result.
 func _show_result() -> void:
 	var game = board_view.game
+	board_view.cancel_premoves()
 	clock.stop()
 	claim_draw.disabled = true
 	result_label.text = "%s by %s (%s)\nSpace for a rematch" % [WINNERS[game.result], game.reason, game.result]

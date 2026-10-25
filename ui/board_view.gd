@@ -230,6 +230,8 @@ func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT:
 		var square := square_at(event.position - _corner(), _side(), flipped)
 		if event.pressed:
+			if not premoves.moves.is_empty() or _is_premove_input():
+				cancel_premoves()
 			_drawing_from = square
 			_drawing_to = square
 		else:
@@ -394,6 +396,15 @@ func _submit(move: String, slide: bool) -> void:
 		_end_snap_back()
 	else:
 		_commit(move, slide)
+
+
+func cancel_premoves() -> void:
+	premoves.clear()
+	if _snap:
+		_snap.kill()
+	if _picker and _picker.visible:
+		_picker._close("")
+	_end_snap_back()
 
 
 func _side() -> float:
