@@ -50,6 +50,8 @@ class Sample:
     level: str
     clock_fraction: float
     seconds: float
+    start_fen: str
+    moves: tuple[str, ...]
 
 
 class LimitedReader:
@@ -100,6 +102,8 @@ def extract_samples(pgn):
             if 1100 <= rating <= 1900:
                 levels[side] = f"maia-{((rating + 50) // 100) * 100}"
         board = game.board()
+        start_fen = game.headers.get("FEN", board.fen())
+        moves = []
         previous = {chess.WHITE: None, chess.BLACK: None}
         for node in game.mainline():
             side = board.turn
@@ -107,15 +111,17 @@ def extract_samples(pgn):
             if side in levels and before is not None and after is not None:
                 seconds = before - after + increment
                 if seconds >= 0:
-                    yield Sample(board.fen(), control, levels[side], before / start, seconds)
+                    yield Sample(board.fen(), control, levels[side], before / start, seconds,
+                                 start_fen, tuple(moves))
             previous[side] = after
+            moves.append(node.move.uci())
             board.push(node.move)
 
 
 def build_table(samples, top_probability, min_samples=50):
     """Fit sampled moves to BOT-006's table; sparse buckets use the fallback.
 
-    top_probability(sample) evaluates its pre-move FEN with its Maia level.
+    top_probability(sample) evaluates its pre-move position and history with its Maia level.
     Zero-second premoves use the game's 0.05 s floor before taking logarithms.
     Bin edges match bot/time_model.gd: lower inclusive, end bins clamped.
     """
@@ -200,7 +206,11 @@ def lc0_policy(engine, weights, timeout=30):
             send("isready")
             list(receive_until("readyok"))
             level = sample.level
-        send(f"position fen {sample.fen}")
+        # Maia uses historical boards: match the game's initial FEN plus all prior moves.
+        position = f"position fen {sample.start_fen}"
+        if sample.moves:
+            position += " moves " + " ".join(sample.moves)
+        send(position)
         send("go nodes 1")
         board = chess.Board(sample.fen)
         probabilities = []
