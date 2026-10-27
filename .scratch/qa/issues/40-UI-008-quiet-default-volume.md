@@ -1,5 +1,5 @@
 # UI-008: Start at 20 % volume
-Stage: to-merge
+Stage: done
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -49,3 +49,4 @@ Verdict: Approve
 - Startup check: C:\Users\bruno\AppData\Local\Temp\ui-008-startup-review.log (exit 0); storage and the engine were isolated using the existing test harness. The external check's initial type-inference error was corrected before the passing run; no repository code changed.
 - Acceptance: passed | tests/test_settings.gd, validated green gate, and the isolated Main startup check above.
 - Integration: no session branch; rebase onto origin/main and merge through a PR to main after CI succeeds. Preserve the root checkout's uncommitted project.godot.
+- Integrated: [PR #19](https://github.com/Laginho/P-Chess/pull/19), merge fd3df27; [CI](https://github.com/Laginho/P-Chess/actions/runs/40508481796) passed both test and windows-export on head 5a71bbc. Root main fast-forwarded with project.godot's SHA256 unchanged; this closure and the ledger entry are committed together.
