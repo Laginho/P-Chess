@@ -284,7 +284,7 @@ def test_reservoir_keeps_a_bounded_seeded_sample_from_the_whole_prefix():
     with FIXTURE.open(encoding="utf-8") as pgn:
         samples = list(extract_samples(pgn))
     result = sample_positions(iter(samples), 3, seed=7)
-    assert len(result) == 6  # Three 3+2/1500, plus the three other strata.
+    assert len(result) == 8  # No fixture stratum exceeds the limit of three.
     assert result == sample_positions(iter(samples), 3, seed=7)
     # A reservoir is not merely the first N positions: later games can enter.
     assert any(sample not in samples[:3] for sample in result)
