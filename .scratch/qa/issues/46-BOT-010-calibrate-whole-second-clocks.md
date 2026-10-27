@@ -1,5 +1,5 @@
 # BOT-010: Calibrate think time from whole-second clocks, with enough scramble samples
-Stage: to-implement
+Stage: implementing
 Status: ready-for-agent
 Blocked by: none
 Review: human
@@ -45,6 +45,8 @@ Then run the calibration and commit `data/time_model.json`.
 - `scripts/test_calibrate_time.py`: the two synthetic recoveries, the all-zero bucket, the stratified reservoir's per-stratum counts.
 
 ## Comments
+
+- Stage 2 scope: `main` calls `sample_positions` then `build_table`; Python fixture/CLI tests and `bot/time_model.gd::load_table`/`bucket` consume their output. Examined zero/empty/sparse buckets, bin boundaries, increment clocks above the starting time, reproducibility and preservation of an existing table on UCI failure. The old exact-time fit assertions are replaced because this ticket changes that contract. Test seams are the ticket-approved `build_table`, `sample_positions` and existing CLI boundary; no new game seam is needed.
 
 - 2026-10-27 Download approved by Bruno in chat ("pode autorizar o download"): up to 500 MB of the 2026-09 monthly dump (the 20 MB probe already held 1.1 M timed moves). The run waits for fix 1, since a table from the current fit would make 1+0 scrambles worse, not better.
 - Variability (Bruno: "humanos também penduram peças ou demoram pra fazer um lance por nervosismo"): blunders come from sampling Maia's human policy plus the §3.4 panic; long and short thinks come from each bucket's real log-σ. Judge the spread after this table lands before adding any extra noise.

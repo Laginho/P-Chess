@@ -2,6 +2,7 @@ from pathlib import Path
 from dataclasses import replace
 import io
 import math
+import random
 import subprocess
 import sys
 import json
@@ -42,19 +43,18 @@ def test_buckets_match_game_edges_and_omit_sparse_groups():
 
     with FIXTURE.open(encoding="utf-8") as pgn:
         example = next(extract_samples(pgn))
-    # A worked log-normal sample: logs 0, ln(2), ln(4), so median=2
-    # and population log-sigma=sqrt(2/3)*ln(2).
+    # These now represent rounded differences, not exact think times.
     samples = [replace(example, clock_fraction=0.5, seconds=s) for s in (1, 2, 4)]
     samples += [replace(example, level="maia-1100", seconds=99)]
     table = build_table(samples, lambda sample: 0.6, min_samples=3)
     assert table["clock_bins"] == [0, 0.15, 0.5, 1]
     assert table["top_p_bins"] == [0, 0.3, 0.6, 1]
     assert len(table["buckets"]) == 1
-    assert table["buckets"][0] == {
-        "control": "3+2", "level": "maia-1500", "clock_bin": 2,
-        "top_p_bin": 2, "median": 2,
-        "log_sigma": pytest.approx(math.sqrt(2 / 3) * math.log(2)),
-    }
+    bucket = table["buckets"][0]
+    assert (bucket["control"], bucket["level"], bucket["clock_bin"], bucket["top_p_bin"]) == (
+        "3+2", "maia-1500", 2, 2)
+    assert 0 < bucket["median"] < 4
+    assert math.isfinite(bucket["log_sigma"]) and bucket["log_sigma"] >= 0
     # Increment can lift clocks above their starting time. Both end bins clamp.
     for fraction, top_p, expected in [(1.1, 1, (2, 2)), (0, 0, (0, 0)),
                                        (0.15, 0.3, (1, 1))]:
@@ -62,9 +62,40 @@ def test_buckets_match_game_edges_and_omit_sparse_groups():
                             lambda sample: top_p, min_samples=1)
         bucket = table["buckets"][0]
         assert (bucket["clock_bin"], bucket["top_p_bin"]) == expected
-        assert bucket["median"] == 0.05
-        assert bucket["log_sigma"] == 0
+        assert math.isfinite(bucket["median"]) and 0 < bucket["median"] < 0.5
+        assert math.isfinite(bucket["log_sigma"]) and bucket["log_sigma"] >= 0
     assert build_table([], lambda sample: 0.6)["buckets"] == []
+
+
+@pytest.mark.parametrize("median, sigma", [(0.6, 0.5), (4, 0.8)])
+def test_fit_recovers_log_normal_from_whole_second_clock_differences(median, sigma):
+    from calibrate_time import build_table
+
+    with FIXTURE.open(encoding="utf-8") as pgn:
+        example = next(extract_samples(pgn))
+    rng = random.Random(37)
+    samples = []
+    for _ in range(30000):
+        elapsed = rng.lognormvariate(math.log(median), sigma)
+        # Two whole-second clock readings with an independent uniform phase.
+        before = 1000 + rng.random()
+        difference = math.floor(before) - math.floor(before - elapsed)
+        samples.append(replace(example, seconds=difference))
+    bucket, = build_table(samples, lambda sample: 0.4)["buckets"]
+    assert bucket["median"] == pytest.approx(median, rel=0.1)
+    assert bucket["log_sigma"] == pytest.approx(sigma, rel=0.1)
+
+
+def test_all_zero_bucket_has_a_finite_subsecond_fit():
+    from calibrate_time import build_table
+
+    with FIXTURE.open(encoding="utf-8") as pgn:
+        example = next(extract_samples(pgn))
+    bucket, = build_table([replace(example, seconds=0)] * 100,
+                          lambda sample: 0.4)["buckets"]
+    assert math.isfinite(bucket["median"]) and 0 < bucket["median"] < 0.5
+    assert bucket["median"] != 0.05
+    assert math.isfinite(bucket["log_sigma"]) and bucket["log_sigma"] >= 0
 
 
 def test_fixture_extraction_from_a_capped_zstandard_stream():
@@ -173,7 +204,7 @@ for line in sys.stdin:
     assert len(table["buckets"]) == 5
     assert all(b["clock_bin"] == 2 and b["top_p_bin"] == 1 for b in table["buckets"])
     assert next(b["median"] for b in table["buckets"]
-                if b["control"] == "3+2" and b["level"] == "maia-1500") == 3
+                if b["control"] == "3+2" and b["level"] == "maia-1500") == pytest.approx(3, rel=0.1)
     commands = transcript.read_text(encoding="utf-8").splitlines()
     assert commands[:2] == ["uci", "setoption name VerboseMoveStats value true"]
     nets = [command.rsplit("maia-", 1)[1] for command in commands
