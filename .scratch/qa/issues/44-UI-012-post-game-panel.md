@@ -1,5 +1,5 @@
 # UI-012: A small post-game panel instead of the full review
-Stage: implementing
+Stage: to-review
 Status: ready-for-agent
 Blocked by: none
 Review: human
@@ -44,3 +44,5 @@ When a game ends, the full review screen takes over at once, a "jumpscare" (Brun
 - 2026-10-27 Foreman: stage 2 set `blocked` without asking the proxy first; the foreman asked it, folded the answer above and set `to-implement`. Stage 2 resumes on this branch from 95ba561.
 
 - 2026-10-27 Stage 2 mutant red: replacing `main.review.show()` with `pass` in `_open_review` yielded 245 passed, 9 failed (exit 1); review visibility assertions fail after pressing the panel button. Production restored. Log: `C:\Users\bruno\AppData\Local\Temp\ui-012-mutant.log`.
+- 2026-10-27 Stage 2 gate: 254 passed, 0 failed (exit 0), tested commit `52dfde3`; manual resignation/flag and panel-button verification remains pending.
+- Gate evidence: C:\Users\bruno\AppData\Local\Temp\ui-012-retry-gate.json
