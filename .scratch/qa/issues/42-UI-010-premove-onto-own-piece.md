@@ -1,5 +1,5 @@
 # UI-010: Premoves follow piece geometry, so recaptures can be queued
-Stage: to-implement
+Stage: implementing
 Status: ready-for-agent
 Blocked by: none
 Review: agent
