@@ -47,6 +47,18 @@ When a game ends, the full review screen takes over at once, a "jumpscare" (Brun
 - 2026-10-27 Stage 2 gate: 254 passed, 0 failed (exit 0), tested commit `52dfde3`; manual resignation/flag and panel-button verification remains pending.
 - Gate evidence: C:\Users\bruno\AppData\Local\Temp\ui-012-stage3-final-gate.json
 
+#### Model trial (gpt-6.1-terra high, stage 2)
+
+- Attempts to reach `to-review`: 2. Attempt 1 wrote the red test and the panel, then stopped at `blocked` (eight existing tests outside Primary files still expected the review to open by itself). Attempt 2, after the foreman folded the proxy decision, reached `to-review`.
+- Tests red for the right reason: yes. `test_game_over_panel_actions` failed on the missing panel / eager review (253 passed, 1 failed); for the updated tests, the mutant `_open_review` without `main.review.show()` gave 245 passed, 9 failed.
+- Gate on the first green: 254 passed, 0 failed, exit 0 (tested `52dfde3`). Attempt 1's first gate after production was 246 passed, 8 failed.
+- Time: attempt 1 ~2.5 min (09:55–09:57), attempt 2 ~2 min (10:02–10:04); ~9.5 min wall clock including the foreman's proxy round.
+- Stage-3 ❌: 0. One optional Standards note (Feature Envy: `ui/game_over.gd` calls into Main, including `_start` and `_show_setup`), not a defect.
+- Reopens: 0.
+- Proxy calls: 1, made by the foreman; terra made none.
+- Misread: the skill's "a question goes to the proxy; only an escalation is a `blocked`". Terra blocked on a scope question the proxy answered at once, and wrote "Stage 1 must expand the ticket" instead of asking (Codex fallback chain: `claude -p`, then gpt-6-astra). It read the ticket itself correctly. Cosmetic: a stray blank line inside `## Comments`.
+- Verdict: fast, clean test-first work with correct code, but it stops on proxy-answerable questions instead of asking. Unattended, that costs a blocked round trip.
+
 #### Resolution (2026-10-27)
 Verdict: Approve
 
