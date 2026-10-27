@@ -74,13 +74,13 @@ The delay is sampled from a lookup table in `data/time_model.json`. The table ha
 - clock fraction left (bins)
 - Maia's top-move probability (bins)
 
-Each bucket stores the median and the log-σ of human think time. The delay is sampled from that log-normal distribution, then clamped to `[0.05 s, clock left]`.
+Each bucket stores the median and the log-σ of human think time. The delay is sampled from that log-normal distribution. An ordinary move waits at least `REACTION = 0.4 s` for human reaction and hand movement, after sampling either a bucket or the §4.2 formula. This is an initial value to tune by playing.
 
 Overrides:
-- With exactly one legal move, the delay is the floor.
-- A "premove": when Maia's top-move probability is over 0.9 and its clock is under 15% of the starting time, the delay is the floor.
+- With exactly one legal move, the delay is the `0.05 s` floor.
+- A "premove": only when the human's last move was Maia's top prediction, Maia's own top-move probability is over 0.9, and its clock is under 10% of the starting time (§3.4), the delay is the `0.05 s` floor. Maia asks the same net about the position before the human's last move, then about its own reply, in FIFO order. Without a previous move or a prediction, this override does not apply.
 
-Lc0's own compute time is subtracted from the sampled delay. It also counts against Maia's clock when it exceeds the delay.
+Every delay is clamped to the clock left, even below the reaction or forced/premove floor: Maia never waits past its own flag. Lc0's compute time for both the prediction and reply is subtracted from the delay. It also counts against Maia's clock when it exceeds the delay.
 
 ### 4.2 Fallback
 

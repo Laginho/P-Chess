@@ -28,11 +28,12 @@ class FakeTime:
 class SlowBridge:
 	signal policy_ready(policy: Dictionary)
 	var policy := {}
+	var policies := []
 	var compute_ms := 0
 
 	func request_policy(_start_fen: String, _moves: PackedStringArray) -> void:
 		OS.delay_msec(compute_ms)
-		policy_ready.emit(policy)
+		policy_ready.emit(policies.pop_front() if policies else policy)
 
 
 # Answers after compute_ms without blocking the frame, as the real bridge does: a blocked frame
@@ -68,9 +69,11 @@ func _near(actual: float, expected: float, message := "") -> void:
 
 
 # The moves Maia has sent by the time think() returns: none while it waits out its think time.
-func _moves_at_once(game, policy: Dictionary, compute_ms: int, clock, table := {}, level := "") -> Array:
+func _moves_at_once(game, policy: Dictionary, compute_ms: int, clock, table := {}, level := "",
+		prediction := {}) -> Array:
 	var bridge := SlowBridge.new()
 	bridge.policy = policy
+	bridge.policies = [prediction, policy] if not game.moves.is_empty() else [policy]
 	bridge.compute_ms = compute_ms
 	var maia = MaiaPlayer.new(bridge)
 	maia.clock = clock
@@ -124,22 +127,27 @@ func test_one_legal_move_takes_the_floor():
 				"seed %d" % seed_value)
 
 
-func test_a_sure_move_in_time_trouble_is_premoved():
-	# 15% of 3+2's 180 s is 27 s.
+func test_only_an_expected_sure_move_under_ten_percent_is_premoved():
 	for seed_value in 20:
-		assert_eq(TimeModel.delay(26.0, 2.0, 180.0, 30, 0.91, 20, _rng(seed_value)), 0.05,
-				"seed %d" % seed_value)
-	var formula: float = TimeModel.base(26.0, 2.0, 30, 0.9) * TimeModel.noise(_rng(3))
-	_near(TimeModel.delay(26.0, 2.0, 180.0, 30, 0.9, 20, _rng(3)), formula, "0.9 is not over 0.9")
-	formula = TimeModel.base(27.5, 2.0, 30, 0.95) * TimeModel.noise(_rng(3))
-	_near(TimeModel.delay(27.5, 2.0, 180.0, 30, 0.95, 20, _rng(3)), formula, "27.5 s is not under 15%")
+		assert_eq(TimeModel.delay(17.0, 2.0, 180.0, 30, 0.91, 20, _rng(seed_value), {}, true),
+				0.05, "expected, seed %d" % seed_value)
+		assert_true(TimeModel.delay(17.0, 2.0, 180.0, 30, 0.91, 20, _rng(seed_value)) >= 0.4,
+				"unexpected, seed %d" % seed_value)
+		assert_true(TimeModel.delay(17.0, 2.0, 180.0, 30, 0.9, 20, _rng(seed_value), {}, true) >= 0.4,
+				"0.9 is not over 0.9")
+		for left in [18.0, 20.0, 26.999, 27.0]:
+			assert_true(TimeModel.delay(left, 2.0, 180.0, 30, 0.95, 20, _rng(seed_value), {}, true) >= 0.4,
+					"%s s is not under 10%%" % left)
 
 
 func test_the_delay_is_clamped_to_the_floor_and_the_clock():
 	for seed_value in 20:
-		# base 0.0025 s: no noise lifts it off the floor.
-		assert_eq(TimeModel.delay(0.1, 0.0, 60.0, 0, 0.6, 20, _rng(seed_value)), 0.05,
-				"floor, seed %d" % seed_value)
+		# A small formula sample still leaves time for reaction and hand movement.
+		assert_eq(TimeModel.delay(1.0, 0.0, 60.0, 0, 0.6, 20, _rng(seed_value)), 0.4,
+				"reaction, seed %d" % seed_value)
+		for left in [0.0, 0.03, 0.1, 0.4]:
+			assert_eq(TimeModel.delay(left, 0.0, 60.0, 0, 0.6, 20, _rng(seed_value)), left,
+					"the clock wins over reaction")
 		# base 240.25 s: no noise brings it under the 10 s left.
 		assert_eq(TimeModel.delay(10.0, 300.0, 180.0, 0, 0.6, 20, _rng(seed_value)), 10.0,
 				"clock, seed %d" % seed_value)
@@ -170,15 +178,16 @@ func test_a_premove_reads_maia_s_own_clock_and_the_starting_time():
 	var clock = Clock.new("3+2", time.ms)
 	for side in ["w", "b", "w"]:
 		clock.moved(side)
-	time.now += 170000  # Black's clock runs: 10 s of 180 left, under 15%. White's still reads 182 s.
+	time.now += 170000  # Black's clock runs: 10 s of 180 left, under 10%. White's still reads 182 s.
 	var game = Game.new()
 	game.play("e2e4")
 	# top_p 0.99 is over 0.9, and c7c5 falls under the cut, so the move is e7e5.
-	assert_eq(_moves_at_once(game, {"e7e5": 0.99, "c7c5": 0.01}, 60, clock), ["e7e5"])
+	assert_eq(_moves_at_once(game, {"e7e5": 0.99, "c7c5": 0.01}, 60, clock, {}, "", {"e2e4": 1.0}),
+			["e7e5"])
 
 
-# A sure 0.3 s delay against Lc0's 0.1 s, on a real-time clock: Maia's move after the full wait.
-const DELAY_MS := 300
+# A 0.3 s bucket waits for the 0.4 s reaction floor, including Lc0's 0.1 s compute time.
+const DELAY_MS := 400
 const COMPUTE_MS := 100
 # Timers follow Godot's 60 Hz frame timing, so one can end up to a tick (17 ms) early or late.
 const FRAME_MS := 20
@@ -188,7 +197,7 @@ const FRAME_MS := 20
 # the game does. Returns the moves, their times since think(), and what White's clock was charged.
 func _delayed_move() -> Dictionary:
 	var table := {"clock_bins": [0.0, 2.0], "top_p_bins": [0.0, 1.0],
-			"buckets": {"3+2/maia-1500/0/0": {"median": DELAY_MS / 1000.0, "log_sigma": 0.0}}}
+			"buckets": {"3+2/maia-1500/0/0": {"median": 0.3, "log_sigma": 0.0}}}
 	# SceneTree timers count frame time, and earlier tests ran inside one long frame: Godot catches up
 	# on it in frames that take no real time. Let it, so Lc0's and Maia's timers run in real time.
 	while true:
@@ -230,7 +239,7 @@ func test_a_delay_longer_than_lc0_s_compute_brings_one_move_after_the_wait():
 
 func test_maia_s_clock_is_charged_the_delay_when_it_outlasts_lc0():
 	var run := await _delayed_move()
-	# max(0.3 s, 0.1 s), give or take the frames the two timers resolve on.
+	# max(0.4 s, 0.1 s), give or take the frames the two timers resolve on.
 	assert_true(absi(run.charged - DELAY_MS) <= 2 * FRAME_MS,
 			"charged %d ms, max(delay, compute) is %d" % [run.charged, DELAY_MS])
 
@@ -295,10 +304,12 @@ func test_a_bucket_s_delay_keeps_the_overrides_and_the_clamps():
 	var sure := {"median": 4.0, "log_sigma": 0.0}
 	assert_eq(TimeModel.delay(180.0, 2.0, 180.0, 12, 0.5, 20, _rng(), sure), 4.0)
 	assert_eq(TimeModel.delay(180.0, 2.0, 180.0, 12, 0.5, 1, _rng(), sure), 0.05, "one legal move")
-	assert_eq(TimeModel.delay(26.0, 2.0, 180.0, 30, 0.91, 20, _rng(), sure), 0.05, "premove")
+	assert_eq(TimeModel.delay(17.0, 2.0, 180.0, 30, 0.91, 20, _rng(), sure, true), 0.05, "expected premove")
+	assert_eq(TimeModel.delay(17.0, 2.0, 180.0, 30, 0.91, 20, _rng(), sure), 4.0, "unexpected move")
+	assert_eq(TimeModel.delay(26.0, 2.0, 180.0, 30, 0.91, 20, _rng(), sure, true), 4.0, "above panic")
 	assert_eq(TimeModel.delay(3.0, 2.0, 180.0, 30, 0.5, 20, _rng(), sure), 3.0, "the clock left")
 	assert_eq(TimeModel.delay(180.0, 2.0, 180.0, 12, 0.5, 20, _rng(), {"median": 0.001, "log_sigma": 0.0}),
-			0.05, "the floor")
+			0.4, "reaction after sampling the bucket")
 
 
 func test_a_malformed_table_warns_and_is_empty():
@@ -378,11 +389,11 @@ func _bucket_with(table: Dictionary, key: String, value) -> String:
 
 func test_in_a_game_maia_s_delay_comes_from_its_bucket():
 	# 3+2 at the start: clock fraction 1, top_p 0.5, so maia-1500's bucket is the 0.001 s one and the
-	# delay is the 0.05 s floor: Maia moves once Lc0 answers. The formula would wait about 6 s.
+	# delay is the 0.4 s reaction floor: Maia moves once Lc0 answers. The formula would wait about 6 s.
 	var table := TimeModel.load_table(SMALL)
 	var policy := {"e2e4": 0.5, "d2d4": 0.5}
 	var clock = Clock.new("3+2", FakeTime.new().ms)
-	assert_eq(_moves_at_once(Game.new(), policy, 60, clock, table, "maia-1500").size(), 1, "from the bucket")
+	assert_eq(_moves_at_once(Game.new(), policy, 450, clock, table, "maia-1500").size(), 1, "from the bucket")
 	clock = Clock.new("3+2", FakeTime.new().ms)
-	assert_eq(_moves_at_once(Game.new(), policy, 60, clock, table, "maia-1100"), [],
+	assert_eq(_moves_at_once(Game.new(), policy, 450, clock, table, "maia-1100"), [],
 			"maia-1100 has no 3+2 bucket: the formula")

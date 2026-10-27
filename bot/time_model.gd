@@ -4,6 +4,7 @@ extends RefCounted
 # hand-tuned fallback of §4.2 elsewhere, with the overrides of §4.1. Pure: the caller owns the RNG.
 
 const FLOOR := 0.05
+const REACTION := 0.4
 const SIGMA := 0.6
 # Written by scripts/calibrate_time.py (§4.3):
 # {"clock_bins": [edges], "top_p_bins": [edges], "buckets": [{"control": "3+2", "level": "maia-1500",
@@ -57,18 +58,19 @@ static func noise(rng: RandomNumberGenerator) -> float:
 	return exp(rng.randfn(0.0, SIGMA))
 
 
-# The floor with one legal move, or for a "premove": top_p over 0.9 with under 15% of the starting
-# time left. Otherwise log-normal around the bucket's median, or the formula without a bucket.
-# Clamped to [FLOOR, clock_left]; under FLOOR left, the clock wins.
+# The floor with one legal move, or an expected human move with top_p over 0.9 and under 10% of
+# the starting time left. Otherwise sample the bucket or formula, with time for reaction and hand
+# movement. The clock-left clamp wins over either floor.
 static func delay(clock_left: float, increment: float, start: float, moves_played: int, top_p: float,
-		legal_moves: int, rng: RandomNumberGenerator, from_bucket := {}) -> float:
+		legal_moves: int, rng: RandomNumberGenerator, from_bucket := {}, expected := false) -> float:
 	var seconds := FLOOR
-	if legal_moves > 1 and not (top_p > 0.9 and clock_left < 0.15 * start):
+	if legal_moves > 1 and not (expected and top_p > 0.9 and clock_left < 0.1 * start):
 		if from_bucket:
 			seconds = from_bucket.median * exp(rng.randfn(0.0, from_bucket.log_sigma))
 		else:
 			seconds = base(clock_left, increment, moves_played, top_p) * noise(rng)
-	return minf(maxf(seconds, FLOOR), clock_left)
+		seconds = maxf(seconds, REACTION)
+	return minf(seconds, clock_left)
 
 
 # What is left to wait once Lc0 took `compute`, so Maia's clock is charged max(delay, compute).
