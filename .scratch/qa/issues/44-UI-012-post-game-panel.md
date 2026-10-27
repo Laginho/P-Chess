@@ -1,5 +1,5 @@
 # UI-012: A small post-game panel instead of the full review
-Stage: to-review
+Stage: to-merge
 Status: ready-for-agent
 Blocked by: none
 Review: human
@@ -45,4 +45,41 @@ When a game ends, the full review screen takes over at once, a "jumpscare" (Brun
 
 - 2026-10-27 Stage 2 mutant red: replacing `main.review.show()` with `pass` in `_open_review` yielded 245 passed, 9 failed (exit 1); review visibility assertions fail after pressing the panel button. Production restored. Log: `C:\Users\bruno\AppData\Local\Temp\ui-012-mutant.log`.
 - 2026-10-27 Stage 2 gate: 254 passed, 0 failed (exit 0), tested commit `52dfde3`; manual resignation/flag and panel-button verification remains pending.
-- Gate evidence: C:\Users\bruno\AppData\Local\Temp\ui-012-retry-gate.json
+- Gate evidence: C:\Users\bruno\AppData\Local\Temp\ui-012-stage3-rebased-gate.json
+
+#### Resolution (2026-10-27)
+Verdict: Approve
+
+- Stage 3, Models (terra): gpt-6.1-sol xhigh. Review: human; no session branch. Leave the PR into main open for Bruno; no merge or done/ledger entry in this stage.
+- Reviewed the complete diff and every commit's file separation. Independent Standards and Spec reviews examined `deb79541e80bb3fb440864938cfee81e2f0133b0` against merge-base `c2ef1f1` (requested fixed point `37d0db1`). Rebased onto `origin/main` `a6169d2d7bd367fb84d3cce612221dbff8e59280`, including UI-008 and UI-010, without conflicts. `git range-diff` reports all six ticket patches unchanged; docs/spec.md retains the upstream premove and volume changes. No production or test fixes authored in stage 3.
+- Examined callers and failure paths: every `_show_result` entry (terminal move, resignation, flag, claimed draw), automatic draw generation, repeated result callbacks, premove/promotion/drag cancellation, pending Maia moves, history-error propagation, engine-stop and failed catalog/repertoire starts. Cross-feature review covered panel lifetime across rematch/setup, current-game review contents/exports, focus/flip, Esc/Space and side-panel Review. Not examined manually: rendered panel, physical keyboard/mouse dispatch, audible sound and live Lc0 play; see Bruno's checks below.
+
+Standards:
+- 0 documented violations; 1 possible Feature Envy, a non-blocking judgement call: `ui/game_over.gd` reads Main state and calls `main.review.show()`, `main._start(main.rematch(main.settings))` and `main._show_setup()`. The existing review uses action signals instead. Reviewer disposition: an optional design alternative, not a confirmed defect or unmet rule; no refactor requested for this small panel.
+
+Spec:
+- 0 findings: no missing/partial requirements, scope creep or incorrect implementation identified.
+- Criterion 1: pass in code/headless tests. The shared ending path creates the panel; mate in focus mode and resignation/time/repetition assert the hidden review, headline and reason before pressing Review. Rendering still needs human acceptance.
+- Criterion 2: pass. Panel Review opens the prepared review; Rematch calls the existing colour-swapping start path; New game opens setup.
+- Criterion 3: pass. Close/Esc hide the panel and expose the side Review action for the same game.
+- Criterion 4: pass by input-path inspection and existing rematch tests. Panel `_input` consumes Space and calls the same rematch path; physical dispatch remains a manual check.
+- Criterion 5: pass in code/headless tests. History save guard, game-end sound call, review preparation, clocks, badges and export assertions remain intact.
+
+Proxy/test-first verification:
+- `Proxy decided (opus)` above is preserved. All six constraints checked: only the eight authorized existing tests (including the permitted shared `_finish`) changed; panel presses precede review use after each game; no `main.review.show()` or other panel bypass exists in tests; existing content/visibility assertions are unchanged byte-for-byte; the specified ending assertions precede Review; `52dfde3` / rebased `663b30b` changes only the four authorized test files plus ticket metadata. The proxy's expected pre-integration gate was 254/0; UI-010 adds three tests, making the rebased gate 257/0.
+- Red proof inspected: initial test-only `e5b9eda` / `b43118b`, 253 passed / 1 failed for missing panel and eager review, exit 1 (`ui-012-red.log`); production-only `95ba561` / `5953c47` followed. Authorized test-only mutant proof: `_open_review` without `main.review.show()`, 245 passed / 9 failed, exit 1 (`ui-012-mutant.log`), then restored production and stage-2 green 254/0. These logs are local evidence under `C:\Users\bruno\AppData\Local\Temp`; counts and failure causes are recorded here for review elsewhere.
+- Rebased gate: `godot --headless -s tests/run.gd`, 257 passed / 0 failed, exit 0, tested commit `0ac5b4ea0bbbdfb40b1714b244b12a155d05cec6`. Four live-engine tests print SKIP because `engine/lc0/lc0.exe` is absent (the runner includes these in its pass count). Full output: `C:\Users\bruno\AppData\Local\Temp\ui-012-stage3-rebased-gate.log`; hashed receipt is the Gate evidence above. Only this ticket changes after the tested commit.
+
+Acceptance: pending | Bruno must run the manual panel checks below; neither stage 2 nor stage 3 ran them. Automated evidence is the rebased gate and the ending/action tests above.
+Disclosure: decision | unknown | The actual `Proxy decided (opus)` decision above expands test-only scope, preserving content assertions; its original decision does not state an integration/release impact. Stage 3 verified every constraint.
+Disclosure: pending | integration | Bruno's manual panel acceptance below remains required before the human merge; automated tests do not establish rendered layout, physical input or audible output. Live Lc0 integration also remains unexecuted in this worktree.
+
+Manual checks for Bruno before merge:
+1. Finish games by resignation and by flag; also exercise mate and a draw. Check White won / Black won / Draw and the matching reason, a small panel centred over the final board, and that the review does not open automatically.
+2. Press Review and inspect that game's result, move list, both clocks, badges, Copy PGN and Open in Lichess; confirm history saves once and the game-end sound still plays once.
+3. Press Rematch, then repeat with Space while the panel is visible: colours swap, other settings stay, the old panel disappears and play works in the new game.
+4. Press New game, change settings and start: setup opens, the old panel/side Review do not persist, and the new game uses the chosen settings.
+5. Test both close X and Esc: the exact final position stays visible, the side Review appears under the result and opens that finished game's review.
+6. Repeat the panel/close/side-Review and Space checks in F11 focus mode and after resizing to 800x600 and 1280x800; check panel placement, readable text and reachable buttons with the real mouse and keyboard.
+
+Review totals: Standards 0 rule violations / 1 optional design smell; Spec 0 findings. No confirmed unresolved implementation defect.
