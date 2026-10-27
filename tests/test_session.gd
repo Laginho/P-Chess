@@ -221,6 +221,7 @@ func test_a_new_reply_plays_before_an_old_games_wait_finishes():
 	var waits := ManualWaits.new()
 	var main = _session(waits)
 	assert_true(main.board_view.play("e2e4"))
+	main.uci.policy_ready.emit({"e2e4": 1.0})
 	main.uci.policy_ready.emit({"e7e5": 1.0})
 	_resign_and_rematch(main)
 	assert_eq(main.human, "b", "Space swaps the colour actually played")
@@ -240,8 +241,9 @@ func test_an_old_policy_after_rematch_is_dropped_before_a_wait_is_scheduled():
 	var main = _session(waits)
 	assert_true(main.board_view.play("e2e4"))
 	_resign_and_rematch(main)
-	assert_eq(main.uci.requests, [[Game.START, PackedStringArray(["e2e4"])],
+	assert_eq(main.uci.requests, [[Game.START, PackedStringArray()], [Game.START, PackedStringArray(["e2e4"])],
 			[Game.START, PackedStringArray()]], "the old and current policies are queued FIFO")
+	main.uci.policy_ready.emit({"e2e4": 1.0})
 	main.uci.policy_ready.emit({"e7e5": 1.0})
 	assert_eq(waits.pending.size(), 0, "no think time scheduled for an obsolete policy")
 	assert_eq(main.maia.latencies_ms, [], "obsolete policies are not processed as current samples")
@@ -283,6 +285,7 @@ func test_a_main_rematch_after_a_flag_closes_the_open_promotion_picker():
 	var replies := ["b7b5", "a7a6", "c8b7", "b8c6"]
 	for i in replies.size():
 		assert_true(main.board_view.play(["a2a4", "a4b5", "b5a6", "a6b7"][i]))
+		main.uci.policy_ready.emit({})
 		main.uci.policy_ready.emit({replies[i]: 1.0})
 		_finish(waits, i)
 	_mouse_on(main, true, "b7")
@@ -336,6 +339,7 @@ func test_two_rematches_drop_a_stale_white_move_legal_in_the_current_game():
 	var waits := ManualWaits.new()
 	var main = _session(waits)
 	assert_true(main.board_view.play("a2a3"))
+	main.uci.policy_ready.emit({"a2a3": 1.0})
 	main.uci.policy_ready.emit({"a7a6": 1.0})
 	_resign_and_rematch(main)
 	main.uci.policy_ready.emit({"d2d4": 1.0})
@@ -346,6 +350,7 @@ func test_two_rematches_drop_a_stale_white_move_legal_in_the_current_game():
 	_finish(waits, 1)
 	assert_eq(main.board_view.game.moves, PackedStringArray(), "stale d2d4 cannot play as the human")
 	assert_true(main.board_view.play("g1f3"))
+	main.uci.policy_ready.emit({"g1f3": 1.0})
 	main.uci.policy_ready.emit({"e7e5": 1.0})
 	_finish(waits, 2)
 	_finish(waits, 0)

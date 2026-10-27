@@ -28,11 +28,12 @@ class FakeTime:
 class SlowBridge:
 	signal policy_ready(policy: Dictionary)
 	var policy := {}
+	var policies := []
 	var compute_ms := 0
 
 	func request_policy(_start_fen: String, _moves: PackedStringArray) -> void:
 		OS.delay_msec(compute_ms)
-		policy_ready.emit(policy)
+		policy_ready.emit(policies.pop_front() if policies else policy)
 
 
 # Answers after compute_ms without blocking the frame, as the real bridge does: a blocked frame
@@ -68,9 +69,11 @@ func _near(actual: float, expected: float, message := "") -> void:
 
 
 # The moves Maia has sent by the time think() returns: none while it waits out its think time.
-func _moves_at_once(game, policy: Dictionary, compute_ms: int, clock, table := {}, level := "") -> Array:
+func _moves_at_once(game, policy: Dictionary, compute_ms: int, clock, table := {}, level := "",
+		prediction := {}) -> Array:
 	var bridge := SlowBridge.new()
 	bridge.policy = policy
+	bridge.policies = [prediction, policy] if not game.moves.is_empty() else [policy]
 	bridge.compute_ms = compute_ms
 	var maia = MaiaPlayer.new(bridge)
 	maia.clock = clock
@@ -124,15 +127,17 @@ func test_one_legal_move_takes_the_floor():
 				"seed %d" % seed_value)
 
 
-func test_a_sure_move_in_time_trouble_is_premoved():
-	# 15% of 3+2's 180 s is 27 s.
+func test_only_an_expected_sure_move_under_ten_percent_is_premoved():
 	for seed_value in 20:
-		assert_eq(TimeModel.delay(26.0, 2.0, 180.0, 30, 0.91, 20, _rng(seed_value)), 0.05,
-				"seed %d" % seed_value)
-	var formula: float = TimeModel.base(26.0, 2.0, 30, 0.9) * TimeModel.noise(_rng(3))
-	_near(TimeModel.delay(26.0, 2.0, 180.0, 30, 0.9, 20, _rng(3)), formula, "0.9 is not over 0.9")
-	formula = TimeModel.base(27.5, 2.0, 30, 0.95) * TimeModel.noise(_rng(3))
-	_near(TimeModel.delay(27.5, 2.0, 180.0, 30, 0.95, 20, _rng(3)), formula, "27.5 s is not under 15%")
+		assert_eq(TimeModel.delay(17.0, 2.0, 180.0, 30, 0.91, 20, _rng(seed_value), {}, true),
+				0.05, "expected, seed %d" % seed_value)
+		assert_true(TimeModel.delay(17.0, 2.0, 180.0, 30, 0.91, 20, _rng(seed_value)) >= 0.4,
+				"unexpected, seed %d" % seed_value)
+		assert_true(TimeModel.delay(17.0, 2.0, 180.0, 30, 0.9, 20, _rng(seed_value), {}, true) >= 0.4,
+				"0.9 is not over 0.9")
+		for left in [18.0, 20.0, 26.999, 27.0]:
+			assert_true(TimeModel.delay(left, 2.0, 180.0, 30, 0.95, 20, _rng(seed_value), {}, true) >= 0.4,
+					"%s s is not under 10%%" % left)
 
 
 func test_the_delay_is_clamped_to_the_floor_and_the_clock():
@@ -173,11 +178,12 @@ func test_a_premove_reads_maia_s_own_clock_and_the_starting_time():
 	var clock = Clock.new("3+2", time.ms)
 	for side in ["w", "b", "w"]:
 		clock.moved(side)
-	time.now += 170000  # Black's clock runs: 10 s of 180 left, under 15%. White's still reads 182 s.
+	time.now += 170000  # Black's clock runs: 10 s of 180 left, under 10%. White's still reads 182 s.
 	var game = Game.new()
 	game.play("e2e4")
 	# top_p 0.99 is over 0.9, and c7c5 falls under the cut, so the move is e7e5.
-	assert_eq(_moves_at_once(game, {"e7e5": 0.99, "c7c5": 0.01}, 60, clock), ["e7e5"])
+	assert_eq(_moves_at_once(game, {"e7e5": 0.99, "c7c5": 0.01}, 60, clock, {}, "", {"e2e4": 1.0}),
+			["e7e5"])
 
 
 # A 0.3 s bucket waits for the 0.4 s reaction floor, including Lc0's 0.1 s compute time.
@@ -298,7 +304,9 @@ func test_a_bucket_s_delay_keeps_the_overrides_and_the_clamps():
 	var sure := {"median": 4.0, "log_sigma": 0.0}
 	assert_eq(TimeModel.delay(180.0, 2.0, 180.0, 12, 0.5, 20, _rng(), sure), 4.0)
 	assert_eq(TimeModel.delay(180.0, 2.0, 180.0, 12, 0.5, 1, _rng(), sure), 0.05, "one legal move")
-	assert_eq(TimeModel.delay(26.0, 2.0, 180.0, 30, 0.91, 20, _rng(), sure), 0.05, "premove")
+	assert_eq(TimeModel.delay(17.0, 2.0, 180.0, 30, 0.91, 20, _rng(), sure, true), 0.05, "expected premove")
+	assert_eq(TimeModel.delay(17.0, 2.0, 180.0, 30, 0.91, 20, _rng(), sure), 4.0, "unexpected move")
+	assert_eq(TimeModel.delay(26.0, 2.0, 180.0, 30, 0.91, 20, _rng(), sure, true), 4.0, "above panic")
 	assert_eq(TimeModel.delay(3.0, 2.0, 180.0, 30, 0.5, 20, _rng(), sure), 3.0, "the clock left")
 	assert_eq(TimeModel.delay(180.0, 2.0, 180.0, 12, 0.5, 20, _rng(), {"median": 0.001, "log_sigma": 0.0}),
 			0.4, "reaction after sampling the bucket")

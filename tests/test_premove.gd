@@ -91,7 +91,7 @@ func test_main_queues_human_moves_and_executes_one_per_maia_reply():
 	assert_eq(board.premoves.moves, PackedStringArray(["d4d5", "g1f3"]))
 	assert_eq(main.clock.left("w"), 59900)
 	assert_eq(sounds.count("premove"), 1)
-	assert_eq(main.uci.requests.size(), 2, "one request after each actual human move")
+	assert_eq(main.uci.requests.size(), 4, "a prediction and reply after each actual human move")
 	time.now += 2000
 	main._on_maia_move("e5d4")
 	assert_eq(board.game.moves, PackedStringArray(["e2e4", "e7e5", "d2d4", "e5d4"]))

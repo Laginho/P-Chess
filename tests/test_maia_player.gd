@@ -6,6 +6,7 @@ extends "res://tests/run.gd".Test
 const Game = preload("res://core/game.gd")
 const MaiaPlayer = preload("res://bot/maia_player.gd")
 const UCI = preload("res://engine/uci.gd")
+const Clock = preload("res://core/clock.gd")
 
 
 # Answers every request at once with the same policy, as uci.gd would after bestmove.
@@ -13,10 +14,29 @@ class FakeBridge:
 	signal policy_ready(policy: Dictionary)
 	var policy := {}
 	var requests := []
+	var policies := []
+	var immediate := true
 
 	func request_policy(start_fen: String, moves: PackedStringArray) -> void:
 		requests.append([start_fen, moves])
-		policy_ready.emit(policy)
+		if immediate:
+			policy_ready.emit(policies.pop_front() if policies else policy)
+
+
+class FakeTime:
+	var now := 0
+
+	func ms() -> int:
+		return now
+
+
+class HeldWaits:
+	signal timeout
+	var seconds := []
+
+	func start(wait: float) -> Signal:
+		seconds.append(wait)
+		return timeout
 
 
 # The move Maia answers with on `game`, given `policy` and the RNG seed.
@@ -41,9 +61,76 @@ func test_maia_asks_for_the_game_so_far_and_answers_from_the_policy():
 	var got := []
 	maia.move_ready.connect(func(move): got.append(move))
 	maia.think(game)
-	assert_eq(bridge.requests, [[Game.START, PackedStringArray(["e2e4"])]])
+	assert_eq(bridge.requests, [[Game.START, PackedStringArray()], [Game.START, PackedStringArray(["e2e4"])]],
+			"predict the human before asking for Maia's move")
 	assert_eq(got.size(), 1, "one move")
 	assert_true(got and got[0] in ["e7e5", "c7c5"], str(got))
+	assert_eq(maia.latencies_ms.size(), 1, "the prediction is not a move latency sample")
+
+
+func test_only_the_top_predicted_human_move_allows_a_premove():
+	for human_move in ["e2e4", "d2d4"]:
+		for prediction in [{"d2d4": 0.1, "e2e4": 0.9}, {}]:
+			var time := FakeTime.new()
+			var clock = Clock.new("1+0", time.ms)
+			for side in ["w", "b", "w"]:
+				clock.moved(side)
+			time.now = 55000
+			var game = Game.new()
+			assert_true(game.play(human_move))
+			var bridge := FakeBridge.new()
+			bridge.policies = [prediction, {"e7e5": 0.99, "c7c5": 0.01}]
+			var waits := HeldWaits.new()
+			var maia = MaiaPlayer.new(bridge, waits.start)
+			maia.clock = clock
+			maia.control = "1+0"
+			maia.level = "maia-1500"
+			maia.time_table = {"clock_bins": [0.0, 1.0], "top_p_bins": [0.0, 1.0],
+					"buckets": {"1+0/maia-1500/0/0": {"median": 0.001, "log_sigma": 0.0}}}
+			var got := []
+			maia.move_ready.connect(func(move): got.append(move))
+			maia.think(game)
+			assert_eq(got, [], "both overrides still wait for the hand")
+			assert_eq(waits.seconds.size(), 1, "one wait per think")
+			if waits.seconds.size() == 1:
+				if human_move == "e2e4" and not prediction.is_empty():
+					assert_true(waits.seconds[0] > 0.0 and waits.seconds[0] <= 0.05, "expected premove")
+				else:
+					assert_true(waits.seconds[0] >= 0.38, "unexpected/unknown move requires reaction")
+				waits.timeout.emit()
+			assert_eq(got, ["e7e5"], "only the reply policy selects Maia's move")
+			assert_eq(maia.latencies_ms.size(), 1)
+
+
+func test_stale_prediction_and_move_replies_keep_their_fifo_slots():
+	for prediction_already_arrived in [false, true]:
+		var bridge := FakeBridge.new()
+		bridge.immediate = false
+		var maia = MaiaPlayer.new(bridge)
+		var old_game = Game.new()
+		assert_true(old_game.play("e2e4"))
+		var got := []
+		maia.move_ready.connect(func(move): got.append(move))
+		maia.think(old_game)
+		if prediction_already_arrived:
+			bridge.policy_ready.emit({"e2e4": 1.0})
+		var game = Game.new()
+		assert_true(game.play("d2d4"))
+		maia.begin_game(game)
+		maia.think(game)
+		assert_eq(bridge.requests, [[Game.START, PackedStringArray()],
+				[Game.START, PackedStringArray(["e2e4"])], [Game.START, PackedStringArray()],
+				[Game.START, PackedStringArray(["d2d4"])]])
+		if not prediction_already_arrived:
+			bridge.policy_ready.emit({"e2e4": 1.0})
+		bridge.policy_ready.emit({"e7e5": 1.0})
+		assert_eq(got, [], "both obsolete replies are consumed and dropped")
+		assert_eq(maia.latencies_ms, [], "obsolete replies do not affect the current game")
+		bridge.policy_ready.emit({"d2d4": 1.0})
+		assert_eq(got, [], "the current prediction cannot play a move")
+		bridge.policy_ready.emit({"c7c5": 1.0})
+		assert_eq(got, ["c7c5"], "the current move receives its own policy")
+		assert_eq(maia.latencies_ms.size(), 1)
 
 
 func test_the_same_seed_gives_the_same_move_and_the_default_cut_holds():
