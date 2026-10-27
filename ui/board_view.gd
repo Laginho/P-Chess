@@ -319,7 +319,7 @@ func _pick_up(point: Vector2) -> void:
 		_press_pos = point
 		_dragged = false
 		_reselected = false
-		for move in position.legal_moves():
+		for move in (premoves.targets(position, square) if _is_premove_input() else position.legal_moves()):
 			if move.begins_with(square):
 				_held_moves.append(move)
 

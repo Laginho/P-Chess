@@ -305,7 +305,7 @@ func test_queued_moves_use_the_ghost_position_without_changing_the_game():
 	assert_true(queue.enqueue(game.board, "f3g5"), "the second move starts on the first ghost")
 	assert_true(not queue.enqueue(game.board, "g1h3"), "the knight has left g1")
 	assert_true(not queue.enqueue(game.board, "a7a6"), "only human pieces")
-	assert_true(not queue.enqueue(game.board, "a1a4"), "blocked moves are refused")
+	assert_true(not queue.enqueue(game.board, "a1b3"), "geometry misses are refused")
 	var ghost = queue.position(game.board)
 	assert_eq(ghost.piece_at("g5"), "N")
 	assert_eq(ghost.piece_at("f3"), "")
@@ -456,3 +456,33 @@ func test_black_ghosts_and_execution_follow_the_same_rules():
 	game.play("a2a3")
 	assert_eq(queue.take(game.board), "f6g4")
 	assert_eq(queue.moves, PackedStringArray())
+
+
+func test_geometric_premoves_and_recapture():
+	var game = Game.new("4k3/8/3p4/4P3/8/5N2/P7/R3K3 b - - 0 1")
+	var queue = PremoveQueue.new("w")
+	assert_true(not queue.enqueue(game.board, "f3e4"), "knight geometry")
+	assert_true(not queue.enqueue(game.board, "e5e4"), "pawn cannot go backwards")
+	assert_true(queue.enqueue(game.board, "f3e5"), "own piece on target")
+	assert_eq(queue.position(game.board).piece_at("e5"), "N")
+	assert_true(queue.enqueue(game.board, "e5f7"), "next move uses the replacement")
+	assert_true(game.play("d6e5"), "Maia captures the pawn")
+	assert_eq(queue.take(game.board), "f3e5")
+	assert_true(game.play("f3e5"), "the recapture plays")
+	queue.clear()
+	assert_true(queue.enqueue(game.board, "a1a4"), "rook passes through a blocker")
+	queue.clear()
+	assert_true(queue.enqueue(game.board, "a2b3"), "pawn captures diagonally onto empty square")
+
+
+func test_premove_targets_include_geometry_on_the_board():
+	var board = BoardScene.instantiate()
+	board.game = Game.new("4k3/8/8/4P3/8/5N2/P7/R3K3 b - - 0 1")
+	board.human_side = "w"
+	Engine.get_main_loop().root.add_child(board)
+	board.size = Vector2(800, 800)
+	_mouse(board, true, "f3")
+	assert_true("f3e5" in board._held_moves, "own piece is a displayed target")
+	_mouse(board, false, "e5")
+	assert_eq(board.premoves.moves, PackedStringArray(["f3e5"]))
+	board.free()
