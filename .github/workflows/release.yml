@@ -66,6 +66,21 @@ jobs:
       - name: Fetch verified engine and Maia networks
         run: ./scripts/fetch-engine.ps1 -Root "$env:GITHUB_WORKSPACE/build/windows"
 
+      - name: Bundle the Visual C++ runtime for Lc0
+        run: |
+          # lc0.exe imports these; a clean Windows has no VC++ runtime, so they ship app-local.
+          $vs = & "${env:ProgramFiles(x86)}/Microsoft Visual Studio/Installer/vswhere.exe" -latest -products * -property installationPath
+          $redist = Get-ChildItem "$vs/VC/Redist/MSVC" -Directory | Where-Object Name -match '^[\d.]+$' |
+            Sort-Object { [version]$_.Name } | Select-Object -Last 1
+          if (-not $redist) { throw "No VC++ redist under $vs" }
+          foreach ($dll in 'msvcp140.dll', 'vcruntime140.dll', 'vcruntime140_1.dll', 'vcomp140.dll') {
+            # x64 holds Microsoft.VC14x.CRT (the first three) and Microsoft.VC14x.OpenMP (vcomp140).
+            $source = Get-ChildItem "$($redist.FullName)/x64" -Recurse -Filter $dll | Select-Object -First 1
+            if (-not $source) { throw "VC++ redist $($redist.Name) is missing $dll" }
+            Copy-Item -LiteralPath $source.FullName build/windows/engine/lc0/
+            "$dll <- $($source.FullName)"
+          }
+
       - name: Include licences and source links
         run: |
           $licence = 'build/windows/engine/weights/COPYING'
@@ -79,6 +94,7 @@ jobs:
         run: |
           $required = @('P-Chess.exe', 'P-Chess.pck', 'THIRD_PARTY.md', 'engine/lc0/lc0.exe', 'engine/lc0/COPYING', 'engine/weights/COPYING')
           $required += 11..19 | ForEach-Object { "engine/weights/maia-$($_ * 100).pb.gz" }
+          $required += 'msvcp140.dll', 'vcruntime140.dll', 'vcruntime140_1.dll', 'vcomp140.dll' | ForEach-Object { "engine/lc0/$_" }
           foreach ($file in $required) {
             if (-not (Test-Path -LiteralPath "build/windows/$file" -PathType Leaf)) {
               throw "Release package is missing $file"
