@@ -1,5 +1,5 @@
 # BOT-010: Calibrate think time from whole-second clocks, with enough scramble samples
-Stage: to-implement
+Stage: to-review
 Status: ready-for-agent
 Blocked by: none
 Review: human
@@ -36,7 +36,7 @@ Then run the calibration and commit `data/time_model.json`.
 #### Verification
 
     python -I -B -m pytest -p no:cacheprovider scripts/test_calibrate_time.py
-    python scripts/calibrate_time.py --url https://database.lichess.org/standard/lichess_db_standard_rated_2026-09.pgn.zst --max-bytes 500000000 --download-approved
+    python scripts/calibrate_time.py --url https://database.lichess.org/standard/lichess_db_standard_rated_2026-09.pgn.zst --max-bytes 20000000 --download-approved
     godot --headless -s tests/run.gd
     Manual (Bruno, M8): a few 1+0 and 5+0 games against the table.
 
@@ -46,5 +46,27 @@ Then run the calibration and commit `data/time_model.json`.
 
 ## Comments
 
+- Proxy decided (gpt-6-astra high, fallback): start with a 20 MB compressed prefix and increase only if coverage is insufficient, within the cumulative 500 MB download budget; acceptance still requires all 27 real 1+0/clock_bin 0 buckets with at least 50 samples each. The 500 MB limit is an authorization ceiling, not a required transfer size. The original 500 MB-cap attempt was stopped before producing a table because incremental parsing projected about two hours; its log is `%TEMP%/BOT-010-calibration.log` (exit -1). No criteria or production seams changed.
+- Proxy decided (gpt-6-astra high, fallback): reserve an estimated 200 MB for the interrupted attempt and proceed with the 20 MB prefix. Including the earlier 20 MB probe, conservative accounting reserves 240 MB of 500 MB and leaves 260 MB. Earlier process I/O showed 4,354,088 bytes read after about 65 CPU seconds; the incremental parser ran for about 3 minutes 20 seconds with no background downloader. Final counter collection failed due to a PowerShell type-array method dispatch error after termination; all calibration processes have exited. This reservation is an estimate, not exact HTTP traffic or a mathematically demonstrated bound.
+
+- Stage 2 scope: `main` calls `sample_positions` then `build_table`; Python fixture/CLI tests and `bot/time_model.gd::load_table`/`bucket` consume their output. Examined zero/empty/sparse buckets, bin boundaries, increment clocks above the starting time, reproducibility and preservation of an existing table on UCI failure. The old exact-time fit assertions are replaced because this ticket changes that contract. Test seams are the ticket-approved `build_table`, `sample_positions` and existing CLI boundary; no new game seam is needed.
+
 - 2026-10-27 Download approved by Bruno in chat ("pode autorizar o download"): up to 500 MB of the 2026-09 monthly dump (the 20 MB probe already held 1.1 M timed moves). The run waits for fix 1, since a table from the current fit would make 1+0 scrambles worse, not better.
 - Variability (Bruno: "humanos também penduram peças ou demoram pra fazer um lance por nervosismo"): blunders come from sampling Maia's human policy plus the §3.4 panic; long and short thinks come from each bucket's real log-σ. Judge the spread after this table lands before adding any extra noise.
+
+#### Stage 2 handoff (2026-10-27)
+
+- Implemented the rounded-clock log-normal likelihood using CDF/partial-moment integrals and integer-difference counts. A two-parameter numerical search uses the existing standard library; no new script dependency. Zero observations remain unchanged; all-zero data has no positive finite MLE, so its boundary solution is represented by median 0.000001 s, sigma 0. The game still applies its existing reaction/premove rules. §4.3 documents these details.
+- Replaced the global reservoir with seeded reservoirs for `(control, level, clock_bin)` and the CLI option `--per-stratum` (default 1,000). The CLI, sample limit, level grouping, full Maia history, sparse fallback and atomic table replacement remain covered. Each serialized bucket includes its real `samples` count for coverage verification.
+- Fit cycle: test-only `870507f` exposed **3 failed / 10 passed** (both synthetic recoveries and the zero bucket); production-only `6bbfc37` passed **13 tests**. Test-only `332841f` corrected an obsolete CLI assumption that a rounded-data MLE must equal the raw median. Replayed those corrected tests against the old production source: **3 failed / 10 passed**, exit 1, `%TEMP%/BOT-010-fit-red-replay.log`.
+- Reservoir cycle: test-only `0cd8099` exposed **3 failed / 11 passed** (CLI option and both reservoir tests); production-only `cdd241b` passed **14 tests**. Test-only `f596ee0` corrected the fixture's stratum count from 6 to 8; no fixture stratum exceeds three observations. Replayed final tests against pre-reservoir production: **3 failed / 11 passed**, exit 1, `%TEMP%/BOT-010-reservoir-red-replay.log`. Final green: `python -I -B -m pytest -p no:cacheprovider scripts/test_calibrate_time.py`, **14 passed**, exit 0, `%TEMP%/BOT-010-reservoir-green.log`. One upstream python-chess asyncio deprecation warning remains. Python 3.14.7 and declared script dependencies plus pytest were installed in external `%TEMP%/BOT-010-python`.
+- Approved real calibration: `python -I -B scripts/calibrate_time.py --url https://database.lichess.org/standard/lichess_db_standard_rated_2026-09.pgn.zst --max-bytes 20000000 --download-approved`, default seed 7, per-stratum 1,000, min-samples 50; **80,691 real positions, 243 buckets**, exit 0. Log: `%TEMP%/BOT-010-calibration-20mb.log`. Generated data committed separately in `bdabbd4`. All 80,691 sampled observations belong to written buckets.
+- Criterion 4: external assertion audit of the committed JSON confirms all **27/27** required 1+0/clock_bin 0 level × top-p combinations with **216–479 observations per bucket**, above 50; every written bucket has finite positive median and finite nonnegative sigma. Log: `%TEMP%/BOT-010-table-audit.log`, exit 0. A Godot smoke calls the actual `TimeModel.load_table(TimeModel.TABLE)` and all 27 public bucket lookups: **243 buckets loaded, 27/27 scramble buckets**, no errors or malformed warnings, exit 0, `%TEMP%/BOT-010-table-load.log`. Its first sandbox attempt could not access Godot's user log/certificate store; the final run outside that sandbox is clean.
+- Bound gate on `bdabbd49991aa21160a89b053a4d8fc2082ae5fe`: `godot --headless -s tests/run.gd`, **268 passed / 0 failed**, exit 0. Run once in the foreground through `gate-evidence.ps1`, with full external log `C:/Users/bruno/AppData/Local/Temp/BOT-010-gate.log`; the receipt records the tested commit and SHA-256 log hash. Godot 4.7.2 is exposed by a temporary PATH shim. Warnings from intentionally malformed fixture tables and existing UI anchor tests are unrelated to the generated table. `git diff --check` passes. Only this ticket changes after the tested commit; no review or merge performed in stage 2.
+
+Acceptance: pending | Automated numbered criteria 1–5 passed; Bruno's M8 manual 1+0 and 5+0 games listed under Verification remain pending.
+
+Disclosure: decision | none | The two Proxy decided entries above approve the smaller prefix while retaining all coverage criteria and reserve an estimated 200 MB for the interrupted attempt. The conservative 240 MB accounting includes the earlier probe and successful prefix; interrupted HTTP consumption was not measured exactly.
+Disclosure: pending | unknown | Verification's manual M8 games still require Bruno to assess the generated table's playing feel and think-time spread.
+
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\BOT-010-gate.json
