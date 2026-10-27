@@ -23,7 +23,7 @@ func test_a_missing_file_gives_the_spec_defaults():
 	assert_eq(settings.get_value("board_theme"), "brown")
 	assert_eq(settings.get_value("piece_theme"), "cburnett")
 	assert_eq(settings.get_value("sound_theme"), "sfx")
-	assert_eq(settings.get_value("volume"), 100)
+	assert_eq(settings.get_value("volume"), 20)
 	assert_eq(settings.get_value("tau"), 0.02)
 	assert_eq(settings.get_value("temperature"), 1.0)
 	assert_eq(settings.get_value("panic"), "medium")
@@ -45,7 +45,14 @@ func test_a_change_is_saved_and_read_back_by_a_new_store():
 	assert_eq(reloaded.get_value("legal_dots"), false)
 	assert_eq(reloaded.get_value("panic"), "high")
 	assert_eq(reloaded.get_value("tau"), 0.05)
-	assert_eq(reloaded.get_value("volume"), 100, "untouched settings keep their default")
+	assert_eq(reloaded.get_value("volume"), 20, "untouched settings keep their default")
+
+
+func test_saved_volume_is_kept_across_its_range():
+	var settings = Settings.new(_fresh())
+	for volume in [0, 50, 100]:
+		assert_true(settings.set_value("volume", volume))
+		assert_eq(Settings.new(PATH).get_value("volume"), volume)
 
 
 func test_an_out_of_range_change_is_refused():
@@ -54,7 +61,7 @@ func test_an_out_of_range_change_is_refused():
 	assert_true(not settings.set_value("animation_ms", -1))
 	assert_true(not settings.set_value("panic", "extreme"))
 	assert_true(not settings.set_value("legal_dots", "yes"))
-	assert_eq(settings.get_value("volume"), 100)
+	assert_eq(settings.get_value("volume"), 20)
 	assert_eq(settings.get_value("animation_ms"), 120)
 	assert_eq(settings.get_value("panic"), "medium")
 	assert_eq(settings.get_value("legal_dots"), true)
@@ -70,7 +77,7 @@ func test_a_bad_value_in_the_file_falls_back_to_its_default_and_keeps_the_rest()
 	file.set_value("settings", "tau", 0.05)
 	file.save(_fresh())
 	var settings = Settings.new(PATH)
-	assert_eq(settings.get_value("volume"), 100)
+	assert_eq(settings.get_value("volume"), 20)
 	assert_eq(settings.get_value("temperature"), 1.0)
 	assert_eq(settings.get_value("panic"), "medium")
 	assert_eq(settings.get_value("animation_ms"), 120)
@@ -106,7 +113,7 @@ func test_a_corrupt_file_gives_the_defaults():
 	Engine.print_error_messages = false
 	var settings = Settings.new(PATH)
 	Engine.print_error_messages = true
-	assert_eq(settings.get_value("volume"), 100)
+	assert_eq(settings.get_value("volume"), 20)
 	assert_eq(settings.get_value("panic"), "medium")
 	assert_true(settings.set_value("volume", 50), "and still saves over it")
 	assert_eq(Settings.new(PATH).get_value("volume"), 50)

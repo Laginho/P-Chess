@@ -21,3 +21,4 @@ Single-context: one `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agent
 - Models (default): sol
 - Models (sol): stage 2 gpt-6.1-sol high, hard gpt-6.1-sol xhigh, stage 3 gpt-6.1-sol xhigh
 - Models (opus): stage 2 opus-5.5 high, hard opus-5.5 xhigh, stage 3 opus-5.5 xhigh
+- Models (terra): stage 2 gpt-6.1-terra high, hard gpt-6.1-terra high, stage 3 gpt-6.1-sol xhigh
