@@ -179,6 +179,27 @@ func test_maia_checkmate_clears_premoves_and_rematch_keeps_no_ghosts():
 	main.free()
 
 
+func test_a_hold_survives_maias_reply_and_drops_as_a_normally_timed_move():
+	for selected in [false, true]:
+		var time := FakeTime.new()
+		var main = _session(time)
+		var board = main.board_view
+		board.click_click = selected
+		board.play("e2e4")
+		_mouse(board, true, "g1")
+		if selected:
+			_mouse(board, false, "g1")
+		main._on_maia_move("e7e5")
+		time.now += 350
+		if selected:
+			_mouse(board, true, "f3")
+		_mouse(board, false, "f3")
+		assert_eq(board.game.moves, PackedStringArray(["e2e4", "e7e5", "g1f3"]))
+		assert_eq(board.premoves.moves, PackedStringArray())
+		assert_eq(main.clock.left("w"), 59650, "the drop uses elapsed time, not the 100 ms premove cost")
+		main.free()
+
+
 func test_a_reply_cancels_an_unfinished_drag_before_running_the_due_premove():
 	var main = _session(FakeTime.new())
 	var board = main.board_view

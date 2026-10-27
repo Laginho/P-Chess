@@ -1,5 +1,5 @@
 # UI-011: A held piece survives Maia's move
-Stage: to-implement
+Stage: implementing
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -34,3 +34,4 @@ Dragging a piece while Maia thinks, then Maia moves: the drag is dropped and the
 ## Comments
 
 - 2026-10-26 Written from Bruno's first QA session (item 4). Reverses UI-007's "Maia replies cancel held input" for drags and selections only; pickers still close.
+- 2026-10-27 Stage 2 scope: `_commit` is reached by `play` (Maia/premoves) and `_submit` (drag, click-selection, promotion). `_cancel_interaction` also serves settings, right-click cancellation and game end; those callers keep cancellation. Input must be reconciled after synchronous `move_played` listeners execute the due premove. Check null/invalid ghost positions, changed/captured sources, legal-target changes, snap-back and promotion cancellation, both colours and both hold modes at the approved BoardView/Main test seams. No config, exports or fixtures need changing.
