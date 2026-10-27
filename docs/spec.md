@@ -317,3 +317,4 @@ The GitHub repo is created before M1's CI job, and **only after Bruno confirms**
 - **Repertoire editor:** record lines by playing them on the board.
 - **Adaptive rating ladder.**
 - **Rebindable hotkeys.**
+- **Blindfold mode:** play against Maia with the pieces hidden (move list and clocks stay).
