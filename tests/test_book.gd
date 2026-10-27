@@ -407,6 +407,7 @@ func test_main_reports_corrupt_practice_in_catalog_and_free_without_duplicate_sa
 				and main.history.error.contains("practice/" + unchecked),
 				"saving retains the warning for every corrupt practice id, including in Free")
 		assert_true(main.result_label.text.contains("History: " + main.history.error))
+		main.board_view.get_node("GameOver/Panel/Content/Review").pressed.emit()
 		var review = main.get_node("Review")
 		assert_true(review.visible)
 		assert_true(review.get_node("Margin/Content/Result").text.contains("History: " + main.history.error),

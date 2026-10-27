@@ -170,6 +170,41 @@ func _key(main, code: Key) -> void:
 	main._unhandled_key_input(event)
 
 
+func test_game_over_panel_actions():
+	for action in ["Review", "Rematch", "NewGame", "Close", "Escape"]:
+		var main = _session(ManualWaits.new())
+		_key(main, KEY_ESCAPE)
+		_key(main, KEY_ESCAPE)
+		assert_true(not main.review.visible, "review waits for a request")
+		var panel = main.board_view.get_node_or_null("GameOver")
+		assert_true(panel != null and panel.visible, "game-over panel appears")
+		if panel:
+			assert_eq(panel.get_node("Panel/Content/Headline").text, "Black won")
+			assert_eq(panel.get_node("Panel/Content/Reason").text, "by resignation")
+			if action == "Escape":
+				var event := InputEventKey.new()
+				event.keycode = KEY_ESCAPE
+				event.pressed = true
+				panel._input(event)
+			else:
+				panel.get_node("Panel/Content/" + action).pressed.emit()
+			match action:
+				"Review":
+					assert_true(main.review.visible, "Review opens the review")
+				"Rematch":
+					assert_eq(main.human, "b", "Rematch swaps colours")
+				"NewGame":
+					assert_true(main.setup.visible, "New game opens setup")
+				_:
+					assert_true(not panel.visible, "the final board remains visible")
+					var review_button = main.get_node_or_null("Layout/Side/ReviewButton")
+					assert_true(review_button != null and review_button.visible, "side Review is available")
+					if review_button:
+						review_button.pressed.emit()
+						assert_true(main.review.visible, "side Review opens review")
+		main.free()
+
+
 func _resign_and_rematch(main) -> void:
 	_key(main, KEY_ESCAPE)
 	_key(main, KEY_ESCAPE)

@@ -47,6 +47,12 @@ theme_override_font_sizes/font_size = 20
 layout_mode = 2
 autowrap_mode = 3
 
+[node name="ReviewButton" type="Button" parent="Layout/Side"]
+visible = false
+layout_mode = 2
+focus_mode = 0
+text = "Review"
+
 [node name="ResignHint" type="Label" parent="Layout/Side"]
 visible = false
 layout_mode = 2

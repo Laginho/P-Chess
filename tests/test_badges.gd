@@ -77,6 +77,7 @@ func _marks(main, ply: int) -> String:
 func _finish(main) -> void:
 	main.board_view.game.resign(main.human)
 	main._show_result()
+	main.board_view.get_node("GameOver/Panel/Content/Review").pressed.emit()
 
 
 func _folder() -> String:
