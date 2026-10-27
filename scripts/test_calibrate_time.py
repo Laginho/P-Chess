@@ -1,4 +1,5 @@
 from pathlib import Path
+from collections import Counter
 from dataclasses import replace
 import io
 import math
@@ -196,7 +197,7 @@ for line in sys.stdin:
     output = tmp_path / "data/time_model.json"
     args = ["--url", "https://example.invalid/month.pgn.zst", "--max-bytes", str(len(compressed)),
             "--engine", str(engine), "--weights", str(weights), "--output", str(output),
-            "--min-samples", "1"]
+            "--min-samples", "1", "--per-stratum", "1000"]
     # The approved flag here executes only local fixture I/O: no download occurs.
     assert calibration.main(args + ["--download-approved"]) == 0
     assert response.consumed == len(compressed)
@@ -283,13 +284,36 @@ def test_reservoir_keeps_a_bounded_seeded_sample_from_the_whole_prefix():
     with FIXTURE.open(encoding="utf-8") as pgn:
         samples = list(extract_samples(pgn))
     result = sample_positions(iter(samples), 3, seed=7)
-    assert len(result) == 3
+    assert len(result) == 6  # Three 3+2/1500, plus the three other strata.
     assert result == sample_positions(iter(samples), 3, seed=7)
     # A reservoir is not merely the first N positions: later games can enter.
     assert any(sample not in samples[:3] for sample in result)
     assert all(sample in samples for sample in result)
     assert len(sample_positions(iter(samples), 100, seed=7)) == 8
     assert sample_positions(iter([]), 3, seed=7) == []
+
+
+def test_reservoir_limits_each_control_level_and_clock_stratum():
+    from calibrate_time import sample_positions
+
+    with FIXTURE.open(encoding="utf-8") as pgn:
+        example = next(extract_samples(pgn))
+    samples = []
+    expected = {}
+    for control in ("1+0", "3+2", "5+0"):
+        for rating in range(1100, 1901, 100):
+            for clock_bin, fraction in enumerate((0.0, 0.15, 0.5)):
+                count = 2 if clock_bin == 2 else 20
+                level = f"maia-{rating}"
+                expected[control, level, fraction] = min(count, 5)
+                samples.extend(replace(example, control=control, level=level,
+                                       clock_fraction=fraction, seconds=i) for i in range(count))
+    result = sample_positions(iter(samples), 5, seed=7)
+    assert Counter((s.control, s.level, s.clock_fraction) for s in result) == expected
+    assert result == sample_positions(iter(samples), 5, seed=7)
+    assert result != sample_positions(iter(samples), 5, seed=8)
+    assert any(s.seconds >= 5 for s in result)
+    assert all(s in samples for s in result)
 
 
 def test_uci_stop_while_bucketing_leaves_the_previous_table_untouched(tmp_path, monkeypatch):
