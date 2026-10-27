@@ -68,10 +68,18 @@ func think(game, time_left := 0, start_time := 0) -> void:
 		picker = MovePicker.panic(temperature, tau, panic, time_left, start_time)
 	var weights: Dictionary = book.weights(game.board, game.moves.size(), book_intensity) \
 			if book != null and not target_id.is_empty() else {}
-	_pending.append({"generation": _generation, "game": game, "ply": game.moves.size(),
+	var request := {"generation": _generation, "game": game, "ply": game.moves.size(),
 			"asked_usec": Time.get_ticks_usec(), "picker": picker, "weights": weights, "clock": clock,
-			"control": control, "level": level, "time_table": time_table})
+			"control": control, "level": level, "time_table": time_table, "expected": false}
+	if not game.moves.is_empty():
+		var prediction := request.duplicate()
+		prediction["reply"] = request
+		prediction["last_move"] = game.moves[-1]
+		_pending.append(prediction)
+	_pending.append(request)
 	# shortcut: every game starts from the initial position; keep the start FEN in Game when one does not.
+	if not game.moves.is_empty():
+		_bridge.request_policy(Game.START, game.moves.slice(0, -1))
 	_bridge.request_policy(Game.START, game.moves)
 
 
@@ -89,6 +97,13 @@ func _on_policy(policy: Dictionary) -> void:
 		return
 	var request: Dictionary = _pending.pop_front()
 	if not _is_current(request):
+		return
+	if request.has("reply"):
+		var top := ""
+		for move in policy:
+			if top.is_empty() or policy[move] > policy[top]:
+				top = move
+		request.reply.expected = top == request.last_move
 		return
 	var game = request.game
 	var legal: PackedStringArray = game.board.legal_moves()
@@ -112,7 +127,7 @@ func _on_policy(policy: Dictionary) -> void:
 		var start: float = Clock.CONTROLS[request.control][0] / 1000.0
 		var bucket := TimeModel.bucket(request.time_table, request.control, request.level, left / start, top_p)
 		var delay := TimeModel.delay(left, request_clock.increment / 1000.0, start, game.moves.size() / 2,
-				top_p, legal.size(), rng, bucket)
+				top_p, legal.size(), rng, bucket, request.expected)
 		var wait := TimeModel.wait(delay, compute_ms / 1000.0)
 		if wait > 0.0:
 			await _wait_for_timeout.call(wait)

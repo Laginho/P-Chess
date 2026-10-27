@@ -91,7 +91,7 @@ func test_main_queues_human_moves_and_executes_one_per_maia_reply():
 	assert_eq(board.premoves.moves, PackedStringArray(["d4d5", "g1f3"]))
 	assert_eq(main.clock.left("w"), 59900)
 	assert_eq(sounds.count("premove"), 1)
-	assert_eq(main.uci.requests.size(), 2, "one request after each actual human move")
+	assert_eq(main.uci.requests.size(), 4, "a prediction and reply after each actual human move")
 	time.now += 2000
 	main._on_maia_move("e5d4")
 	assert_eq(board.game.moves, PackedStringArray(["e2e4", "e7e5", "d2d4", "e5d4"]))
@@ -179,18 +179,85 @@ func test_maia_checkmate_clears_premoves_and_rematch_keeps_no_ghosts():
 	main.free()
 
 
-func test_a_reply_cancels_an_unfinished_drag_before_running_the_due_premove():
+func test_a_hold_survives_maias_reply_and_drops_as_a_normally_timed_move():
+	for selected in [false, true]:
+		var time := FakeTime.new()
+		var main = _session(time)
+		var board = main.board_view
+		board.click_click = selected
+		board.play("e2e4")
+		_mouse(board, true, "g1")
+		if selected:
+			_mouse(board, false, "g1")
+		main._on_maia_move("e7e5")
+		time.now += 350
+		if selected:
+			_mouse(board, true, "f3")
+		_mouse(board, false, "f3")
+		assert_eq(board.game.moves, PackedStringArray(["e2e4", "e7e5", "g1f3"]))
+		assert_eq(board.premoves.moves, PackedStringArray())
+		assert_eq(main.clock.left("w"), 59650, "the drop uses elapsed time, not the 100 ms premove cost")
+		main.free()
+
+
+func test_a_reply_and_due_premove_preserve_an_unfinished_drag():
+	for selected in [false, true]:
+		var main = _session(FakeTime.new())
+		var board = main.board_view
+		board.click_click = selected
+		board.play("e2e4")
+		_drag(board, "g1", "f3")
+		_mouse(board, true, "f3")
+		if selected:
+			_mouse(board, false, "f3")
+		board.slide_seconds = 0.12
+		main._on_maia_move("e7e5")
+		if not selected:
+			assert_eq(board._slide_to, "", "the held knight is not also drawn as a sliding piece")
+		if selected:
+			_mouse(board, true, "g5")
+		_mouse(board, false, "g5")
+		assert_eq(board.game.moves, PackedStringArray(["e2e4", "e7e5", "g1f3"]))
+		assert_eq(board.premoves.moves, PackedStringArray(["f3g5"]), "the held ghost becomes the live knight, and its release queues the next move")
+		main.free()
+
+
+func test_a_due_premove_moving_the_held_live_piece_ends_the_hold():
+	for selected in [false, true]:
+		var main = _session(FakeTime.new())
+		var board = main.board_view
+		board.premove_style = "Lichess"
+		board.click_click = selected
+		board.play("e2e4")
+		_drag(board, "g1", "f3")
+		_mouse(board, true, "g1")
+		if selected:
+			_mouse(board, false, "g1")
+		main._on_maia_move("e7e5")
+		assert_eq(board._drag_from, "")
+		assert_eq(board._selected, "")
+		assert_eq(board._held_moves, PackedStringArray())
+		if selected:
+			_mouse(board, true, "h3")
+		_mouse(board, false, "h3")
+		assert_eq(board.game.moves, PackedStringArray(["e2e4", "e7e5", "g1f3"]))
+		assert_eq(board.premoves.moves, PackedStringArray(), "the moved source cannot queue a stale replacement")
+		main.free()
+
+
+func test_an_invalid_remaining_ghost_cancels_the_hold_without_a_stale_drop():
 	var main = _session(FakeTime.new())
 	var board = main.board_view
-	board.play("e2e4")
-	_drag(board, "g1", "f3")
-	_mouse(board, true, "f3")
-	main._on_maia_move("e7e5")
-	_mouse(board, false, "g5")
-	assert_eq(board.game.moves, PackedStringArray(["e2e4", "e7e5", "g1f3"]))
-	assert_eq(board.premoves.moves, PackedStringArray(), "the stale release queues nothing")
-	_drag(board, "f3", "g5")
-	assert_eq(board.premoves.moves, PackedStringArray(["f3g5"]), "new input still works")
+	board.game = Game.new("8/8/8/8/2k5/8/R7/K7 b - - 0 1")
+	_drag(board, "a2", "a3")
+	_drag(board, "a3", "b3")
+	_mouse(board, true, "b3")
+	main._on_maia_move("c4b3")
+	assert_eq(board.game.moves, PackedStringArray(["c4b3", "a2a3"]))
+	assert_eq(board._drag_from, "", "the remaining ghost would capture Maia's king")
+	assert_eq(board._held_moves, PackedStringArray())
+	_mouse(board, false, "b4")
+	assert_eq(board.premoves.moves, PackedStringArray(["a3b3"]), "the release adds nothing to the invalid tail")
 	main.free()
 
 

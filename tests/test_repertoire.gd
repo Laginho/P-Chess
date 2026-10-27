@@ -277,6 +277,7 @@ func test_main_uses_repertoire_for_maia_catalog_for_history_and_preserves_rematc
 	assert_true(main.board_view.play("e2e4"))
 	assert_eq(main.uci.requests[-1], PackedStringArray(["e2e4"]))
 	# With strong book weights e5 survives the 50% cut; without them only d5 survives.
+	main.uci.policy_ready.emit({"e2e4": 1.0})
 	main.uci.policy_ready.emit({"e7e5": 0.1, "d7d5": 0.9})
 	assert_eq(main.board_view.game.moves, PackedStringArray(["e2e4", "e7e5"]))
 	var first_target: String = main.maia.target_id

@@ -120,3 +120,74 @@ func test_an_open_promotion_picker_follows_flip_and_resize():
 			assert_eq(board.game.moves if premove else board.premoves.moves, PackedStringArray(), label)
 			assert_eq(played.size(), 1 if choose and not premove else 0, label)
 			board.free()
+
+
+func _held_board(fen: String, human: String, square: String, selected: bool):
+	var board = preload("res://ui/board_view.tscn").instantiate()
+	board.game = preload("res://core/game.gd").new(fen)
+	board.human_side = human
+	board.flipped = human == "b"
+	board.click_click = selected
+	board.slide_seconds = 0
+	Engine.get_main_loop().root.add_child(board)
+	board.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	board.size = Vector2(800, 800)
+	var at: Vector2 = board.square_position(square, 800, board.flipped) + Vector2(50, 50)
+	board._gui_input(_mouse(true, at))
+	if selected:
+		board._gui_input(_mouse(false, at))
+	return board
+
+
+func test_held_targets_update_to_legal_moves_including_new_en_passant():
+	for selected in [false, true]:
+		for case in [
+			["4k3/3p4/8/4P3/8/8/8/4K3 b - - 0 1", "w", "e5", "d7d5", "d6", "e6"],
+			["4k3/8/8/8/4p3/8/3P4/4K3 w - - 0 1", "b", "e4", "d2d4", "d3", "e3"],
+		]:
+			var board = _held_board(case[0], case[1], case[2], selected)
+			assert_true(board._held_moves.size() > 2, "premove dots include geometric captures")
+			assert_true(board.play(case[3]))
+			assert_eq(board._held_moves.size(), 2, "only the advance and en passant are now legal")
+			assert_true(case[2] + case[4] in board._held_moves, "the newly available en passant target")
+			assert_true(case[2] + case[5] in board._held_moves, "the ordinary pawn advance")
+			var to: Vector2 = board.square_position(case[4], 800, board.flipped) + Vector2(50, 50)
+			if selected:
+				board._gui_input(_mouse(true, to))
+			board._gui_input(_mouse(false, to))
+			assert_eq(board.game.moves, PackedStringArray([case[3], case[2] + case[4]]))
+			assert_eq(board._drag_from, "", "playing the held piece ends its hold")
+			assert_eq(board._selected, "")
+			board.free()
+
+
+func test_capturing_a_held_piece_clears_drag_selection_and_targets():
+	for selected in [false, true]:
+		for case in [
+			["4k3/8/3p4/4P3/8/8/P7/4K3 b - - 0 1", "w", "e5", "d6e5", "e6"],
+			["4k3/p7/8/8/4p3/3P4/8/4K3 w - - 0 1", "b", "e4", "d3e4", "e3"],
+		]:
+			var board = _held_board(case[0], case[1], case[2], selected)
+			assert_true(board.play(case[3]))
+			assert_eq(board._drag_from, "")
+			assert_eq(board._selected, "")
+			assert_eq(board._held_moves, PackedStringArray())
+			var to: Vector2 = board.square_position(case[4], 800, board.flipped) + Vector2(50, 50)
+			if selected:
+				board._gui_input(_mouse(true, to))
+			board._gui_input(_mouse(false, to))
+			assert_eq(board.game.moves, PackedStringArray([case[3]]), "stale input cannot play the captured piece")
+			board.free()
+
+
+func test_a_hold_survives_even_when_the_reply_leaves_no_legal_targets():
+	for selected in [false, true]:
+		var board = _held_board("4k3/4p3/8/8/4P3/8/8/4K3 b - - 0 1", "w", "e4", selected)
+		assert_true(board.play("e7e5"))
+		assert_eq(board._selected if selected else board._drag_from, "e4")
+		assert_eq(board._held_moves, PackedStringArray(), "the blocked pawn has no legal move")
+		if selected:
+			board._gui_input(_mouse(true, Vector2(450, 350)))
+		board._gui_input(_mouse(false, Vector2(450, 350)))
+		assert_eq(board.game.moves, PackedStringArray(["e7e5"]), "an illegal drop cannot play a stale geometric target")
+		board.free()

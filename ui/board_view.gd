@@ -371,7 +371,8 @@ func _commit(move: String, slide: bool, premove := false) -> void:
 	if not game.play(move):
 		_end_snap_back()
 		return
-	_cancel_interaction()
+	if _promoting or _snapping:
+		_cancel_interaction()
 	if slide and slide_seconds > 0:
 		_end_slide()
 		_slide_to = move.substr(2, 2)
@@ -386,6 +387,19 @@ func _commit(move: String, slide: bool, premove := false) -> void:
 	if game.board.in_check():
 		sound_requested.emit("check")
 	move_played.emit(san)
+	# A reply's listeners may also play the due premove before input resumes.
+	var held := _drag_from if _drag_from else _selected
+	if held:
+		var position = _input_position()
+		if game.is_over() or position == null or position.piece_at(held) != _held_piece:
+			_cancel_interaction()
+		else:
+			if _drag_from == _slide_to:
+				_end_slide()
+			_held_moves.clear()
+			for target in (premoves.targets(position, held) if _is_premove_input() else position.legal_moves()):
+				if target.begins_with(held):
+					_held_moves.append(target)
 
 
 func _end_slide() -> void:
