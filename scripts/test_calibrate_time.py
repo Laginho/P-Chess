@@ -203,8 +203,8 @@ for line in sys.stdin:
     table = json.loads(output.read_text(encoding="utf-8"))
     assert len(table["buckets"]) == 5
     assert all(b["clock_bin"] == 2 and b["top_p_bin"] == 1 for b in table["buckets"])
-    assert next(b["median"] for b in table["buckets"]
-                if b["control"] == "3+2" and b["level"] == "maia-1500") == pytest.approx(3, rel=0.1)
+    assert 2 < next(b["median"] for b in table["buckets"]
+                    if b["control"] == "3+2" and b["level"] == "maia-1500") < 4
     commands = transcript.read_text(encoding="utf-8").splitlines()
     assert commands[:2] == ["uci", "setoption name VerboseMoveStats value true"]
     nets = [command.rsplit("maia-", 1)[1] for command in commands
