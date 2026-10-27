@@ -1,5 +1,5 @@
 # BOT-009: Maia premoves only expected moves, and never moves faster than a human hand
-Stage: to-implement
+Stage: implementing
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -46,3 +46,4 @@ The clamp to `clock_left` stays: Maia never waits past its own flag.
 ## Comments
 
 - 2026-10-27 Written from Bruno's QA session. Bruno saw it in 1+0. The cheaper "recapture on the square just captured" heuristic was set aside for the real prediction: the extra query is a single `go nodes 1`, and Bruno asked why it should wait.
+- 2026-10-27 Stage 2 scope: `TimeModel.delay` is called only by `MaiaPlayer._on_policy` and the time-model tests; `think` is called by Main and bot/session tests. Test seams are the ticket's `delay` and `think` boundaries, with fake engine, clock and timer signals. Check empty histories (no prediction), synchronous and FIFO replies, stale games, both clock sides, forced moves, table samples, and clocks at/below reaction. Existing session tests that deliver one policy per think will need test-only harness updates for the extra query.
