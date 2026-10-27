@@ -140,6 +140,7 @@ func test_main_recovers_corrupt_stats_once_and_reports_them_in_the_review():
 		assert_true(main.history.error.contains("Corrupt"), "corrupt stats are reported after saving")
 		assert_true(main.result_label.text.contains("History: " + main.history.error))
 		assert_true(main.result_label.text.contains("Space for a rematch"))
+		main.board_view.get_node("GameOver/Panel/Content/Review").pressed.emit()
 		var review = main.get_node("Review")
 		assert_true(review.visible, "review still opens after corrupt history is recovered")
 		assert_true(review.get_node("Margin/Content/Result").text.contains("History: " + main.history.error),
