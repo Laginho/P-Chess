@@ -1,5 +1,5 @@
 # UI-008: Start at 20 % volume
-Stage: to-implement
+Stage: implementing
 Status: ready-for-agent
 Blocked by: none
 Review: agent
