@@ -1,5 +1,5 @@
 # UI-008: Start at 20 % volume
-Stage: implementing
+Stage: to-review
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -31,3 +31,6 @@ A first launch plays sounds at 20 % instead of 100 %. Full volume on top of the 
 ## Comments
 
 - 2026-10-26 Written from Bruno's first QA session (item 1).
+
+- Stage 2: red at 85f0056 (249 passed, 5 failed: default 100 instead of 20); green at f104999 (254 passed, 0 failed). Saved volumes 0, 50 and 100 reload unchanged. Main applies each stored setting at startup.
+- Gate evidence: C:\Users\bruno\AppData\Local\Temp\ui-008-green.json
