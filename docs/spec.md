@@ -259,7 +259,7 @@ Stored in `user://settings.cfg`. Each setting with its default:
 | Legal-move dots | on |
 | Animation length | 120 ms |
 | Board, pieces, sounds | brown, cburnett, chosen by ear |
-| Volume | — |
+| Volume | 20 % |
 | Threshold `τ` | 2% |
 | Temperature `T` | 1.0 |
 | Panic intensity | medium |
