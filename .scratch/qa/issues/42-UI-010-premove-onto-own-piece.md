@@ -43,7 +43,7 @@ Premove input accepts any move that fits the piece's geometry from the ghost pos
 
 - Red: 253 passed, 2 failed at fd05a74; geometric queue and board target assertions failed as expected.
 - Green: 255 passed, 0 failed at 6b1f607; gate exit 0.
-- Gate evidence: C:\Users\bruno\AppData\Local\Temp\ui-010-gate.json
+- Gate evidence: C:\Users\bruno\AppData\Local\Temp\ui-010-stage3-gate.json
 - Acceptance: pending | Manual 1+0 recapture against Maia remains to be checked.
 - Disclosure: pending | release | Manual 1+0 recapture against Maia remains to be checked.
 
@@ -55,8 +55,8 @@ Verdict: Approve
 - Spec: criteria 1-7 pass inspection and automated coverage: own-piece recapture, blocked sliders and empty pawn diagonals, rejected geometry, illegal-due queue clearing, sequential ghost replacement, geometric targets, and auto-queen/Alt promotion.
 - Examined callers and failure paths: queue enqueue/input/projection/take; board pickup, targets, drawing, drop and submission; Main's Maia callback and turn dispatch; Board/Game real execution. Cross-feature checks covered both colours, Lichess replacement, Chess.com chaining, castling, en passant, king-target guards, promotion cancellation, captured sources and game-end cleanup.
 - Files: `ui/premove_queue.gd`, `ui/board_view.gd`, `tests/test_premove.gd`, `docs/spec.md` section 8.2.
-- Red-green proof: the recorded red log has 253 passed, 2 failed at `fd05a74`, including rejected own-piece recapture and missing board targets. The green log has 255 passed, 0 failed at `6b1f607`, exit 0. Its receipt/log hash was verified; only this ticket changed after that tested tree, so the existing run was reused.
-- Integration: fetched and rebased onto `origin/main` before PR creation. The pre-existing local `main` commit `c2ef1f1` adds the terra lineup and is also carried by this branch; it is not a UI-010 implementation change.
+- Red-green proof: the recorded red log has 253 passed, 2 failed at `fd05a74`, including rejected own-piece recapture and missing board targets. The stage-2 green log has 255 passed, 0 failed at `6b1f607`, exit 0. After integrating UI-008, the stage-3 gate has 256 passed, 0 failed, exit 0; the current receipt is linked above.
+- Integration: fetched and rebased onto `origin/main` before PR creation and again after UI-008 merged. Both `docs/spec.md` changes are preserved, with UI-010 limited to section 8.2. The pre-existing terra lineup is now part of `origin/main`.
 - Proxy decisions: none.
 - Acceptance: pending | [Automated recapture and board-target coverage](../../../tests/test_premove.gd) passes; the manual 1+0 recapture against Maia was not performed.
 - Disclosure: pending | release | The manual 1+0 recapture check remains a release condition; this review establishes automated correctness only.
