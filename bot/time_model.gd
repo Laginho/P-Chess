@@ -58,13 +58,13 @@ static func noise(rng: RandomNumberGenerator) -> float:
 	return exp(rng.randfn(0.0, SIGMA))
 
 
-# The floor with one legal move, or for a "premove": top_p over 0.9 with under 15% of the starting
-# time left. Otherwise log-normal around the bucket's median, or the formula without a bucket.
-# Clamped to [FLOOR, clock_left]; under FLOOR left, the clock wins.
+# The floor with one legal move, or an expected human move with top_p over 0.9 and under 10% of
+# the starting time left. Otherwise sample the bucket or formula, with time for reaction and hand
+# movement. The clock-left clamp wins over either floor.
 static func delay(clock_left: float, increment: float, start: float, moves_played: int, top_p: float,
-		legal_moves: int, rng: RandomNumberGenerator, from_bucket := {}) -> float:
+		legal_moves: int, rng: RandomNumberGenerator, from_bucket := {}, expected := false) -> float:
 	var seconds := FLOOR
-	if legal_moves > 1 and not (top_p > 0.9 and clock_left < 0.15 * start):
+	if legal_moves > 1 and not (expected and top_p > 0.9 and clock_left < 0.1 * start):
 		if from_bucket:
 			seconds = from_bucket.median * exp(rng.randfn(0.0, from_bucket.log_sigma))
 		else:
