@@ -93,9 +93,10 @@ Until the calibration exists, a hand-tuned formula is used instead:
 `scripts/calibrate_time.py` runs offline:
 1. Stream the start of one monthly Lichess `.pgn.zst` file (a partial download of a few GB — **ask Bruno first**).
 2. Keep games at 60+0, 180+2 and 300+0 in the 1100–1900 bands.
-3. Compute think times from the `%clk` comments.
-4. Run Lc0 on a sample of those positions to get Maia's top-move probability.
-5. Write `data/time_model.json`.
+3. Compute recorded differences from consecutive `%clk` comments for the same player, adding the increment back. First moves are untimed. The dump's clocks are whole seconds: a difference of 0 does not mean a true think time of 0.
+4. Keep a seeded reservoir per `(control, Maia level, clock bin)` (`--per-stratum`, default 1,000; `--seed`, default 7). Run Lc0 with each position's full game history to get Maia's top-move probability, then split by its probability bin.
+5. Fit each bucket's log-normal median and log-σ by maximum likelihood of the rounded differences. With uniform sub-second clock phase, a true time `t` records integer difference `d` with likelihood `max(0, 1 − |d − t|)`. Integrate this triangular kernel against the log-normal density using its CDF and partial expectation; group equal differences for speed. Zero differences enter unchanged, without the old 0.05 s clamp. An all-zero bucket has its likelihood supremum at zero; serialize a finite positive median of 0.000001 s and σ = 0. The game's reaction/premove rules still apply.
+6. Write `data/time_model.json`, including each bucket's sample count. Buckets below `--min-samples` (default 50) are omitted and use the formula fallback.
 
 Python dependencies (`zstandard`, `python-chess`) are only for this script; the game does not need them.
 

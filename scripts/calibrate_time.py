@@ -6,9 +6,9 @@ Install script-only dependencies with:
 Plan only (no network access):
     python scripts/calibrate_time.py --url <monthly.pgn.zst URL> --max-bytes 2000000000
 Only after Bruno approves that download in chat, repeat with --download-approved.
-The default sample is a seeded reservoir of up to 10,000 positions. Buckets
-need 50 observations; --max-positions, --seed and --min-samples tune these.
-No calibrated table is bundled until an approved run produces real data.
+The default sample is a seeded reservoir of up to 1,000 positions per
+(control, Maia level, clock bin). Buckets need 50 observations;
+--per-stratum, --seed and --min-samples tune these.
 """
 
 import argparse
@@ -186,21 +186,27 @@ def build_table(samples, top_probability, min_samples=50):
             median, log_sigma = _fit_rounded_lognormal(seconds)
             buckets.append({"control": control, "level": level, "clock_bin": clock_bin,
                             "top_p_bin": top_p_bin, "median": median,
-                            "log_sigma": log_sigma})
+                            "log_sigma": log_sigma, "samples": len(seconds)})
     return {"clock_bins": CLOCK_BINS, "top_p_bins": TOP_P_BINS, "buckets": buckets}
 
 
-def sample_positions(samples, limit, seed):
-    """Uniform reservoir: memory stays bounded while scanning the entire prefix."""
+def sample_positions(samples, per_stratum, seed):
+    """Seeded reservoirs keep rare clock/control/level strata in the sample."""
     rng = random.Random(seed)
-    reservoir = []
-    for count, sample in enumerate(samples, 1):
-        if len(reservoir) < limit:
+    reservoirs = defaultdict(list)
+    counts = Counter()
+    for sample in samples:
+        key = (sample.control, sample.level,
+               bisect_right(CLOCK_BINS[1:-1], sample.clock_fraction))
+        counts[key] += 1
+        reservoir = reservoirs[key]
+        if len(reservoir) < per_stratum:
             reservoir.append(sample)
-        elif (index := rng.randrange(count)) < limit:
+        elif (index := rng.randrange(counts[key])) < per_stratum:
             reservoir[index] = sample
     # Grouping avoids loading a different Maia net on every sampled position.
-    return sorted(reservoir, key=lambda sample: (sample.level, sample.control))
+    return sorted((s for reservoir in reservoirs.values() for s in reservoir),
+                  key=lambda sample: (sample.level, sample.control))
 
 
 @contextmanager
@@ -306,7 +312,7 @@ def main(argv=None):
                         help="maximum compressed download bytes")
     parser.add_argument("--download-approved", action="store_true",
                         help="only use after Bruno approves this download in chat")
-    parser.add_argument("--max-positions", type=positive_int, default=10000)
+    parser.add_argument("--per-stratum", type=positive_int, default=1000)
     parser.add_argument("--min-samples", type=positive_int, default=50)
     parser.add_argument("--seed", type=int, default=7)
     parser.add_argument("--engine", type=Path, default=ROOT / "engine/lc0/lc0.exe")
@@ -333,7 +339,7 @@ def main(argv=None):
             if response.status == 206 and not response.headers.get("Content-Range", "").startswith("bytes 0-"):
                 raise ValueError("Server did not return the start of the dump")
             with pgn_stream(response, args.max_bytes) as pgn:
-                samples = sample_positions(extract_samples(pgn), args.max_positions, args.seed)
+                samples = sample_positions(extract_samples(pgn), args.per_stratum, args.seed)
         print(f"Evaluating {len(samples):,} sampled positions with Maia", flush=True)
         with lc0_policy(engine, weights) as top_probability:
             table = build_table(samples, top_probability, args.min_samples)
