@@ -1,5 +1,5 @@
 # UI-011: A held piece survives Maia's move
-Stage: to-review
+Stage: done
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -49,3 +49,30 @@ Dragging a piece while Maia thinks, then Maia moves: the drag is dropped and the
 - Disclosure: pending | release | [Verification](#verification): complete the manual 1+0 check before release; visual pointer/animation behavior has automated state coverage but no interactive confirmation in this session.
 
 Gate evidence: C:\Users\bruno\AppData\Local\Temp\p-chess-ui-011\final-green.json
+
+#### Resolution (2026-10-27)
+Verdict: Approve
+
+- Stage 3 reviewed the entire diff from `a827dc99e5001347469814c5d877c77b98cc6b6d` through `04e7121`, including every commit's file separation. Independent Standards and Spec reviewers found no issues. No production or test changes were authored during review.
+- Examined callers: `BoardView.play`, `_submit`, Main's `_on_maia_move`, `_on_move_played` and `_next_turn`, including synchronous due-premove execution. Failure paths and interactions examined: moved/captured sources, null or invalid ghost projections, empty legal targets, en passant, game end/flag, ordinary clock charge versus premove charge, promotion-picker cancellation, snap-back, settings/right-click cancellation and slide suppression. Both hold modes and colours/orientations are covered by the tests. Physical mouse dispatch, rendered animation and a live Maia 1+0 game were not checked in this review.
+
+Standards:
+- 0 findings: Primary-file boundaries and surrounding conventions are respected; no dependency or speculative abstraction was added. Test-only commits `2631d41`, `ee86b59`, `ced5eed` and `57032aa` remain separate from production-only `275ff98`. Ticket metadata carries the stage transitions.
+
+Spec:
+- 0 findings: no missing/partial criteria, unrequested behavior or regression identified.
+- Criterion 1: pass. Drag and click-selection are reconciled after move listeners finish, preserving the hold when its source still matches the current input position, including a ghost becoming live after a due premove.
+- Criterion 2: pass. Captured/replaced pieces, a moved live source, invalid projections and ended games clear the hold and its targets.
+- Criterion 3: pass. A legal drop on the human turn commits normally (the clock test charges 350 ms); a drop after the due premove queues the next move during Maia's turn.
+- Criterion 4: pass. Targets are rebuilt from current legal moves or premove geometry; tests cover new en passant targets and a preserved hold with no legal targets.
+- Criterion 5: pass. The promotion picker still closes before listeners process Maia's move; existing promotion cancellation coverage is preserved.
+
+Verification and delivery:
+- Inspected the recorded red proof: final tests against the original `a827dc9` BoardView yield 260 passed / 4 failed, exit 1; failures identify lost drag/selection, ghost continuation and refreshed targets. Production was restored before the green run. The retired reply-cancels-drag expectation was changed in a test-only commit to match this ticket.
+- Reused the unchanged-code gate: `godot --headless -s tests/run.gd`, 264 passed / 0 failed, exit 0, tested commit `57032aa3b1bc7cd4b05a3322029d48db77ea46f1`. Validated the receipt with `Assert-GateEvidence`, including log SHA-256, exit marker, tested commit and equality of all files except this ticket and its ledger. `git diff --check` passed. The gate was not rerun because production and tests are unchanged.
+- The ticket branch was already based on the session tip; integrated with merge commit `c7c1f40` into `sweatshop/qa/2026-10-27-1653`, preserving all commits. The driver owns session publication.
+
+Acceptance: pending | [Verification](#verification): headless scenarios pass; a real 1+0 Maia reply while holding and then dropping the piece remains unchecked.
+Disclosure: pending | release | [Verification](#verification): complete that interactive check before release, including pointer continuity and animation. Automated state coverage supports integration; visual acceptance remains pending.
+
+Review totals: Standards 0 findings; Spec 0 findings. No confirmed unresolved implementation defect.
