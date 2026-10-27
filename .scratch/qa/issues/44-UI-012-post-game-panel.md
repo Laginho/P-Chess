@@ -1,5 +1,5 @@
 # UI-012: A small post-game panel instead of the full review
-Stage: implementing
+Stage: blocked
 Status: ready-for-agent
 Blocked by: none
 Review: human
@@ -36,3 +36,4 @@ When a game ends, the full review screen takes over at once, a "jumpscare" (Brun
 ## Comments
 
 - 2026-10-26 Written from Bruno's first QA session (item 5), from a Chess.com screenshot (result, reason, Game Review / New / Rematch). No rating, leaderboard or coach: the app has none.
+- 2026-10-27 Stage 2 blocked: the new behavior passes the UI-012 session test, but eight existing tests in `tests/test_badges.gd`, `tests/test_book.gd`, `tests/test_history.gd` and `tests/test_review.gd` expect the review to open automatically. These files are outside Primary files and the approved test seam. Stage 1 must expand the ticket to permit updating those tests to request Review before asserting its contents. Gate: 246 passed, 8 failed; log: `C:\Users\bruno\AppData\Local\Temp\ui-012-green.log`. The red run was 253 passed, 1 failed (`test_game_over_panel_actions`); log: `C:\Users\bruno\AppData\Local\Temp\ui-012-red.log`.
