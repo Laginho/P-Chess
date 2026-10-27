@@ -1,5 +1,5 @@
 # UI-012: A small post-game panel instead of the full review
-Stage: to-implement
+Stage: implementing
 Status: ready-for-agent
 Blocked by: none
 Review: human
