@@ -25,6 +25,14 @@ including `COPYING`, the bundled network `791556.pb.gz`, and the DNNL/mimalloc
 licence and attribution files. Each extracted file also has a pinned SHA-256.
 Release ZIPs preserve these notices under `engine/lc0/`, beside the application.
 
+## Runtime: Microsoft Visual C++
+
+`lc0.exe` needs the Visual C++ runtime, which the Lc0 archive does not ship and a
+clean Windows lacks. Release ZIPs place `msvcp140.dll`, `vcruntime140.dll`,
+`vcruntime140_1.dll` and `vcomp140.dll` beside it in `engine/lc0/`, copied unmodified
+from the Visual Studio redistributable folder (`VC/Redist/MSVC`) on the build runner,
+as Microsoft's [redistributable files](https://learn.microsoft.com/cpp/windows/redistributing-visual-cpp-files) permit.
+
 ## Networks: Maia-1
 
 `engine/weights/maia-1100.pb.gz` through `maia-1900.pb.gz` are unmodified networks
