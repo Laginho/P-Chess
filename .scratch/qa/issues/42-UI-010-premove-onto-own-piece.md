@@ -1,5 +1,5 @@
 # UI-010: Premoves follow piece geometry, so recaptures can be queued
-Stage: implementing
+Stage: to-review
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -40,3 +40,9 @@ Premove input accepts any move that fits the piece's geometry from the ghost pos
 
 - 2026-10-26 Written from Bruno's first QA session (item 3). Default taken: Lichess's geometric premove rule for both styles, including through blockers; correct it if a stricter rule is wanted.
 - The existing guard against premoving onto a king square in the ghost position stays, since the ghost can put the opposing king in reach.
+
+- Red: 253 passed, 2 failed at fd05a74; geometric queue and board target assertions failed as expected.
+- Green: 255 passed, 0 failed at 6b1f607; gate exit 0.
+- Gate evidence: C:\Users\bruno\AppData\Local\Temp\ui-010-gate.json
+- Acceptance: pending | Manual 1+0 recapture against Maia remains to be checked.
+- Disclosure: pending | release | Manual 1+0 recapture against Maia remains to be checked.
