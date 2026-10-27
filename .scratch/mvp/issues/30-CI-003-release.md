@@ -1,5 +1,5 @@
 # CI-003: Release on v* tags
-Stage: to-merge
+Stage: done
 Blocked by: BOT-001, CI-002
 Review: human
 Difficulty: normal
@@ -120,3 +120,4 @@ Acceptance: passed | [RC2 release](https://github.com/Laginho/P-Chess/releases/t
 Disclosure: decision | none | The [successful RC2 run](https://github.com/Laginho/P-Chess/actions/runs/40589070264) and Bruno's clean-Windows full game resolve the earlier criterion-5 integration condition. No acceptance waiver or unresolved integration/release condition remains; the PR waits for Bruno because `Review: human`.
 
 Gate evidence: C:/Users/bruno/AppData/Local/Temp/P-Chess-CI-003-review-20261027/gate.json
+- 2026-10-27 PR #23 review (gpt-6.1-sol xhigh with subagents). Round 1 asked for three licence duties in the release zip: protective terms for the VC++ DLLs, Godot's `LICENSE.txt`/`COPYRIGHT.txt`, and the AGPL text for the Enigmahack sounds. Commit `a68fc1f` adds all three: the terms go in `docs/THIRD_PARTY.md`, and the three files, SHA-256 pinned and required by the package check, go in `licenses/`. Round 2 approved with no new findings. It also judged an `rc3` tag run unnecessary, because the change only adds notices; the packaging and gameplay path is the rc2 one Bruno verified. Merged by Bruno's instruction as `ac99a90`.
