@@ -20,7 +20,7 @@ const DEFAULTS := {
 	"piece_theme": "cburnett",
 	# UI-003's default until Bruno picks one by ear.
 	"sound_theme": "sfx",
-	"volume": 100,
+	"volume": 20,
 	"tau": 0.02,
 	"temperature": 1.0,
 	"panic": "medium",
