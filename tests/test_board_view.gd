@@ -178,3 +178,16 @@ func test_capturing_a_held_piece_clears_drag_selection_and_targets():
 			board._gui_input(_mouse(false, to))
 			assert_eq(board.game.moves, PackedStringArray([case[3]]), "stale input cannot play the captured piece")
 			board.free()
+
+
+func test_a_hold_survives_even_when_the_reply_leaves_no_legal_targets():
+	for selected in [false, true]:
+		var board = _held_board("4k3/4p3/8/8/4P3/8/8/4K3 b - - 0 1", "w", "e4", selected)
+		assert_true(board.play("e7e5"))
+		assert_eq(board._selected if selected else board._drag_from, "e4")
+		assert_eq(board._held_moves, PackedStringArray(), "the blocked pawn has no legal move")
+		if selected:
+			board._gui_input(_mouse(true, Vector2(450, 350)))
+		board._gui_input(_mouse(false, Vector2(450, 350)))
+		assert_eq(board.game.moves, PackedStringArray(["e7e5"]), "an illegal drop cannot play a stale geometric target")
+		board.free()

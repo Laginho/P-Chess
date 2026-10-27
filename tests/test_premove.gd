@@ -210,7 +210,10 @@ func test_a_reply_and_due_premove_preserve_an_unfinished_drag():
 		_mouse(board, true, "f3")
 		if selected:
 			_mouse(board, false, "f3")
+		board.slide_seconds = 0.12
 		main._on_maia_move("e7e5")
+		if not selected:
+			assert_eq(board._slide_to, "", "the held knight is not also drawn as a sliding piece")
 		if selected:
 			_mouse(board, true, "g5")
 		_mouse(board, false, "g5")
@@ -240,6 +243,22 @@ func test_a_due_premove_moving_the_held_live_piece_ends_the_hold():
 		assert_eq(board.game.moves, PackedStringArray(["e2e4", "e7e5", "g1f3"]))
 		assert_eq(board.premoves.moves, PackedStringArray(), "the moved source cannot queue a stale replacement")
 		main.free()
+
+
+func test_an_invalid_remaining_ghost_cancels_the_hold_without_a_stale_drop():
+	var main = _session(FakeTime.new())
+	var board = main.board_view
+	board.game = Game.new("8/8/8/8/2k5/8/R7/K7 b - - 0 1")
+	_drag(board, "a2", "a3")
+	_drag(board, "a3", "b3")
+	_mouse(board, true, "b3")
+	main._on_maia_move("c4b3")
+	assert_eq(board.game.moves, PackedStringArray(["c4b3", "a2a3"]))
+	assert_eq(board._drag_from, "", "the remaining ghost would capture Maia's king")
+	assert_eq(board._held_moves, PackedStringArray())
+	_mouse(board, false, "b4")
+	assert_eq(board.premoves.moves, PackedStringArray(["a3b3"]), "the release adds nothing to the invalid tail")
+	main.free()
 
 
 func _promotion_board():
