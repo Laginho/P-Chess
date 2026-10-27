@@ -16,10 +16,13 @@ class FakeBridge:
 	var requests := []
 	var policies := []
 	var immediate := true
+	var compute_ms := []
 
 	func request_policy(start_fen: String, moves: PackedStringArray) -> void:
 		requests.append([start_fen, moves])
 		if immediate:
+			if compute_ms:
+				OS.delay_msec(compute_ms.pop_front())
 			policy_ready.emit(policies.pop_front() if policies else policy)
 
 
@@ -100,6 +103,42 @@ func test_only_the_top_predicted_human_move_allows_a_premove():
 				waits.timeout.emit()
 			assert_eq(got, ["e7e5"], "only the reply policy selects Maia's move")
 			assert_eq(maia.latencies_ms.size(), 1)
+
+
+func test_the_first_move_has_no_human_move_to_predict():
+	var bridge := FakeBridge.new()
+	bridge.policy = {"e2e4": 1.0}
+	var maia = MaiaPlayer.new(bridge)
+	var got := []
+	maia.move_ready.connect(func(move): got.append(move))
+	maia.think(Game.new())
+	assert_eq(bridge.requests, [[Game.START, PackedStringArray()]])
+	assert_eq(got, ["e2e4"])
+
+
+func test_prediction_compute_time_counts_toward_the_reply_delay():
+	var bridge := FakeBridge.new()
+	bridge.policies = [{"e2e4": 1.0}, {"e7e5": 1.0}]
+	bridge.compute_ms = [80, 0]
+	var time := FakeTime.new()
+	var clock = Clock.new("1+0", time.ms)
+	for side in ["w", "b", "w"]:
+		clock.moved(side)
+	time.now = 55000
+	var waits := HeldWaits.new()
+	var maia = MaiaPlayer.new(bridge, waits.start)
+	maia.clock = clock
+	maia.control = "1+0"
+	var game = Game.new()
+	assert_true(game.play("e2e4"))
+	var got := []
+	maia.move_ready.connect(func(move): got.append(move))
+	maia.think(game)
+	assert_eq(got, ["e7e5"], "prediction compute already exceeded the premove delay")
+	assert_eq(waits.seconds, [], "do not charge an extra wait after the prediction")
+	assert_eq(maia.latencies_ms.size(), 1)
+	if maia.latencies_ms.size() == 1:
+		assert_true(maia.latencies_ms[0] >= 80.0, "latency includes the prediction")
 
 
 func test_stale_prediction_and_move_replies_keep_their_fifo_slots():
