@@ -1,5 +1,5 @@
 # UI-010: Premoves follow piece geometry, so recaptures can be queued
-Stage: to-merge
+Stage: done
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -57,6 +57,7 @@ Verdict: Approve
 - Files: `ui/premove_queue.gd`, `ui/board_view.gd`, `tests/test_premove.gd`, `docs/spec.md` section 8.2.
 - Red-green proof: the recorded red log has 253 passed, 2 failed at `fd05a74`, including rejected own-piece recapture and missing board targets. The stage-2 green log has 255 passed, 0 failed at `6b1f607`, exit 0. After integrating UI-008, the stage-3 gate has 256 passed, 0 failed, exit 0; the current receipt is linked above.
 - Integration: fetched and rebased onto `origin/main` before PR creation and again after UI-008 merged. Both `docs/spec.md` changes are preserved, with UI-010 limited to section 8.2. The pre-existing terra lineup is now part of `origin/main`.
+- Delivery: [PR #20](https://github.com/Laginho/P-Chess/pull/20) merged into `main` as `a6169d2`, preserving the individual test and implementation commits. CI [tests](https://github.com/Laginho/P-Chess/actions/runs/40509102009/job/122205968893) and [Windows export](https://github.com/Laginho/P-Chess/actions/runs/40509102009/job/122205969796) passed for head `9103b68`.
 - Proxy decisions: none.
 - Acceptance: pending | [Automated recapture and board-target coverage](../../../tests/test_premove.gd) passes; the manual 1+0 recapture against Maia was not performed.
 - Disclosure: pending | release | The manual 1+0 recapture check remains a release condition; this review establishes automated correctness only.
