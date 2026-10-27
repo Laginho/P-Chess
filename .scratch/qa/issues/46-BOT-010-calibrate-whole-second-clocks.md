@@ -1,5 +1,5 @@
 # BOT-010: Calibrate think time from whole-second clocks, with enough scramble samples
-Stage: to-review
+Stage: done
 Status: ready-for-agent
 Blocked by: none
 Review: human
@@ -70,3 +70,26 @@ Disclosure: decision | none | The two Proxy decided entries above approve the sm
 Disclosure: pending | unknown | Verification's manual M8 games still require Bruno to assess the generated table's playing feel and think-time spread.
 
 Gate evidence: C:\Users\bruno\AppData\Local\Temp\BOT-010-gate.json
+
+#### Resolution (2026-10-27)
+Verdict: Approve
+
+- Reviewed `git diff sweatshop/qa/2026-10-27-1653...8841c7b` against all five numbered criteria. Independent Standards and Spec agents examined the complete change; stage 3 authored no production behavior.
+- Standards: one minor process finding, no blocking violations or baseline smells. All nine stage-2 commits omit the explanatory body required by ticket-flow, while their subjects cite BOT-010 and this ticket records the rationale. Primary-file boundaries and test-only/production-only commit separation hold; the CLI wiring and numerical helper implement the approved contract. Existing HTTP limits, UCI cleanup and atomic output replacement remain intact; no dependency was added.
+- Accepted deferral (stage-3 reviewer): preserve the original stage-2 commits rather than rewrite tested history solely to add their missing bodies. This is a historical commit-format exception with no runtime, integration or release impact. This review's merge and closing commits include explanatory bodies and BOT-010 references.
+- Spec: zero findings; no missing numbered requirement, scope creep or implementation defect found. The game accepts the table schema and ignores its additional sample-count field; reaction, premove and remaining-clock limits still apply.
+- Examined callers and interactions: `main` -> `extract_samples` -> `sample_positions` -> `build_table`, fixture/CLI consumers, and `MaiaPlayer` -> `TimeModel.load_table`/`bucket`/`delay`. Examined zero/empty/sparse buckets, rounded-likelihood interval integrals and numerical bounds, reservoir replacement and seeded ordering, bin boundaries, increment clocks above start, full Maia history, failed UCI evaluation and preservation of an existing output table. Manual playing feel remains unexamined.
+- Criterion 1: passed. Both 30,000-observation synthetic rounded-clock distributions recover median and log-sigma within 10% in the production `build_table` tests.
+- Criterion 2: passed. The all-zero test produces a finite positive subsecond median without restoring the 0.05 s clamp.
+- Criterion 3: passed. Tests cover all 81 control/level/clock strata, sparse strata, per-stratum limits, identical seeds and different seeds.
+- Criterion 4: passed. Stage-3 assertion audit confirms 243 unique valid buckets, 80,691 total observations and all 27 required scramble buckets with 216-479 samples each. Inspected the successful actual `TimeModel.load_table`/27-lookup smoke in `C:/Users/bruno/AppData/Local/Temp/BOT-010-table-load.log`, exit 0, with no malformed-table warning.
+- Criterion 5: passed. `docs/spec.md` section 4.3 describes whole-second clocks, triangular likelihood, zero handling, per-stratum sampling, sample counts and sparse fallback.
+- Red-green evidence: inspected every commit's stat and both external red-replay logs. Fit red: 3 failed / 10 passed; reservoir red: 3 failed / 11 passed. Corrections to replaced-contract assertions and fixture counts remain test-only and are documented above. Stage-3 offline rerun: `python -I -B -m pytest -p no:cacheprovider scripts/test_calibrate_time.py`, 14 passed, exit 0; `C:/Users/bruno/AppData/Local/Temp/BOT-010-review-python.log`. The sole warning is python-chess's upstream asyncio deprecation.
+- Gate: reused the single green bound run on `bdabbd49991aa21160a89b053a4d8fc2082ae5fe`, 268 passed / 0 failed, exit 0. `Assert-GateEvidence` verified the command, tested commit, SHA-256 log hash, exit marker and unchanged production tree. No code changed during review or integration; `git diff --check` passes.
+- Proxy decisions reviewed: both `gpt-6-astra high, fallback` entries above preserve the 27-bucket coverage contract while approving the 20 MB prefix and reserving estimated traffic for the interrupted attempt. No further download was made during review; the original HTTP accounting remains an estimate.
+- Integration: branch already based on the session; merged without squash into `sweatshop/qa/2026-10-27-1653` as `3fd6114`. Changed files: `scripts/calibrate_time.py`, `scripts/test_calibrate_time.py`, `data/time_model.json`, `docs/spec.md`, this ticket and its ledger. `Review: human` is carried to the session PR by the driver; session integration is permitted by ticket-flow.
+
+Acceptance: pending | Automated criteria 1-5 passed; Bruno's manual M8 1+0 and 5+0 playing-feel assessment remains pending as described under Verification.
+Disclosure: deferred | none | Stage-3 reviewer accepts the historical empty-commit-body exception above to preserve the original tested commits; no runtime, integration or release impact.
+Disclosure: decision | none | Both existing proxy decisions and their approximate download accounting were reviewed above; no coverage criterion changed.
+Disclosure: pending | unknown | Bruno's manual M8 games must still assess playing feel and think-time spread; this review establishes implementation acceptance only.
