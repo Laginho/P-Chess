@@ -23,7 +23,34 @@ matching GitHub's published release-asset digest.
 The script retains the archive and extracts all its files into `engine/lc0/`,
 including `COPYING`, the bundled network `791556.pb.gz`, and the DNNL/mimalloc
 licence and attribution files. Each extracted file also has a pinned SHA-256.
-Preserve these notices when packaging the engine.
+Release ZIPs preserve these notices under `engine/lc0/`, beside the application.
+
+## Runtime: Microsoft Visual C++
+
+`lc0.exe` needs the Visual C++ runtime, which the Lc0 archive does not ship and a
+clean Windows lacks. Release ZIPs place `msvcp140.dll`, `vcruntime140.dll`,
+`vcruntime140_1.dll` and `vcomp140.dll` beside it in `engine/lc0/`, copied unmodified
+from the Visual Studio redistributable folder (`VC/Redist/MSVC`) on the build runner,
+as Microsoft's [redistributable files](https://learn.microsoft.com/cpp/windows/redistributing-visual-cpp-files) permit.
+
+These four files are Microsoft's, not covered by P-Chess's licence. Microsoft's
+licence terms require everyone who receives or passes them on to accept the
+following, and by using or redistributing them you agree to it:
+
+- You may use them only to run P-Chess, and pass them on only unmodified and as part of P-Chess.
+- You may not reverse engineer, decompile or disassemble them, except where applicable law expressly permits it.
+- They are provided "as is", without any warranty from Microsoft, and Microsoft is not liable for any damages arising from their use.
+- Microsoft and its suppliers keep all rights and ownership; nothing here grants rights to Microsoft's trademarks.
+
+## Engine: Godot
+
+P-Chess is built with [Godot Engine 4.7.2](https://github.com/godotengine/godot/tree/4.7.2-stable);
+`P-Chess.exe` is Godot's Windows export template. Godot is under the
+[MIT licence](https://github.com/godotengine/godot/blob/4.7.2-stable/LICENSE.txt),
+and its bundled third-party components are listed in
+[COPYRIGHT.txt](https://github.com/godotengine/godot/blob/4.7.2-stable/COPYRIGHT.txt).
+Release ZIPs include both files, unmodified, as `licenses/Godot-LICENSE.txt` and
+`licenses/Godot-COPYRIGHT.txt`.
 
 ## Networks: Maia-1
 
@@ -34,8 +61,18 @@ by the Maia team (CSSLab). Exact source tag:
 Licence: [GPL-3.0](https://github.com/CSSLab/maia-chess/blob/v1.0/LICENSE).
 The nine SHA-256 values pinned in `scripts/fetch-engine.ps1` were computed from
 the official release downloads on 2026-10-24; this release publishes no asset
-digests. The release packaging task (CI-003) must include Maia's licence text
-alongside the networks and preserve the exact source links above.
+digests. The release workflow copies the unmodified upstream `v1.0/LICENSE` to
+`engine/weights/COPYING` (SHA-256
+`3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986`).
+Both engine and network files retain the bytes verified by the fetch script.
+
+On a `v*` tag, `.github/workflows/release.yml` exports Windows with Godot 4.7.2,
+runs the fetch script on Windows with the export folder as `-Root`, and attaches
+`P-Chess-windows-x86_64.zip` to a GitHub release named after the tag. Extract the
+whole ZIP into one folder and run `P-Chess.exe`; keep `P-Chess.pck` and `engine/`
+beside it. No separate engine download is needed. This document is included as
+`THIRD_PARTY.md` in the ZIP and as the release notes, preserving the exact upstream
+source tags and licence links above.
 
 Run `powershell -NoProfile -File scripts/fetch-engine.ps1` from a checkout, or
 pass `-Root <dir>` to install under another folder. The default root is the
@@ -52,6 +89,9 @@ to [Enigmahack](https://github.com/Enigmahack) under
 Source: [lila/public/sound at revision 81e2d1b](https://github.com/lichess-org/lila/tree/81e2d1bca7a0c97ba3a980f2c51fcff67bfef7ed/public/sound).
 The OGG bytes are unchanged; only filenames are adapted to the game's events.
 The `standard` set is not bundled.
+Release ZIPs include the full licence text, unmodified from
+[lila's LICENSE at that revision](https://github.com/lichess-org/lila/blob/81e2d1bca7a0c97ba3a980f2c51fcff67bfef7ed/LICENSE),
+as `licenses/AGPL-3.0.txt`.
 
 | Local event file | Original file in each set |
 |---|---|
