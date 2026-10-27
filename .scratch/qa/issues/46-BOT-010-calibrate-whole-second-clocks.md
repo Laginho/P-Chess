@@ -36,7 +36,7 @@ Then run the calibration and commit `data/time_model.json`.
 #### Verification
 
     python -I -B -m pytest -p no:cacheprovider scripts/test_calibrate_time.py
-    python scripts/calibrate_time.py --url https://database.lichess.org/standard/lichess_db_standard_rated_2026-09.pgn.zst --max-bytes 500000000 --download-approved
+    python scripts/calibrate_time.py --url https://database.lichess.org/standard/lichess_db_standard_rated_2026-09.pgn.zst --max-bytes 20000000 --download-approved
     godot --headless -s tests/run.gd
     Manual (Bruno, M8): a few 1+0 and 5+0 games against the table.
 
@@ -45,6 +45,9 @@ Then run the calibration and commit `data/time_model.json`.
 - `scripts/test_calibrate_time.py`: the two synthetic recoveries, the all-zero bucket, the stratified reservoir's per-stratum counts.
 
 ## Comments
+
+- Proxy decided (gpt-6-astra high, fallback): start with a 20 MB compressed prefix and increase only if coverage is insufficient, within the cumulative 500 MB download budget; acceptance still requires all 27 real 1+0/clock_bin 0 buckets with at least 50 samples each. The 500 MB limit is an authorization ceiling, not a required transfer size. The original 500 MB-cap attempt was stopped before producing a table because incremental parsing projected about two hours; its log is `%TEMP%/BOT-010-calibration.log` (exit -1). No criteria or production seams changed.
+- Proxy decided (gpt-6-astra high, fallback): reserve an estimated 200 MB for the interrupted attempt and proceed with the 20 MB prefix. Including the earlier 20 MB probe, conservative accounting reserves 240 MB of 500 MB and leaves 260 MB. Earlier process I/O showed 4,354,088 bytes read after about 65 CPU seconds; the incremental parser ran for about 3 minutes 20 seconds with no background downloader. Final counter collection failed due to a PowerShell type-array method dispatch error after termination; all calibration processes have exited. This reservation is an estimate, not exact HTTP traffic or a mathematically demonstrated bound.
 
 - Stage 2 scope: `main` calls `sample_positions` then `build_table`; Python fixture/CLI tests and `bot/time_model.gd::load_table`/`bucket` consume their output. Examined zero/empty/sparse buckets, bin boundaries, increment clocks above the starting time, reproducibility and preservation of an existing table on UCI failure. The old exact-time fit assertions are replaced because this ticket changes that contract. Test seams are the ticket-approved `build_table`, `sample_positions` and existing CLI boundary; no new game seam is needed.
 
