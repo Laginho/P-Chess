@@ -14,7 +14,7 @@ No calibrated table is bundled until an approved run produces real data.
 import argparse
 from dataclasses import dataclass
 from bisect import bisect_right
-from collections import defaultdict
+from collections import Counter, defaultdict
 from contextlib import contextmanager
 import io
 import math
@@ -23,7 +23,6 @@ import json
 import queue
 import random
 import re
-import statistics
 import subprocess
 import threading
 import time
@@ -118,11 +117,57 @@ def extract_samples(pgn):
             board.push(node.move)
 
 
+def _fit_rounded_lognormal(seconds):
+    """MLE under P(d | t) = max(0, 1 - abs(d - t)), grouped by recorded d."""
+    counts = Counter(seconds)
+    if not any(counts):
+        # All-zero data has its likelihood supremum at zero; keep JSON's median positive.
+        return 1e-6, 0.0
+    intervals = [(d, n, [math.log(x) if x > 0 else -math.inf
+                          for x in (d - 1, d, d + 1)]) for d, n in counts.items()]
+
+    def loss(parameters):
+        mu, log_sigma = parameters
+        # Numerical search bounds, well beyond the dump's observed clock range.
+        if not -20 <= mu <= 20 or not -7 <= log_sigma <= 2:
+            return math.inf
+        sigma = math.exp(log_sigma)
+        mean = math.exp(mu + sigma * sigma / 2)
+
+        def mass(a, b):
+            # erfc keeps small tail intervals when both CDFs would round to 1.
+            if a > 0:
+                return (math.erfc(a / math.sqrt(2)) - math.erfc(b / math.sqrt(2))) / 2
+            return (math.erfc(-b / math.sqrt(2)) - math.erfc(-a / math.sqrt(2))) / 2
+
+        total = 0.0
+        for d, count, edges in intervals:
+            lo, mid, hi = [(edge - mu) / sigma for edge in edges]
+            left = mean * mass(lo - sigma, mid - sigma) - (d - 1) * mass(lo, mid)
+            right = (d + 1) * mass(mid, hi) - mean * mass(mid - sigma, hi - sigma)
+            total -= count * math.log(max(left + right, 1e-300))
+        return total
+
+    point = (math.log(sum(seconds) / len(seconds)), math.log(0.8))
+    best = loss(point)
+    step = 0.5
+    while step > 1e-5:
+        candidates = [(point[0] + x * step, point[1] + y * step)
+                      for x in (-1, 0, 1) for y in (-1, 0, 1) if x or y]
+        candidate = min(candidates, key=loss)
+        value = loss(candidate)
+        if value < best:
+            point, best = candidate, value
+        else:
+            step /= 2
+    return math.exp(point[0]), math.exp(point[1])
+
+
 def build_table(samples, top_probability, min_samples=50):
     """Fit sampled moves to BOT-006's table; sparse buckets use the fallback.
 
     top_probability(sample) evaluates its pre-move position and history with its Maia level.
-    Zero-second premoves use the game's 0.05 s floor before taking logarithms.
+    Fit whole-second clock differences without clamping zero observations.
     Bin edges match bot/time_model.gd: lower inclusive, end bins clamped.
     """
     if min_samples < 1:
@@ -134,14 +179,14 @@ def build_table(samples, top_probability, min_samples=50):
             raise ValueError("top-move probability must be finite and in [0, 1]")
         clock_bin = bisect_right(CLOCK_BINS[1:-1], sample.clock_fraction)
         top_p_bin = bisect_right(TOP_P_BINS[1:-1], probability)
-        groups[sample.control, sample.level, clock_bin, top_p_bin].append(
-            max(0.05, sample.seconds))
+        groups[sample.control, sample.level, clock_bin, top_p_bin].append(sample.seconds)
     buckets = []
     for (control, level, clock_bin, top_p_bin), seconds in sorted(groups.items()):
         if len(seconds) >= min_samples:
+            median, log_sigma = _fit_rounded_lognormal(seconds)
             buckets.append({"control": control, "level": level, "clock_bin": clock_bin,
-                            "top_p_bin": top_p_bin, "median": statistics.median(seconds),
-                            "log_sigma": statistics.pstdev(math.log(s) for s in seconds)})
+                            "top_p_bin": top_p_bin, "median": median,
+                            "log_sigma": log_sigma})
     return {"clock_bins": CLOCK_BINS, "top_p_bins": TOP_P_BINS, "buckets": buckets}
 
 
