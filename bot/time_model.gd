@@ -4,6 +4,7 @@ extends RefCounted
 # hand-tuned fallback of §4.2 elsewhere, with the overrides of §4.1. Pure: the caller owns the RNG.
 
 const FLOOR := 0.05
+const REACTION := 0.4
 const SIGMA := 0.6
 # Written by scripts/calibrate_time.py (§4.3):
 # {"clock_bins": [edges], "top_p_bins": [edges], "buckets": [{"control": "3+2", "level": "maia-1500",
@@ -68,7 +69,8 @@ static func delay(clock_left: float, increment: float, start: float, moves_playe
 			seconds = from_bucket.median * exp(rng.randfn(0.0, from_bucket.log_sigma))
 		else:
 			seconds = base(clock_left, increment, moves_played, top_p) * noise(rng)
-	return minf(maxf(seconds, FLOOR), clock_left)
+		seconds = maxf(seconds, REACTION)
+	return minf(seconds, clock_left)
 
 
 # What is left to wait once Lc0 took `compute`, so Maia's clock is charged max(delay, compute).
