@@ -61,3 +61,15 @@ Verdict: Approve
 - Proxy decisions: none.
 - Acceptance: pending | [Automated recapture and board-target coverage](../../../tests/test_premove.gd) passes; the manual 1+0 recapture against Maia was not performed.
 - Disclosure: pending | release | The manual 1+0 recapture check remains a release condition; this review establishes automated correctness only.
+
+#### Model trial (gpt-6.1-terra high, stage 2)
+
+- Attempts to reach `to-review`: 1.
+- Tests red for the right reason: yes. At fd05a74, 253 passed and 2 failed: `test_geometric_premoves_and_recapture` (`enqueue` refused Nf3xe5 onto the own pawn) and `test_premove_targets_include_geometry_on_the_board` (f3e5 missing from the held targets). The through-blocker and empty-diagonal asserts sit after the first failure in the same test, so they had no red run of their own. a1a4 was refused on base, which the edited old test shows.
+- Gate on the first green: 255 passed, 0 failed, exit 0 (receipt for 6b1f607).
+- Stage 2 time: about 3 min (launched 09:54, handoff 42fc55f at 09:57).
+- Stage-3 ❌: 0. Standards 0 findings, Spec 0 findings.
+- Reopens: 0.
+- Proxy calls: 0.
+- Misreads: none seen. Commits stayed separated (test-only, production plus §8.2, then metadata), only Primary files were touched, and the stale `sweatshop/2026-10-25-1843` branch was not taken as the base (the foreman's prompt named `main`). One style point neither review flagged: `PremoveQueue.position` applies ghost moves with about 17 inlined lines that copy `Board.make_move`, plus a rook-presence guard for castling, instead of reusing it.
+- Verdict: clean first pass on a hard ticket with real logic, in 3 minutes. The thin red coverage of criterion 2 and the copied move code are the only marks against it.
