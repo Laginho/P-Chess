@@ -201,16 +201,45 @@ func test_a_hold_survives_maias_reply_and_drops_as_a_normally_timed_move():
 
 
 func test_a_reply_and_due_premove_preserve_an_unfinished_drag():
-	var main = _session(FakeTime.new())
-	var board = main.board_view
-	board.play("e2e4")
-	_drag(board, "g1", "f3")
-	_mouse(board, true, "f3")
-	main._on_maia_move("e7e5")
-	_mouse(board, false, "g5")
-	assert_eq(board.game.moves, PackedStringArray(["e2e4", "e7e5", "g1f3"]))
-	assert_eq(board.premoves.moves, PackedStringArray(["f3g5"]), "the held ghost becomes the live knight, and its release queues the next move")
-	main.free()
+	for selected in [false, true]:
+		var main = _session(FakeTime.new())
+		var board = main.board_view
+		board.click_click = selected
+		board.play("e2e4")
+		_drag(board, "g1", "f3")
+		_mouse(board, true, "f3")
+		if selected:
+			_mouse(board, false, "f3")
+		main._on_maia_move("e7e5")
+		if selected:
+			_mouse(board, true, "g5")
+		_mouse(board, false, "g5")
+		assert_eq(board.game.moves, PackedStringArray(["e2e4", "e7e5", "g1f3"]))
+		assert_eq(board.premoves.moves, PackedStringArray(["f3g5"]), "the held ghost becomes the live knight, and its release queues the next move")
+		main.free()
+
+
+func test_a_due_premove_moving_the_held_live_piece_ends_the_hold():
+	for selected in [false, true]:
+		var main = _session(FakeTime.new())
+		var board = main.board_view
+		board.premove_style = "Lichess"
+		board.click_click = selected
+		board.play("e2e4")
+		_drag(board, "g1", "f3")
+		_mouse(board, true, "g1")
+		if selected:
+			_mouse(board, false, "g1")
+		main._on_maia_move("e7e5")
+		assert_eq(board._drag_from, "")
+		assert_eq(board._selected, "")
+		assert_eq(board._held_moves, PackedStringArray())
+		if selected:
+			_mouse(board, true, "h3")
+		_mouse(board, false, "h3")
+		assert_eq(board.game.moves, PackedStringArray(["e2e4", "e7e5", "g1f3"]))
+		assert_eq(board.premoves.moves, PackedStringArray(), "the moved source cannot queue a stale replacement")
+		main.free()
 
 
 func _promotion_board():
