@@ -1,5 +1,5 @@
 # UI-010: Premoves follow piece geometry, so recaptures can be queued
-Stage: to-review
+Stage: to-merge
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -46,3 +46,17 @@ Premove input accepts any move that fits the piece's geometry from the ghost pos
 - Gate evidence: C:\Users\bruno\AppData\Local\Temp\ui-010-gate.json
 - Acceptance: pending | Manual 1+0 recapture against Maia remains to be checked.
 - Disclosure: pending | release | Manual 1+0 recapture against Maia remains to be checked.
+
+#### Resolution (2026-10-27)
+Verdict: Approve
+
+- Reviewer: gpt-6.1-sol xhigh, stage 3 of Models (terra). Independent Standards and Spec reviewers examined `c2ef1f1...42fc55f`; neither found a breach, defect or actionable smell. No review fixes were needed.
+- Standards: the changes stay in the Primary files plus ticket metadata. `fd05a74` contains tests only, `6b1f607` contains production/spec only, and `42fc55f` contains the handoff only.
+- Spec: criteria 1-7 pass inspection and automated coverage: own-piece recapture, blocked sliders and empty pawn diagonals, rejected geometry, illegal-due queue clearing, sequential ghost replacement, geometric targets, and auto-queen/Alt promotion.
+- Examined callers and failure paths: queue enqueue/input/projection/take; board pickup, targets, drawing, drop and submission; Main's Maia callback and turn dispatch; Board/Game real execution. Cross-feature checks covered both colours, Lichess replacement, Chess.com chaining, castling, en passant, king-target guards, promotion cancellation, captured sources and game-end cleanup.
+- Files: `ui/premove_queue.gd`, `ui/board_view.gd`, `tests/test_premove.gd`, `docs/spec.md` section 8.2.
+- Red-green proof: the recorded red log has 253 passed, 2 failed at `fd05a74`, including rejected own-piece recapture and missing board targets. The green log has 255 passed, 0 failed at `6b1f607`, exit 0. Its receipt/log hash was verified; only this ticket changed after that tested tree, so the existing run was reused.
+- Integration: fetched and rebased onto `origin/main` before PR creation. The pre-existing local `main` commit `c2ef1f1` adds the terra lineup and is also carried by this branch; it is not a UI-010 implementation change.
+- Proxy decisions: none.
+- Acceptance: pending | [Automated recapture and board-target coverage](../../../tests/test_premove.gd) passes; the manual 1+0 recapture against Maia was not performed.
+- Disclosure: pending | release | The manual 1+0 recapture check remains a release condition; this review establishes automated correctness only.
