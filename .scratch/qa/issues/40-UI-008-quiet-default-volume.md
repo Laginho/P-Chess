@@ -50,3 +50,15 @@ Verdict: Approve
 - Acceptance: passed | tests/test_settings.gd, validated green gate, and the isolated Main startup check above.
 - Integration: no session branch; rebase onto origin/main and merge through a PR to main after CI succeeds. Preserve the root checkout's uncommitted project.godot.
 - Integrated: [PR #19](https://github.com/Laginho/P-Chess/pull/19), merge fd3df27; [CI](https://github.com/Laginho/P-Chess/actions/runs/40508481796) passed both test and windows-export on head 5a71bbc. Root main fast-forwarded with project.godot's SHA256 unchanged; this closure and the ledger entry are committed together.
+
+#### Model trial (gpt-6.1-terra high, stage 2)
+
+- Attempts to reach `to-review`: 1.
+- Tests red for the right reason: yes. The five `volume` default/fallback assertions in tests/test_settings.gd failed with `expected 20, got 100` (249 passed, 5 failed). The added `test_saved_volume_is_kept_across_its_range` passed on base: it guards criterion 2 rather than going red.
+- Gate on the first green: 254 passed, 0 failed, exit 0 (receipt for f104999).
+- Stage 2 time: about 2 min (launched 09:55, handoff 3e73bbe at 09:57:00).
+- Stage-3 ❌: 0. Standards 0 findings, Spec 0 findings.
+- Reopens: 0.
+- Proxy calls: 0.
+- Misreads: none seen. Commits stayed separated (test-only, then production-only, then docs, then metadata), only Primary files were touched, and the stale `sweatshop/2026-10-25-1843` branch was correctly not taken as the base. Criterion 1's Main startup half got no test; terra relied on the existing `_apply` path, and stage 3 confirmed it with an isolated startup check.
+- Verdict: clean, fast pass on a one-line ticket; too small to show how terra handles a ticket with real logic.
