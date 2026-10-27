@@ -1,5 +1,5 @@
 # BOT-009: Maia premoves only expected moves, and never moves faster than a human hand
-Stage: implementing
+Stage: to-review
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -49,3 +49,12 @@ The clamp to `clock_left` stays: Maia never waits past its own flag.
 - 2026-10-27 Stage 2 scope: `TimeModel.delay` is called only by `MaiaPlayer._on_policy` and the time-model tests; `think` is called by Main and bot/session tests. Test seams are the ticket's `delay` and `think` boundaries, with fake engine, clock and timer signals. Check empty histories (no prediction), synchronous and FIFO replies, stale games, both clock sides, forced moves, table samples, and clocks at/below reaction. Existing session tests that deliver one policy per think will need test-only harness updates for the extra query.
 - Reaction cycle: test-only `fa5c8c2` failed with 15 passed / 4 failed; production-only `92fa7f2` passed all 19 time-model tests. Logs: `%TEMP%/BOT-009-reaction-{red,green}.log`. The first sandbox run could not write Godot's existing user-data fixtures; the recorded red/green runs used the installed Godot with that access.
 - Replaced-contract test-only updates: `test_session.gd` now supplies both prediction and reply policies and expects both FIFO requests; `test_repertoire.gd` supplies the prediction before its existing book-weight reply; `test_premove.gd` counts both requests per actual human move. These change only the engine harness/assertion replaced by BOT-009; other assertions stay unchanged, per ticket-flow's replaced-contract exception.
+- Prediction cycle: test-only `a59fe3e` was red (46 passed / 9 failed across the five affected suites, including the not-yet-added delay argument); production-only `0f5b94f` was green (73 passed / 0 failed). This includes a real Lc0 game of 30 plies, with one latency sample per played move. Logs: `%TEMP%/BOT-009-prediction-{red,green}.log`.
+- Additional boundary tests in test-only `a4241aa` cover an empty history and prediction compute time. Mutation proof (all mutations restored without a source diff): restoring the old unconditional/15% premove gives 17 passed / 2 failed in time-model tests; clearing stale FIFO entries gives 9 passed / 1 failed in Maia tests; resetting the reply timestamp after prediction gives 9 passed / 1 failed in Maia tests. Logs: `%TEMP%/BOT-009-mutant-{premoves,stale-fifo,prediction-compute}.log`.
+- Final bound gate on `a4241aa`: `godot --headless -s tests/run.gd`, 268 passed / 0 failed, exit 0. Godot 4.7.2 was found under `%TEMP%/P-Chess-CI-003/godot`; a temporary PATH shim exposes the bound command. Full output and exit status are in `C:/Users/bruno/AppData/Local/Temp/BOT-009-gate.log`; the receipt records the tested commit and log hash. `git diff --check` passed. Test and production changes remain separate commits.
+
+Acceptance: pending | The two manual 1+0 scenarios under Verification (hanging a piece / expected recapture under 6 s, and a premove scramble reaching Maia's flag) still need a human play session. Automated checks cover the delay rules, strict thresholds, both sampling paths, clock clamp, FIFO invalidation, and compute accounting.
+
+Disclosure: pending | unknown | This ticket's Verification section: human 1+0 feel and tuning of the initial 0.4 s reaction value were not assessed during stage 2.
+
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\BOT-009-gate.json
