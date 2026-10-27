@@ -88,6 +88,20 @@ jobs:
           if ((Get-FileHash $licence -Algorithm SHA256).Hash -ne '3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986') {
             throw 'SHA-256 mismatch: Maia COPYING'
           }
+          # Godot's MIT licence and engine notices (the export template), and the AGPL text the Enigmahack sounds require.
+          New-Item -ItemType Directory -Force build/windows/licenses | Out-Null
+          $notices = [ordered]@{
+            'Godot-LICENSE.txt'   = @('https://raw.githubusercontent.com/godotengine/godot/4.7.2-stable/LICENSE.txt', 'b0435e3b3e4e55238f05f4b306f30524a1b2e20147810d436eaa554fa6855c80')
+            'Godot-COPYRIGHT.txt' = @('https://raw.githubusercontent.com/godotengine/godot/4.7.2-stable/COPYRIGHT.txt', 'cb1980c88089573bcacd7221d777c689bb8bbd778799f24c27fca0fe5f774d6d')
+            'AGPL-3.0.txt'        = @('https://raw.githubusercontent.com/lichess-org/lila/81e2d1bca7a0c97ba3a980f2c51fcff67bfef7ed/LICENSE', '0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0')
+          }
+          foreach ($notice in $notices.GetEnumerator()) {
+            $path = "build/windows/licenses/$($notice.Key)"
+            Invoke-WebRequest $notice.Value[0] -OutFile $path
+            if ((Get-FileHash $path -Algorithm SHA256).Hash -ne $notice.Value[1]) {
+              throw "SHA-256 mismatch: $($notice.Key)"
+            }
+          }
           Copy-Item docs/THIRD_PARTY.md build/windows/THIRD_PARTY.md
 
       - name: Verify package and zip
@@ -95,6 +109,7 @@ jobs:
           $required = @('P-Chess.exe', 'P-Chess.pck', 'THIRD_PARTY.md', 'engine/lc0/lc0.exe', 'engine/lc0/COPYING', 'engine/weights/COPYING')
           $required += 11..19 | ForEach-Object { "engine/weights/maia-$($_ * 100).pb.gz" }
           $required += 'msvcp140.dll', 'vcruntime140.dll', 'vcruntime140_1.dll', 'vcomp140.dll' | ForEach-Object { "engine/lc0/$_" }
+          $required += 'Godot-LICENSE.txt', 'Godot-COPYRIGHT.txt', 'AGPL-3.0.txt' | ForEach-Object { "licenses/$_" }
           foreach ($file in $required) {
             if (-not (Test-Path -LiteralPath "build/windows/$file" -PathType Leaf)) {
               throw "Release package is missing $file"

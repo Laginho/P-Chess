@@ -33,6 +33,25 @@ clean Windows lacks. Release ZIPs place `msvcp140.dll`, `vcruntime140.dll`,
 from the Visual Studio redistributable folder (`VC/Redist/MSVC`) on the build runner,
 as Microsoft's [redistributable files](https://learn.microsoft.com/cpp/windows/redistributing-visual-cpp-files) permit.
 
+These four files are Microsoft's, not covered by P-Chess's licence. Microsoft's
+licence terms require everyone who receives or passes them on to accept the
+following, and by using or redistributing them you agree to it:
+
+- You may use them only to run P-Chess, and pass them on only unmodified and as part of P-Chess.
+- You may not reverse engineer, decompile or disassemble them, except where applicable law expressly permits it.
+- They are provided "as is", without any warranty from Microsoft, and Microsoft is not liable for any damages arising from their use.
+- Microsoft and its suppliers keep all rights and ownership; nothing here grants rights to Microsoft's trademarks.
+
+## Engine: Godot
+
+P-Chess is built with [Godot Engine 4.7.2](https://github.com/godotengine/godot/tree/4.7.2-stable);
+`P-Chess.exe` is Godot's Windows export template. Godot is under the
+[MIT licence](https://github.com/godotengine/godot/blob/4.7.2-stable/LICENSE.txt),
+and its bundled third-party components are listed in
+[COPYRIGHT.txt](https://github.com/godotengine/godot/blob/4.7.2-stable/COPYRIGHT.txt).
+Release ZIPs include both files, unmodified, as `licenses/Godot-LICENSE.txt` and
+`licenses/Godot-COPYRIGHT.txt`.
+
 ## Networks: Maia-1
 
 `engine/weights/maia-1100.pb.gz` through `maia-1900.pb.gz` are unmodified networks
@@ -70,6 +89,9 @@ to [Enigmahack](https://github.com/Enigmahack) under
 Source: [lila/public/sound at revision 81e2d1b](https://github.com/lichess-org/lila/tree/81e2d1bca7a0c97ba3a980f2c51fcff67bfef7ed/public/sound).
 The OGG bytes are unchanged; only filenames are adapted to the game's events.
 The `standard` set is not bundled.
+Release ZIPs include the full licence text, unmodified from
+[lila's LICENSE at that revision](https://github.com/lichess-org/lila/blob/81e2d1bca7a0c97ba3a980f2c51fcff67bfef7ed/LICENSE),
+as `licenses/AGPL-3.0.txt`.
 
 | Local event file | Original file in each set |
 |---|---|
