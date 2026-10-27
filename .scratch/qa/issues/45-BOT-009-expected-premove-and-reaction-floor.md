@@ -1,5 +1,5 @@
 # BOT-009: Maia premoves only expected moves, and never moves faster than a human hand
-Stage: to-review
+Stage: done
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -58,3 +58,25 @@ Acceptance: pending | The two manual 1+0 scenarios under Verification (hanging a
 Disclosure: pending | unknown | This ticket's Verification section: human 1+0 feel and tuning of the initial 0.4 s reaction value were not assessed during stage 2.
 
 Gate evidence: C:\Users\bruno\AppData\Local\Temp\BOT-009-gate.json
+
+#### Resolution (2026-10-27)
+
+Verdict: Approve
+
+Standards: 0 findings. Independent Standards review checked all six commit diffs/stats: tests and production remain separate, and the session/repertoire/premove test edits only replace the obsolete one-request harness contract. Runtime changes stay within Primary files and reuse the existing dictionary/FIFO conventions.
+
+Spec: 0 findings. Independent Spec review and the closing review examined `MaiaPlayer.think`/`_on_policy`, `TimeModel.delay`/`wait`, Main's turn and flag handling, the real UCI queue/parser, clock accounting, repertoire weighting, human premoves, rematches, synchronous replies, empty history, empty prediction policies and obsolete requests/waits. No production repair was authored during review. Manual 1+0 play and reaction-value tuning were not examined.
+
+1. ✅ Expected/unexpected prediction pairs select the 0.05 s override or ordinary reaction floor only under the strict panic and probability thresholds (`test_only_the_top_predicted_human_move_allows_a_premove`, `test_only_an_expected_sure_move_under_ten_percent_is_premoved`).
+2. ✅ The exact 10% edge and 10–15% band retain ordinary delay, even for an expected move above 0.9 probability.
+3. ✅ Formula and table samples receive the 0.4 s reaction floor; timer/clock integration tests cover compute subtraction and the resulting move delay.
+4. ✅ Exactly one legal move retains the 0.05 s floor in both sampling modes.
+5. ✅ Ordinary moves with at most 0.4 s left clamp to the remaining clock, including zero. The explicit forced/premove overrides in criteria 1 and 4 retain their own floor, also clamped to the remaining clock.
+6. ✅ Both pending entries exist before either bridge call; old predictions and replies consume their FIFO slots without selecting a current move or recording latency. Shared timestamps count both queries, with one latency sample per actual move. Session/rematch tests retain CLEAN-005's guarantee.
+7. ✅ `docs/spec.md` §4.1 documents prediction, strict 10% panic, reaction floor, both overrides, clock clamp and combined compute time.
+
+Red-green evidence reviewed: reaction cycle 15 passed / 4 failed → 19 passed / 0 failed; prediction cycle 46 passed / 9 failed → 73 passed / 0 failed. The prediction red run includes the not-yet-added `delay` argument plus behavioral failures at the public seams. Mutation logs independently reject unconditional/15% premoves (17 passed / 2 failed), cleared stale FIFO slots (9 passed / 1 failed), and a reset reply timestamp (9 passed / 1 failed). The final gate includes the supplementary empty-history and compute-boundary tests.
+
+Gate: reused the bound run on `a4241aa21824dff9170a941f77748d928d1ac314`, 268 passed / 0 failed, exit 0. Validated the receipt command, commit, SHA-256 log hash, recorded exit and unchanged tested files using `Assert-GateEvidence`; no gate rerun was needed. The log records a real Lc0 game of 30 moves, median 9.3 ms. `git diff --check` passed. External log: `C:/Users/bruno/AppData/Local/Temp/BOT-009-gate.log`; receipt: `C:/Users/bruno/AppData/Local/Temp/BOT-009-gate.json`.
+
+Files: `bot/time_model.gd`, `bot/maia_player.gd`, `docs/spec.md`, the two primary test files, and the three replaced-contract test harnesses. Rebase onto `sweatshop/qa/2026-10-27-1653` required no changes; integrated without squash as `3e4e850`. Only this ticket and the QA ledger change after the tested code. The existing Acceptance/Disclosure lines remain pending: implementation approval does not claim the two human 1+0 scenarios passed.
