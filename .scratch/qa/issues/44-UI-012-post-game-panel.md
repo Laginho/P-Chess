@@ -1,5 +1,5 @@
 # UI-012: A small post-game panel instead of the full review
-Stage: to-merge
+Stage: done
 Status: ready-for-agent
 Blocked by: none
 Review: human
@@ -82,9 +82,10 @@ Proxy/test-first verification:
 - Red proof inspected: initial test-only `e5b9eda` / `a511841`, 253 passed / 1 failed for missing panel and eager review, exit 1 (`ui-012-red.log`); production-only `95ba561` / `df7786f` followed. Authorized test-only mutant proof: `_open_review` without `main.review.show()`, 245 passed / 9 failed, exit 1 (`ui-012-mutant.log`), then restored production and stage-2 green 254/0. These logs are local evidence under `C:\Users\bruno\AppData\Local\Temp`; counts and failure causes are recorded here for review elsewhere.
 - Rebased gate: `godot --headless -s tests/run.gd`, 257 passed / 0 failed, exit 0, tested commit `cdbd1f431252315e9f5e91c5ea91dc7d984ed1e7`. Four live-engine tests print SKIP because `engine/lc0/lc0.exe` is absent (the runner includes these in its pass count). Full output: `C:\Users\bruno\AppData\Local\Temp\ui-012-stage3-final-gate.log`; hashed receipt is the Gate evidence above. Only this ticket changes after the tested commit.
 
-Acceptance: pending | Bruno must run the manual panel checks below; neither stage 2 nor stage 3 ran them. Automated evidence is the rebased gate and the ending/action tests above.
+Acceptance: passed | Bruno ran manual checks 1-6 below on 2026-10-27, playing live Maia (Lc0) from the `ui-012` worktree, and accepted every item.
 Disclosure: decision | unknown | The actual `Proxy decided (opus)` decision above expands test-only scope, preserving content assertions; its original decision does not state an integration/release impact. Stage 3 verified every constraint.
-Disclosure: pending | integration | Bruno's manual panel acceptance below remains required before the human merge; automated tests do not establish rendered layout, physical input or audible output. Live Lc0 integration also remains unexecuted in this worktree.
+Disclosure: decision | none | The integration item pending here (manual panel acceptance, live Lc0) was resolved by Bruno's 2026-10-27 run of checks 1-6 before merge.
+- Delivery: [PR #21](https://github.com/Laginho/P-Chess/pull/21) merged into `main` as `cbab1fd`, preserving the individual commits. CI [tests](https://github.com/Laginho/P-Chess/actions/runs/40559805888/job/122385461330) and [Windows export](https://github.com/Laginho/P-Chess/actions/runs/40559805888/job/122385460882) passed for head `9311dc9`.
 
 Manual checks for Bruno before merge:
 1. Finish games by resignation and by flag; also exercise mate and a draw. Check White won / Black won / Draw and the matching reason, a small panel centred over the final board, and that the review does not open automatically.
