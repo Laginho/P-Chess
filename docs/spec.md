@@ -231,7 +231,9 @@ All attributions go in `docs/THIRD_PARTY.md`.
 
 ### 9.3 Review
 
-The review screen opens after each game:
+After a game, a panel over the final board shows the result and reason, with Review,
+Rematch, New game and close actions. Closing it leaves a Review button in the side panel.
+The review screen opens on request:
 - The result and the reason for it.
 - The move list with these badges:
   - **Book:** the position and move appear in the catalog. The badge runs up to the point where the opening left the catalog.

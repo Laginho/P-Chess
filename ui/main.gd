@@ -366,6 +366,13 @@ func _show_result() -> void:
 		result_label.text += "\nHistory: " + history.error
 	review.present(game, _move_clocks, settings, result_label.text,
 			setup.book.entries, _review_repertoire, preferences.get_value("check_repertoire"))
+	review.hide()
+	var old_panel = board_view.get_node_or_null("GameOver")
+	if old_panel:
+		old_panel.free()
+	var panel = load("res://ui/game_over.tscn").instantiate()
+	board_view.add_child(panel)
+	panel.present(self, game, $Layout/Side/ReviewButton)
 	sound_player.play("game_end")
 	print("Maia: median %.1f ms from your move to Lc0's answer, over %d moves"
 			% [maia.median_ms(), maia.latencies_ms.size()])
