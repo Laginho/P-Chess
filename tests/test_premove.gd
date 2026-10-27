@@ -200,7 +200,7 @@ func test_a_hold_survives_maias_reply_and_drops_as_a_normally_timed_move():
 		main.free()
 
 
-func test_a_reply_cancels_an_unfinished_drag_before_running_the_due_premove():
+func test_a_reply_and_due_premove_preserve_an_unfinished_drag():
 	var main = _session(FakeTime.new())
 	var board = main.board_view
 	board.play("e2e4")
@@ -209,9 +209,7 @@ func test_a_reply_cancels_an_unfinished_drag_before_running_the_due_premove():
 	main._on_maia_move("e7e5")
 	_mouse(board, false, "g5")
 	assert_eq(board.game.moves, PackedStringArray(["e2e4", "e7e5", "g1f3"]))
-	assert_eq(board.premoves.moves, PackedStringArray(), "the stale release queues nothing")
-	_drag(board, "f3", "g5")
-	assert_eq(board.premoves.moves, PackedStringArray(["f3g5"]), "new input still works")
+	assert_eq(board.premoves.moves, PackedStringArray(["f3g5"]), "the held ghost becomes the live knight, and its release queues the next move")
 	main.free()
 
 
