@@ -211,6 +211,7 @@ All attributions go in `docs/THIRD_PARTY.md`.
 ### 8.7 Layout and window
 
 - The window is resizable; the default size is 1280×800 and the minimum 800×600. The board scales with the window.
+- Board resize: a grip on the board's bottom-right corner lets you drag the board bigger or smaller (`nwse-resize` cursor). The side panel takes the remaining width, the board stays square, and it never drops below the minimum size or goes past what the window fits. The chosen size is saved in settings and restored on the next launch. Double-clicking the grip resets to the default fit-to-window.
 - The side panel shows Maia's clock, the move list (SAN), your clock and buttons.
 - `F11` toggles focus mode: only the board and the clocks.
 
@@ -220,6 +221,7 @@ All attributions go in `docs/THIRD_PARTY.md`.
 
 - The setup screen picks your colour (white / black / random), the time control, the Maia level and the opening mode with its selection.
 - `Space` starts a rematch with the same settings and the colours swapped.
+- Match score: consecutive rematches form a match. The game-over card shows the running score between the two avatars (for example "2 – 1"), and from the first rematch onwards each player row in the game side panel shows that player's score in a small box left of the avatar. A win counts 1 and a draw ½ to each side. The score resets on New game, on any settings change, or when you return to Home. It is not saved across launches.
 
 ### 9.2 Hotkeys
 
@@ -316,8 +318,178 @@ The GitHub repo is created before M1's CI job, and **only after Bruno confirms**
 
 - **Allie 2.0 as a second engine:** run it in a Linux Docker container (CPU int8, about 6.4 GB RAM) behind a small UCI wrapper, using its think-time head for the delay. First measure RAM, milliseconds per move, and whether its timing feels human.
 - **Maia-3 test:** install it, measure milliseconds per move, and decide whether it replaces Maia-1.
-- **Chess.com-style review with Stockfish:** an evaluation bar, move classification and the best move.
-- **Repertoire editor:** record lines by playing them on the board.
+- **More engines:** pick the main analysis engine, or analyse one game with several.
+- **Training-pal stats:** win rate per colour, time-scramble performance, clutch moments, brilliant-move highlights, most-played openings and where you leave your repertoire.
+- **Import accounts** from chess.com, Lichess and chess24, several per site, each deletable on its own.
+- **Portuguese translation** of the UI.
 - **Adaptive rating ladder.**
 - **Rebindable hotkeys.**
 - **Blindfold mode:** play against Maia with the pieces hidden (move list and clocks stay).
+
+The Stockfish review and the repertoire editor moved into v0.1.0 (§15).
+
+## 15. v0.1.0: Stockfish review, history and home screen
+
+Decided in a grilling session on 2026-10-29. Each patch below ships as its own `v0.0.x` tag; `v0.1.0` closes the set.
+
+This section supersedes, where they conflict:
+- §3.1: `fetch-engine.ps1` also fetches Stockfish.
+- §7: resigning also has a button; `Esc` twice still works.
+- §9.1: the app opens on the home screen; the setup screen becomes "Custom game". `Space` rematch is unchanged.
+- §9.3: the review is replaced by §15.6.
+- §9.4: the player header holds your name, not "You".
+- §10 and §12: the settings and the release additions below.
+
+UI strings stay English only (Portuguese is in §14).
+
+### 15.1 Patches
+
+| Tag | Content |
+|---|---|
+| v0.0.2 | Draw offer and resign buttons (§15.2) |
+| v0.0.3 | Stockfish fetch and release, analysis engine, analysis files (§15.3) |
+| v0.0.4 | Move classification and accuracy, headless (§15.4, §15.5) |
+| v0.0.5 | The new review screen (§15.6) |
+| v0.0.6 | History screen and analysis queue (§15.7) |
+| v0.0.7 | Home screen, profile, your name, the searching screen (§15.8) |
+| v0.0.8 | Repertoire from opening names, with a board to view it (§15.9) |
+| v0.0.9 | Repertoire editor (§15.9) |
+| v0.1.0 | Tune every threshold by playing |
+
+Every tunable number in §15 (analysis budget, convergence, classification thresholds, the draw rule) lives in one constants file.
+
+### 15.2 Draw offer and resign
+
+- The side panel shows a resign button (flag) and a draw-offer button (½) between the clocks.
+- **Resign** asks for a second click within 2 s, like `Esc`.
+- **Draw offer:** at most one offer per 10 of your moves. Maia answers on its next move, and a notice says "Maia declined" or "Draw agreed". An agreed draw ends the game as a draw (`Termination: Normal`, reason "agreement") and counts as a draw in the stats.
+- Maia never offers a draw.
+- **Maia's decision** uses its own net's evaluation, the `score` Lc0 reports with each move (from Maia's side, in pawns):
+  - `fp` = 1 − (non-pawn material on the board / 62), counting Q=9, R=5, B=N=3;
+  - `ft` = 1 − Maia's clock left / its starting time;
+  - `v = (fp + ft) / 2`.
+  - Maia accepts when `eval ≤ +0.5` **and** `v ≥ 0.6`, or always when `eval ≤ −1.5`. Otherwise it declines. The rule is deterministic.
+- **Verify first:** `engine/uci.gd` does not parse `score` yet. Check that Lc0 reports a usable `score cp` under `go nodes 1`.
+
+### 15.3 Analysis engine
+
+- **Engine:** Stockfish 19, the Windows `x86-64-universal` build (it picks the CPU path at runtime; the NNUE net is embedded). GPLv3, shipped unmodified with its `Copying.txt`. `fetch-engine.ps1` pins the release URL and the SHA-256 of the zip and the exe, like Lc0. `THIRD_PARTY.md` links the `sf_19` source tag.
+- **Protocol:** UCI through the same bridge as Lc0. Stockfish 19 kills its own process on a malformed FEN or command, so the app validates every position before sending it.
+- **Search:** `MultiPV 2`. Each game starts with `ucinewgame` and keeps the hash for the whole game. Positions are analysed **backwards**, from the last to the first, as Lichess does.
+- **Budget:** a fixed 3M nodes per position, with no setting. The search stops early once it has reached depth 12 and the last 3 completed depths have the same best move and an expected-points change under 0.01.
+- **Threads:** "Background" uses 1 thread; "Max" uses the logical cores − 1. No GPU (Stockfish is CPU only).
+- **Speed** on the i5-12400F, roughly 6M nodes/s on 10 threads: up to ~40 s per 40-move game on Max, ~5 min on Background. Convergence should cut that. These numbers are this machine's.
+- **Storage:** `user://analysis/<game file name>.json` holds, for every position, both PV lines with their scores and best moves, plus the engine version and the node budget. A file whose version or budget differs from the current one is **stale**. The PGN is never touched.
+- **When:** analysis runs only when asked (§15.6, §15.7), never on its own after a game.
+
+### 15.4 Move classification
+
+Both sides are classified, so you and Maia both get accuracy.
+
+- **Expected points (EP)** from the mover's side: `EP(cp) = 1 / (1 + e^(−0.00368208·cp))` (Lichess's win%), with cp clamped to ±1000.
+- **Loss** = `max(0, EP(PV1 before the move) − EP(after))`. When the played move is PV1 or PV2, use that line's score so depth noise doesn't count.
+
+| Class | Rule |
+|---|---|
+| Forced | The only legal move |
+| Book | The position and move are in the catalog, and every earlier move was book |
+| Repertoire | The move matches your repertoire; same icon as Book, in blue |
+| Best | The played move is PV1 |
+| Excellent | Loss ≤ 0.02 |
+| Good | Loss ≤ 0.05 |
+| Inaccuracy | Loss ≤ 0.10 |
+| Mistake | Loss ≤ 0.20 |
+| Blunder | Loss > 0.20 |
+| Great | PV1 was played and PV2 loses ≥ 0.10 (the only good move), or EP crosses 0.5 with a gain ≥ 0.10 |
+| Brilliant | A piece sacrifice that is the best move (see below); outranks Great |
+| Miss | The opponent's last move was a Mistake or Blunder, your EP before the move was ≥ 0.75, and the move drops you to ≤ 0.6 with a loss ≥ 0.10. Replaces Mistake or Blunder |
+
+These thresholds are chess.com's published expected-points table. Unlike chess.com, they do not depend on rating.
+
+- **Great and Brilliant are never given when:**
+  - PV2 is still ≥ +700 cp for the mover (winning anyway);
+  - the mover is below EP 0.5 after the move;
+  - the mover was in check;
+  - the move is a promotion, or simply takes a free piece or recaptures.
+- **Sacrifice test for Brilliant:** play the move plus PV1 for a few plies on `core/board.gd`. It is a sacrifice when the mover ended down non-pawn material. If this gives too many false Brilliants, switch to an attacked-and-undefended-pieces test (WintrChess's approach).
+- **Lenient Blunder:** a would-be Blunder becomes Good when the mover is still ≥ +600 cp after the move, or was already ≤ −600 cp.
+- **Mates**, in mate-in-N:
+  - Winning mate to winning mate: Best if not slower, Excellent if up to 2 moves slower, Good otherwise.
+  - Losing a winning mate: graded by the resulting cp. ≥ 800 Excellent, ≥ 400 Good, ≥ 200 Inaccuracy, ≥ 0 Mistake, otherwise Blunder.
+  - Allowing a mate: mated in ≤ 2 is a Blunder, in ≤ 5 a Mistake, otherwise an Inaccuracy.
+- **Left repertoire** stays a separate marker, on the move where you left your repertoire, with the expected moves shown.
+
+These rules are restated from public descriptions (chess.com's help pages, Lichess, Chesskit, WintrChess). No code is copied: Chesskit is AGPL-3.0 and WintrChess GPL-3.0.
+
+### 15.5 Accuracy
+
+Lichess's formulas:
+- **Per move:** 100 when the win% did not drop. Otherwise `103.1668·e^(−0.04354·drop) − 3.1669 + 1`, clamped to 0–100.
+- **Per game:** the mean of the volatility-weighted mean and the harmonic mean. The window is plies/10, clamped to 2–8. The weight is the std-dev of win% in the window, clamped to 0.5–12.
+
+chess.com's CAPS2 is not published.
+
+### 15.6 Review screen
+
+- **Layout:** copies chess.com's game review.
+- **Board:** steps through the moves with ←/→. The **eval bar is on the left** of the board, and it and the graph follow the board's orientation.
+- **Graph and move list:** a clickable eval graph that jumps to the move, and a move list with a classification icon on every move.
+- **On the board:** the classification icon on the destination square, and an arrow for the best move.
+- **Summary:** each side's accuracy, and the count of moves per class.
+- A "?" tooltip next to the accuracy and the class counts explains in plain English how each is computed and the thresholds.
+- Copy PGN and Open in Lichess stay. There is no coach text and no retry.
+- **Icons:** our own SVGs in chess.com's style and colours; chess.com's icons are proprietary.
+- **Entry points:**
+  - The post-game panel's **Review** button opens it and starts analysing at once on Max. Moves fill in as their analysis lands.
+  - From the history, a game without analysis opens with an **Analyze** button.
+
+### 15.7 History screen and analysis queue
+
+- **Tabs:** All, 1+0, 3+2 and 5+0. The default tab is a setting.
+- **Each game card shows:**
+  - a thumbnail from your side of the board, at the deepest ply that still matches a catalog opening, with the last move highlighted;
+  - the opening name, only when the game matched the catalog. Without a match there is no name and the thumbnail shows ply 10;
+  - the date, each player's colour, "{name} x Maia 1500", the result and reason, and the number of moves;
+  - the analysis state: not analysed / queued / analysing x% / both accuracies / stale.
+- **Actions per game:** Review, Analyze (Re-analyze when stale), Delete with confirmation, and Copy PGN as a discreet square icon that is still easy to hit. Delete removes the PGN, its analysis, and its share of the stats and practice counts, so the profile always matches the history.
+- **Batch:** select several games, or use **Analyze all** per tab.
+- **Queue:**
+  - Games run one at a time, in the thread mode set in the settings (Background by default).
+  - Clicking Review on another game jumps it ahead on Max; the batch then resumes where it stopped.
+  - The queue pauses while a game is played and resumes after it, and also survives restarting the app.
+
+### 15.8 Home screen, profile and your name
+
+- **Home screen:** the app opens on it.
+  - Quick-play buttons for 1+0, 3+2 and 5+0 reuse your last level, colour and opening mode. The first time they use Maia 1500, a random colour and Free mode. A small level selector sits next to them.
+  - Also: Custom game (today's setup screen), History, Profile, Settings and Quit.
+- **Searching screen:** shown between the click and the game for at least 0.5 s. Its message follows the real work: pausing the analysis, loading the Maia net, preparing the game.
+- **Your name:**
+  - On first launch, a dialog asks for it, prefilled with "You". It has only OK, no skip.
+  - The name changes in the Profile.
+  - New PGNs write it in the player header. Old PGNs keep "You" in the file but show the current name.
+- **Profile:** your name, W/D/L per level and time control (with flag wins and losses), and your accuracy over time.
+
+### 15.9 Repertoire from names, viewer and editor
+
+- **v0.0.8, from names:**
+  - The repertoire screen gets a **From openings** button next to Import PGN. It opens the catalog picker with names only, as on Lichess ("Caro-Kann Defense: Advance Variation"), without the move sequence.
+  - You check lines, pick your colour and a name. It is saved like an imported repertoire, so "check my moves" and the review badges work with it.
+- **v0.0.8, viewer:** a board beside the list, from the repertoire colour's side. Clicking a name shows the line's final position, and ←/→ steps through it.
+- **v0.0.9, editor:**
+  - Start from a checked line or the start position, and play moves on the board to extend a line or add a branch.
+  - A tree list shows the branches. Right-clicking a move deletes it and everything after it.
+  - It works on every repertoire, imported or built from names, and saves in the same format.
+  - No comments, NAGs or main-line marking.
+
+### 15.10 Settings added
+
+| Setting | Default |
+|---|---|
+| History default tab | All |
+| Batch analysis threads | Background (1 thread) |
+
+### 15.11 Tests
+
+- **Classification and accuracy:** headless tests on fixed engine output (fixture JSON). CI has no Stockfish.
+- **Also covered:** the convergence rule, the draw rule, the history thumbnail ply, and deleting a game from the stats.
