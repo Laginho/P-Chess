@@ -221,7 +221,7 @@ All attributions go in `docs/THIRD_PARTY.md`.
 
 - The setup screen picks your colour (white / black / random), the time control, the Maia level and the opening mode with its selection.
 - `Space` starts a rematch with the same settings and the colours swapped.
-- Match score: consecutive rematches form a match. The game-over card shows the running score between the two avatars (for example "2 – 1"), and from the first rematch onwards each player row in the game side panel shows that player's score in a small box left of the avatar. A win counts 1 and a draw ½ to each side. The score resets on New game, on any settings change, or when you return to Home. It is not saved across launches.
+- Match score: consecutive rematches form a match. The game-over panel (§9.3) shows the running score between the two players (for example "2 – 1"), and from the first rematch onwards the game side panel shows each player's score in a small box beside their name. A win counts 1 and a draw ½ to each side. The score resets on New game, on any settings change, or when you return to Home. It is not saved across launches.
 
 ### 9.2 Hotkeys
 
@@ -346,7 +346,7 @@ UI strings stay English only (Portuguese is in §14).
 
 | Tag | Content |
 |---|---|
-| v0.0.2 | Draw offer and resign buttons (§15.2) |
+| v0.0.2 | Draw offer and resign buttons (§15.2), match score (§9.1), board resize grip (§8.7) |
 | v0.0.3 | Stockfish fetch and release, analysis engine, analysis files (§15.3) |
 | v0.0.4 | Move classification and accuracy, headless (§15.4, §15.5) |
 | v0.0.5 | The new review screen (§15.6) |
@@ -387,6 +387,7 @@ Every tunable number in §15 (analysis budget, convergence, classification thres
 Both sides are classified, so you and Maia both get accuracy.
 
 - **Expected points (EP)** from the mover's side: `EP(cp) = 1 / (1 + e^(−0.00368208·cp))` (Lichess's win%), with cp clamped to ±1000.
+- **Mate scores and game ends** enter EP, accuracy and the convergence check as ±1000 cp: mate-in-N for the mover is +1000, being mated is −1000. A position where the game is over is scored directly: checkmate given is +1000 for the side that gave it, any draw is 0. The mate-in-N rules below still grade the classes.
 - **Loss** = `max(0, EP(PV1 before the move) − EP(after))`. When the played move is PV1 or PV2, use that line's score so depth noise doesn't count.
 
 | Class | Rule |
@@ -411,7 +412,7 @@ These thresholds are chess.com's published expected-points table. Unlike chess.c
   - the mover is below EP 0.5 after the move;
   - the mover was in check;
   - the move is a promotion, or simply takes a free piece or recaptures.
-- **Sacrifice test for Brilliant:** play the move plus PV1 for a few plies on `core/board.gd`. It is a sacrifice when the mover ended down non-pawn material. If this gives too many false Brilliants, switch to an attacked-and-undefended-pieces test (WintrChess's approach).
+- **Sacrifice test for Brilliant:** play the move plus PV1 on `core/board.gd`, up to a fixed number of plies (a constant, default 4) or the end of PV1. It is a sacrifice when the mover's non-pawn material balance (own minus the opponent's) is lower there than in the position before the move. A deficit the mover already had does not count. If this gives too many false Brilliants, switch to an attacked-and-undefended-pieces test (WintrChess's approach).
 - **Lenient Blunder:** a would-be Blunder becomes Good when the mover is still ≥ +600 cp after the move, or was already ≤ −600 cp.
 - **Mates**, in mate-in-N:
   - Winning mate to winning mate: Best if not slower, Excellent if up to 2 moves slower, Good otherwise.
@@ -441,7 +442,7 @@ chess.com's CAPS2 is not published.
 - **Icons:** our own SVGs in chess.com's style and colours; chess.com's icons are proprietary.
 - **Entry points:**
   - The post-game panel's **Review** button opens it and starts analysing at once on Max. Moves fill in as their analysis lands.
-  - From the history, a game without analysis opens with an **Analyze** button.
+  - From the history, a game without analysis that is not queued opens with an **Analyze** button. Pressing it analyses the game on Max ahead of the queue, as in §15.7.
 
 ### 15.7 History screen and analysis queue
 
@@ -451,11 +452,12 @@ chess.com's CAPS2 is not published.
   - the opening name, only when the game matched the catalog. Without a match there is no name and the thumbnail shows ply 10;
   - the date, each player's colour, "{name} x Maia 1500", the result and reason, and the number of moves;
   - the analysis state: not analysed / queued / analysing x% / both accuracies / stale.
-- **Actions per game:** Review, Analyze (Re-analyze when stale), Delete with confirmation, and Copy PGN as a discreet square icon that is still easy to hit. Delete removes the PGN, its analysis, and its share of the stats and practice counts, so the profile always matches the history.
+- **Actions per game:** Review, Analyze (Re-analyze when stale), Delete with confirmation, and Copy PGN as a discreet square icon that is still easy to hit. Delete removes the PGN, its analysis, and its share of the stats (read back from the PGN headers) and of the practice counts, so the profile always matches the history.
+- **Practice target in the PGN:** from v0.0.6, a game played with a target line (§6.3) records its id in a `PracticeTarget` header, so Delete can take it off the practice counts. Games saved earlier have no such header; deleting one leaves the practice counts as they are.
 - **Batch:** select several games, or use **Analyze all** per tab.
 - **Queue:**
   - Games run one at a time, in the thread mode set in the settings (Background by default).
-  - Clicking Review on another game jumps it ahead on Max; the batch then resumes where it stopped.
+  - Clicking Review on a queued game, or Analyze inside the review of an unqueued one, jumps it ahead on Max; the batch then resumes where it stopped.
   - The queue pauses while a game is played and resumes after it, and also survives restarting the app.
 
 ### 15.8 Home screen, profile and your name
@@ -488,6 +490,7 @@ chess.com's CAPS2 is not published.
 |---|---|
 | History default tab | All |
 | Batch analysis threads | Background (1 thread) |
+| Board size (§8.7) | Fit to window |
 
 ### 15.11 Tests
 

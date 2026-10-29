@@ -34,9 +34,12 @@ P-Chess is a native Windows app for bullet and blitz practice against **Maia**, 
 ### 4. Game screen side panel (change only)
 - **Existing panel**, top to bottom: Maia's clock, the move list (SAN), your clock and buttons.
 - **New:** a **resign** button (flag) and a **draw offer** button (½) between the clocks, as on chess.com.
+- **New:** from the first rematch, each player's match score in a small box beside their name (for example "2" and "1"); a draw counts ½.
+- **New:** a resize grip on the board's bottom-right corner (`nwse-resize` cursor) to drag the board bigger or smaller.
 - **States to show:**
   - "Click again to resign": the confirm state, which lasts 2 s.
   - A brief notice, "Maia declined" or "Draw agreed".
+  - The game-over panel over the final board: result and reason, the running match score between the two players (for example "2 – 1"), and Review, Rematch, New game and close.
 
 ### 5. History
 - **Tabs:** All, 1+0, 3+2 and 5+0.
