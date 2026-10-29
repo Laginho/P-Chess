@@ -201,7 +201,8 @@ func _draw() -> void:
 		_draw_piece(_held_piece, _drag_pos - cell / 2, cell)
 	for drawing in drawings:
 		_draw_annotation(drawing[0], drawing[1], cell.x)
-	if _drawing_from and _drawing_to:
+	# Redrawing an existing one erases it on release, so don't stack a copy on it meanwhile.
+	if _drawing_from and _drawing_to and not PackedStringArray([_drawing_from, _drawing_to]) in drawings:
 		_draw_annotation(_drawing_from, _drawing_to, cell.x)
 
 
@@ -250,13 +251,23 @@ func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT:
 		var square := square_at(event.position - _corner(), _side(), flipped)
 		if event.pressed:
+			# A right click that cancels a queue, a drag or a premove selection draws nothing.
+			var interrupts: bool = not premoves.moves.is_empty() or (_drag_from and not _snapping) \
+					or (_selected and _is_premove_input())
 			if not premoves.moves.is_empty() or _is_premove_input():
 				cancel_premoves()
-			_drawing_from = square
-			_drawing_to = square
+			elif _drag_from:
+				_cancel_interaction()
+			_drawing_from = "" if interrupts else square
+			_drawing_to = _drawing_from
 		else:
 			if _drawing_from and square:
-				drawings.append(PackedStringArray([_drawing_from, square]))
+				# Drawing the same arrow or circle again erases it.
+				var drawing := PackedStringArray([_drawing_from, square])
+				if drawing in drawings:
+					drawings.erase(drawing)
+				else:
+					drawings.append(drawing)
 			_drawing_from = ""
 			_drawing_to = ""
 		queue_redraw()

@@ -240,6 +240,29 @@ func test_off_board_right_gestures_and_unmatched_releases_draw_nothing():
 	board.free()
 
 
+func test_drawing_the_same_arrow_or_circle_again_erases_it():
+	var board = _board()
+	for i in 2:
+		_mouse(board, true, "e2", MOUSE_BUTTON_RIGHT)
+		_mouse(board, false, "e4", MOUSE_BUTTON_RIGHT)
+		_mouse(board, true, "d5", MOUSE_BUTTON_RIGHT)
+		_mouse(board, false, "d5", MOUSE_BUTTON_RIGHT)
+	assert_eq(board.drawings, [])
+	board.free()
+
+
+func test_right_press_drops_a_held_piece_back():
+	var board = _board()
+	_mouse(board, true, "e2")
+	_mouse(board, true, "e4", MOUSE_BUTTON_RIGHT)
+	assert_eq(board._drag_from, "", "the drag ends on the right press")
+	_mouse(board, false, "e4")
+	_mouse(board, false, "e4", MOUSE_BUTTON_RIGHT)
+	assert_eq(board.game.moves, PackedStringArray(), "the left release plays nothing")
+	assert_eq(board.drawings, [], "the cancelling click draws nothing")
+	board.free()
+
+
 func test_left_press_clears_all_drawings_and_cancels_an_unfinished_one():
 	var board = _board()
 	board.click_click = true
@@ -268,6 +291,7 @@ func test_settings_screen_changes_reach_the_board_and_survive_reload():
 	var history_folder := "user://test_input_modes_history_%d" % Time.get_ticks_usec()
 	var isolated_history = History.new(history_folder)
 	var main = MainScene.instantiate()
+	main.get_node("Setup").book.load_tsv("eco\tname\tpgn\nA00\tFixture\t1. h3\n")
 	main.history = isolated_history
 	main.tree_exiting.connect(func(): HistoryStorage.clean(history_folder))
 	main.uci.free()

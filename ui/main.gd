@@ -81,6 +81,7 @@ const BLACK_GLYPHS := {"q": "♛", "r": "♜", "b": "♝", "n": "♞", "p": "♟
 @onready var setup = $Setup
 @onready var resign_hint: Label = $Layout/Side/ResignHint
 @onready var claim_draw: Button = $Layout/Side/ClaimDraw
+@onready var starting: Control = $Layout/BoardView/Starting
 
 
 # The same settings with the colours swapped.
@@ -119,6 +120,10 @@ func _ready() -> void:
 		board_view.game.claim_draw()
 		_show_result())
 	setup.started.connect(_start)
+	# The catalog takes seconds to parse: start it now so the first game does not wait for it.
+	setup.get_node("OpeningPicker").ensure_catalog()
+	$Layout.resized.connect(_fit_board)
+	_fit_board()
 	settings_screen.store = preferences
 	add_child(settings_screen)
 	add_child(review)
@@ -174,7 +179,7 @@ func _start(new_settings: Dictionary) -> void:
 	setup.get_node("RepertoireImport").hide()
 	review.hide()
 	board_view.mouse_filter = MOUSE_FILTER_IGNORE
-	result_label.text = "Loading opening catalog…"
+	starting.show()
 	var error := ""
 	var practice_book = setup.book
 	var review_repertoire: Array = []
@@ -199,6 +204,7 @@ func _start(new_settings: Dictionary) -> void:
 	if error.is_empty() and new_settings.opening == "Catalog":
 		error = setup.book.load_selection(new_settings.get("selection", ""))
 	_starting = false
+	starting.hide()
 	if not uci.error.is_empty():
 		return
 	if not error.is_empty():
@@ -294,6 +300,12 @@ func _apply(key: String, value) -> void:
 			maia.book_intensity = value
 		"auto_claim":
 			board_view.game.auto_claim = value
+
+
+# The board stays square and the side panel sits right next to it.
+func _fit_board() -> void:
+	board_view.custom_minimum_size.x = maxf(0, minf($Layout.size.y,
+			$Layout.size.x - $Layout/Side.get_combined_minimum_size().x - 16))
 
 
 func _set_flipped(flipped: bool) -> void:

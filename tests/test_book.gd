@@ -303,13 +303,16 @@ class HeldEngine extends "res://engine/uci.gd":
 		requests.append(moves.duplicate())
 
 
-func _session(folder: String, book):
+# start_worker replaces the picker's thread start before Main's _ready begins the catalog load.
+func _session(folder: String, book, start_worker := Callable()):
 	DirAccess.make_dir_recursive_absolute(folder)
 	var main = MainScene.instantiate()
 	main.history = History.new(folder)
 	main.preferences = Settings.new(folder.path_join("settings.cfg"))
 	book.selection_dir = folder.path_join("openings")
 	main.get_node("Setup").book = book
+	if start_worker.is_valid():
+		main.get_node("Setup/OpeningPicker").start_catalog_worker = start_worker
 	main.uci.free()
 	main.uci = HeldEngine.new()
 	main.maia = MaiaPlayer.new(main.uci)
@@ -460,7 +463,7 @@ func test_cold_main_and_picker_share_one_loader_and_wait_responsively_before_sta
 	assert_eq(main.clock, null, "no clock during loading")
 	assert_eq(main.uci.requests.size(), 0, "no engine request during loading")
 	assert_eq(main.board_view.mouse_filter, Control.MOUSE_FILTER_IGNORE, "the waiting board cannot play before a clock exists")
-	assert_true(main.result_label.text.contains("Loading"), "visible loading status")
+	assert_true(main.starting.visible, "visible loading status")
 	assert_true(not picker.visible, "starting a game doesn't open the picker")
 	var ready := []
 	_watch_catalog(picker, ready)
@@ -531,14 +534,7 @@ func test_main_joins_a_picker_load_without_applying_its_old_selection_and_reject
 func test_loader_startup_failure_reports_an_error_without_a_game_and_allows_retry():
 	var folder := _folder()
 	var book = Book.new()
-	var main = _session(folder, book)
-	var picker = main.setup.get_node("OpeningPicker")
-	assert_true("start_catalog_worker" in picker, "thread-start system boundary can report failure")
-	if not "start_catalog_worker" in picker:
-		main.free()
-		_clean(folder)
-		return
-	picker.start_catalog_worker = func(_worker, _load): return ERR_CANT_CREATE
+	var main = _session(folder, book, func(_worker, _load): return ERR_CANT_CREATE)
 	var settings := SETTINGS.duplicate()
 	settings.opening = "Free"
 	settings.colour = "b"

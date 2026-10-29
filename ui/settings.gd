@@ -2,8 +2,8 @@ extends Control
 
 # The settings screen (§10): one row per setting of `store` (core/settings.gd), set before this
 # enters the tree. Each edit goes straight to the store, which saves it and announces it.
-# shortcut: the Open button sits left of the top clock by assuming main.tscn's 16 px margin and
-# 240 px side panel; move it into the side panel when main.tscn is next in a ticket.
+# shortcut: the Open button sits in the window's top-right corner, clear of the top clock because
+# the side panel is 240 px wide and the clock text narrower; move it into the panel if they collide.
 
 const Settings = preload("res://core/settings.gd")
 const ThemeLoader = preload("res://ui/theme_loader.gd")
