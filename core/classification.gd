@@ -9,7 +9,9 @@ const Tunables = preload("res://core/tunables.gd")
 static func evaluate(moves: PackedStringArray, analysis: Dictionary, catalog: Array,
 		repertoire: Array, human_colour: String, check_repertoire: bool) -> Array:
 	var positions: Array = analysis.positions
-	var marks: Array = Badges.evaluate(moves, catalog, repertoire, human_colour, check_repertoire)
+	if moves.is_empty():
+		return []
+	var marks: Array = Badges.evaluate(moves, catalog, repertoire, human_colour, check_repertoire, positions[0].fen)
 	var result := []
 	for i in moves.size():
 		var before: Dictionary = positions[i]

@@ -6,10 +6,10 @@ const Game = preload("res://core/game.gd")
 
 # Pure review data, one record per ply. Use every catalog line, regardless of checks.
 static func evaluate(moves: PackedStringArray, catalog: Array, repertoire: Array,
-		human_colour: String, check_repertoire: bool) -> Array:
+		human_colour: String, check_repertoire: bool, starting_fen: String = Game.START) -> Array:
 	var book := _continuations(catalog)
 	var expected := _continuations(repertoire) if check_repertoire else {}
-	var board = Board.from_fen(Game.START)
+	var board = Board.from_fen(starting_fen)
 	var in_book := true
 	var in_repertoire := check_repertoire and not repertoire.is_empty()
 	var result := []
