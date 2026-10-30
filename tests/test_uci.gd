@@ -86,6 +86,20 @@ func test_missing_stockfish_names_the_engine_and_path():
 	uci.free()
 
 
+func test_search_forwards_all_info_and_bestmove_to_the_request_callback():
+	var uci = UCI.new("engine/stockfish/stockfish.exe", "Stockfish")
+	uci.available = true
+	uci.pid = OS.get_process_id()
+	uci._stdio = FileAccess.open("user://rev001-commands.txt", FileAccess.WRITE)
+	var received := []
+	uci.request_search(["position startpos", "go depth 2"], func(line): received.append(line))
+	uci._lines.append_array(["info depth 1 multipv 1 score cp 20", "info depth 2 multipv 2 score cp 10", "bestmove e2e4"])
+	uci.poll()
+	assert_eq(received, ["info depth 1 multipv 1 score cp 20", "info depth 2 multipv 2 score cp 10", "bestmove e2e4"])
+	uci.pid = -1
+	uci.free()
+
+
 # Polls on this thread, as the game's _process does, until bestmove or a 30 s timeout.
 func _policy(uci, moves: String) -> Dictionary:
 	var got := []
