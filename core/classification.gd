@@ -25,6 +25,9 @@ static func evaluate(moves: PackedStringArray, analysis: Dictionary, catalog: Ar
 				break
 		if after.pv.is_empty():
 			played = {"cp": -int(after.terminal_score)}
+			var end_board = Board.from_fen(after.fen)
+			if int(after.terminal_score) == -Tunables.CLASSIFICATION_CP_LIMIT and end_board.in_check() and end_board.legal_moves().is_empty():
+				played = {"mate": 1}
 		var played_score := _score(played)
 		var before_ep := _ep(_score(best))
 		var after_ep := _ep(played_score)
