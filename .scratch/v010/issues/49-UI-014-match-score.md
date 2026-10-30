@@ -1,5 +1,5 @@
 # UI-014: Match score across rematches
-Stage: to-review
+Stage: done
 Blocked by: none
 Review: agent
 Difficulty: normal
@@ -39,7 +39,7 @@ Consecutive rematches form a match (§9.1). The game-over panel shows the runnin
 
 - 2026-10-30 Stage 2: red test failed because the score boxes were absent; final headless gate passed. Manual win, rematch, draw, rematch and visual layout remain pending.
 
-Acceptance: pending | Stage-3 findings below, then manual win, rematch, draw, rematch and visual inspection of the score boxes.
+Acceptance: pending | Implementation approved on re-review; manual win, rematch, draw, rematch and visual inspection of the score boxes remain for release.
 Disclosure: pending | release | Manual match-score and layout acceptance remains to be performed.
 Gate evidence: C:/Users/bruno/AppData/Local/Temp/ui014-reopen-green.json
 
@@ -59,8 +59,25 @@ Coverage: all seven changed files (this ticket, `docs/spec.md`, `tests/test_sess
 
 Verification: the stage-2 red log `C:/Users/bruno/AppData/Local/Temp/ui014-red.log` records the missing-box failure (281 passed, 1 failed). The final receipt above tests `5f02ee7c26f02dbc7ba112a1d1492545343271f2`: 282 PASS lines, no explicit SKIPs, 0 failed, exit 0. Its command, log SHA-256, commit and unchanged-code status were validated with `Assert-GateEvidence`; only ticket metadata changed since that run, so the full gate was reused. The focused probe `C:/Users/bruno/AppData/Local/Temp/ui014-stage3-probe-20261030.gd` and its `.log` confirm both findings, exit 1, without script errors. Headless visibility checks do not establish manual/visual acceptance.
 
-Disclosure: pending | integration | Both P2 findings above must be fixed and reviewed before session integration; probe evidence: C:/Users/bruno/AppData/Local/Temp/ui014-stage3-probe-20261030.log.
+Disclosure: decision | none | The two former integration-blocking P2 findings above were fixed by 872e635 and approved in the re-review below; original failure evidence: C:/Users/bruno/AppData/Local/Temp/ui014-stage3-probe-20261030.log.
 
 Return to stage 2 on the existing branch for these two findings only. Keep the manual match-score/layout acceptance as a release condition after the fixes.
 
 - 2026-10-30 Stage 2 reopen: the regression tests failed on both stale totals and focus visibility (281 passed, 2 failed; C:/Users/bruno/AppData/Local/Temp/ui014-reopen-red.log). Updated clock totals when counting a result and made visibility follow the current game's rematch and focus states. The final headless gate passed 283 tests, 0 failed, on `872e635`; see the receipt above. The two fixes await stage-3 review; manual match-score and layout acceptance remains pending for release.
+
+#### Resolution (2026-10-30)
+Verdict: Approve
+
+Re-review of `b66e2e0...49f0cd8`, reconnected to all seven files in the complete session diff `246818e...49f0cd8`. Independent Standards and Spec reviews found no remaining defects. No production repair was authored during this review.
+
+Standards: 0 findings. The changed files remain within the Primary-files boundary. The reopen keeps the test-only red commit `b7f6bff`, production-only correction `872e635`, and metadata handoff `49f0cd8` separate. No documented-standard violation or actionable code smell was found.
+
+Spec: 0 unresolved findings. Both previous P2s are fixed: `_show_result()` updates the clock-row totals when counting a result, before presenting the panel; `_start()` and `_set_focus()` show the boxes only during a rematch outside focus mode. The regression tests assert `1½`/`½` before and after closing the panel, focus entry/exit during a rematch, a rematch started while focused, and hidden boxes after toggling focus in the first game.
+
+Numbered criteria: 1 ✅, 2 ✅, 3 ✅, 4 ✅, 5 ✅. These verdicts describe the implementation and automated evidence; manual product acceptance remains pending.
+
+Coverage: reviewed the two failed items and subsequent changes to this ticket, `tests/test_session.gd` and `ui/main.gd`; reconnected the complete diff including `docs/spec.md`, `ui/main.tscn`, `ui/game_over.gd` and `ui/game_over.tscn`. Rechecked player/colour ownership, completed-rematch totals, first-game visibility, focus transitions, keyboard/panel/review rematch callers, New game and changed-settings resets, engine-stop setup, and result deduplication. Physical input, rendered layout, screen-reader behavior and live Lc0 gameplay were not independently exercised.
+
+Verification: the reopen red log `C:/Users/bruno/AppData/Local/Temp/ui014-reopen-red.log` records both intended failures (281 passed, 2 failed). The green receipt above tests `872e6354a50d4254572719dd1cce21471fd351e8`: 283 PASS records, no explicit SKIPs, 0 failed, exit 0. `Assert-GateEvidence` validated the command, tested commit, log hash, exit marker and unchanged code, both before integration and on merge `f289b1eeded2a5ebfc4c4e97067a7dd8a52d5109`. The gate was reused because production and tests are unchanged; this session could not launch an additional focused probe because `godot` is absent from its PATH. The existing gate log includes a root-certificate-store diagnostic and fixture warnings; its test summary and exit status are green.
+
+Integration: rebase onto `sweatshop/v010/2026-10-30-1831` was already up to date; merged with `--no-ff` as `f289b1eeded2a5ebfc4c4e97067a7dd8a52d5109`. This closure and the ledger entry are committed together on the session branch. The release disclosure above remains open for manual match-score and layout acceptance.
