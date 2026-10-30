@@ -58,3 +58,42 @@ func test_book_and_repertoire_override_engine_and_exit_marker_survives():
 	result = classification.evaluate(PackedStringArray(["d2d4"]), data, [], study.lines, "w", true)
 	assert_true(result[0].left_repertoire)
 	assert_eq(result[0].expected, PackedStringArray(["e4"]))
+
+
+func test_mate_rules_and_lenient_blunders():
+	var classification = load("res://core/classification.gd")
+	var second := {"moves": ["d2d4"], "cp": 0}
+	for sample in [
+			[{"moves": ["e2e4"], "mate": 3}, {"moves": ["g1f3"], "mate": -2}, "Best"],
+			[{"moves": ["e2e4"], "mate": 3}, {"moves": ["g1f3"], "mate": -5}, "Excellent"],
+			[{"moves": ["e2e4"], "mate": 3}, {"moves": ["g1f3"], "mate": -6}, "Good"],
+			[{"moves": ["e2e4"], "mate": 3}, {"moves": ["g1f3"], "cp": -800}, "Excellent"],
+			[{"moves": ["e2e4"], "mate": 3}, {"moves": ["g1f3"], "cp": -400}, "Good"],
+			[{"moves": ["e2e4"], "mate": 3}, {"moves": ["g1f3"], "cp": -200}, "Inaccuracy"],
+			[{"moves": ["e2e4"], "mate": 3}, {"moves": ["g1f3"], "cp": 0}, "Mistake"],
+			[{"moves": ["e2e4"], "mate": 3}, {"moves": ["g1f3"], "cp": 100}, "Blunder"],
+			[{"moves": ["e2e4"], "cp": 100}, {"moves": ["g1f3"], "mate": 2}, "Blunder"],
+			[{"moves": ["e2e4"], "cp": 100}, {"moves": ["g1f3"], "mate": 5}, "Mistake"],
+			[{"moves": ["e2e4"], "cp": 100}, {"moves": ["g1f3"], "mate": 6}, "Inaccuracy"],
+			[{"moves": ["e2e4"], "cp": 1000}, {"moves": ["g1f3"], "cp": -600}, "Inaccuracy"],
+			[{"moves": ["e2e4"], "cp": -600}, {"moves": ["g1f3"], "cp": 1000}, "Inaccuracy"]]:
+		var data := _one("c2c4", sample[0], second, sample[1])
+		var result: Array = classification.evaluate(PackedStringArray(["c2c4"]), data, [], [], "w", false)
+		assert_eq(result[0].class, sample[2], str(sample))
+
+
+func test_great_requires_only_good_move_and_respects_exclusions():
+	var classification = load("res://core/classification.gd")
+	var first := {"moves": ["e2e4"], "cp": 100}
+	var second := {"moves": ["d2d4"], "cp": -100}
+	var data := _one("e2e4", first, second, {"moves": ["e7e5"], "cp": -100})
+	var result: Array = classification.evaluate(PackedStringArray(["e2e4"]), data, [], [], "w", false)
+	assert_eq(result[0].class, "Great")
+	first.cp = 1000
+	second.cp = 700
+	result = classification.evaluate(PackedStringArray(["e2e4"]), data, [], [], "w", false)
+	assert_eq(result[0].class, "Best", "PV2 remains at least +700")
+	first.cp = -10
+	second.cp = -500
+	result = classification.evaluate(PackedStringArray(["e2e4"]), data, [], [], "w", false)
+	assert_eq(result[0].class, "Best", "mover remains below 0.5 EP")
