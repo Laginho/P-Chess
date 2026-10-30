@@ -171,7 +171,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 
 
 func _resign() -> void:
-	if clock != null and not board_view.game.is_over() and resign_key.press():
+	if not settings_screen.get_node("Panel").visible and clock != null and not board_view.game.is_over() and resign_key.press():
 		board_view.game.resign(human)
 		_show_result()
 
