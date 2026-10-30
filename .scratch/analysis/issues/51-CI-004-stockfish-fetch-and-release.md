@@ -1,5 +1,5 @@
 # CI-004: Fetch and ship Stockfish 19
-Stage: to-implement
+Stage: implementing
 Blocked by: none
 Review: human
 Difficulty: normal
