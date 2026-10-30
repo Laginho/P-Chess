@@ -1,5 +1,5 @@
 # REV-002: Analyse a game with Stockfish and store the result
-Stage: blocked
+Stage: to-implement
 Blocked by: CI-004, REV-001
 Review: agent
 Difficulty: hard
@@ -43,3 +43,46 @@ Given a saved game, run Stockfish over every position and write `user://analysis
 - 2026-10-30 REV-001 review handoff: criteria 2 and 5 here need an in-search `stop` command and the handshake's `id name`. The bridge's public `request_search()` queues commands until `bestmove` and forwards only search `info`/`bestmove`, so these two access paths remain to be designed for REV-002. Its current `engine/uci.gd` Primary-files entry only permits MultiPV parsing; resolve the seam/scope with the stage-1 proxy before adding bridge behavior. This is not a failure of REV-001's numbered criteria.
 
 - 2026-10-30 Attempt 1 stopped to ask (its commits are on branch `recovery/asked/20261030-191713/REV-002`): REV-002 está bloqueado na branch `rev-002`, com o motivo registrado no commit `91f2d7a`. Nenhuma implementação foi iniciada. /  / O ticket precisa ampliar o escopo da ponte UCI para expor o `id name` recebido na inicialização e enviar `stop` durante uma busca ativa, inclusive no cancelamento. A [skill ticket-flow](C:/Users/bruno/.agents/skills/ticket-flow/SKILL.md) determina, quando o proxy falha: “set `Stage: blocked` with the question under `## Comments`, commit, stop.” /  / Você aprova ampliar `engine/uci.gd` e seus testes para essas duas interfaces, preservando o comportamento de Maia? Sua decisão permitiria retomar o ticket sem enviar o contexto ao proxy externo. /  / A revisão automática rejeitou a tentativa de executar o proxy com acesso de rede porque ela poderia enviar contexto do repositório a um serviço externo não especificado. A tentativa isolada anterior falhou com `ECONNREFUSED`.
+
+- 2026-10-30 Proxy decided (opus-5.5 xhigh): Approve widening `engine/uci.gd` and `tests/test_uci.gd` by exactly two seams: the handshake's `id name`, and an in-search `stop`. — Criteria 2, 5 and 6 can't be met without them. Spec §15.3 says Stockfish runs "through the same bridge as Lc0", and the REV-001 handoff already left these two paths to REV-002. (receipt C:\Users\bruno\AppData\Local\Temp\sweatshop-proxy\20261030-191716-REV-002-cdc3e7.json)
+  > Decision: Approve widening `engine/uci.gd` and `tests/test_uci.gd` by exactly two seams: the handshake's `id name`, and an in-search `stop`. — Criteria 2, 5 and 6 can't be met without them. Spec §15.3 says Stockfish runs "through the same bridge as Lc0", and the REV-001 handoff already left these two paths to REV-002.
+  > 
+  > **Proposed bridge seams (drafts for stage 2):**
+  > 
+  > 1. **`id name`:** add a new public field, e.g. `engine_id: String`. In `poll()`, a line that starts with `id name ` sets it.
+  >    - Keep it separate from `_engine_name`, which is the display name used in the "is missing" and "stopped" errors.
+  >    - The handshake already waits for `uciok`, so the field is set before any search is sent.
+  >    - Lc0 also sends `id name`, so storing it changes nothing for Maia.
+  > 2. **In-search stop:** add a new method, e.g. `stop_search()`.
+  >    - It writes `stop` straight to `_stdio`, skipping the queue, and only while `_awaiting == "bestmove"`. Otherwise it does nothing.
+  >    - The search then ends normally: `bestmove` still reaches the callback and `_send()` moves on to the next queued step.
+  >    - **Do not reuse or extend `stop()` (`engine/uci.gd:168`).** That method kills the process and Maia's shutdown depends on it.
+  > 3. **Analyser side, not the bridge:**
+  >    - Send `stop` at most once per search.
+  >    - Request the next position only after handling the current search's `bestmove`; otherwise a late `stop` would cut the next search short.
+  >    - Cancelling means: `stop_search()`, ignore the rest of that search's output, write no file. "No partial file" is the analyser's job; the bridge needs nothing more.
+  > 4. **Rejected:** a subclass or separate Stockfish bridge, which goes against "same bridge as Lc0" in §15.3.
+  > 
+  > **Draft ticket text for REV-002:**
+  > 
+  > Replace the `engine/uci.gd` Primary-files entry and add one line under it:
+  > 
+  > ```
+  >   - engine/uci.gd (MultiPV `info` parsing if it belongs there; a public field holding the handshake's `id name`; a `stop_search()` that sends `stop` only during an active search — `stop()` keeps killing the process; Maia's behaviour unchanged)
+  >   - tests/test_uci.gd (additions for those two seams only; existing tests unchanged)
+  > ```
+  > 
+  > Add to "Tests stage 2 writes":
+  > 
+  > ```
+  > - `tests/test_uci.gd`, fake stdio as in `test_search_forwards_all_info_and_bestmove_to_the_request_callback`: `id name Stockfish 19` before `uciok` fills the bridge's engine id (red: dropped); `stop_search()` during a search writes `stop` and the later `bestmove` still reaches the callback and advances the queue; with no search it writes nothing (red: no method).
+  > ```
+  > 
+  > **Next steps for the caller:**
+  > 1. Apply both drafts to `53-REV-002-analysis-engine-and-files.md`.
+  > 2. Record this answer under `## Comments`, set `Stage: to-implement` and commit.
+  > 3. Resume stage 2 on `rev-002`. The recovery branch has only the blocking commit `91f2d7a`, so nothing needs to be brought over.
+  > 
+  > This doesn't need the owner: the change is internal and easy to undo, with no public API, merge, credential or data at stake.
+  > 
+  > I didn't run the gate, and no real Stockfish `id name` or `stop` exchange was tried. The fake-stdio tests only cover the bridge's own bookkeeping.
