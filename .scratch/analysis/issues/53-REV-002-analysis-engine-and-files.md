@@ -1,14 +1,17 @@
 # REV-002: Analyse a game with Stockfish and store the result
-Stage: to-implement
+Stage: to-review
 Blocked by: CI-004, REV-001
 Review: agent
 Difficulty: hard
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\rev002-gate.json
+Acceptance: pending | Run scripts/analyse.gd on a real saved game and check the JSON and elapsed time; a two-ply synthetic PGN was verified locally with Stockfish 19 in 0.9 s, and its SHA-256 was unchanged.
 
 - Primary files:
   - New: engine/analyser.gd
   - New: scripts/analyse.gd (headless: analyse one PGN, write its JSON)
   - core/tunables.gd (if BOT-011 has not created it yet, create it)
-  - engine/uci.gd (only to parse MultiPV `info` lines, if that belongs there)
+  - engine/uci.gd (MultiPV parsing if appropriate; expose handshake `id name` and provide in-search `stop_search()`, preserving process-killing `stop()` and Maia behavior)
+  - tests/test_uci.gd (additions for those two bridge seams only)
   - New: tests/test_analyser.gd
   - New: tests/fixtures/analysis/ (recorded Stockfish transcripts)
   - docs/spec.md (§15.3)
@@ -36,9 +39,11 @@ Given a saved game, run Stockfish over every position and write `user://analysis
 ## Tests stage 2 writes (own commit, red)
 
 - `tests/test_analyser.gd`, with a fake bridge replaying fixture transcripts (CI has no Stockfish): positions are sent last to first; the convergence function stops at depth 12 with 3 stable depths and not before; an invalid FEN sends nothing; forced and terminal positions are stored as criterion 5; stale detection on version and budget (red: no analyser).
+- `tests/test_uci.gd`, fake stdio: the handshake exposes `id name`; `stop_search()` sends stop only during an active search, and the subsequent bestmove reaches the callback and advances the queue.
 
 ## Comments
 
+- 2026-10-30 Stage 2: the gate on commit `1a7332815c6fd9eff8f0d892d5f107cdc66c858a` reported 286 passed, 0 failed, exit 0; the recorded Stockfish 19 transcript covers MultiPV parsing. A two-ply synthetic PGN was analysed on Max, producing three positions with engine version and budget; its SHA-256 was unchanged. Manual verification on a real saved game remains pending.
 - 2026-10-30 Written from spec §15.3. Speed figures in the spec are this machine's.
 - 2026-10-30 REV-001 review handoff: criteria 2 and 5 here need an in-search `stop` command and the handshake's `id name`. The bridge's public `request_search()` queues commands until `bestmove` and forwards only search `info`/`bestmove`, so these two access paths remain to be designed for REV-002. Its current `engine/uci.gd` Primary-files entry only permits MultiPV parsing; resolve the seam/scope with the stage-1 proxy before adding bridge behavior. This is not a failure of REV-001's numbered criteria.
 
