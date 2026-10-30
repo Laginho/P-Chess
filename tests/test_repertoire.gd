@@ -425,3 +425,24 @@ func test_catalog_selection_saves_repertoire_and_book_uses_it():
 	var board = load("res://core/board.gd").from_fen(load("res://bot/book.gd").START)
 	assert_true(book.weights(board, 0).e2e4 > 1.0, "My repertoire follows the selected lines")
 	_clean(folder)
+
+func test_editor_extends_a_selected_line_and_saves_it():
+	var path := "res://ui/repertoire_editor.tscn"
+	assert_true(ResourceLoader.exists(path), "editor scene exists")
+	if not ResourceLoader.exists(path):
+		return
+	var repertoire = _repertoire()
+	var folder := _folder()
+	repertoire.storage_dir = folder
+	assert_eq(repertoire.import_pgn("1. e4 e5 *", "w", "Study"), "")
+	var editor = load(path).instantiate()
+	Engine.get_main_loop().root.add_child(editor)
+	editor.present(repertoire, "Study", 0)
+	assert_true(editor.get_node("Margin/Form/Content/Board").play("g1f3"))
+	editor.save()
+	var loaded = _repertoire()
+	loaded.storage_dir = folder
+	assert_eq(loaded.load_saved("Study"), "")
+	assert_eq(" ".join(loaded.lines[0].moves), "e2e4 e7e5 g1f3")
+	editor.free()
+	_clean(folder)
