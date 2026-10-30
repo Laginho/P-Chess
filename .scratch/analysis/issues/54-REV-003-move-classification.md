@@ -1,8 +1,10 @@
 # REV-003: Classify every move
-Stage: implementing
+Stage: to-review
 Blocked by: REV-002
 Review: human
 Difficulty: hard
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\rev003-gate.json
+Acceptance: pending | Review classifications by eye on a real analysed game, including Great and Brilliant sacrifices.
 
 - Primary files:
   - New: core/classification.gd
@@ -37,5 +39,9 @@ From a game, its analysis JSON (REV-002), the catalog and the repertoire, give e
 - `tests/test_classification.gd`, one fixture per rule: each class from a position built for it; the precedence order (Book beats Best, Brilliant beats Great); each of the five Great/Brilliant exclusions; a pre-existing deficit is not a sacrifice; Miss replacing a Blunder; both Lenient Blunder cases; the three mate cases (red: no module).
 
 ## Comments
+
+- 2026-10-30 Stage 2: focused red/green cycles cover stored JSON, both colours, opening precedence and FEN-rooted repertoire, score bands and clamping, mate rules, forced and terminal positions, Miss, Great/Brilliant, all named exclusions and a pre-existing material deficit. The complete gate on `734dd43056be17c8b8520ab024f2215a8f5a07` passed with 299 passed, 0 failed and exit 0; log `C:\Users\bruno\AppData\Local\Temp\rev003-gate.log`.
+- The initial expected loss-band examples used incorrect EP differences; commit `5f16013` corrected the test expectations, and the corrected tests were verified red against the preceding implementation before the production change. The PV2 fixture's resulting FEN was also corrected in `2890489`.
+- Under the clamped EP formula, ordinary centipawn bands cannot produce a Blunder when the resulting score is at least +600 cp, or when the initial best score is at most -600 cp: the largest possible EP loss in either case is about 0.075, below the 0.20 Blunder threshold. The tests verify these boundaries do not wrongly turn an Inaccuracy into Good, and exercise the already-losing leniency branch with an allowed mate. The +600 cp would-be-Blunder case has no reachable ordinary-score fixture under this contract.
 
 - 2026-10-30 Written from spec §15.4. Brilliant uses the simple material count; if it gives false Brilliants in play, the fallback is WintrChess's attacked-and-undefended-pieces test, reimplemented from its description (GPL-3.0, no code copied). `Review: human` because the classes are what you will judge by eye.
