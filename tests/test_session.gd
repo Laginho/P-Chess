@@ -356,3 +356,50 @@ func test_two_rematches_drop_a_stale_white_move_legal_in_the_current_game():
 	_finish(waits, 0)
 	assert_eq(main.board_view.game.moves, PackedStringArray(["g1f3", "e7e5"]), "only the current reply plays")
 	main.free()
+
+
+func test_resign_button_shares_the_two_second_window_with_escape():
+	for sequence in ["click_click", "click_escape", "escape_click", "expired_click"]:
+		var main = _session(ManualWaits.new())
+		var button = main.get_node_or_null("Layout/Side/ResignButton")
+		assert_true(button != null, "resign button exists")
+		if button == null:
+			main.free()
+			continue
+		var time := FakeTime.new()
+		main.resign_key = Main.ResignKey.new(time.ms)
+		assert_true(not button.disabled, "enabled during game")
+		if sequence == "escape_click":
+			_key(main, KEY_ESCAPE)
+		else:
+			button.pressed.emit()
+		main._process(0)
+		assert_true(not main.board_view.game.is_over(), "first action arms")
+		assert_true(main.resign_hint.visible, "hint visible")
+		assert_eq(main.resign_hint.text, "Click again to resign")
+		time.now = 2100 if sequence == "expired_click" else 1900
+		if sequence == "expired_click":
+			main._process(0)
+			assert_true(not main.resign_hint.visible, "expired hint is hidden")
+		if sequence == "click_escape":
+			_key(main, KEY_ESCAPE)
+		else:
+			button.pressed.emit()
+		assert_eq(main.board_view.game.is_over(), sequence != "expired_click")
+		if sequence != "expired_click":
+			assert_eq(main.board_view.game.reason, "resignation")
+			assert_true(button.disabled, "disabled after game")
+		main.free()
+
+
+func test_resign_button_disabled_in_setup_and_after_engine_stops():
+	var main = _session(ManualWaits.new())
+	var button = main.get_node_or_null("Layout/Side/ResignButton")
+	assert_true(button != null, "resign button exists")
+	if button:
+		main._show_setup()
+		assert_true(button.disabled, "disabled in setup")
+		main._start(SETTINGS.duplicate())
+		main._on_engine_stopped()
+		assert_true(button.disabled, "disabled after engine stops")
+	main.free()
