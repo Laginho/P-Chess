@@ -101,7 +101,7 @@ static func _mate_or_band(best: Dictionary, played: Dictionary, loss: float) -> 
 			return "Good"
 		if cp >= Tunables.CLASSIFICATION_MATE_INACCURACY_CP:
 			return "Inaccuracy"
-		return "Mistake" if cp >= 0 else "Blunder"
+		return "Mistake" if cp >= Tunables.CLASSIFICATION_MATE_MISTAKE_CP else "Blunder"
 	return _band(loss)
 
 
@@ -118,9 +118,10 @@ static func _great(board, moves: PackedStringArray, i: int, positions: Array, li
 		var last := moves[i - 1]
 		if not previous.piece_at(last.substr(2, 2)).is_empty() or (previous.piece_at(last.substr(0, 2)).to_lower() == "p" and last.substr(2, 2) == previous.en_passant):
 			return false
-	var victim: String = board.piece_at(move.substr(2, 2))
-	if not victim.is_empty():
-		var square := (move.unicode_at(3) - 49) * 8 + move.unicode_at(2) - 97
+	var square := (move.unicode_at(3) - 49) * 8 + move.unicode_at(2) - 97
+	if board.piece_at(move.substr(0, 2)).to_lower() == "p" and move.substr(2, 2) == board.en_passant:
+		square += -8 if board.side_to_move == "w" else 8
+	if not board.squares[square].is_empty():
 		if not board._attacked(square, board.side_to_move == "b"):
 			return false
 	return true
