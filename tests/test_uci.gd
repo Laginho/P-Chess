@@ -100,6 +100,35 @@ func test_search_forwards_all_info_and_bestmove_to_the_request_callback():
 	uci.free()
 
 
+func test_engine_id_and_in_search_stop_preserve_the_queue():
+	var uci = UCI.new("engine/stockfish/stockfish.exe", "Stockfish")
+	uci.available = true
+	uci.pid = OS.get_process_id()
+	uci._stdio = FileAccess.open("user://rev002-commands.txt", FileAccess.WRITE_READ)
+	uci._queue(["uci"], "uciok")
+	uci._lines.append_array(["id name Stockfish 19", "uciok"])
+	uci.poll()
+	assert_eq(uci.get("engine_id"), "Stockfish 19")
+	if not uci.has_method("stop_search"):
+		assert_true(false, "stop_search is missing")
+		uci.pid = -1
+		uci.free()
+		return
+	var received := []
+	uci.stop_search()
+	uci.request_search(["position startpos", "go nodes 1"], func(line): received.append(line))
+	uci.request_search(["position startpos", "go nodes 2"], func(line): received.append(line))
+	uci.stop_search()
+	uci._lines.append("bestmove e2e4")
+	uci.poll()
+	uci._stdio.flush()
+	uci._stdio.seek(0)
+	assert_eq(uci._stdio.get_as_text(), "uci\nposition startpos\ngo nodes 1\nstop\nposition startpos\ngo nodes 2\n")
+	assert_eq(received, ["bestmove e2e4"])
+	uci.pid = -1
+	uci.free()
+
+
 func test_stockfish_does_not_send_maia_requests():
 	var uci = UCI.new("engine/stockfish/stockfish.exe", "Stockfish")
 	uci.available = true
