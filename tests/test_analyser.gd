@@ -127,6 +127,19 @@ func test_terminal_only_game_still_starts_one_engine_game():
 	analyser.free()
 
 
+func test_drawn_game_has_terminal_zero_even_when_moves_remain():
+	var bridge := FakeBridge.new()
+	var analyser = Analyser.new(bridge)
+	var path := "user://rev002-draw.json"
+	assert_true(analyser.analyse([START], path, true, true))
+	assert_true(bridge.searches.is_empty())
+	var data: Dictionary = Analyser.read_analysis(path, "Stockfish 19", 3000000).data
+	assert_eq(data.positions[0].terminal_score, 0)
+	assert_eq(data.positions[0].pv, [])
+	DirAccess.remove_absolute(path)
+	analyser.free()
+
+
 func test_stop_waits_for_completed_multipv_depth_and_fires_once():
 	var bridge := FakeBridge.new()
 	var analyser = Analyser.new(bridge)
