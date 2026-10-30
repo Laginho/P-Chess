@@ -17,6 +17,7 @@ var _active := false
 var _stop_sent := false
 var _lines := {}
 var _depths := {}
+var _completed := {}
 var _setup := PackedStringArray()
 
 
@@ -28,7 +29,7 @@ func analyse(fens: Array, path: String, maximum: bool) -> bool:
 	if _active or _bridge == null or fens.is_empty():
 		return false
 	for fen in fens:
-		if Board.from_fen(fen) == null:
+		if not _valid_position(fen):
 			return false
 	_fens = fens.duplicate()
 	_positions.resize(fens.size())
@@ -74,6 +75,28 @@ static func positions_from_game(game: Dictionary) -> Array:
 	return positions
 
 
+static func _valid_position(fen: String) -> bool:
+	var board = Board.from_fen(fen)
+	if board == null or board.squares.count("K") != 1 or board.squares.count("k") != 1:
+		return false
+	for i in range(8):
+		if board.squares[i].to_lower() == "p" or board.squares[i + 56].to_lower() == "p":
+			return false
+	var other = board.copy()
+	other.side_to_move = "b" if board.side_to_move == "w" else "w"
+	if other.in_check():
+		return false
+	for right: String in board.castling:
+		if right == "-":
+			continue
+		var white := right == right.to_upper()
+		var king := "e1" if white else "e8"
+		var rook := ("h" if right.to_lower() == "k" else "a") + ("1" if white else "8")
+		if board.piece_at(king) != ("K" if white else "k") or board.piece_at(rook) != ("R" if white else "r"):
+			return false
+	return true
+
+
 func _next() -> void:
 	if _cancelled:
 		_active = false
@@ -92,6 +115,7 @@ func _next() -> void:
 		return
 	_lines = {}
 	_depths = {}
+	_completed = {}
 	_stop_sent = false
 	var commands := _setup
 	_setup = PackedStringArray()
@@ -133,11 +157,12 @@ func _on_line(line: String) -> void:
 				_depths[parsed.depth].mate = parsed.mate
 		var completed: bool = number == 2 or Board.from_fen(_fens[_index]).legal_moves().size() == 1
 		if completed and _depths.has(parsed.depth):
-			var depths := _depths.keys().filter(func(depth): return depth <= parsed.depth)
+			_completed[parsed.depth] = _depths[parsed.depth]
+			var depths := _completed.keys()
 			depths.sort()
 			var samples := []
 			for depth in depths:
-				samples.append(_depths[depth])
+				samples.append(_completed[depth])
 			if not _stop_sent and converged(samples):
 				_stop_sent = true
 				_bridge.stop_search()
