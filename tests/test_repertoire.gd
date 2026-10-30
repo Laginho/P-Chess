@@ -446,3 +446,23 @@ func test_editor_extends_a_selected_line_and_saves_it():
 	assert_eq(" ".join(loaded.lines[0].moves), "e2e4 e7e5 g1f3")
 	editor.free()
 	_clean(folder)
+
+func test_editor_keeps_existing_annotations_when_saving_a_branch():
+	var repertoire = _repertoire()
+	var folder := _folder()
+	repertoire.storage_dir = folder
+	assert_eq(repertoire.import_pgn("{Root} 1. e4 {Space} e5 $1 *", "w", "Study"), "")
+	var editor = load("res://ui/repertoire_editor.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(editor)
+	editor.present(repertoire, "Study", 0)
+	assert_true(editor.get_node("Margin/Form/Content/Board").play("g1f3"))
+	editor.save()
+	var loaded = _repertoire()
+	loaded.storage_dir = folder
+	assert_eq(loaded.load_saved("Study"), "")
+	var root: Dictionary = loaded.tree.values()[0]
+	assert_eq(root.comments, ["Root"])
+	assert_eq(root.children.e2e4.comments, ["Space"])
+	assert_eq(root.children.e2e4.children.e7e5.nags, [1])
+	editor.free()
+	_clean(folder)
