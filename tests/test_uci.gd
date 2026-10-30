@@ -86,33 +86,43 @@ func test_missing_stockfish_names_the_engine_and_path():
 	uci.free()
 
 
+func _idle_child() -> Dictionary:
+	return OS.execute_with_pipe(OS.get_executable_path(), ["--headless", "--path", ProjectSettings.globalize_path("res://"), "-s", "res://tests/fixtures/idle_child.gd"], false)
+
+
 func test_search_forwards_all_info_and_bestmove_to_the_request_callback():
 	var uci = UCI.new("engine/stockfish/stockfish.exe", "Stockfish")
 	uci.available = true
-	uci.pid = OS.get_process_id()
+	var child := _idle_child()
+	uci.pid = child.pid
 	uci._stdio = FileAccess.open("user://rev001-commands.txt", FileAccess.WRITE)
 	var received := []
 	uci.request_search(["position startpos", "go depth 2"], func(line): received.append(line))
 	uci._lines.append_array(["info depth 1 multipv 1 score cp 20", "info depth 2 multipv 2 score cp 10", "bestmove e2e4"])
+	assert_true(OS.is_process_running(uci.pid), "idle child is running")
 	uci.poll()
 	assert_eq(received, ["info depth 1 multipv 1 score cp 20", "info depth 2 multipv 2 score cp 10", "bestmove e2e4"])
-	uci.pid = -1
 	uci.free()
+	child.stdio.close()
+	child.stderr.close()
 
 
 func test_engine_id_and_in_search_stop_preserve_the_queue():
 	var uci = UCI.new("engine/stockfish/stockfish.exe", "Stockfish")
 	uci.available = true
-	uci.pid = OS.get_process_id()
+	var child := _idle_child()
+	uci.pid = child.pid
 	uci._stdio = FileAccess.open("user://rev002-commands.txt", FileAccess.WRITE_READ)
 	uci._queue(["uci"], "uciok")
 	uci._lines.append_array(["id name Stockfish 19", "uciok"])
+	assert_true(OS.is_process_running(uci.pid), "idle child is running")
 	uci.poll()
 	assert_eq(uci.get("engine_id"), "Stockfish 19")
 	if not uci.has_method("stop_search"):
 		assert_true(false, "stop_search is missing")
-		uci.pid = -1
 		uci.free()
+		child.stdio.close()
+		child.stderr.close()
 		return
 	var received := []
 	uci.stop_search()
@@ -125,20 +135,19 @@ func test_engine_id_and_in_search_stop_preserve_the_queue():
 	uci._stdio.seek(0)
 	assert_eq(uci._stdio.get_as_text(), "uci\nposition startpos\ngo nodes 1\nstop\nposition startpos\ngo nodes 2\n")
 	assert_eq(received, ["bestmove e2e4"])
-	uci.pid = -1
 	uci.free()
+	child.stdio.close()
+	child.stderr.close()
 
 
 func test_stockfish_does_not_send_maia_requests():
 	var uci = UCI.new("engine/stockfish/stockfish.exe", "Stockfish")
 	uci.available = true
-	uci.pid = OS.get_process_id()
 	uci._stdio = FileAccess.open("user://rev001-stockfish-commands.txt", FileAccess.WRITE)
 	uci.set_level("weights.pb.gz")
 	uci.request_policy(START, PackedStringArray())
 	assert_eq(uci._stdio.get_position(), 0, "no Maia commands are sent")
 	assert_true(uci._steps.is_empty(), "no Maia commands are queued")
-	uci.pid = -1
 	uci.free()
 
 
