@@ -22,6 +22,8 @@ var level := ""
 var time_table := TimeModel.load_table(TimeModel.TABLE)
 # From think() to Lc0's answer, one entry per move; the think time comes after.
 var latencies_ms := []
+# Score associated with the most recently emitted move_ready.
+var evaluation = null
 # The picker's cut and temperature (§3.3) and the panic intensity (§3.4), from the settings.
 var tau := MovePicker.DEFAULT_TAU
 var temperature := MovePicker.DEFAULT_TEMPERATURE
@@ -120,6 +122,7 @@ func _on_policy(policy: Dictionary) -> void:
 				top = move
 		request.reply.expected = top == request.last_move
 		return
+	var score = _bridge.evaluation if _bridge is UCI else null
 	var game = request.game
 	var legal: PackedStringArray = game.board.legal_moves()
 	var usable := {}
@@ -147,6 +150,7 @@ func _on_policy(policy: Dictionary) -> void:
 		if wait > 0.0:
 			await _wait_for_timeout.call(wait)
 	if _is_current(request):
+		evaluation = score
 		move_ready.emit(move)
 
 

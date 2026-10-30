@@ -72,11 +72,28 @@ layout_mode = 2
 focus_mode = 0
 text = "Review"
 
-[node name="ResignButton" type="Button" parent="Layout/Side"]
+[node name="Actions" type="HBoxContainer" parent="Layout/Side"]
+layout_mode = 2
+
+[node name="ResignButton" type="Button" parent="Layout/Side/Actions"]
 layout_mode = 2
 disabled = true
 text = "⚑"
 tooltip_text = "Resign"
+
+[node name="DrawButton" type="Button" parent="Layout/Side/Actions"]
+layout_mode = 2
+disabled = true
+text = "?"
+tooltip_text = "Offer a draw"
+
+[node name="DrawNotice" type="Label" parent="Layout/Side"]
+visible = false
+layout_mode = 2
+
+[node name="DrawNoticeTimer" type="Timer" parent="Layout/Side"]
+wait_time = 3.0
+one_shot = true
 
 [node name="ResignHint" type="Label" parent="Layout/Side"]
 visible = false

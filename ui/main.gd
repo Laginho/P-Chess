@@ -7,6 +7,7 @@ extends Control
 
 const Game = preload("res://core/game.gd")
 const Clock = preload("res://core/clock.gd")
+const Tunables = preload("res://core/tunables.gd")
 const SoundPlayer = preload("res://ui/sound_player.gd")
 const UCI = preload("res://engine/uci.gd")
 const MaiaPlayer = preload("res://bot/maia_player.gd")
@@ -35,6 +36,8 @@ var resign_key := ResignKey.new(Time.get_ticks_msec)
 # Only the board and the clocks show (§8.7).
 var focus := false
 var _playing_premove := false
+var _draw_offered := false
+var _draw_moves_left := 0
 # Created at ready time so scene tests can supply isolated storage before any file is read.
 var history
 var _move_clocks := []
@@ -80,7 +83,10 @@ const BLACK_GLYPHS := {"q": "♛", "r": "♜", "b": "♝", "n": "♞", "p": "♟
 @onready var black_clock = $Layout/Side/BlackClock
 @onready var setup = $Setup
 @onready var resign_hint: Label = $Layout/Side/ResignHint
-@onready var resign_button: Button = $Layout/Side/ResignButton
+@onready var resign_button: Button = $Layout/Side/Actions/ResignButton
+@onready var draw_button: Button = $Layout/Side/Actions/DrawButton
+@onready var draw_notice: Label = $Layout/Side/DrawNotice
+@onready var draw_notice_timer: Timer = $Layout/Side/DrawNoticeTimer
 @onready var claim_draw: Button = $Layout/Side/ClaimDraw
 @onready var starting: Control = $Layout/BoardView/Starting
 
@@ -121,6 +127,8 @@ func _ready() -> void:
 		board_view.game.claim_draw()
 		_show_result())
 	resign_button.pressed.connect(_resign)
+	draw_button.pressed.connect(_offer_draw)
+	draw_notice_timer.timeout.connect(draw_notice.hide)
 	setup.started.connect(_start)
 	# The catalog takes seconds to parse: start it now so the first game does not wait for it.
 	setup.get_node("OpeningPicker").ensure_catalog()
@@ -174,6 +182,14 @@ func _resign() -> void:
 	if not settings_screen.get_node("Panel").visible and clock != null and not board_view.game.is_over() and resign_key.press():
 		board_view.game.resign(human)
 		_show_result()
+
+
+func _offer_draw() -> void:
+	if settings_screen.get_node("Panel").visible or clock == null or board_view.game.is_over() or draw_button.disabled:
+		return
+	_draw_offered = true
+	_draw_moves_left = Tunables.DRAW_COOLDOWN_MOVES
+	draw_button.disabled = true
 
 
 func _start(new_settings: Dictionary) -> void:
@@ -240,6 +256,11 @@ func _start(new_settings: Dictionary) -> void:
 	claim_draw.disabled = true
 	clock = Clock.new(settings.control, Time.get_ticks_msec)
 	resign_button.disabled = false
+	_draw_offered = false
+	_draw_moves_left = 0
+	draw_button.disabled = false
+	draw_notice.hide()
+	draw_notice_timer.stop()
 	maia.clock = clock
 	maia.control = settings.control
 	maia.level = settings.level
@@ -255,6 +276,10 @@ func _start(new_settings: Dictionary) -> void:
 
 
 func _show_setup() -> void:
+	draw_button.disabled = true
+	_draw_offered = false
+	draw_notice.hide()
+	draw_notice_timer.stop()
 	resign_button.disabled = true
 	resign_hint.hide()
 	review.hide()
@@ -333,7 +358,7 @@ func _set_focus(on: bool) -> void:
 	focus = on
 	# The Esc hint and the result stay out of this list: criteria 4 and 2 show them when they apply,
 	# and the result is empty during play.
-	for node in [move_list, white_material, black_material, claim_draw, resign_button, settings_screen]:
+	for node in [move_list, white_material, black_material, claim_draw, $Layout/Side/Actions, settings_screen]:
 		node.visible = not on
 
 
@@ -342,6 +367,19 @@ func _set_focus(on: bool) -> void:
 func _on_maia_move(move: String) -> void:
 	if clock:
 		clock.tick()
+	if clock == null or board_view.game.is_over():
+		return
+	if _draw_offered:
+		_draw_offered = false
+		var accepted := MaiaPlayer.accepts_draw(maia.evaluation, board_view.game.board,
+				clock.left(board_view.game.board.side_to_move), Clock.CONTROLS[settings.control][0])
+		draw_notice.text = "Draw agreed" if accepted else "Maia declined"
+		draw_notice.show()
+		draw_notice_timer.start()
+		if accepted:
+			board_view.game.agree_draw()
+			_show_result()
+			return
 	board_view.play(move)
 
 
@@ -350,6 +388,9 @@ func _on_move_played(san: String) -> void:
 	var game = board_view.game
 	claim_draw.disabled = not game.can_claim_draw()
 	var mover: String = "b" if game.board.side_to_move == "w" else "w"
+	if mover == human and _draw_moves_left > 0:
+		_draw_moves_left -= 1
+		draw_button.disabled = _draw_moves_left > 0
 	_recording_move = true
 	if not _playing_premove:
 		# May flag, when the time ran out before the move landed.
@@ -375,6 +416,8 @@ func _on_flagged(side: String) -> void:
 
 # Every way a game ends lands here, after the game has its result.
 func _show_result() -> void:
+	draw_button.disabled = true
+	_draw_offered = false
 	resign_button.disabled = true
 	resign_hint.hide()
 	var game = board_view.game
