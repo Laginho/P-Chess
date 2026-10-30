@@ -1,5 +1,5 @@
 # HIST-003: Save the repertoire snapshot beside the PGN
-Stage: implementing
+Stage: to-review
 Blocked by: none
 Review: agent
 Difficulty: normal
@@ -32,6 +32,9 @@ When a game is played with a repertoire loaded, the lines it was checked against
 ## Comments
 
 - 2026-10-30 Written from spec §15.7.
+- 2026-10-30 Implemented snapshot persistence and recovery. The red run failed to load the history test because the snapshot arguments were absent (275 passed, 1 failed); the green gate passed 287 tests, 0 failed. Snapshot write errors are reported while PGN and stats continue to save.
+
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\hist003-green.json
 
 - 2026-10-30 Review ended at blocked (exit 0); branch HIST-003 holds the review; left for a human
 
