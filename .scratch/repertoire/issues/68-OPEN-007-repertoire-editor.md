@@ -1,5 +1,5 @@
 # OPEN-007: Edit a repertoire on the board
-Stage: to-implement
+Stage: implementing
 Blocked by: OPEN-006
 Review: agent
 Difficulty: normal
