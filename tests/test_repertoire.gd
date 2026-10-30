@@ -466,3 +466,28 @@ func test_editor_keeps_existing_annotations_when_saving_a_branch():
 	assert_eq(root.children.e2e4.children.e7e5.nags, [1])
 	editor.free()
 	_clean(folder)
+
+func test_editor_opens_from_screen_branches_and_cancel_discards():
+	var setup = load("res://ui/setup.tscn").instantiate()
+	var folder := _folder()
+	setup.repertoire.storage_dir = folder
+	assert_eq(setup.repertoire.import_pgn("1. e4 e5 2. Nf3 *", "w", "Study"), "")
+	var original := FileAccess.get_file_as_string(folder.path_join("Study.json"))
+	Engine.get_main_loop().root.add_child(setup)
+	var screen = setup.get_node("RepertoireScreen")
+	screen.present()
+	screen.get_node("Margin/Form/List").item_selected.emit(0)
+	var button = screen.get_node_or_null("Margin/Form/Edit")
+	assert_true(button != null, "screen offers editing")
+	if button != null:
+		button.pressed.emit()
+		var editor = screen.get_node("RepertoireEditor")
+		var tree: Tree = editor.get_node("Margin/Form/Content/Tree")
+		var first = tree.get_root().get_first_child().get_first_child()
+		first.select(0)
+		tree.item_selected.emit()
+		assert_true(editor.get_node("Margin/Form/Content/Board").play("c7c5"))
+		editor.get_node("Margin/Form/Buttons/Cancel").pressed.emit()
+		assert_eq(FileAccess.get_file_as_string(folder.path_join("Study.json")), original)
+	setup.free()
+	_clean(folder)
