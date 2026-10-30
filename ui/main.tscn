@@ -84,7 +84,7 @@ tooltip_text = "Resign"
 [node name="DrawButton" type="Button" parent="Layout/Side/Actions"]
 layout_mode = 2
 disabled = true
-text = "?"
+text = "½"
 tooltip_text = "Offer a draw"
 
 [node name="DrawNotice" type="Label" parent="Layout/Side"]
