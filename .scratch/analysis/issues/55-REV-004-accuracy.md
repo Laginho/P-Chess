@@ -1,5 +1,5 @@
 # REV-004: Accuracy per move and per game
-Stage: to-implement
+Stage: implementing
 Blocked by: REV-002
 Review: agent
 Difficulty: hard
