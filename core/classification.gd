@@ -52,7 +52,7 @@ static func evaluate(moves: PackedStringArray, analysis: Dictionary, catalog: Ar
 			label = "Book"
 		elif moves[i] == before.best_move:
 			label = "Best"
-			if _great(board, moves, i, lines, after_ep):
+			if _great(board, moves, i, positions, lines, after_ep):
 				label = "Brilliant" if _sacrifice(board, lines[0].moves) else "Great"
 		result.append({"class": label, "loss": loss, "before_ep": before_ep,
 				"after_ep": after_ep, "left_repertoire": marks[i].left_repertoire,
@@ -105,14 +105,19 @@ static func _mate_or_band(best: Dictionary, played: Dictionary, loss: float) -> 
 	return _band(loss)
 
 
-static func _great(board, moves: PackedStringArray, i: int, lines: Array, after_ep: float) -> bool:
+static func _great(board, moves: PackedStringArray, i: int, positions: Array, lines: Array, after_ep: float) -> bool:
 	if lines.size() < 2 or _score(lines[1]) >= Tunables.CLASSIFICATION_GREAT_PV2_CP:
 		return false
 	if _ep(_score(lines[0])) - _ep(_score(lines[1])) < Tunables.CLASSIFICATION_GREAT_LOSS or after_ep < Tunables.CLASSIFICATION_MIN_EP:
 		return false
 	var move := moves[i]
-	if board.in_check() or move.length() > 4 or (i > 0 and moves[i - 1].substr(2, 2) == move.substr(2, 2)):
+	if board.in_check() or move.length() > 4:
 		return false
+	if i > 0 and moves[i - 1].substr(2, 2) == move.substr(2, 2):
+		var previous = Board.from_fen(positions[i - 1].fen)
+		var last := moves[i - 1]
+		if not previous.piece_at(last.substr(2, 2)).is_empty() or (previous.piece_at(last.substr(0, 2)).to_lower() == "p" and last.substr(2, 2) == previous.en_passant):
+			return false
 	var victim: String = board.piece_at(move.substr(2, 2))
 	if not victim.is_empty():
 		var square := (move.unicode_at(3) - 49) * 8 + move.unicode_at(2) - 97
