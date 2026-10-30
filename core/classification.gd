@@ -38,7 +38,9 @@ static func evaluate(moves: PackedStringArray, analysis: Dictionary, catalog: Ar
 		elif marks[i].book:
 			label = "Book"
 		elif moves[i] == before.best_move:
-			label = "Great" if _great(board, moves, i, lines, after_ep) else "Best"
+			label = "Best"
+			if _great(board, moves, i, lines, after_ep):
+				label = "Brilliant" if _sacrifice(board, lines[0].moves) else "Great"
 		result.append({"class": label, "loss": loss, "before_ep": before_ep,
 				"after_ep": after_ep, "left_repertoire": marks[i].left_repertoire,
 				"expected": marks[i].expected})
@@ -107,3 +109,25 @@ static func _great(board, moves: PackedStringArray, i: int, lines: Array, after_
 		if not board._attacked(square, board.side_to_move == "b"):
 			return false
 	return true
+
+
+static func _sacrifice(board, pv: Array) -> bool:
+	var side: String = board.side_to_move
+	var before := _material(board, side)
+	var position = board.copy()
+	for i in mini(pv.size(), Tunables.CLASSIFICATION_SACRIFICE_PLIES + 1):
+		var move: String = pv[i]
+		if not move in position.legal_moves():
+			break
+		position.make_move(move)
+	return _material(position, side) < before
+
+
+static func _material(board, side: String) -> int:
+	var balance := 0
+	for piece: String in board.squares:
+		if piece.is_empty():
+			continue
+		var value: int = Tunables.CLASSIFICATION_MATERIAL.get(piece.to_lower(), 0)
+		balance += value if (piece == piece.to_upper()) == (side == "w") else -value
+	return balance
