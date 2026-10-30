@@ -4,6 +4,12 @@ signal saved(name: String)
 
 const Game = preload("res://core/game.gd")
 const Repertoire = preload("res://bot/repertoire.gd")
+
+# Analysis positions accept legal moves even after an automatic draw.
+class EditorGame extends Game:
+	func is_over() -> bool:
+		return false
+
 var repertoire
 var saved_name := ""
 var edited := {}
@@ -43,7 +49,7 @@ func _node() -> Dictionary:
 
 
 func _show_position() -> void:
-	board.game = Game.new(_node().position + " 0 1")
+	board.game = EditorGame.new(_node().position + " 0 1")
 	board.game.moves = path.duplicate()
 	board.queue_redraw()
 
