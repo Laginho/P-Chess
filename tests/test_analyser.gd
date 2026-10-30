@@ -27,7 +27,9 @@ func test_reverse_order_progress_persistence_and_staleness():
 	var bridge := FakeBridge.new()
 	var analyser = Analyser.new(bridge)
 	var progress := []
+	var landed := []
 	analyser.progress.connect(func(done, total): progress.append([done, total]))
+	analyser.position_ready.connect(func(index, position): landed.append([index, position.best_move]))
 	var path := "user://rev002-test.json"
 	DirAccess.remove_absolute(path)
 	assert_true(analyser.analyse([START, AFTER], path, false))
@@ -40,6 +42,7 @@ func test_reverse_order_progress_persistence_and_staleness():
 	assert_true("position fen " + START in bridge.searches[1])
 	bridge.answer()
 	assert_eq(progress, [[1, 2], [2, 2]])
+	assert_eq(landed, [[1, "e7e5"], [0, "e7e5"]])
 	var result: Dictionary = Analyser.read_analysis(path, "Stockfish 19", 3000000)
 	assert_eq(result.state, "analysed")
 	assert_eq(result.data.positions[1].best_move, "e7e5")
