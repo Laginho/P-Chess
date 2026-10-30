@@ -1,5 +1,5 @@
 # OPEN-007: Edit a repertoire on the board
-Stage: implementing
+Stage: to-review
 Blocked by: OPEN-006
 Review: agent
 Difficulty: normal
@@ -37,3 +37,8 @@ An editor where you extend lines and add branches by playing moves on the board 
 ## Comments
 
 - 2026-10-30 Written from spec §15.9 and the design brief (screen 9).
+
+- 2026-10-30 Stage 2: focused extension red 10 passed / 1 failed (editor absent), green 11 / 0; annotation preservation red 11 / 1, green 12 / 0; screen entry red 12 / 1, green 13 / 0; subtree deletion mutation red 13 / 1, green 14 / 0. Gate: 276 reported passed, 0 failed, including 4 Lc0 skips (272 executed).
+- Acceptance: pending | Manually add a branch to an imported repertoire, delete a sub-line, save, and play it in My repertoire mode; inspect rendered layout and physical input.
+- Disclosure: pending | release | Manual editor layout, physical input and My repertoire acceptance remain outstanding.
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\open007-gate.json
