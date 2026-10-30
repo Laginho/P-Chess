@@ -1,5 +1,5 @@
 # CI-004: Fetch and ship Stockfish 19
-Stage: to-review
+Stage: done
 Blocked by: none
 Review: human
 Difficulty: normal
@@ -73,3 +73,25 @@ uciok
 ```
 
 Gate evidence: C:\Users\bruno\AppData\Local\Temp\ci-004-gate-20261030.json
+
+#### Resolution (2026-10-30)
+
+Verdict: Approve
+
+- Standards: 0 documented violations and 0 relevant heuristic smells. An independent reviewer checked Windows PowerShell 5.1 compatibility, Primary-files scope, commit separation and the existing download/validation conventions.
+- Spec: 0 findings from a second independent reviewer. Criteria 1-5 passed; no production behavior was authored during stage 3.
+- Coverage: reviewed all 6 changed files in `c748352b902402f47da000ab1d206b1ab0798c60...0fe9ddf9ee570770bda0d7f8e6ad1c3292603fb4`, including all 3 Markdown files OCR excluded as `unsupported_ext`. OCR coverage: 3/3 reviewable files; complete Git coverage: 6/6, none skipped, 100%.
+- Criterion 1: passed. The pinned official universal archive's SHA-256 matches the [published release-asset digest](https://github.com/official-stockfish/Stockfish/releases/expanded_assets/sf_19). Local archive, executable and licence hashes match the script. An external fixture executed the actual script AST blocks with a mocked transfer of the verified archive: corrupt ZIP, exe and licence each fail with the shared SHA-256 message, delete the corrupt file, and recover on the next run.
+- Criterion 2: passed. A full Windows PowerShell 5.1 rerun of `scripts/fetch-engine.ps1` exited 0 without downloads. The fixture also checked a fresh Stockfish installation, cached rerun and restoration of a missing exe from the cached ZIP. The stage-2 fresh network download remains the recorded transfer evidence; review's fixture did not download over the network.
+- Criterion 3: passed. The workflow calls the same fetch script with the package root. Executing its exact package-validation/archiving block produced a fixture ZIP containing both Stockfish files. Removing either file rejected the package before archiving. All 8 multiline workflow PowerShell blocks parsed under Windows PowerShell 5.1. Fixture application and other engine files were placeholders; this was not a Godot export or a tagged Actions release.
+- Criterion 4: passed. `docs/THIRD_PARTY.md` identifies the official release, exact `sf_19` source tag, GPLv3 and unmodified distribution. The real extracted `Copying.txt` is present and hash-verified, and the workflow includes the notices in the package and release notes.
+- Criterion 5: passed. Review independently piped `uci` and `quit` into the installed executable: `id name Stockfish 19`, `uciok`, exit 0. Stage 2's full output remains above.
+- Examined callers and failure paths: default-root local fetch, release fetch with `-Root`, Lc0/Maia validation and cache behavior, Stockfish archive/file integrity, missing entries/files, failure cleanup and archive disposal, Git ignores, package validation and compression, and the executable path expected by the generic UCI bridge. Full Stockfish game analysis remains [REV-002](53-REV-002-analysis-engine-and-files.md); no gameplay, clean-machine release acceptance or tagged workflow execution was performed here.
+- Red/green evidence: the ticket explicitly requires no new Godot tests. Production and metadata are separated in `f2d4694` and `0fe9ddf`. Review's corruption and missing-package-file fixtures exercise the production blocks rather than a copied implementation. Fixture script and output: `C:\Users\bruno\AppData\Local\Temp\P-Chess-CI-004-review-20261030-190958\verify.ps1` and `verification.log` (exit 0).
+- Verification: reused the bound gate on production commit `f2d4694543b903ef229a297be7ef97aa8fdc102d`: 274 passed, 0 failed, 0 skips, exit 0. Verified the receipt, log SHA-256 and unchanged production using `Assert-GateEvidence` after merging. Log: `C:\Users\bruno\AppData\Local\Temp\ci-004-gate-20261030.log`. The gate was not repeated in review.
+- Proxy decision reviewed: the existing `Proxy decided (opus-5.5 xhigh): Accept with one change` record matches receipt `C:\Users\bruno\AppData\Local\Temp\sweatshop-proxy\20261030-190030-CI-004-9cf28d.json`. The committed implementation reuses only the production change, preserves the resumed ticket state, records fresh manual output, and supplies the new green gate. This resolved an environment/state recovery; no product criterion changed or known defect was deferred.
+- Integration: rebased onto `sweatshop/analysis/2026-10-30-1831` (already current), then merged without squash as `181777e`. `Review: human` is carried to the driver's eventual session PR; this stage does not push or open a separate PR.
+
+Acceptance: passed | Local fetch/cache verification, Stockfish UCI handshake and package integrity checks above; external fixture evidence is linked in this Resolution.
+Disclosure: decision | none | [Recovery decision above](#comments), checked against its proxy receipt, was fulfilled without changing the contract.
+Disclosure: pending | release | [Product QA in spec section 15.1](../../../docs/spec.md#151-release-and-tickets) remains Bruno's release acceptance. The future tagged workflow and clean-machine Stockfish package have not been exercised; local fixture checks establish packaging behavior, not that release acceptance. Game analysis remains the open [REV-002](53-REV-002-analysis-engine-and-files.md) deliverable.
