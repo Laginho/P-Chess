@@ -5,6 +5,7 @@
 [ext_resource type="PackedScene" path="res://ui/move_list.tscn" id="3"]
 [ext_resource type="PackedScene" path="res://ui/setup.tscn" id="4"]
 [ext_resource type="PackedScene" path="res://ui/clock.tscn" id="5"]
+[ext_resource type="Script" path="res://ui/resize_grip.gd" id="6"]
 
 [sub_resource type="StyleBoxFlat" id="ScoreBox"]
 bg_color = Color(0.2, 0.2, 0.2, 1)
@@ -40,6 +41,12 @@ alignment = 1
 layout_mode = 2
 size_flags_horizontal = 1
 
+[node name="ResizeGrip" type="Control" parent="Layout/BoardView"]
+layout_mode = 0
+offset_right = 20.0
+offset_bottom = 20.0
+script = ExtResource("6")
+
 [node name="Starting" type="PanelContainer" parent="Layout/BoardView"]
 visible = false
 layout_mode = 1
@@ -60,6 +67,7 @@ horizontal_alignment = 1
 [node name="Side" type="VBoxContainer" parent="Layout"]
 custom_minimum_size = Vector2(240, 0)
 layout_mode = 2
+size_flags_horizontal = 3
 
 [node name="BlackClockRow" type="HBoxContainer" parent="Layout/Side"]
 layout_mode = 2

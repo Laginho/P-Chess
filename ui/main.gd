@@ -17,6 +17,7 @@ const History = preload("res://core/history.gd")
 const ReviewScreen = preload("res://ui/review.tscn")
 
 const WINNERS := {"1-0": "White wins", "0-1": "Black wins", "1/2-1/2": "Draw"}
+const MIN_BOARD_SIZE := 320
 
 var sound_player := SoundPlayer.new()
 var uci := UCI.new()
@@ -140,6 +141,7 @@ func _ready() -> void:
 	# The catalog takes seconds to parse: start it now so the first game does not wait for it.
 	setup.get_node("OpeningPicker").ensure_catalog()
 	$Layout.resized.connect(_fit_board)
+	$Layout/BoardView/ResizeGrip.size_requested.connect(_resize_board)
 	_fit_board()
 	settings_screen.store = preferences
 	add_child(settings_screen)
@@ -348,12 +350,25 @@ func _apply(key: String, value) -> void:
 			maia.book_intensity = value
 		"auto_claim":
 			board_view.game.auto_claim = value
+		"board_size":
+			_fit_board()
 
 
 # The board stays square and the side panel sits right next to it.
 func _fit_board() -> void:
-	board_view.custom_minimum_size.x = maxf(0, minf($Layout.size.y,
+	var fit := _board_fit_size()
+	var chosen: int = preferences.get_value("board_size")
+	board_view.custom_minimum_size.x = fit if chosen == 0 else clampf(chosen, minf(MIN_BOARD_SIZE, fit), fit)
+
+
+func _board_fit_size() -> float:
+	return maxf(0, minf($Layout.size.y,
 			$Layout.size.x - $Layout/Side.get_combined_minimum_size().x - 16))
+
+
+func _resize_board(side: int) -> void:
+	var fit := _board_fit_size()
+	preferences.set_value("board_size", 0 if side == 0 else roundi(clampf(side, minf(MIN_BOARD_SIZE, fit), fit)))
 
 
 func _set_flipped(flipped: bool) -> void:

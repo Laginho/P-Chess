@@ -6,6 +6,52 @@ extends "res://tests/run.gd".Test
 const BoardView = preload("res://ui/board_view.gd")
 
 
+func test_board_size_clamps_and_fit_follows_layout():
+	var main = preload("res://ui/main.tscn").instantiate()
+	main.preferences = preload("res://core/settings.gd").new("user://test_ui015_size.cfg")
+	main.preferences.set_value("board_size", 0)
+	Engine.get_main_loop().root.add_child(main)
+	var layout = main.get_node("Layout")
+	layout.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	layout.size = Vector2(1000, 700)
+	main._fit_board()
+	assert_eq(main.board_view.custom_minimum_size.x, 700)
+	main.preferences.set_value("board_size", 1)
+	assert_eq(main.board_view.custom_minimum_size.x, 320)
+	main.preferences.set_value("board_size", 900)
+	assert_eq(main.board_view.custom_minimum_size.x, 700)
+	main.preferences.set_value("board_size", 0)
+	layout.size = Vector2(900, 500)
+	main._fit_board()
+	assert_eq(main.board_view.custom_minimum_size.x, 500)
+	main.free()
+	DirAccess.remove_absolute("user://test_ui015_size.cfg")
+
+
+func test_grip_drag_saves_size_and_double_click_restores_fit():
+	var main = preload("res://ui/main.tscn").instantiate()
+	var path := "user://test_ui015_grip.cfg"
+	DirAccess.remove_absolute(path)
+	main.preferences = preload("res://core/settings.gd").new(path)
+	Engine.get_main_loop().root.add_child(main)
+	var grip = main.get_node("Layout/BoardView/ResizeGrip")
+	var press := _mouse(true, Vector2(10, 10))
+	grip._gui_input(press)
+	var motion := InputEventMouseMotion.new()
+	motion.relative = Vector2(-100, -100)
+	grip._gui_input(motion)
+	var saved: int = main.preferences.get_value("board_size")
+	assert_true(saved > 0, "drag selects a fixed size")
+	assert_eq(preload("res://core/settings.gd").new(path).get_value("board_size"), saved)
+	grip._gui_input(_mouse(false, Vector2(10, 10)))
+	press.double_click = true
+	grip._gui_input(press)
+	assert_eq(main.preferences.get_value("board_size"), 0, "double-click resets fit")
+	assert_eq(preload("res://core/settings.gd").new(path).get_value("board_size"), 0)
+	main.free()
+	DirAccess.remove_absolute(path)
+
+
 func test_point_to_square_with_white_at_the_bottom():
 	assert_eq(BoardView.square_at(Vector2(0, 0), 800, false), "a8")
 	assert_eq(BoardView.square_at(Vector2(799, 799), 800, false), "h1")

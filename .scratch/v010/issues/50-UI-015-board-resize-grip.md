@@ -1,5 +1,5 @@
 # UI-015: Board resize grip
-Stage: to-implement
+Stage: to-review
 Blocked by: none
 Review: agent
 Difficulty: normal
@@ -38,3 +38,8 @@ A grip on the board's bottom-right corner lets you drag the board bigger or smal
 ## Comments
 
 - 2026-10-30 Written from spec §8.7 and §15.10.
+- Stage 2: setting and board-size tests failed before implementation; the grip test failed when its double-click reset was temporarily disabled. Gate: 286 passed, 0 failed (Godot 4.7, headless).
+- Acceptance: pending | Manual drag, restart, double-click reset, cursor and rendered layout remain to be checked in a graphical session.
+- Disclosure: pending | release | Manual acceptance above remains outstanding.
+
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\ui015-gate.json
