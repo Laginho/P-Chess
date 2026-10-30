@@ -55,11 +55,43 @@ func test_invalid_fen_sends_nothing_and_cancellation_writes_nothing():
 	DirAccess.remove_absolute(path)
 	assert_true(not analyser.analyse([START, "invalid"], path, true))
 	assert_true(bridge.searches.is_empty())
+	assert_true(not analyser.analyse([START, "8/8/8/8/8/8/8/8 w - - 0 1"], path, true), "missing kings")
+	assert_true(bridge.searches.is_empty())
 	assert_true(analyser.analyse([START], path, true))
 	analyser.cancel()
 	bridge.answer()
 	assert_eq(bridge.stops, 1)
 	assert_true(not FileAccess.file_exists(path))
+	analyser.free()
+
+
+func test_recorded_stockfish_transcript_keeps_both_lines():
+	var bridge := FakeBridge.new()
+	var analyser = Analyser.new(bridge)
+	var path := "user://rev002-transcript.json"
+	assert_true(analyser.analyse([START], path, false))
+	var lines := FileAccess.get_file_as_string("res://tests/fixtures/analysis/stockfish19-start.txt").split("\n", false)
+	for line in lines:
+		bridge.callback.call(line)
+	var data: Dictionary = Analyser.read_analysis(path, "Stockfish 19", 3000000).data
+	assert_eq(data.positions[0].best_move, "e2e4")
+	assert_eq(data.positions[0].pv[0].cp, 19)
+	assert_eq(data.positions[0].pv[1].moves[0], "d2d4")
+	DirAccess.remove_absolute(path)
+	analyser.free()
+
+
+func test_incomplete_depth_does_not_count_for_convergence():
+	var bridge := FakeBridge.new()
+	var analyser = Analyser.new(bridge)
+	assert_true(analyser.analyse([START], "user://rev002-depth.json", false))
+	for depth in [10, 11, 12]:
+		bridge.callback.call("info depth %d multipv 1 score cp 30 pv e2e4" % depth)
+		if depth != 11:
+			bridge.callback.call("info depth %d multipv 2 score cp 10 pv d2d4" % depth)
+	assert_eq(bridge.stops, 0, "depth 11 did not finish")
+	analyser.cancel()
+	bridge.callback.call("bestmove e2e4")
 	analyser.free()
 
 
