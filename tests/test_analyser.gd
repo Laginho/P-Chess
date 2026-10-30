@@ -9,6 +9,9 @@ class FakeBridge extends RefCounted:
 	var searches := []
 	var callback := Callable()
 	var stops := 0
+	var new_games := 0
+	func new_game() -> void:
+		new_games += 1
 	func request_search(commands: PackedStringArray, next: Callable) -> void:
 		searches.append(Array(commands))
 		callback = next
@@ -31,7 +34,7 @@ func test_reverse_order_progress_persistence_and_staleness():
 	assert_true("position fen " + AFTER in bridge.searches[0])
 	assert_true("setoption name MultiPV value 2" in bridge.searches[0])
 	assert_true("setoption name Threads value 1" in bridge.searches[0])
-	assert_true("ucinewgame" in bridge.searches[0])
+	assert_eq(bridge.new_games, 1)
 	assert_true("go nodes 3000000" in bridge.searches[0])
 	bridge.answer()
 	assert_true("position fen " + START in bridge.searches[1])
@@ -109,6 +112,17 @@ func test_terminal_and_forced_positions_are_recorded():
 	assert_eq(positions[1].pv, [])
 	assert_eq(positions[1].terminal_score, -1000)
 	assert_eq(positions[0].pv.size(), 1)
+	DirAccess.remove_absolute(path)
+	analyser.free()
+
+
+func test_terminal_only_game_still_starts_one_engine_game():
+	var bridge := FakeBridge.new()
+	var analyser = Analyser.new(bridge)
+	var path := "user://rev002-terminal-only.json"
+	assert_true(analyser.analyse(["7k/6Q1/6K1/8/8/8/8/8 b - - 0 1"], path, false))
+	assert_eq(bridge.new_games, 1)
+	assert_true(bridge.searches.is_empty())
 	DirAccess.remove_absolute(path)
 	analyser.free()
 
