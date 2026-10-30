@@ -502,8 +502,8 @@ func _reset_match() -> void:
 
 static func _format_score(half_points: int) -> String:
 	var whole := half_points / 2
-	return (str(whole) if whole > 0 or half_points == 0 else "") + ("?" if half_points % 2 else "")
+	return (str(whole) if whole > 0 or half_points == 0 else "") + (String.chr(0x00bd) if half_points % 2 else "")
 
 
 func match_score_text() -> String:
-	return "You %s ? %s Maia %s" % [_format_score(_human_score), _format_score(_maia_score), settings.level.trim_prefix("maia-")]
+	return "You %s %s %s Maia %s" % [_format_score(_human_score), String.chr(0x2013), _format_score(_maia_score), settings.level.trim_prefix("maia-")]
