@@ -39,7 +39,7 @@ func _run() -> void:
 	analyser.finished.connect(_finished)
 	var output := "user://analysis".path_join(args[0].get_file() + ".json")
 	_started = Time.get_ticks_msec()
-	if not analyser.analyse(positions, output, true):
+	if not analyser.analyse(positions, output, true, parsed.games[0].result == "1/2-1/2"):
 		_fail("Could not start analysis")
 
 

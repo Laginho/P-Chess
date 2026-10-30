@@ -20,13 +20,14 @@ var _depths := {}
 var _completed := {}
 var _setup := PackedStringArray()
 var _waiting_for_engine := false
+var _draw_at_end := false
 
 
 func _init(bridge = null) -> void:
 	_bridge = bridge
 
 
-func analyse(fens: Array, path: String, maximum: bool) -> bool:
+func analyse(fens: Array, path: String, maximum: bool, draw_at_end := false) -> bool:
 	if _active or _bridge == null or fens.is_empty():
 		return false
 	for fen in fens:
@@ -35,6 +36,7 @@ func analyse(fens: Array, path: String, maximum: bool) -> bool:
 	_fens = fens.duplicate()
 	_positions.resize(fens.size())
 	_path = path
+	_draw_at_end = draw_at_end
 	_index = fens.size() - 1
 	_cancelled = false
 	_active = true
@@ -117,7 +119,7 @@ func _next() -> void:
 		return
 	var board = Board.from_fen(_fens[_index])
 	var legal: PackedStringArray = board.legal_moves()
-	if legal.is_empty() or board.halfmove_clock >= 100 or (board.cannot_mate("w") and board.cannot_mate("b")):
+	if (_draw_at_end and _index == _fens.size() - 1) or legal.is_empty() or board.halfmove_clock >= 100 or (board.cannot_mate("w") and board.cannot_mate("b")):
 		# Terminal scores use the side to move, just like UCI scores.
 		_positions[_index] = {"fen": _fens[_index], "pv": [], "best_move": "",
 				"terminal_score": -1000 if legal.is_empty() and board.in_check() else 0}
