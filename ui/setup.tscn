@@ -79,7 +79,7 @@ tooltip_text = "Saved repertoire"
 
 [node name="Import" type="Button" parent="Center/Form/RepertoireControls"]
 layout_mode = 2
-text = "Import PGN…"
+text = "Repertoires..."
 
 [node name="Start" type="Button" parent="Center/Form"]
 layout_mode = 2
