@@ -1,5 +1,5 @@
 # REV-002: Analyse a game with Stockfish and store the result
-Stage: to-review
+Stage: done
 Blocked by: CI-004, REV-001
 Review: agent
 Difficulty: hard
@@ -91,3 +91,25 @@ Given a saved game, run Stockfish over every position and write `user://analysis
   > This doesn't need the owner: the change is internal and easy to undo, with no public API, merge, credential or data at stake.
   > 
   > I didn't run the gate, and no real Stockfish `id name` or `stop` exchange was tried. The fake-stdio tests only cover the bridge's own bookkeeping.
+
+#### Resolution (2026-10-30)
+
+Verdict: Approve
+
+- Standards: 0 documented violations and 0 relevant heuristic findings. Spec: 0 confirmed findings against criteria 1-8. Independent Standards and Spec reviewers examined the full `7be9cac...18adc82` diff; the primary reviewer also read every changed file and the connected code. Coverage: total_files=9, reviewed_files=9, skipped_files=0, coverage_rate=100%. OCR excluded all nine files as `unsupported_ext`; all were reviewed manually with its default correctness, security, performance, maintainability and test-coverage rules.
+- Criterion 1: passed. Positions are searched last to first with MultiPV 2; `new_game()` is called once, including terminal-only games, and no per-position hash reset is sent.
+- Criterion 2: passed. The node budget and convergence thresholds live in `core/tunables.gd`. The pure function checks the last three completed PV1 depths, minimum depth 12, the same first move, EP range below 0.01, cp clamping and mate conversion. MultiPV completion waits for PV2 when two legal lines exist; `stop` is sent at most once per search.
+- Criterion 3: passed. Background sends one thread; Max sends `max(1, logical cores - 1)`. The tests inspect both command configurations.
+- Criterion 4: passed. The complete FEN array is validated before any engine command: Board parsing, king counts, pawn ranks, the previous mover's king safety and castling pieces. Invalid input rejects the analysis without starting a game or search.
+- Criterion 5: passed. JSON records the game-ordered positions, per-line moves/score/depth, best move, handshake engine identity and budget. Forced positions retain PV1 only; terminal positions have no PV and use side-to-move scores (-1000 for checkmate, 0 for draws). The CLI passes the final draw result; analysis writes a separate JSON and does not write the PGN.
+- Criterion 6: passed. Missing files read as not analysed; mismatched engine version or node budget reads as stale. Malformed JSON is also treated as stale.
+- Criterion 7: passed. `position_ready(index, position)` and `progress(done, total)` publish completed positions. Cancellation stops the current search once, ignores its remaining output and writes no result; cancellation from a position callback prevents the next search.
+- Criterion 8: passed. The headless CLI validates a single PGN, reconstructs its initial and subsequent positions, starts Stockfish on Max and writes `user://analysis/<PGN filename>.json`. Stage 2 recorded a successful two-ply synthetic Stockfish 19 run in 0.9 s with unchanged PGN SHA-256; this review did not repeat that run. A real saved-game timing/JSON check remains pending product acceptance.
+- Examined callers and failure paths: full UCI handshake, queued callbacks, search stop and process cleanup; existing Maia setup and policy path; Board FEN/move/terminal handling; PGN replay; CLI startup/stopped-engine/write failures; analyser convergence, terminal/forced positions, missing/stale files, cancellation during a search and from progress callbacks. Future REV-005/HIST-006 UI/queue consumers do not exist in this change and were not exercised. No changed file was skipped.
+- Scope decision: the recorded `Proxy decided (opus-5.5 xhigh): Approve widening engine/uci.gd and tests/test_uci.gd by exactly two seams` authorizes handshake `id name` and in-search `stop`. The receipt `C:\Users\bruno\AppData\Local\Temp\sweatshop-proxy\20261030-191716-REV-002-cdc3e7.json` matches REV-002 and that decision. The implementation preserves process-killing `stop()` and Maia behavior; no additional bridge seam was introduced.
+- Test evidence: separate test/production commits were checked, including bridge identity/stop (`5c16ba3` / `cf8c186`), convergence (`d1710c3` / `82d6962`), lifecycle/storage (`c6c699a` / `a98355c`) and subsequent focused additions. Historical red executions were not replayed in this review. The recorded Stockfish transcript exercises the production MultiPV parser; the green gate includes the later cancellation regression test.
+- Verification: the existing receipt and log SHA-256 were verified using `Assert-GateEvidence`, with 286 passed, 0 failed, 0 skips and exit 0 on `1a7332815c6fd9eff8f0d892d5f107cdc66c858a`. Only ticket metadata changed after that tested commit. The gate was reused, not rerun, because no production code changed during review, rebase or merge. Log: `C:\Users\bruno\AppData\Local\Temp\rev002-gate.log`.
+- Integration: rebased onto `sweatshop/analysis/2026-10-30-1831` (already current), then merged without squash as `8a79621`. This resolution, `Stage: done` and the ledger entry are committed together on the session branch. No production behavior was authored during review.
+
+Disclosure: decision | none | [Recorded proxy scope decision](#comments), receipt `C:\Users\bruno\AppData\Local\Temp\sweatshop-proxy\20261030-191716-REV-002-cdc3e7.json`: two internal bridge interfaces were approved to satisfy criteria 2, 5 and 6; their implementation and regression tests are included here.
+Disclosure: pending | release | Run `scripts/analyse.gd` on a real saved game, inspect the complete JSON and elapsed time, and verify the PGN remains unchanged. The recorded synthetic run and fixture/headless checks do not establish that product acceptance. This remains part of [Bruno's release QA in spec section 15.1](../../../docs/spec.md#151-release-and-tickets), and does not prevent session integration.
