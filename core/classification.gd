@@ -1,6 +1,8 @@
 extends RefCounted
 
 const Badges = preload("res://bot/badges.gd")
+const Board = preload("res://core/board.gd")
+const Tunables = preload("res://core/tunables.gd")
 
 
 # Analysis scores are from the side to move in each stored position.
@@ -22,7 +24,15 @@ static func evaluate(moves: PackedStringArray, analysis: Dictionary, catalog: Ar
 		var before_ep := _ep(_score(best))
 		var after_ep := _ep(played_score)
 		var loss := maxf(0.0, before_ep - after_ep)
-		var label := "Best" if moves[i] == before.best_move else "Excellent"
+		var label := _band(loss)
+		if Board.from_fen(before.fen).legal_moves().size() == 1:
+			label = "Forced"
+		elif marks[i].repertoire:
+			label = "Repertoire"
+		elif marks[i].book:
+			label = "Book"
+		elif moves[i] == before.best_move:
+			label = "Best"
 		result.append({"class": label, "loss": loss, "before_ep": before_ep,
 				"after_ep": after_ep, "left_repertoire": marks[i].left_repertoire,
 				"expected": marks[i].expected})
@@ -30,8 +40,20 @@ static func evaluate(moves: PackedStringArray, analysis: Dictionary, catalog: Ar
 
 
 static func _score(line: Dictionary) -> int:
-	return int(line.cp) if line.has("cp") else (1000 if line.mate > 0 else -1000)
+	return int(line.cp) if line.has("cp") else (Tunables.CLASSIFICATION_CP_LIMIT if line.mate > 0 else -Tunables.CLASSIFICATION_CP_LIMIT)
 
 
 static func _ep(cp: int) -> float:
-	return 1.0 / (1.0 + exp(-0.00368208 * clampi(cp, -1000, 1000)))
+	return 1.0 / (1.0 + exp(-Tunables.CLASSIFICATION_EP_FACTOR * clampi(cp, -Tunables.CLASSIFICATION_CP_LIMIT, Tunables.CLASSIFICATION_CP_LIMIT)))
+
+
+static func _band(loss: float) -> String:
+	if loss <= Tunables.CLASSIFICATION_EXCELLENT_LOSS:
+		return "Excellent"
+	if loss <= Tunables.CLASSIFICATION_GOOD_LOSS:
+		return "Good"
+	if loss <= Tunables.CLASSIFICATION_INACCURACY_LOSS:
+		return "Inaccuracy"
+	if loss <= Tunables.CLASSIFICATION_MISTAKE_LOSS:
+		return "Mistake"
+	return "Blunder"
