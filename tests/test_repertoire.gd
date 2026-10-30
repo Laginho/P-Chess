@@ -5,6 +5,38 @@ const Book = preload("res://bot/book.gd")
 const STUDY := "res://tests/fixtures/pgn/repertoire_study.pgn"
 
 
+func test_viewer_shows_black_line_and_steps_without_allowing_moves():
+	var setup = load("res://ui/setup.tscn").instantiate()
+	var folder := _folder()
+	setup.repertoire.storage_dir = folder
+	assert_eq(setup.repertoire.import_pgn("1. e4 e5 2. Nf3 *", "b", "Study"), "")
+	Engine.get_main_loop().root.add_child(setup)
+	var screen = setup.get_node("RepertoireScreen")
+	screen.present()
+	var list: ItemList = screen.get_node("Margin/Form/List")
+	list.item_selected.emit(0)
+	var lines: ItemList = screen.get_node_or_null("Margin/Form/Viewer/Lines")
+	var board = screen.get_node_or_null("Margin/Form/Viewer/Board")
+	assert_true(lines != null and board != null, "viewer provides lines and a board")
+	if lines != null and board != null:
+		assert_true(board.flipped, "Black is at the bottom")
+		assert_eq(lines.item_count, 1)
+		lines.item_selected.emit(0)
+		assert_eq(board.game.board.position_key(), "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq -")
+		assert_eq(board.game.moves[-1], "g1f3", "last move is highlighted")
+		var key := InputEventKey.new()
+		key.pressed = true
+		key.keycode = KEY_LEFT
+		screen._unhandled_key_input(key)
+		assert_eq(board.game.moves.size(), 2)
+		key.keycode = KEY_RIGHT
+		screen._unhandled_key_input(key)
+		assert_eq(board.game.moves.size(), 3)
+		assert_eq(board.mouse_filter, Control.MOUSE_FILTER_IGNORE, "board ignores user moves")
+	setup.free()
+	_clean(folder)
+
+
 func _repertoire():
 	var path := "res://bot/repertoire.gd"
 	assert_true(ResourceLoader.exists(path), "the production repertoire importer exists")

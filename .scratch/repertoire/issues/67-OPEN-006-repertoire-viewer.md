@@ -1,5 +1,5 @@
 # OPEN-006: View a repertoire on a board
-Stage: to-review
+Stage: implementing
 Blocked by: OPEN-005
 Review: agent
 Difficulty: normal
