@@ -423,6 +423,8 @@ These thresholds are chess.com's published expected-points table. Unlike chess.c
   - Allowing a mate: mated in ≤ 2 is a Blunder, in ≤ 5 a Mistake, otherwise an Inaccuracy.
 - **Left repertoire** stays a separate marker, on the move where you left your repertoire, with the expected moves shown.
 
+The headless classifier `core/classification.gd` takes UCI moves, the stored analysis JSON, catalog and repertoire lines, the human colour, and whether to check the repertoire. It returns one record per ply with `class`, `loss`, `before_ep`, `after_ep`, `left_repertoire` and `expected`. It uses the first stored FEN as the game's starting position. A free capture is a capture of an undefended piece; the material comparison values knights and bishops at 3, rooks at 5 and queens at 9, excluding pawns and kings. Those values and the classification thresholds live in `core/tunables.gd`.
+
 These rules are restated from public descriptions (chess.com's help pages, Lichess, Chesskit, WintrChess). No code is copied: Chesskit is AGPL-3.0 and WintrChess GPL-3.0.
 
 ### 15.5 Accuracy
