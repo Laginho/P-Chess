@@ -196,6 +196,22 @@ func test_capture_after_pawn_push_can_be_great():
 	assert_eq(result[1].class, "Great", "capturing a defended pawn after its push is not a recapture")
 
 
+func test_en_passant_free_and_defended_captures():
+	var classification = load("res://core/classification.gd")
+	for sample in [
+			["6k1/8/8/3pP3/8/8/8/6K1 w - d6 0 1", "e5d6", "Best"],
+			["6k1/8/5n2/3pP3/8/8/8/6K1 w - d6 0 1", "e5d6", "Great"],
+			["6k1/8/8/8/3Pp3/8/8/6K1 b - d3 0 1", "e4d3", "Best"],
+			["6k1/8/8/8/3Pp3/5N2/8/6K1 b - d3 0 1", "e4d3", "Great"]]:
+		var board = Board.from_fen(sample[0])
+		var legal: PackedStringArray = board.legal_moves()
+		assert_true(sample[1] in legal, "en passant is legal")
+		var alt: String = legal[0] if legal[0] != sample[1] else legal[1]
+		var data := _position(sample[0], sample[1], [sample[1]], alt)
+		var result: Array = classification.evaluate(PackedStringArray([sample[1]]), data, [], [], "w", false)
+		assert_eq(result[0].class, sample[2], sample[0])
+
+
 func test_checkmate_played_off_pv_is_best_and_leniency_applies_to_forced_mate():
 	var classification = load("res://core/classification.gd")
 	var fen := "7k/5Q2/6K1/8/8/8/8/8 w - - 0 1"
