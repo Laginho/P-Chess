@@ -1,5 +1,5 @@
 # REV-001: A UCI bridge that can run a second engine
-Stage: implementing
+Stage: to-review
 Blocked by: none
 Review: agent
 Difficulty: normal
@@ -33,3 +33,8 @@ Prefactor, no behaviour change for Maia. `engine/uci.gd` hardcodes Lc0: its path
 ## Comments
 
 - 2026-10-30 Written from spec §15.3 ("through the same bridge as Lc0").
+- Stage 2: missing-engine and search-forwarding tests failed before implementation; the Stockfish Maia-command guard was checked with a failing mutation. The two-instance regression test uses two live Lc0 processes and verifies that the survivor answers after the other stops.
+- Verification: `godot --headless -s tests/run.gd` passed, 274 passed, 0 failed, no skips, on production commit `998bb5c`.
+- Acceptance: unknown
+
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\REV-001-final-gate.json
