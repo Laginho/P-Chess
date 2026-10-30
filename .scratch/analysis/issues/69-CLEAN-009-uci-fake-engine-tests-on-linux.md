@@ -1,5 +1,5 @@
 # CLEAN-009: UCI bridge tests that fake the engine fail on Linux CI
-Stage: implementing
+Stage: to-review
 Blocked by: none
 Review: agent
 Difficulty: normal
@@ -39,3 +39,9 @@ Make both tests pass on Linux and Windows without changing what the bridge does.
 - 2026-10-30 The proxy's recipe is folded into Primary files and "Tests stage 2 writes" above. The proxy did not check whether an empty `extends SceneTree` child keeps running: confirm it with one local run before relying on it, and if it exits, take the fallback seam. The foreman confirms the Linux green on PR #26's `test` check; if it is still red, the ticket reopens.
 
 - 2026-10-30: The idle SceneTree child stayed alive in a Windows Godot 4.7 probe. Before repair, `git grep -n "get_process_id" -- tests/` found three hits in test_uci.gd; after repair it found none. Linux CI failure: https://github.com/Laginho/P-Chess/actions/runs/41143449186.
+
+- Windows Godot 4.7 mutation checks: removing `_callback.call(line)` failed the forwarding test (and the queue callback assertion); removing `_stdio.store_line("stop")` failed the queue command assertion. Both mutations were reverted. Gate on e40f327: 306 passed, 0 failed.
+
+Acceptance: pending | Linux Godot 4.7.2 session PR test check, to be verified by the foreman as specified above.
+Disclosure: pending | integration | PR #26 test check must pass on Linux; https://github.com/Laginho/P-Chess/actions/runs/41143449186 records the original failure.
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\clean009-gate.json
