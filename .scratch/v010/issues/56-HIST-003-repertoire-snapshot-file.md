@@ -1,5 +1,5 @@
 # HIST-003: Save the repertoire snapshot beside the PGN
-Stage: to-review
+Stage: implementing
 Blocked by: none
 Review: agent
 Difficulty: normal

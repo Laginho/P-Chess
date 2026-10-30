@@ -31,6 +31,23 @@ class HeldEngine extends "res://engine/uci.gd":
 		pass
 
 
+func test_repertoire_snapshot_round_trip_and_missing_file():
+	var folder := _folder()
+	var history = History.new(folder)
+	var repertoire = load("res://bot/repertoire.gd").new()
+	assert_eq(repertoire.parse("1. e4 e5 2. Nf3 *", "b"), "")
+	var game = Game.new()
+	game.resign("w")
+	var path: String = history.save(game, [], SETTINGS, "", "", repertoire.lines, repertoire.colour)
+	assert_true(FileAccess.file_exists(path.trim_suffix(".pgn") + ".repertoire.json"))
+	var snapshot: Dictionary = history.read_repertoire(path)
+	assert_eq(snapshot.colour, "b")
+	assert_eq(snapshot.lines, repertoire.lines)
+	var plain: String = history.save(game, [], SETTINGS)
+	assert_true(not FileAccess.file_exists(plain.trim_suffix(".pgn") + ".repertoire.json"))
+	assert_eq(history.read_repertoire(plain).lines, [])
+	HistoryStorage.clean(folder)
+
 func _session(folder: String, time: FakeTime, settings := SETTINGS):
 	var main = MainScene.instantiate()
 	main.get_node("Setup").book.load_tsv("eco\tname\tpgn\nA00\tFixture\t1. h3\n")
