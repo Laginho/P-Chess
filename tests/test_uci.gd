@@ -79,6 +79,40 @@ func test_missing_engine_reports_unavailable_naming_the_fetch_script():
 	uci.free()
 
 
+func test_missing_stockfish_names_the_engine_and_path():
+	var uci = UCI.new("engine/stockfish/stockfish.exe", "Stockfish")
+	assert_eq(uci.start(PackedStringArray([OS.get_user_data_dir().path_join("test_uci/empty")])), false)
+	assert_eq(uci.error, "Stockfish is missing (engine/stockfish/stockfish.exe). Run scripts/fetch-engine.ps1 to download it.")
+	uci.free()
+
+
+func test_search_forwards_all_info_and_bestmove_to_the_request_callback():
+	var uci = UCI.new("engine/stockfish/stockfish.exe", "Stockfish")
+	uci.available = true
+	uci.pid = OS.get_process_id()
+	uci._stdio = FileAccess.open("user://rev001-commands.txt", FileAccess.WRITE)
+	var received := []
+	uci.request_search(["position startpos", "go depth 2"], func(line): received.append(line))
+	uci._lines.append_array(["info depth 1 multipv 1 score cp 20", "info depth 2 multipv 2 score cp 10", "bestmove e2e4"])
+	uci.poll()
+	assert_eq(received, ["info depth 1 multipv 1 score cp 20", "info depth 2 multipv 2 score cp 10", "bestmove e2e4"])
+	uci.pid = -1
+	uci.free()
+
+
+func test_stockfish_does_not_send_maia_requests():
+	var uci = UCI.new("engine/stockfish/stockfish.exe", "Stockfish")
+	uci.available = true
+	uci.pid = OS.get_process_id()
+	uci._stdio = FileAccess.open("user://rev001-stockfish-commands.txt", FileAccess.WRITE)
+	uci.set_level("weights.pb.gz")
+	uci.request_policy(START, PackedStringArray())
+	assert_eq(uci._stdio.get_position(), 0, "no Maia commands are sent")
+	assert_true(uci._steps.is_empty(), "no Maia commands are queued")
+	uci.pid = -1
+	uci.free()
+
+
 # Polls on this thread, as the game's _process does, until bestmove or a 30 s timeout.
 func _policy(uci, moves: String) -> Dictionary:
 	var got := []
@@ -123,6 +157,24 @@ func _live_engine(test_name: String) -> String:
 	if exe == "":
 		print("SKIP test_uci.gd::%s: no engine/lc0/lc0.exe, run scripts/fetch-engine.ps1" % test_name)
 	return exe
+
+
+func test_stopping_one_bridge_leaves_the_other_running():
+	var exe := _live_engine("test_stopping_one_bridge_leaves_the_other_running")
+	if exe == "":
+		return
+	var first = UCI.new()
+	var second = UCI.new()
+	assert_true(first.start(), first.error)
+	assert_true(second.start(), second.error)
+	var second_pid: int = second.pid
+	assert_true(first.pid != second_pid, "separate engine processes")
+	first.stop()
+	assert_true(OS.is_process_running(second_pid), "second engine survives first stop")
+	second.set_level(exe.get_base_dir().get_base_dir().path_join("weights/maia-1100.pb.gz"))
+	assert_true(not _policy(second, ITALIAN).is_empty(), "second engine still answers")
+	first.free()
+	second.free()
 
 
 func _wait_for_stop(uci, stops: Array) -> void:
