@@ -1,5 +1,5 @@
 # BOT-011: Draw offer, answered by Maia
-Stage: to-review
+Stage: reviewing
 Blocked by: UI-013
 Review: agent
 Difficulty: hard
@@ -53,6 +53,8 @@ A ½ button beside the resign button offers Maia a draw (§15.2). Maia answers w
 - 2026-10-30: Lc0 v0.32.1, maia-1100, start position, `go nodes 1`: `info depth 1 seldepth 1 time 21 nodes 1 score cp 116 tbhits 0 pv e2e4`; `bestmove e2e4`.
 
 - 2026-10-30: The cooldown test was red with a nine-move mutant and green at ten; the live UCI test was red when score delivery was removed and green with it restored. The existing resignation session tests were updated for the action row.
+
+- 2026-10-30 Stage 3: Standards and Spec found no blocking defect in the complete diff. Updated only the `core/game.gd` reason-list comment to include `agreement`; behavior is unchanged. A fresh gate will cover this review commit before session integration.
 
 ## Resolution
 

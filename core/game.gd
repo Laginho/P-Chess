@@ -14,7 +14,7 @@ var moves := PackedStringArray()
 var auto_claim := false
 # PGN result: "*" while the game is on, then "1-0", "0-1" or "1/2-1/2".
 var result := "*"
-# checkmate, stalemate, 50-move, repetition, insufficient material, time or resignation.
+# checkmate, stalemate, 50-move, repetition, insufficient material, time, resignation or agreement.
 var reason := ""
 # Position key -> times it has occurred.
 var _seen := {}
