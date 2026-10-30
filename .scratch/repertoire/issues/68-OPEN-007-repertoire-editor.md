@@ -1,5 +1,5 @@
 # OPEN-007: Edit a repertoire on the board
-Stage: to-review
+Stage: done
 Blocked by: OPEN-006
 Review: agent
 Difficulty: normal
@@ -68,3 +68,20 @@ Disclosure: pending | release | [Verification](#verification): manual editor lay
 - Acceptance: pending | [Verification](#verification): manually inspect editor layout and physical input, add and delete a branch, save, and play in My repertoire mode.
 - Disclosure: pending | integration | The four reopened findings require stage-3 re-review.
 - Disclosure: pending | release | Manual editor layout, physical input, and My repertoire acceptance remain outstanding.
+
+#### Resolution (2026-10-30)
+Verdict: Approve
+
+- Re-reviewed `5f837550b8edbd7686652ad3ec496a84a1fc66e9...21cc6cc03ffef156be8185c62dcc70c3de7e6b8d` after the four reopened repairs, using independent Standards and Spec reviewers. Coverage: 5 changed files, 5 reviewed, 0 skipped; the original 7-file implementation review remains recorded above. No production behavior was authored during this review.
+- Standards: 0 documented violations and 0 material baseline smells. The four new test-only commits alternate with production-only fixes; all changes remain within Primary files, with reopen/handoff metadata separate.
+- Spec: 0 new findings and no scope creep. All four previous findings are resolved. Criterion 1 passes: Edit enables only after successful load, resets after refresh/failure, and real dispatched clicks open both the root and a selected line's final position. Criterion 2 passes: the editor permits legal moves after automatic draws while Game/Board continue validating legality; normal gameplay still uses Game. Criterion 3 passes: tree-node selection shows the matching position. Criterion 4 passes: right-click removes the move and descendants, then refreshes Tree/board after the deferred queue drains. Criterion 5 passes: save/reload preserves branches and leading variation annotations in the existing format; Cancel isolation and Book/Badges consumers remain valid. Criterion 6 passes: no annotation or main-line editing controls were added.
+- Rechecked callers, failure paths and interactions: repertoire selection/refresh, invalid saved JSON, root/selected-line entry, normal Game and BoardView legality checks, draw positions, Tree mouse dispatch/deferred rebuilding, PGN RAV parsing and merged annotations, custom-FEN/Black roots, and Setup/Book/Badges consumers. No additional affected path was identified. Rendered layout, physical device input and live My repertoire play were not verified.
+- Red/green evidence inspected: availability 14 passed / 1 failed -> 15 / 0; the legal-draw reproduction failed on the rejected move and missing saved continuation; annotation reproduction failed on misplaced/missing leading comments; real right-click reproduction failed on Tree selection-guard errors and stale Tree/board. Each corresponding focused green log reports 0 failures. Source/test commits remain separate.
+- Gate receipt `C:/Users/bruno/AppData/Local/Temp/open007-reopen-gate.json` was verified after rebase: bound command, exit 0, log SHA-256 and code equality against tested commit `14aa98d2472c67a5574cdbadc0ae77124f933b24` all match. Result: 280 reported passed, 0 failed, including 4 Lc0 skips (276 executed). Reused the receipt because production did not change; no full gate rerun.
+- Additional synthetic input probe: `C:/Users/bruno/AppData/Local/Temp/open007-rereview-ui-probe.gd` and `.log`, 15 checks passed, 0 failures, exit 0. Covered actual Edit activation at root/leaf, tree-node selection, board drag branching, right-click subtree removal, deferred Tree/board refresh and save/reload. The probe waits for the deferred queue; its earlier one-frame observation ran before that refresh and is not a product defect.
+- Independent serialization probe: `C:/Users/bruno/AppData/Local/Temp/open007-spec-rereview-nesting.gd` and `.log`, 3 exact tree/line round-trips passed, exit 0, covering nested leading comments, NAGs/post-comments, sibling branches and a Black-to-move FEN root. Probe startup reported environment log/certificate-store warnings; no product script/Tree errors occurred.
+- Rebased onto `sweatshop/repertoire/2026-10-30-1830` (already current), merged the ticket history without squash as `ac455eb`, and recorded Stage: done with the ledger in this closure commit. The earlier integration disclosures are resolved by this re-review. No push or PR was performed; the session driver owns publication.
+
+Acceptance: pending | [Verification](#verification): manually add a branch to an imported repertoire, delete a sub-line, save and play in My repertoire mode; inspect rendered layout and physical input. Automated implementation checks passed.
+Disclosure: decision | none | [Resolution](#resolution-2026-10-30): all four reopened findings are repaired and independently re-reviewed; session integration is approved.
+Disclosure: pending | release | [Verification](#verification): manual editor layout, physical input and My repertoire acceptance remain release conditions.
