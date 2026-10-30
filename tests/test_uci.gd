@@ -189,3 +189,26 @@ func test_missing_net_reports_stopped_instead_of_waiting_for_readyok():
 	assert_true(policies.is_empty(), "a failed net emits no policy")
 	uci.free()
 	assert_eq(stops.size(), 1, "freeing a failed bridge does not emit stopped again")
+
+
+func test_search_score_is_in_pawns_and_absent_without_cp():
+	var transcript := PackedStringArray([_line("e2e4", 12.0), "info depth 1 nodes 1 score cp 34 pv e2e4", "bestmove e2e4"])
+	assert_eq(UCI.parse_score(transcript), 0.34, "score belongs to the side to move")
+	assert_eq(UCI.parse_score(PackedStringArray([_line("e2e4", 12.0), "bestmove e2e4"])), null, "no score")
+	assert_eq(UCI.parse_score(PackedStringArray(["info depth 1 score cp -150 pv e2e4"])), -1.5, "negative score")
+
+
+func test_live_policy_exposes_the_score_of_that_search():
+	var exe := _live_engine("test_live_policy_exposes_the_score_of_that_search")
+	if exe == "":
+		return
+	var uci = UCI.new()
+	assert_true(uci.start(), uci.error)
+	uci.set_level(exe.get_base_dir().get_base_dir().path_join("weights/maia-1100.pb.gz"))
+	var observed := []
+	uci.policy_ready.connect(func(_policy): observed.append(uci.evaluation))
+	_policy(uci, "e2e4")
+	assert_eq(observed.size(), 1, "one score with the reply")
+	if observed.size() == 1:
+		assert_true(observed[0] is float, "live search supplies a cp score in pawns")
+	uci.free()

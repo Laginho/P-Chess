@@ -11,6 +11,7 @@ const Clock = preload("res://core/clock.gd")
 const MovePicker = preload("res://bot/move_picker.gd")
 const TimeModel = preload("res://bot/time_model.gd")
 const UCI = preload("res://engine/uci.gd")
+const Tunables = preload("res://core/tunables.gd")
 
 var rng := RandomNumberGenerator.new()
 # The game's core/clock.gd and its control ("3+2"); without a clock Maia answers at once.
@@ -21,6 +22,8 @@ var level := ""
 var time_table := TimeModel.load_table(TimeModel.TABLE)
 # From think() to Lc0's answer, one entry per move; the think time comes after.
 var latencies_ms := []
+# Score associated with the most recently emitted move_ready.
+var evaluation = null
 # The picker's cut and temperature (§3.3) and the panic intensity (§3.4), from the settings.
 var tau := MovePicker.DEFAULT_TAU
 var temperature := MovePicker.DEFAULT_TEMPERATURE
@@ -42,6 +45,20 @@ func _init(bridge, wait_for_timeout := Callable()) -> void:
 	_bridge = bridge
 	_bridge.policy_ready.connect(_on_policy)
 	_wait_for_timeout = wait_for_timeout if wait_for_timeout.is_valid() else _timer_timeout
+
+
+# The evaluation is in pawns from Maia's side; no evaluation always declines.
+static func accepts_draw(evaluation, board, maia_left: float, start: float) -> bool:
+	if evaluation == null:
+		return false
+	var values := {"q": 9, "r": 5, "b": 3, "n": 3}
+	var nonpawn := 0
+	for piece in board.squares:
+		nonpawn += values.get(piece.to_lower(), 0)
+	var fp := 1.0 - nonpawn / Tunables.DRAW_START_NONPAWN
+	var ft := 1.0 - maia_left / start
+	var phase := (fp + ft) / 2.0
+	return evaluation <= Tunables.DRAW_EVAL_LOSING or (evaluation <= Tunables.DRAW_EVAL_MAX and phase >= Tunables.DRAW_PHASE_MIN)
 
 
 # engine/weights/<level>.pb.gz next to the engine found by the bridge.
@@ -105,6 +122,7 @@ func _on_policy(policy: Dictionary) -> void:
 				top = move
 		request.reply.expected = top == request.last_move
 		return
+	var score = _bridge.evaluation if _bridge is UCI else null
 	var game = request.game
 	var legal: PackedStringArray = game.board.legal_moves()
 	var usable := {}
@@ -132,6 +150,7 @@ func _on_policy(policy: Dictionary) -> void:
 		if wait > 0.0:
 			await _wait_for_timeout.call(wait)
 	if _is_current(request):
+		evaluation = score
 		move_ready.emit(move)
 
 

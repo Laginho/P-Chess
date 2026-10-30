@@ -14,7 +14,7 @@ var moves := PackedStringArray()
 var auto_claim := false
 # PGN result: "*" while the game is on, then "1-0", "0-1" or "1/2-1/2".
 var result := "*"
-# checkmate, stalemate, 50-move, repetition, insufficient material, time or resignation.
+# checkmate, stalemate, 50-move, repetition, insufficient material, time, resignation or agreement.
 var reason := ""
 # Position key -> times it has occurred.
 var _seen := {}
@@ -46,6 +46,11 @@ func can_claim_draw() -> bool:
 func claim_draw() -> void:
 	if can_claim_draw():
 		_end("1/2-1/2", "repetition")
+
+
+func agree_draw() -> void:
+	if not is_over():
+		_end("1/2-1/2", "agreement")
 
 
 # side is "w" or "b", as Board.side_to_move.
