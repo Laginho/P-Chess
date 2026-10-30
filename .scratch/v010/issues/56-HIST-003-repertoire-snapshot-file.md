@@ -1,5 +1,5 @@
 # HIST-003: Save the repertoire snapshot beside the PGN
-Stage: to-implement
+Stage: blocked
 Blocked by: none
 Review: agent
 Difficulty: normal
@@ -32,3 +32,5 @@ When a game is played with a repertoire loaded, the lines it was checked against
 ## Comments
 
 - 2026-10-30 Written from spec §15.7.
+
+- 2026-10-30 Review ended at blocked (exit 0); branch HIST-003 holds the review; left for a human
