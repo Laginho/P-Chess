@@ -379,7 +379,7 @@ Every tunable number in §15 (analysis budget, convergence, classification thres
 - **Budget:** a fixed 3M nodes per position, with no setting. The search stops early once it has reached depth 12 and the last 3 completed depths have the same best move and an expected-points change under 0.01.
 - **Threads:** "Background" uses 1 thread; "Max" uses the logical cores − 1. No GPU (Stockfish is CPU only).
 - **Speed** on the i5-12400F, roughly 6M nodes/s on 10 threads: up to ~40 s per 40-move game on Max, ~5 min on Background. Convergence should cut that. These numbers are this machine's.
-- **Storage:** `user://analysis/<game file name>.json` holds, for every position, both PV lines with their scores and best moves, plus the engine version and the node budget. A file whose version or budget differs from the current one is **stale**. The PGN is never touched.
+- **Storage:** `user://analysis/<game file name>.json` holds, for every position, up to two PV lines with their scores and best moves, plus the engine version and the node budget. A position with one legal move has only PV1 (its move is Forced, so no rule reads PV2); a position where the game is over has no PV and stores its terminal score instead (§15.4). A file whose version or budget differs from the current one is **stale**. The PGN is never touched.
 - **When:** analysis runs only when asked (§15.6, §15.7), never on its own after a game.
 
 ### 15.4 Move classification
@@ -429,6 +429,7 @@ These rules are restated from public descriptions (chess.com's help pages, Liche
 Lichess's formulas (`AccuracyPercent.scala` in lila). Win% is `100·EP`, so drops and the std-dev below are in percentage points (0–100), not EP's 0–1.
 - **Per move:** 100 when the win% did not drop. Otherwise `103.1668·e^(−0.04354·drop) − 3.1669 + 1`, clamped to 0–100.
 - **Per game:** the mean of the volatility-weighted mean and the harmonic mean of that side's move accuracies. The window is plies/10 rounded down, clamped to 2–8. The win% series starts at the initial position; windows slide over it one ply at a time, and the first window is repeated so the opening plies also get one, as in lila. A move's weight is the std-dev of win% in its window, clamped to 0.5–12.
+- **A side with no moves** (you resigned before your first move) has no accuracy: the review and the history card show "–" for it, and the profile's accuracy over time leaves the game out.
 
 chess.com's CAPS2 is not published.
 
