@@ -1,5 +1,5 @@
 # CI-004: Fetch and ship Stockfish 19
-Stage: to-implement
+Stage: blocked
 Blocked by: none
 Review: human
 Difficulty: normal
@@ -37,3 +37,5 @@ The analysis engine arrives the same way Lc0 does (§15.3): `fetch-engine.ps1` d
 - 2026-10-30 Written from spec §15.3. `Review: human` because it changes what a release ships.
 
 - 2026-10-30 Attempt 1 failed: exit 0. Log tail: O CI-004 foi implementado na branch `ci-004`, mas **ainda não está pronto para revisão**: permanece em `implementing` porque o gate não produziu recibo verde. /  / O script instalou o Stockfish 19 e sua licença; a segunda execução não baixou arquivos. O executável respondeu `id name Stockfish 19` e `uciok`. A saída foi registrada no [ticket](</C:/Users/bruno/Desktop/Pastinha/Programas/Projects/P-Chess/.artifacts-build/lanes/analysis/.scratch/analysis/issues/51-CI-004-stockfish-fetch-and-release.md>). /  / O gate encontrou falhas de acesso a `user://` no sandbox e processos filhos começaram a se multiplicar após timeouts. A saída parcial indicou 198 testes aprovados e 72 falhos; interrompi os processos dessa execução, que terminou com código `-1`. Pela regra fornecida, o gate só pode ser repetido após mudança de código. /  / Commits registrados: `423f2ed` para a implementação e `aa2f15c` para a evidência da tentativa. A árvore de trabalho está limpa. /  /
+
+- 2026-10-30 Attempt 2 failed: exit 0; blocked after two attempts. Log tail: O CI-004 tem uma implementação anterior interrompida em **`implementing`**. Pela regra da skill `ticket-flow`, essa etapa deve ser relatada sem retomá-la às cegas. /  / A branch `ci-004` não aparece entre as referências locais ou remotas, mas os commits `423f2ed` e `aa2f15c` ainda estão acessíveis. O último registra que o Stockfish 19 respondeu `uciok` e que a segunda execução do script não baixou arquivos. O gate foi interrompido após falhas de acesso a `user://` e não produziu recibo verde; portanto, o ticket ainda não está pronto para revisão. /  / A cópia na branch da sessão continua em `to-implement`, mas está desatualizada em relação a esses commits. Não alterei arquivos nem executei o gate.
