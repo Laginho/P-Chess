@@ -41,6 +41,7 @@ func _refresh() -> void:
 	_line_list.clear()
 	_lines.clear()
 	_selection = ""
+	$Margin/Form/Edit.disabled = true
 	_line = -1
 	_board.game = null
 	_board.queue_redraw()
@@ -51,6 +52,7 @@ func _refresh() -> void:
 
 func _select_repertoire(index: int) -> void:
 	_selection = _list.get_item_text(index)
+	$Margin/Form/Edit.disabled = true
 	var error: String = repertoire.load_saved(_selection)
 	_line_list.clear()
 	_lines.clear()
@@ -60,6 +62,7 @@ func _select_repertoire(index: int) -> void:
 	_status.text = error
 	if not error.is_empty():
 		return
+	$Margin/Form/Edit.disabled = false
 	_lines = repertoire.lines.duplicate(true)
 	_board.flipped = repertoire.colour == "b"
 	_show_names()
