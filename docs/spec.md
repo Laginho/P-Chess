@@ -369,7 +369,7 @@ Every tunable number in §15 (analysis budget, convergence, classification thres
   - `ft` = 1 − Maia's clock left / its starting time;
   - `v = (fp + ft) / 2`.
   - Maia accepts when `eval ≤ +0.5` **and** `v ≥ 0.6`, or always when `eval ≤ −1.5`. Otherwise it declines. The rule is deterministic.
-- **Verify first:** `engine/uci.gd` does not parse `score` yet. Check that Lc0 reports a usable `score cp` under `go nodes 1`.
+- Lc0 v0.32.1 with a Maia net reports `score cp` under `go nodes 1`; a reply without a centipawn score declines the offer. The evaluation is captured from the search for Maia?s reply, before its move is played.
 
 ### 15.3 Analysis engine
 

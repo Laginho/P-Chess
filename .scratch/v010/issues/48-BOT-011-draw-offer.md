@@ -51,3 +51,5 @@ A ½ button beside the resign button offers Maia a draw (§15.2). Maia answers w
 - 2026-10-30 Written from spec §15.2. Decided while slicing: an agreed draw ends the game before Maia's move, as an accepted offer does on Lichess.
 
 - 2026-10-30: Lc0 v0.32.1, maia-1100, start position, `go nodes 1`: `info depth 1 seldepth 1 time 21 nodes 1 score cp 116 tbhits 0 pv e2e4`; `bestmove e2e4`.
+
+- 2026-10-30: The cooldown test was red with a nine-move mutant and green at ten; the live UCI test was red when score delivery was removed and green with it restored. The existing resignation session tests were updated for the action row.
