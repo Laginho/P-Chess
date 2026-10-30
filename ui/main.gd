@@ -49,6 +49,7 @@ var _review_repertoire: Array = []
 var _human_score := 0
 var _maia_score := 0
 var _match_games := 0
+var _show_match_score := false
 
 
 # Esc resigns on a second press within 2 s of the first (§7). The time source returns milliseconds.
@@ -249,10 +250,10 @@ func _start(new_settings: Dictionary) -> void:
 	settings = new_settings.duplicate()
 	_review_repertoire = review_repertoire
 	human = settings.colour
-	white_score.visible = _match_games > 0
-	black_score.visible = _match_games > 0
-	white_score.text = _format_score(_human_score if human == "w" else _maia_score)
-	black_score.text = _format_score(_human_score if human == "b" else _maia_score)
+	_show_match_score = _match_games > 0
+	white_score.visible = _show_match_score and not focus
+	black_score.visible = _show_match_score and not focus
+	_update_score_text()
 	uci.set_level(MaiaPlayer.net_path(settings.level))
 	var game = Game.new()
 	maia.book = practice_book
@@ -373,6 +374,8 @@ func _set_focus(on: bool) -> void:
 	# and the result is empty during play.
 	for node in [move_list, white_material, black_material, claim_draw, $Layout/Side/Actions, settings_screen]:
 		node.visible = not on
+	white_score.visible = _show_match_score and not on
+	black_score.visible = _show_match_score and not on
 
 
 # Like _input: Maia's think-time timer can fire after its clock hit zero but before the next
@@ -447,6 +450,7 @@ func _show_result() -> void:
 			_human_score += 2
 		else:
 			_maia_score += 2
+		_update_score_text()
 		_history_saved = true
 		history.save(game, _move_clocks, settings, "", maia.target_id)
 	if history.error:
@@ -492,6 +496,11 @@ static func _captured(roles: String, glyphs: Dictionary) -> String:
 
 static func _lead(points: int) -> String:
 	return " +%d" % points if points > 0 else ""
+
+
+func _update_score_text() -> void:
+	white_score.text = _format_score(_human_score if human == "w" else _maia_score)
+	black_score.text = _format_score(_human_score if human == "b" else _maia_score)
 
 
 func _reset_match() -> void:
