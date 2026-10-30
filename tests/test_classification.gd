@@ -180,6 +180,22 @@ func test_recapture_is_best_instead_of_great():
 	assert_eq(result[3].class, "Best", "recapturing the last move cannot be Great")
 
 
+func test_capture_after_pawn_push_can_be_great():
+	var board = Board.from_fen("6k1/3p4/5n2/8/4P3/8/8/6K1 b - - 0 1")
+	var moves := PackedStringArray(["d7d5", "e4d5"])
+	var positions := []
+	for move: String in moves:
+		var legal: PackedStringArray = board.legal_moves()
+		assert_true(move in legal)
+		var alt: String = legal[0] if legal[0] != move else legal[1]
+		positions.append({"fen": board.to_fen(), "best_move": move, "pv": [
+				{"moves": [move], "cp": 100}, {"moves": [alt], "cp": -100}]})
+		board.make_move(move)
+	positions.append({"fen": board.to_fen(), "pv": [{"moves": ["g8h8"], "cp": -100}]})
+	var result: Array = load("res://core/classification.gd").evaluate(moves, {"positions": positions}, [], [], "w", false)
+	assert_eq(result[1].class, "Great", "capturing a defended pawn after its push is not a recapture")
+
+
 func test_checkmate_played_off_pv_is_best_and_leniency_applies_to_forced_mate():
 	var classification = load("res://core/classification.gd")
 	var fen := "7k/5Q2/6K1/8/8/8/8/8 w - - 0 1"

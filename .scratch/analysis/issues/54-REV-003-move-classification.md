@@ -1,5 +1,5 @@
 # REV-003: Classify every move
-Stage: to-implement
+Stage: implementing
 Blocked by: REV-002
 Review: human
 Difficulty: hard
