@@ -1,5 +1,5 @@
 # OPEN-006: View a repertoire on a board
-Stage: to-implement
+Stage: blocked
 Blocked by: OPEN-005
 Review: agent
 Difficulty: normal
@@ -33,3 +33,5 @@ The repertoire screen gets a board beside the list (§15.9), so you can see what
 ## Comments
 
 - 2026-10-30 Written from spec §15.9. Blocked by OPEN-005 because that ticket creates the screen.
+
+- 2026-10-30 Stage stopped (incomplete handoff): Invalid committed handoff: Illegal characters in path. See C:\Users\bruno\Desktop\Pastinha\Programas\Projects\P-Chess\.artifacts-build\lanes\repertoire\.scratch\run-log\OPEN-006-implement-20261030-184720.txt.runtime.json and run-log/recovery.txt; inspect the saved work before retrying.
