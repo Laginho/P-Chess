@@ -52,6 +52,18 @@ func import_pgn(text: String, human_colour: String, name: String) -> String:
 	return ""
 
 
+# Store catalog lines through the same validated PGN path as an imported repertoire.
+func save_openings(catalog, human_colour: String, name: String) -> String:
+	var selected: Array[String] = catalog.selected_ids()
+	if selected.is_empty():
+		return "Choose at least one opening."
+	var chapters: Array[String] = []
+	for entry in catalog.entries:
+		if entry.id in selected:
+			chapters.append(entry.pgn + " *")
+	return import_pgn("\n\n".join(chapters), human_colour, name)
+
+
 func load_saved(name: String) -> String:
 	if not Book._valid_name(name):
 		return "Invalid repertoire name."

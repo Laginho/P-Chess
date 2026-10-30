@@ -4,6 +4,8 @@
 [ext_resource type="PackedScene" path="res://ui/opening_picker.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://ui/repertoire_import.tscn" id="3"]
 
+[ext_resource type="PackedScene" path="res://ui/repertoire_screen.tscn" id="4"]
+
 [node name="Setup" type="Control"]
 layout_mode = 3
 anchors_preset = 15
@@ -91,3 +93,5 @@ autowrap_mode = 3
 [node name="OpeningPicker" parent="." instance=ExtResource("2")]
 
 [node name="RepertoireImport" parent="." instance=ExtResource("3")]
+
+[node name="RepertoireScreen" parent="." instance=ExtResource("4")]
