@@ -1,5 +1,5 @@
-﻿# UI-014: Match score across rematches
-Stage: implementing
+# UI-014: Match score across rematches
+Stage: to-review
 Blocked by: none
 Review: agent
 Difficulty: normal
@@ -10,23 +10,23 @@ Difficulty: normal
   - ui/game_over.gd
   - ui/game_over.tscn
   - tests/test_session.gd
-  - docs/spec.md (Â§9.1)
+  - docs/spec.md (§9.1)
 
 #### What to build
 
-Consecutive rematches form a match (Â§9.1). The game-over panel shows the running score between you and Maia, and from the first rematch on each player's score shows in a small box beside their clock.
+Consecutive rematches form a match (§9.1). The game-over panel shows the running score between you and Maia, and from the first rematch on each player's score shows in a small box beside their clock.
 
 #### Acceptance criteria
 
-1. A win counts 1 to the winner, a draw Â½ to each side; scores show as "1", "Â½", "1Â½".
-2. The game-over panel shows the running score including the game just finished, you first, for example "You 2 â€“ 1 Maia 1500".
+1. A win counts 1 to the winner, a draw ½ to each side; scores show as "1", "½", "1½".
+2. The game-over panel shows the running score including the game just finished, you first, for example "You 2 – 1 Maia 1500".
 3. From the first rematch onwards each clock row shows that player's score in a small box; the first game of a match shows no boxes.
 4. A rematch (`Space` or the button) keeps the score, and the boxes follow the players across the colour swap.
 5. The score resets on New game, when a game starts with any setting other than the swapped colour changed, and when the engine stops. It is not saved across launches.
 
 #### Verification
 
-    Manual: win, rematch, draw, rematch: the panel reads 1Â½ â€“ Â½ and the boxes follow the colours.
+    Manual: win, rematch, draw, rematch: the panel reads 1½ – ½ and the boxes follow the colours.
     godot --headless -s tests/run.gd
 
 ## Tests stage 2 writes (own commit, red)
@@ -35,5 +35,10 @@ Consecutive rematches form a match (Â§9.1). The game-over panel shows the runn
 
 ## Comments
 
-- 2026-10-30 Written from spec Â§9.1. The Home screen (UI-016) adds the reset on returning Home.
+- 2026-10-30 Written from spec §9.1. The Home screen (UI-016) adds the reset on returning Home.
 
+- 2026-10-30 Stage 2: red test failed because the score boxes were absent; final headless gate passed. Manual win, rematch, draw, rematch and visual layout remain pending.
+
+Acceptance: pending | Manual win, rematch, draw, rematch and visual inspection of the score boxes.
+Disclosure: pending | release | Manual match-score and layout acceptance remains to be performed.
+Gate evidence: C:/Users/bruno/AppData/Local/Temp/ui014-gate-box.json
