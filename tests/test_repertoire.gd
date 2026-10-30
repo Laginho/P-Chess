@@ -554,3 +554,15 @@ func test_editor_allows_legal_moves_after_automatic_draw():
 	assert_eq(repertoire.lines[0].moves, PackedStringArray(["b1a2", "h8g7"]))
 	editor.free()
 	_clean(folder)
+
+func test_editor_preserves_variation_opening_comment_on_save():
+	var repertoire = _repertoire()
+	var folder := _folder()
+	repertoire.storage_dir = folder
+	assert_eq(repertoire.import_pgn("1. e4 e5 ({Sicilian} 1... c5) *", "w", "Study"), "")
+	assert_eq(repertoire.save_edited(repertoire.tree.duplicate(true), "Study"), "")
+	assert_eq(repertoire.load_saved("Study"), "")
+	var e4: Dictionary = repertoire.tree.values()[0].children.e2e4
+	assert_eq(e4.comments, [])
+	assert_eq(e4.children.c7c5.comments_before, ["Sicilian"])
+	_clean(folder)
