@@ -440,7 +440,7 @@ chess.com's CAPS2 is not published.
 - **On the board:** the classification icon on the destination square, and an arrow for the best move.
 - **Summary:** each side's accuracy, and the count of moves per class.
 - A "?" tooltip next to the accuracy and the class counts explains in plain English how each is computed and the thresholds.
-- Copy PGN and Open in Lichess stay. Rematch and New game appear only when the review was opened from the post-game panel, whose game settings are still in memory; a review opened from the history has neither, and `Space` does nothing there. There is no coach text and no retry.
+- Copy PGN and Open in Lichess stay. Rematch and New game appear only when the review was opened from the post-game panel, whose game settings are still in memory; a review opened from the history has neither, and `Space` does nothing there; it has a **Back to History** button instead, also on `Esc`. There is no coach text and no retry.
 - **Icons:** our own SVGs in chess.com's style and colours; chess.com's icons are proprietary.
 - **Entry points:**
   - The post-game panel's **Review** button opens it and starts analysing at once on Max. Moves fill in as their analysis lands.
@@ -473,7 +473,7 @@ chess.com's CAPS2 is not published.
 - **Your name:**
   - On first launch, a dialog asks for it, prefilled with "You". It has only OK, no skip.
   - The name changes in the Profile.
-  - New PGNs write it in the player header. Old PGNs keep "You" in the file but show the current name.
+  - New PGNs write it in the player header, plus a `HumanColor` header (`w` or `b`), since a name such as "Maia 1500" could match the opponent's. Stats, thumbnails and Delete read your side from `HumanColor`; older PGNs have none, and there your side is the one named "You". Old PGNs keep "You" in the file but show the current name.
 - **Profile:** your name, W/D/L per level and time control (with flag wins and losses), and your accuracy over time.
 
 ### 15.9 Repertoire from names, viewer and editor

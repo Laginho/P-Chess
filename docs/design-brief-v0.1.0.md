@@ -73,7 +73,7 @@ P-Chess is a native Windows app for bullet and blitz practice against **Maia**, 
   - **Summary:** the two players, each side's accuracy, and a table counting each class per side. A small "?" next to the accuracy and the table shows a tooltip explaining how they are computed.
   - **Eval graph:** clickable; it jumps to that move.
   - **Move list:** with a classification icon on each move. A "Left repertoire" marker on the move where the player left their repertoire shows the expected move.
-  - **Buttons:** Copy PGN, Open in Lichess, Rematch and New game. Rematch and New game only when the review was opened right after a game, not from History.
+  - **Buttons:** Copy PGN, Open in Lichess, Rematch and New game. Rematch and New game only when the review was opened right after a game; from History, a **Back to History** button instead.
 - **States:**
   - **Analysing:** a progress bar, with icons and the graph filling in move by move.
   - **Done.**
