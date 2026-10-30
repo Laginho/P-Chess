@@ -100,6 +100,19 @@ func test_search_forwards_all_info_and_bestmove_to_the_request_callback():
 	uci.free()
 
 
+func test_stockfish_does_not_send_maia_requests():
+	var uci = UCI.new("engine/stockfish/stockfish.exe", "Stockfish")
+	uci.available = true
+	uci.pid = OS.get_process_id()
+	uci._stdio = FileAccess.open("user://rev001-stockfish-commands.txt", FileAccess.WRITE)
+	uci.set_level("weights.pb.gz")
+	uci.request_policy(START, PackedStringArray())
+	assert_eq(uci._stdio.get_position(), 0, "no Maia commands are sent")
+	assert_true(uci._steps.is_empty(), "no Maia commands are queued")
+	uci.pid = -1
+	uci.free()
+
+
 # Polls on this thread, as the game's _process does, until bestmove or a 30 s timeout.
 func _policy(uci, moves: String) -> Dictionary:
 	var got := []
@@ -159,7 +172,7 @@ func test_stopping_one_bridge_leaves_the_other_running():
 	first.stop()
 	assert_true(OS.is_process_running(second_pid), "second engine survives first stop")
 	second.set_level(exe.get_base_dir().get_base_dir().path_join("weights/maia-1100.pb.gz"))
-	assert_true(not _policy(second, "").is_empty(), "second engine still answers")
+	assert_true(not _policy(second, ITALIAN).is_empty(), "second engine still answers")
 	first.free()
 	second.free()
 
