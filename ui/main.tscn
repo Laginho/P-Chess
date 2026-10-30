@@ -54,9 +54,16 @@ horizontal_alignment = 1
 custom_minimum_size = Vector2(240, 0)
 layout_mode = 2
 
-[node name="BlackClock" parent="Layout/Side" instance=ExtResource("5")]
+[node name="BlackClockRow" type="HBoxContainer" parent="Layout/Side"]
+layout_mode = 2
+
+[node name="BlackClock" parent="Layout/Side/BlackClockRow" instance=ExtResource("5")]
 layout_mode = 2
 side = "b"
+
+[node name="Score" type="Label" parent="Layout/Side/BlackClockRow"]
+visible = false
+layout_mode = 2
 
 [node name="BlackMaterial" type="Label" parent="Layout/Side"]
 layout_mode = 2
@@ -113,7 +120,14 @@ layout_mode = 2
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
 
-[node name="WhiteClock" parent="Layout/Side" instance=ExtResource("5")]
+[node name="WhiteClockRow" type="HBoxContainer" parent="Layout/Side"]
+layout_mode = 2
+
+[node name="WhiteClock" parent="Layout/Side/WhiteClockRow" instance=ExtResource("5")]
+layout_mode = 2
+
+[node name="Score" type="Label" parent="Layout/Side/WhiteClockRow"]
+visible = false
 layout_mode = 2
 
 [node name="Setup" parent="." instance=ExtResource("4")]

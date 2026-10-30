@@ -45,6 +45,10 @@ var _history_saved := false
 var _recording_move := false
 var _starting := false
 var _review_repertoire: Array = []
+# Scores are half-points, attached to the players rather than board colours.
+var _human_score := 0
+var _maia_score := 0
+var _match_games := 0
 
 
 # Esc resigns on a second press within 2 s of the first (§7). The time source returns milliseconds.
@@ -79,8 +83,10 @@ const BLACK_GLYPHS := {"q": "♛", "r": "♜", "b": "♝", "n": "♞", "p": "♟
 @onready var result_label: Label = $Layout/Side/Result
 @onready var white_material: Label = $Layout/Side/WhiteMaterial
 @onready var black_material: Label = $Layout/Side/BlackMaterial
-@onready var white_clock = $Layout/Side/WhiteClock
-@onready var black_clock = $Layout/Side/BlackClock
+@onready var white_clock = $Layout/Side/WhiteClockRow/WhiteClock
+@onready var black_clock = $Layout/Side/BlackClockRow/BlackClock
+@onready var white_score: Label = $Layout/Side/WhiteClockRow/Score
+@onready var black_score: Label = $Layout/Side/BlackClockRow/Score
 @onready var setup = $Setup
 @onready var resign_hint: Label = $Layout/Side/ResignHint
 @onready var resign_button: Button = $Layout/Side/Actions/ResignButton
@@ -238,9 +244,15 @@ func _start(new_settings: Dictionary) -> void:
 	setup.get_node("Center/Form/Missing").hide()
 	_move_clocks.clear()
 	_history_saved = false
+	if settings.is_empty() or new_settings != rematch(settings) or not board_view.game.is_over():
+		_reset_match()
 	settings = new_settings.duplicate()
 	_review_repertoire = review_repertoire
 	human = settings.colour
+	white_score.visible = _match_games > 0
+	black_score.visible = _match_games > 0
+	white_score.text = _format_score(_human_score if human == "w" else _maia_score)
+	black_score.text = _format_score(_human_score if human == "b" else _maia_score)
 	uci.set_level(MaiaPlayer.net_path(settings.level))
 	var game = Game.new()
 	maia.book = practice_book
@@ -276,6 +288,7 @@ func _start(new_settings: Dictionary) -> void:
 
 
 func _show_setup() -> void:
+	_reset_match()
 	draw_button.disabled = true
 	_draw_offered = false
 	draw_notice.hide()
@@ -345,8 +358,8 @@ func _fit_board() -> void:
 func _set_flipped(flipped: bool) -> void:
 	board_view.flipped = flipped
 	# Each side's clock and material sit on that side's edge of the board, the clock outermost.
-	var top := [white_clock, white_material] if flipped else [black_clock, black_material]
-	var bottom := [black_material, black_clock] if flipped else [white_material, white_clock]
+	var top := [white_clock.get_parent(), white_material] if flipped else [black_clock.get_parent(), black_material]
+	var bottom := [black_material, black_clock.get_parent()] if flipped else [white_material, white_clock.get_parent()]
 	var side_panel := white_material.get_parent()
 	for i in top.size():
 		side_panel.move_child(top[i], i)
@@ -426,6 +439,14 @@ func _show_result() -> void:
 	claim_draw.disabled = true
 	result_label.text = "%s by %s (%s)\nSpace for a rematch" % [WINNERS[game.result], game.reason, game.result]
 	if not _history_saved:
+		_match_games += 1
+		if game.result == "1/2-1/2":
+			_human_score += 1
+			_maia_score += 1
+		elif (game.result == "1-0") == (human == "w"):
+			_human_score += 2
+		else:
+			_maia_score += 2
 		_history_saved = true
 		history.save(game, _move_clocks, settings, "", maia.target_id)
 	if history.error:
@@ -471,3 +492,18 @@ static func _captured(roles: String, glyphs: Dictionary) -> String:
 
 static func _lead(points: int) -> String:
 	return " +%d" % points if points > 0 else ""
+
+
+func _reset_match() -> void:
+	_human_score = 0
+	_maia_score = 0
+	_match_games = 0
+
+
+static func _format_score(half_points: int) -> String:
+	var whole := half_points / 2
+	return (str(whole) if whole > 0 or half_points == 0 else "") + ("?" if half_points % 2 else "")
+
+
+func match_score_text() -> String:
+	return "You %s ? %s Maia %s" % [_format_score(_human_score), _format_score(_maia_score), settings.level.trim_prefix("maia-")]

@@ -221,7 +221,7 @@ All attributions go in `docs/THIRD_PARTY.md`.
 
 - The setup screen picks your colour (white / black / random), the time control, the Maia level and the opening mode with its selection.
 - `Space` starts a rematch with the same settings and the colours swapped.
-- Match score: consecutive rematches form a match. The game-over panel (§9.3) shows the running score between the two players (for example "2 – 1"), and from the first rematch onwards the game side panel shows each player's score in a small box beside their name. A win counts 1 and a draw ½ to each side. The score resets on New game, on any settings change, or when you return to Home. It is not saved across launches.
+- Match score: consecutive rematches form a match. The game-over panel (§9.3) shows the running score between the two players (for example "2 – 1"), and from the first rematch onwards the game side panel shows each player's score in a small box beside their clock. A win counts 1 and a draw ½ to each side. The score resets on New game, on any settings change, when the engine stops, or when you return to Home. It is not saved across launches.
 
 ### 9.2 Hotkeys
 
