@@ -20,7 +20,7 @@ var _stdio: FileAccess
 var _readers: Array[Thread] = []
 var _mutex := Mutex.new()
 var _lines := []
-# Each step: [command lines, the reply it waits for ("" for none), board for a policy request].
+# Each step: [command lines, reply to wait for ("" for none), policy board, search callback].
 var _steps := []
 var _awaiting := ""
 var _board
@@ -53,7 +53,7 @@ static func search_dirs() -> PackedStringArray:
 	return dirs
 
 
-# The first dirs/engine/lc0/lc0.exe that exists, or "".
+# The first engine path under dirs that exists, or ""; defaults to engine/lc0/lc0.exe.
 static func engine_path(dirs: PackedStringArray, engine := ENGINE) -> String:
 	for dir in dirs:
 		var path := dir.path_join(engine)

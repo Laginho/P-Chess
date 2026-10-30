@@ -40,3 +40,4 @@ Given a saved game, run Stockfish over every position and write `user://analysis
 ## Comments
 
 - 2026-10-30 Written from spec §15.3. Speed figures in the spec are this machine's.
+- 2026-10-30 REV-001 review handoff: criteria 2 and 5 here need an in-search `stop` command and the handshake's `id name`. The bridge's public `request_search()` queues commands until `bestmove` and forwards only search `info`/`bestmove`, so these two access paths remain to be designed for REV-002. Its current `engine/uci.gd` Primary-files entry only permits MultiPV parsing; resolve the seam/scope with the stage-1 proxy before adding bridge behavior. This is not a failure of REV-001's numbered criteria.
