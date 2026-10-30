@@ -25,6 +25,13 @@ var _steps := []
 var _awaiting := ""
 var _board
 var _info := PackedStringArray()
+var _engine_path: String
+var _engine_name: String
+
+
+func _init(engine_path := ENGINE, engine_name := "Lc0") -> void:
+	_engine_path = engine_path
+	_engine_name = engine_name
 
 
 func _process(_delta: float) -> void:
@@ -46,9 +53,9 @@ static func search_dirs() -> PackedStringArray:
 
 
 # The first dirs/engine/lc0/lc0.exe that exists, or "".
-static func engine_path(dirs: PackedStringArray) -> String:
+static func engine_path(dirs: PackedStringArray, engine := ENGINE) -> String:
 	for dir in dirs:
-		var path := dir.path_join(ENGINE)
+		var path := dir.path_join(engine)
 		if FileAccess.file_exists(path):
 			return path
 	return ""
@@ -78,9 +85,9 @@ static func parse_policy(lines: PackedStringArray, board) -> Dictionary:
 func start(dirs := search_dirs()) -> bool:
 	if available:
 		return true
-	var path := engine_path(dirs)
+	var path := engine_path(dirs, _engine_path)
 	if path == "":
-		error = "Lc0 is missing (%s). Run scripts/fetch-engine.ps1 to download it." % ENGINE
+		error = "%s is missing (%s). Run scripts/fetch-engine.ps1 to download it." % [_engine_name, _engine_path]
 		return false
 	var pipe := OS.execute_with_pipe(path, [])
 	if pipe.is_empty():
