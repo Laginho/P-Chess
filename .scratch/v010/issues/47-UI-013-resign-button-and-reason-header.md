@@ -1,5 +1,5 @@
-﻿# UI-013: Resign button and the Reason header
-Stage: implementing
+# UI-013: Resign button and the Reason header
+Stage: to-review
 Blocked by: none
 Review: agent
 Difficulty: normal
@@ -40,3 +40,9 @@ Resigning gets a button: a flag between the clocks that, like `Esc`, asks for a 
 ## Comments
 
 - 2026-10-30 Written from spec Â§15 (PR #24). v0.1.0 ships as one build, so the spec's `v0.0.x` patch split is gone (Â§15.1).
+
+- Stage 2: PGN tests red (10 passed, 3 failed), then green (13 passed); session tests red (14 passed, 2 failed), then green (16 passed). Updated exact-header assertions in `test_finished_game_builds_the_headers_and_clock_records_both_exports_share`, `test_finished_game_names_a_flag_and_an_optional_opening_last`, `test_finished_game_saves_one_pgn_with_headers_moves_and_exact_clocks`, the opening header assertion in `test_history.gd`, and the PGN export assertion in `test_review.gd`.
+- Gate: 273 passed, 0 failed, exit 0. The sandbox logged failure to read the Windows root certificate store; the test runner completed successfully.
+- Acceptance: pending | Manual two-click resignation and expiry check in the running application.
+
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\ui013-gate.json
