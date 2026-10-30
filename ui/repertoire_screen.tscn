@@ -1,7 +1,8 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://ui/repertoire_screen.gd" id="1"]
 [ext_resource type="PackedScene" path="res://ui/opening_picker.tscn" id="2"]
+[ext_resource type="PackedScene" path="res://ui/board_view.tscn" id="3"]
 
 [node name="RepertoireScreen" type="PopupPanel"]
 title = "Repertoires"
@@ -28,8 +29,23 @@ text = "Repertoires"
 
 [node name="List" type="ItemList" parent="Margin/Form"]
 layout_mode = 2
+custom_minimum_size = Vector2(0, 90)
+
+[node name="Viewer" type="HBoxContainer" parent="Margin/Form"]
+layout_mode = 2
 size_flags_vertical = 3
-custom_minimum_size = Vector2(0, 300)
+
+[node name="Lines" type="ItemList" parent="Margin/Form/Viewer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Board" parent="Margin/Form/Viewer" instance=ExtResource("3")]
+custom_minimum_size = Vector2(280, 280)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Status" type="Label" parent="Margin/Form"]
+layout_mode = 2
 
 [node name="Import" type="Button" parent="Margin/Form"]
 layout_mode = 2
