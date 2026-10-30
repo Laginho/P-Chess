@@ -330,7 +330,7 @@ The Stockfish review and the repertoire editor moved into v0.1.0 (§15).
 
 ## 15. v0.1.0: Stockfish review, history and home screen
 
-Decided in a grilling session on 2026-10-29. Each patch below ships as its own `v0.0.x` tag; `v0.1.0` closes the set.
+Decided in a grilling session on 2026-10-29. Everything below ships together as one `v0.0.2` build; after Bruno's QA it is tagged `v0.1.0` (§15.1).
 
 This section supersedes, where they conflict:
 - §3.1: `fetch-engine.ps1` also fetches Stockfish.
@@ -342,19 +342,19 @@ This section supersedes, where they conflict:
 
 UI strings stay English only (Portuguese is in §14).
 
-### 15.1 Patches
+### 15.1 Release and tickets
 
-| Tag | Content |
+One build, `v0.0.2`, holds all of §15. Bruno then plays it, tunes every threshold, and tags `v0.1.0`. The tickets live in `.scratch/v010/issues/`:
+
+| Content | Tickets |
 |---|---|
-| v0.0.2 | Draw offer and resign buttons (§15.2), match score (§9.1), board resize grip (§8.7) |
-| v0.0.3 | Stockfish fetch and release, analysis engine, analysis files (§15.3) |
-| v0.0.4 | Move classification and accuracy, headless (§15.4, §15.5) |
-| v0.0.5 | The new review screen (§15.6) |
-| v0.0.6 | History screen and analysis queue (§15.7) |
-| v0.0.7 | Home screen, profile, your name, the searching screen (§15.8) |
-| v0.0.8 | Repertoire from opening names, with a board to view it (§15.9) |
-| v0.0.9 | Repertoire editor (§15.9) |
-| v0.1.0 | Tune every threshold by playing |
+| Resign and draw-offer buttons (§15.2), match score (§9.1), board resize grip (§8.7) | UI-013, BOT-011, UI-014, UI-015 |
+| Stockfish fetch and release, analysis engine, analysis files (§15.3) | CI-004, REV-001, REV-002 |
+| Move classification and accuracy, headless (§15.4, §15.5) | REV-003, REV-004 |
+| The new review screen (§15.6) | REV-005, REV-006 |
+| History screen, delete, analysis queue (§15.7) | HIST-003, HIST-004, HIST-005, HIST-006 |
+| Home screen, searching screen, your name, profile (§15.8) | UI-016, UI-017, UI-018, UI-019 |
+| Repertoire from opening names, viewer and editor (§15.9) | OPEN-005, OPEN-006, OPEN-007 |
 
 Every tunable number in §15 (analysis budget, convergence, classification thresholds, the draw rule) lives in one constants file.
 
@@ -456,9 +456,9 @@ chess.com's CAPS2 is not published.
   - the date, each player's colour, "{name} x Maia 1500", the result and reason, and the number of moves;
   - the analysis state: not analysed / queued / analysing x% / both accuracies / stale.
 - **Actions per game:** Review, Analyze (Re-analyze when stale), Delete with confirmation, and Copy PGN as a discreet square icon that is still easy to hit. Delete removes the PGN, its analysis, and its share of the stats (read back from the PGN headers) and of the practice counts, so the profile always matches the history.
-- **Practice target in the PGN:** from v0.0.6, a game played with a target line (§6.3) records its id in a `PracticeTarget` header, so Delete can take it off the practice counts. Games saved earlier have no such header; deleting one leaves the practice counts as they are.
+- **Practice target in the PGN:** from v0.0.2, a game played with a target line (§6.3) records its id in a `PracticeTarget` header, so Delete can take it off the practice counts. Games saved earlier have no such header; deleting one leaves the practice counts as they are.
 - **Result reason:** from v0.0.2 every PGN records `game.reason` (`checkmate`, `resignation`, `time`, `agreement`, `repetition`, `stalemate`, `50-move`, `insufficient material`) in a `Reason` header, since `Termination: Normal` alone cannot tell an agreed draw from a claimed repetition. For older games the card replays the moves: checkmate, stalemate, insufficient material and the 50-move rule are read off the final position, a decisive `Normal` game that is not mate is a resignation, and any other draw shows just "Draw".
-- **Repertoire snapshot:** from v0.0.5, when a game is played with a repertoire loaded, its lines (the snapshot `ui/main.gd` already keeps for the review) are saved next to the PGN as `<game file name>.repertoire.json`. A review opened from the history checks Repertoire and Left repertoire against that file, never against the repertoire as it is now. Games without the file get no repertoire markers. Delete removes it with the PGN.
+- **Repertoire snapshot:** from v0.0.2, when a game is played with a repertoire loaded, its lines (the snapshot `ui/main.gd` already keeps for the review) are saved next to the PGN as `<game file name>.repertoire.json`. A review opened from the history checks Repertoire and Left repertoire against that file, never against the repertoire as it is now. Games without the file get no repertoire markers. Delete removes it with the PGN.
 - **Batch:** select several games, or use **Analyze all** per tab.
 - **Queue:**
   - Games run one at a time, in the thread mode set in the settings (Background by default).
@@ -479,11 +479,11 @@ chess.com's CAPS2 is not published.
 
 ### 15.9 Repertoire from names, viewer and editor
 
-- **v0.0.8, from names:**
+- **From names:**
   - The repertoire screen gets a **From openings** button next to Import PGN. It opens the catalog picker with names only, as on Lichess ("Caro-Kann Defense: Advance Variation"), without the move sequence.
   - You check lines, pick your colour and a name. It is saved like an imported repertoire, so "check my moves" and the review badges work with it.
-- **v0.0.8, viewer:** a board beside the list, from the repertoire colour's side. Clicking a name shows the line's final position, and ←/→ steps through it.
-- **v0.0.9, editor:**
+- **Viewer:** a board beside the list, from the repertoire colour's side. Clicking a name shows the line's final position, and ←/→ steps through it.
+- **Editor:**
   - Start from a checked line or the start position, and play moves on the board to extend a line or add a branch.
   - A tree list shows the branches. Right-clicking a move deletes it and everything after it.
   - It works on every repertoire, imported or built from names, and saves in the same format.
