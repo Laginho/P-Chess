@@ -337,7 +337,7 @@ This section supersedes, where they conflict:
 - §7: resigning also has a button; `Esc` twice still works.
 - §9.1: the app opens on the home screen; the setup screen becomes "Custom game". `Space` rematch is unchanged.
 - §9.3: the review is replaced by §15.6.
-- §9.4: the player header holds your name, not "You".
+- §9.4: the player header holds your name, not "You", and the PGN gains `Reason` and `PracticeTarget` headers and a repertoire snapshot file (§15.7).
 - §10 and §12: the settings and the release additions below.
 
 UI strings stay English only (Portuguese is in §14).
@@ -401,7 +401,7 @@ Both sides are classified, so you and Maia both get accuracy.
 | Inaccuracy | Loss ≤ 0.10 |
 | Mistake | Loss ≤ 0.20 |
 | Blunder | Loss > 0.20 |
-| Great | PV1 was played and PV2 loses ≥ 0.10 (the only good move), or EP crosses 0.5 with a gain ≥ 0.10 |
+| Great | PV1 was played and PV2 loses ≥ 0.10 (the only good move) |
 | Brilliant | A piece sacrifice that is the best move (see below); outranks Great |
 | Miss | The opponent's last move was a Mistake or Blunder, your EP before the move was ≥ 0.75, and the move drops you to ≤ 0.6 with a loss ≥ 0.10. Replaces Mistake or Blunder |
 
@@ -424,9 +424,9 @@ These rules are restated from public descriptions (chess.com's help pages, Liche
 
 ### 15.5 Accuracy
 
-Lichess's formulas:
+Lichess's formulas (`AccuracyPercent.scala` in lila). Win% is `100·EP`, so drops and the std-dev below are in percentage points (0–100), not EP's 0–1.
 - **Per move:** 100 when the win% did not drop. Otherwise `103.1668·e^(−0.04354·drop) − 3.1669 + 1`, clamped to 0–100.
-- **Per game:** the mean of the volatility-weighted mean and the harmonic mean. The window is plies/10, clamped to 2–8. The weight is the std-dev of win% in the window, clamped to 0.5–12.
+- **Per game:** the mean of the volatility-weighted mean and the harmonic mean of that side's move accuracies. The window is plies/10 rounded down, clamped to 2–8. The win% series starts at the initial position; windows slide over it one ply at a time, and the first window is repeated so the opening plies also get one, as in lila. A move's weight is the std-dev of win% in its window, clamped to 0.5–12.
 
 chess.com's CAPS2 is not published.
 
@@ -454,6 +454,8 @@ chess.com's CAPS2 is not published.
   - the analysis state: not analysed / queued / analysing x% / both accuracies / stale.
 - **Actions per game:** Review, Analyze (Re-analyze when stale), Delete with confirmation, and Copy PGN as a discreet square icon that is still easy to hit. Delete removes the PGN, its analysis, and its share of the stats (read back from the PGN headers) and of the practice counts, so the profile always matches the history.
 - **Practice target in the PGN:** from v0.0.6, a game played with a target line (§6.3) records its id in a `PracticeTarget` header, so Delete can take it off the practice counts. Games saved earlier have no such header; deleting one leaves the practice counts as they are.
+- **Result reason:** from v0.0.2 every PGN records `game.reason` (`checkmate`, `resignation`, `time`, `agreement`, `repetition`, `stalemate`, `50-move`, `insufficient material`) in a `Reason` header, since `Termination: Normal` alone cannot tell an agreed draw from a claimed repetition. For older games the card replays the moves: checkmate, stalemate, insufficient material and the 50-move rule are read off the final position, a decisive `Normal` game that is not mate is a resignation, and any other draw shows just "Draw".
+- **Repertoire snapshot:** from v0.0.5, when a game is played with a repertoire loaded, its lines (the snapshot `ui/main.gd` already keeps for the review) are saved next to the PGN as `<game file name>.repertoire.json`. A review opened from the history checks Repertoire and Left repertoire against that file, never against the repertoire as it is now. Games without the file get no repertoire markers. Delete removes it with the PGN.
 - **Batch:** select several games, or use **Analyze all** per tab.
 - **Queue:**
   - Games run one at a time, in the thread mode set in the settings (Background by default).
