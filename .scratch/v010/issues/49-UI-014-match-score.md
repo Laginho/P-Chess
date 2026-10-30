@@ -1,5 +1,5 @@
 # UI-014: Match score across rematches
-Stage: to-implement
+Stage: implementing
 Blocked by: none
 Review: agent
 Difficulty: normal

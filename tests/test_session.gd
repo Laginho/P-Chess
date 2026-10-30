@@ -534,6 +534,11 @@ func test_match_score_follows_players_and_resets():
 	main._show_result()
 	score = main.board_view.get_node("GameOver/Panel/Content/Score")
 	assert_eq(score.text, "You 1½ – ½ Maia 1700")
+	assert_eq(black.text, "1½", "finished rematch updates human score")
+	assert_eq(white.text, "½", "finished rematch updates Maia score")
+	main.board_view.get_node("GameOver/Panel/Content/Close").pressed.emit()
+	assert_eq(black.text, "1½", "human score remains after closing panel")
+	assert_eq(white.text, "½", "Maia score remains after closing panel")
 	main.board_view.get_node("GameOver/Panel/Content/Rematch").pressed.emit()
 	assert_eq(white.text, "1½")
 	assert_eq(black.text, "½")
@@ -546,4 +551,28 @@ func test_match_score_follows_players_and_resets():
 	changed.level = "maia-1500"
 	main._start(changed)
 	assert_true(not white.visible and not black.visible, "changed level resets score")
+	main.free()
+
+
+func test_match_score_respects_focus_mode():
+	var main = _session(ManualWaits.new())
+	var white = main.white_score
+	var black = main.black_score
+	_key(main, KEY_F11)
+	_key(main, KEY_F11)
+	assert_true(not white.visible and not black.visible, "first game stays without boxes after focus")
+	main.board_view.game.resign("b")
+	main._show_result()
+	_key(main, KEY_SPACE)
+	_key(main, KEY_F11)
+	assert_true(not white.visible and not black.visible, "focus hides rematch boxes")
+	_key(main, KEY_F11)
+	assert_true(white.visible and black.visible, "leaving focus restores rematch boxes")
+	main.board_view.game.agree_draw()
+	main._show_result()
+	_key(main, KEY_F11)
+	_key(main, KEY_SPACE)
+	assert_true(not white.visible and not black.visible, "rematch started in focus hides boxes")
+	_key(main, KEY_F11)
+	assert_true(white.visible and black.visible, "leaving focus restores new rematch boxes")
 	main.free()
