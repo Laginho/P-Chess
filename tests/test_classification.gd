@@ -18,6 +18,9 @@ func test_best_and_played_second_line_use_movers_score():
 	]}
 	var best: Array = classification.evaluate(PackedStringArray(["e2e4"]), analysis, [], [], "w", false)
 	assert_eq(best[0].class, "Best")
+	var alternate = Board.from_fen(START)
+	alternate.make_move("d2d4")
+	analysis.positions[1].fen = alternate.to_fen()
 	var second: Array = classification.evaluate(PackedStringArray(["d2d4"]), analysis, [], [], "w", false)
 	assert_eq(second[0].class, "Good", "PV2 score overrides the noisy subsequent position")
 
@@ -175,3 +178,31 @@ func test_recapture_is_best_instead_of_great():
 	positions.append({"fen": board.to_fen(), "pv": [{"moves": ["b1c3"], "cp": -100}]})
 	var result: Array = classification.evaluate(moves, {"positions": positions}, [], [], "w", false)
 	assert_eq(result[3].class, "Best", "recapturing the last move cannot be Great")
+
+
+func test_checkmate_played_off_pv_is_best_and_leniency_applies_to_forced_mate():
+	var classification = load("res://core/classification.gd")
+	var fen := "7k/5Q2/6K1/8/8/8/8/8 w - - 0 1"
+	var board = Board.from_fen(fen)
+	assert_true("f7g7" in board.legal_moves())
+	board.make_move("f7g7")
+	assert_true(board.in_check() and board.legal_moves().is_empty())
+	var data := {"positions": [{"fen": fen, "best_move": "f7e8", "pv": [
+			{"moves": ["f7e8"], "mate": 1}, {"moves": ["f7f8"], "mate": 1}]},
+			{"fen": board.to_fen(), "pv": [], "terminal_score": -1000}]}
+	var result: Array = classification.evaluate(PackedStringArray(["f7g7"]), data, [], [], "w", false)
+	assert_eq(result[0].class, "Best", "delivering mate is no slower")
+	data = _one("c2c4", {"moves": ["e2e4"], "cp": -600},
+			{"moves": ["d2d4"], "cp": -700}, {"moves": ["g1f3"], "mate": 2})
+	result = classification.evaluate(PackedStringArray(["c2c4"]), data, [], [], "w", false)
+	assert_eq(result[0].class, "Good", "leniency applies when already at -600 cp")
+
+
+func test_json_fixture_uses_analysis_storage_format():
+	var classification = load("res://core/classification.gd")
+	var data = JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/analysis/rev003-opening.json"))
+	assert_true(data is Dictionary)
+	if not data is Dictionary:
+		return
+	var result: Array = classification.evaluate(PackedStringArray(["e2e4", "e7e5"]), data, [], [], "w", false)
+	assert_eq(result.map(func(item): return item.class), ["Best", "Best"])
