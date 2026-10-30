@@ -425,3 +425,185 @@ func test_catalog_selection_saves_repertoire_and_book_uses_it():
 	var board = load("res://core/board.gd").from_fen(load("res://bot/book.gd").START)
 	assert_true(book.weights(board, 0).e2e4 > 1.0, "My repertoire follows the selected lines")
 	_clean(folder)
+
+func test_editor_extends_a_selected_line_and_saves_it():
+	var path := "res://ui/repertoire_editor.tscn"
+	assert_true(ResourceLoader.exists(path), "editor scene exists")
+	if not ResourceLoader.exists(path):
+		return
+	var repertoire = _repertoire()
+	var folder := _folder()
+	repertoire.storage_dir = folder
+	assert_eq(repertoire.import_pgn("1. e4 e5 *", "w", "Study"), "")
+	var editor = load(path).instantiate()
+	Engine.get_main_loop().root.add_child(editor)
+	editor.present(repertoire, "Study", 0)
+	assert_true(editor.get_node("Margin/Form/Content/Board").play("g1f3"))
+	editor.save()
+	var loaded = _repertoire()
+	loaded.storage_dir = folder
+	assert_eq(loaded.load_saved("Study"), "")
+	assert_eq(" ".join(loaded.lines[0].moves), "e2e4 e7e5 g1f3")
+	editor.free()
+	_clean(folder)
+
+func test_editor_keeps_existing_annotations_when_saving_a_branch():
+	var repertoire = _repertoire()
+	var folder := _folder()
+	repertoire.storage_dir = folder
+	assert_eq(repertoire.import_pgn("{Root} 1. e4 {Space} e5 $1 *", "w", "Study"), "")
+	var editor = load("res://ui/repertoire_editor.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(editor)
+	editor.present(repertoire, "Study", 0)
+	assert_true(editor.get_node("Margin/Form/Content/Board").play("g1f3"))
+	editor.save()
+	var loaded = _repertoire()
+	loaded.storage_dir = folder
+	assert_eq(loaded.load_saved("Study"), "")
+	var root: Dictionary = loaded.tree.values()[0]
+	assert_eq(root.comments, ["Root"])
+	assert_eq(root.children.e2e4.comments, ["Space"])
+	assert_eq(root.children.e2e4.children.e7e5.nags, [1])
+	editor.free()
+	_clean(folder)
+
+func test_editor_opens_from_screen_branches_and_cancel_discards():
+	var setup = load("res://ui/setup.tscn").instantiate()
+	var folder := _folder()
+	setup.repertoire.storage_dir = folder
+	assert_eq(setup.repertoire.import_pgn("1. e4 e5 2. Nf3 *", "w", "Study"), "")
+	var original := FileAccess.get_file_as_string(folder.path_join("Study.json"))
+	Engine.get_main_loop().root.add_child(setup)
+	var screen = setup.get_node("RepertoireScreen")
+	screen.present()
+	screen.get_node("Margin/Form/List").item_selected.emit(0)
+	var button = screen.get_node_or_null("Margin/Form/Edit")
+	assert_true(button != null, "screen offers editing")
+	if button != null:
+		button.pressed.emit()
+		var editor = screen.get_node("RepertoireEditor")
+		var tree: Tree = editor.get_node("Margin/Form/Content/Tree")
+		var first = tree.get_root().get_first_child().get_first_child()
+		first.select(0)
+		tree.item_selected.emit()
+		assert_true(editor.get_node("Margin/Form/Content/Board").play("c7c5"))
+		editor.get_node("Margin/Form/Buttons/Cancel").pressed.emit()
+		assert_eq(FileAccess.get_file_as_string(folder.path_join("Study.json")), original)
+	setup.free()
+	_clean(folder)
+
+func test_editor_saves_a_branch_and_deletes_a_subtree():
+	var repertoire = _repertoire()
+	var folder := _folder()
+	repertoire.storage_dir = folder
+	assert_eq(repertoire.import_pgn("1. e4 e5 2. Nf3 *", "w", "Study"), "")
+	var editor = load("res://ui/repertoire_editor.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(editor)
+	editor.present(repertoire, "Study")
+	var tree: Tree = editor.get_node("Margin/Form/Content/Tree")
+	var e4 = tree.get_root().get_first_child().get_first_child()
+	e4.select(0)
+	tree.item_selected.emit()
+	assert_true(editor.get_node("Margin/Form/Content/Board").play("c7c5"))
+	await Engine.get_main_loop().process_frame
+	var e5 = tree.get_root().get_first_child().get_first_child().get_first_child()
+	var point: Vector2 = tree.get_item_area_rect(e5).get_center()
+	tree.item_mouse_selected.emit(point, MOUSE_BUTTON_RIGHT)
+	editor.save()
+	var loaded = _repertoire()
+	loaded.storage_dir = folder
+	assert_eq(loaded.load_saved("Study"), "")
+	assert_eq(loaded.lines.size(), 1)
+	assert_eq(" ".join(loaded.lines[0].moves), "e2e4 c7c5")
+	editor.free()
+	_clean(folder)
+
+func test_editor_button_tracks_repertoire_selection():
+	var setup = load("res://ui/setup.tscn").instantiate()
+	var folder := _folder()
+	setup.repertoire.storage_dir = folder
+	assert_eq(setup.repertoire.import_pgn("1. e4 e5 *", "w", "Study"), "")
+	Engine.get_main_loop().root.add_child(setup)
+	var screen = setup.get_node("RepertoireScreen")
+	screen.present()
+	var button: Button = screen.get_node("Margin/Form/Edit")
+	assert_true(button.disabled)
+	screen.get_node("Margin/Form/List").item_selected.emit(0)
+	assert_true(not button.disabled, "a loaded repertoire can be edited")
+	screen.present()
+	assert_true(button.disabled, "refresh clears selection")
+	var file := FileAccess.open(folder.path_join("Study.json"), FileAccess.WRITE)
+	file.store_string("bad JSON")
+	file.close()
+	screen.get_node("Margin/Form/List").item_selected.emit(0)
+	assert_true(button.disabled, "failed loading cannot open editor")
+	setup.free()
+	_clean(folder)
+
+func test_editor_allows_legal_moves_after_automatic_draw():
+	var repertoire = _repertoire()
+	var folder := _folder()
+	repertoire.storage_dir = folder
+	assert_eq(repertoire.import_pgn("[SetUp \"1\"]\n[FEN \"7k/8/8/8/8/8/8/KB6 w - - 0 1\"]\n1. Ba2 *", "w", "Study"), "")
+	var editor = load("res://ui/repertoire_editor.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(editor)
+	editor.present(repertoire, "Study", 0)
+	assert_true(editor.board.play("h8g7"), "legal continuation after insufficient material")
+	editor.save()
+	assert_eq(repertoire.load_saved("Study"), "")
+	assert_eq(repertoire.lines[0].moves, PackedStringArray(["b1a2", "h8g7"]))
+	editor.free()
+	_clean(folder)
+
+func test_editor_preserves_variation_opening_comment_on_save():
+	var repertoire = _repertoire()
+	var folder := _folder()
+	repertoire.storage_dir = folder
+	assert_eq(repertoire.import_pgn("1. e4 e5 ({Sicilian} 1... c5) *", "w", "Study"), "")
+	assert_eq(repertoire.save_edited(repertoire.tree.duplicate(true), "Study"), "")
+	assert_eq(repertoire.load_saved("Study"), "")
+	var e4: Dictionary = repertoire.tree.values()[0].children.e2e4
+	assert_eq(e4.comments, [])
+	assert_eq(e4.children.c7c5.comments_before, ["Sicilian"])
+	_clean(folder)
+
+func _editor_mouse(window: Window, point: Vector2, button: int, pressed: bool) -> void:
+	var motion := InputEventMouseMotion.new()
+	motion.position = point + Vector2(window.position)
+	motion.global_position = motion.position
+	Input.parse_input_event(motion)
+	var event := InputEventMouseButton.new()
+	event.position = motion.position
+	event.global_position = motion.position
+	event.button_index = button
+	event.pressed = pressed
+	Input.parse_input_event(event)
+
+func test_editor_right_click_refreshes_tree_and_board():
+	var repertoire = _repertoire()
+	var folder := _folder()
+	repertoire.storage_dir = folder
+	assert_eq(repertoire.import_pgn("1. e4 e5 2. Nf3 *", "w", "Study"), "")
+	var root: Window = Engine.get_main_loop().root
+	var old_embed := root.gui_embed_subwindows
+	var old_size := root.size
+	root.gui_embed_subwindows = true
+	root.size = Vector2i(1280, 800)
+	var editor = load("res://ui/repertoire_editor.tscn").instantiate()
+	root.add_child(editor)
+	editor.present(repertoire, "Study", 0)
+	editor.size = Vector2i(760, 520)
+	await Engine.get_main_loop().process_frame
+	var tree: Tree = editor.tree
+	var e5 = tree.get_root().get_first_child().get_first_child().get_first_child()
+	var point: Vector2 = tree.global_position + Vector2(100, tree.get_item_area_rect(e5).get_center().y)
+	_editor_mouse(editor, point, MOUSE_BUTTON_RIGHT, true)
+	_editor_mouse(editor, point, MOUSE_BUTTON_RIGHT, false)
+	await Engine.get_main_loop().process_frame
+	assert_eq(tree.get_root().get_first_child().get_first_child().get_child_count(), 0, "deleted subtree disappears")
+	assert_eq(editor.board.game.board.position_key(), editor._node().position, "board returns to parent")
+	assert_eq(editor.path, PackedStringArray(["e2e4"]))
+	editor.free()
+	root.gui_embed_subwindows = old_embed
+	root.size = old_size
+	_clean(folder)

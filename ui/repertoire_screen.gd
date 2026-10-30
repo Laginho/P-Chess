@@ -12,12 +12,15 @@ var _selection := ""
 
 @onready var _list: ItemList = $Margin/Form/List
 @onready var _picker = $OpeningPicker
+@onready var _editor = $RepertoireEditor
 @onready var _line_list: ItemList = $Margin/Form/Viewer/Lines
 @onready var _board = $Margin/Form/Viewer/Board
 @onready var _status: Label = $Margin/Form/Status
 
 
 func _ready() -> void:
+	$Margin/Form/Edit.pressed.connect(func(): _editor.present(repertoire, _selection, _line))
+	_editor.saved.connect(_saved)
 	$Margin/Form/Import.pressed.connect(func(): importer.present())
 	$Margin/Form/FromOpenings.pressed.connect(func(): _picker.present_repertoire(repertoire))
 	$Margin/Form/Back.pressed.connect(hide)
@@ -38,6 +41,7 @@ func _refresh() -> void:
 	_line_list.clear()
 	_lines.clear()
 	_selection = ""
+	$Margin/Form/Edit.disabled = true
 	_line = -1
 	_board.game = null
 	_board.queue_redraw()
@@ -48,6 +52,7 @@ func _refresh() -> void:
 
 func _select_repertoire(index: int) -> void:
 	_selection = _list.get_item_text(index)
+	$Margin/Form/Edit.disabled = true
 	var error: String = repertoire.load_saved(_selection)
 	_line_list.clear()
 	_lines.clear()
@@ -57,6 +62,7 @@ func _select_repertoire(index: int) -> void:
 	_status.text = error
 	if not error.is_empty():
 		return
+	$Margin/Form/Edit.disabled = false
 	_lines = repertoire.lines.duplicate(true)
 	_board.flipped = repertoire.colour == "b"
 	_show_names()
@@ -93,7 +99,7 @@ func _show_position() -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if visible and not _picker.visible:
+	if visible and not _picker.visible and not _editor.visible:
 		_unhandled_key_input(event)
 
 
