@@ -4,7 +4,7 @@ Blocked by: CI-004, REV-001
 Review: agent
 Difficulty: hard
 Gate evidence: C:\Users\bruno\AppData\Local\Temp\rev002-gate.json
-Acceptance: pending | Run scripts/analyse.gd on a real saved game and check the JSON and elapsed time; a two-ply synthetic PGN was verified locally with Stockfish 19 in 0.9 s, and its SHA-256 was unchanged.
+Acceptance: passed | Foreman probe on the integrated session (8bb6467, 2026-10-30 20:10): `scripts/analyse.gd` on a copy of a real saved game (2026-10-26T23-21-19, 124 positions) finished in 21.4 s, exit 0; JSON has engine_version "Stockfish 19", node_budget 3000000, two PV lines on 122 positions, one forced position with PV1 only, the final checkmate as terminal_score; PGN SHA-256 unchanged. See ## Comments.
 
 - Primary files:
   - New: engine/analyser.gd
@@ -92,6 +92,8 @@ Given a saved game, run Stockfish over every position and write `user://analysis
   > 
   > I didn't run the gate, and no real Stockfish `id name` or `stop` exchange was tried. The fake-stdio tests only cover the bridge's own bookkeeping.
 
+- 2026-10-30 Foreman acceptance probe (after merge, session 8bb6467): `scripts/fetch-engine.ps1` verified Stockfish 19; `godot --headless -s scripts/analyse.gd -- <copy of user://games/2026-10-26T23-21-19_388433369.pgn>` reported 124/124 positions and "Analysis saved in 21.4 s", exit 0. JSON: engine_version "Stockfish 19", node_budget 3000000, 124 positions, 122 with two PV lines (depth 15-20 in the sampled positions), 1 forced with PV1 only, the last (checkmate) with no PV and terminal_score -1000. The PGN copy's SHA-256 was unchanged. The JSON was removed from user://analysis afterwards; a copy stays in the foreman's local run-log/probe/.
+
 #### Resolution (2026-10-30)
 
 Verdict: Approve
@@ -112,4 +114,4 @@ Verdict: Approve
 - Integration: rebased onto `sweatshop/analysis/2026-10-30-1831` (already current), then merged without squash as `8a79621`. This resolution, `Stage: done` and the ledger entry are committed together on the session branch. No production behavior was authored during review.
 
 Disclosure: decision | none | [Recorded proxy scope decision](#comments), receipt `C:\Users\bruno\AppData\Local\Temp\sweatshop-proxy\20261030-191716-REV-002-cdc3e7.json`: two internal bridge interfaces were approved to satisfy criteria 2, 5 and 6; their implementation and regression tests are included here.
-Disclosure: pending | release | Run `scripts/analyse.gd` on a real saved game, inspect the complete JSON and elapsed time, and verify the PGN remains unchanged. The recorded synthetic run and fixture/headless checks do not establish that product acceptance. This remains part of [Bruno's release QA in spec section 15.1](../../../docs/spec.md#151-release-and-tickets), and does not prevent session integration.
+Disclosure: decision | none | The real saved-game check this line used to hold was run by the foreman after merge (see Acceptance and ## Comments); classifications and accuracy on a real game remain with REV-005/REV-006 UI acceptance in [Bruno's release QA](../../../docs/spec.md#151-release-and-tickets).
