@@ -25,6 +25,7 @@ var _steps := []
 var _awaiting := ""
 var _board
 var _info := PackedStringArray()
+var _callback := Callable()
 var _engine_path: String
 var _engine_name: String
 
@@ -102,13 +103,15 @@ func start(dirs := search_dirs()) -> bool:
 	available = true
 	error = ""
 	_queue(["uci"], "uciok")
-	_queue(["setoption name VerboseMoveStats value true"], "")
+	if _engine_path == ENGINE:
+		_queue(["setoption name VerboseMoveStats value true"], "")
 	return true
 
 
 # Loads a Maia net (engine/weights/maia-<level>.pb.gz); later requests wait for readyok.
 func set_level(net_path: String) -> void:
-	_queue(["ucinewgame", "setoption name WeightsFile value " + net_path, "isready"], "readyok")
+	if _engine_path == ENGINE:
+		_queue(["ucinewgame", "setoption name WeightsFile value " + net_path, "isready"], "readyok")
 
 
 func new_game() -> void:
@@ -117,6 +120,8 @@ func new_game() -> void:
 
 # Emits policy_ready on the main thread once Lc0 answers bestmove.
 func request_policy(start_fen: String, moves: PackedStringArray) -> void:
+	if _engine_path != ENGINE:
+		return
 	var board = Board.from_fen(start_fen)
 	for move in moves:
 		board.make_move(move)
@@ -124,11 +129,15 @@ func request_policy(start_fen: String, moves: PackedStringArray) -> void:
 	_queue([position, "go nodes 1"], "bestmove", board)
 
 
+func request_search(commands: PackedStringArray, callback: Callable) -> void:
+	_queue(commands, "bestmove", null, callback)
+
+
 func poll() -> void:
 	if not available:
 		return
 	if not OS.is_process_running(pid):
-		_report_stopped("Lc0 stopped. Restart the app to play again.")
+		_report_stopped(_engine_name + " stopped. Restart the app to play again. Run scripts/fetch-engine.ps1 if needed.")
 		return
 	_mutex.lock()
 	var lines := _lines.duplicate()
@@ -137,13 +146,15 @@ func poll() -> void:
 	for line in lines:
 		# A failed WeightsFile can produce readyok, then error, then a fallback bestmove.
 		if line.begins_with("error "):
-			_report_stopped("Lc0 stopped: " + line.trim_prefix("error "))
+			_report_stopped(_engine_name + " stopped: " + line.trim_prefix("error ") + ". Run scripts/fetch-engine.ps1 if needed.")
 			return
+		if _awaiting == "bestmove" and _callback.is_valid() and (line.begins_with("info ") or line.begins_with("bestmove")):
+			_callback.call(line)
 		if _awaiting == "bestmove" and line.begins_with("info string "):
 			_info.append(line)
 		elif _awaiting != "" and line.begins_with(_awaiting):
 			_awaiting = ""
-			if line.begins_with("bestmove"):
+			if line.begins_with("bestmove") and _board != null:
 				policy_ready.emit(parse_policy(_info, _board))
 			_send()
 
@@ -167,16 +178,17 @@ func stop() -> void:
 	_steps.clear()
 	_awaiting = ""
 	_board = null
+	_callback = Callable()
 	_info.clear()
 	_mutex.lock()
 	_lines.clear()
 	_mutex.unlock()
 
 
-func _queue(lines: PackedStringArray, reply: String, board = null) -> void:
+func _queue(lines: PackedStringArray, reply: String, board = null, callback := Callable()) -> void:
 	if not available:
 		return
-	_steps.append([lines, reply, board])
+	_steps.append([lines, reply, board, callback])
 	_send()
 
 
@@ -188,6 +200,7 @@ func _send() -> void:
 			_stdio.store_line(line)
 		_awaiting = step[1]
 		_board = step[2]
+		_callback = step[3]
 		_info.clear()
 
 
