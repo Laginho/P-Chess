@@ -539,3 +539,18 @@ func test_editor_button_tracks_repertoire_selection():
 	assert_true(button.disabled, "failed loading cannot open editor")
 	setup.free()
 	_clean(folder)
+
+func test_editor_allows_legal_moves_after_automatic_draw():
+	var repertoire = _repertoire()
+	var folder := _folder()
+	repertoire.storage_dir = folder
+	assert_eq(repertoire.import_pgn("[SetUp \"1\"]\n[FEN \"7k/8/8/8/8/8/8/KB6 w - - 0 1\"]\n1. Ba2 *", "w", "Study"), "")
+	var editor = load("res://ui/repertoire_editor.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(editor)
+	editor.present(repertoire, "Study", 0)
+	assert_true(editor.board.play("h8g7"), "legal continuation after insufficient material")
+	editor.save()
+	assert_eq(repertoire.load_saved("Study"), "")
+	assert_eq(repertoire.lines[0].moves, PackedStringArray(["b1a2", "h8g7"]))
+	editor.free()
+	_clean(folder)
