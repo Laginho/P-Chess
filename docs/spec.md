@@ -452,7 +452,7 @@ chess.com's CAPS2 is not published.
 - **Tabs:** All, 1+0, 3+2 and 5+0. The default tab is a setting.
 - **Each game card shows:**
   - a thumbnail from your side of the board, at the deepest ply that still matches a catalog opening, with the last move highlighted;
-  - the opening name, only when the game matched the catalog. Without a match there is no name and the thumbnail shows ply 10;
+  - the opening name, only when the game matched the catalog. Without a match there is no name and the thumbnail shows ply 10, or the last ply in a shorter game; a game with no moves shows the start position with no highlight;
   - the date, each player's colour, "{name} x Maia 1500", the result and reason, and the number of moves;
   - the analysis state: not analysed / queued / analysing x% / both accuracies / stale.
 - **Actions per game:** Review, Analyze (Re-analyze when stale), Delete with confirmation, and Copy PGN as a discreet square icon that is still easy to hit. Delete removes the PGN, its analysis, and its share of the stats (read back from the PGN headers) and of the practice counts, so the profile always matches the history.
