@@ -1,5 +1,5 @@
 # HIST-003: Save the repertoire snapshot beside the PGN
-Stage: blocked
+Stage: to-review
 Blocked by: none
 Review: agent
 Difficulty: normal
@@ -34,3 +34,6 @@ When a game is played with a repertoire loaded, the lines it was checked against
 - 2026-10-30 Written from spec §15.7.
 
 - 2026-10-30 Review ended at blocked (exit 0); branch HIST-003 holds the review; left for a human
+
+- 2026-10-30 Proxy decided (opus-5.5 xhigh): Approve. Criterion 4 requires the reader and criterion 1 requires the colour, so both edits are authorized. Stage 1 does not need to clarify anything first. Fold the widened scopes below into Primary files so the boundary matches what was merged - both edits sit in files the ticket already names, and the numbered criteria require them. (receipt C:\Users\bruno\AppData\Local\Temp\sweatshop-proxy\20261030-195501-HIST-003-ed4474.json)
+  Primary-files interpretation: criteria 4 (snapshot reader) and 1 (repertoire colour) required `read_repertoire` in `core/history.gd` and the colour capture in `ui/main.gd` `_start`. Both files were already named. Scopes widened to match, numbered criteria unchanged. Asked by the foreman after stage 3 (gpt-6.1-sol xhigh) blocked with the proxy unreachable from Codex; resume stage 3 on the retained `HIST-003` branch (abb5e93).
