@@ -80,6 +80,7 @@ const BLACK_GLYPHS := {"q": "♛", "r": "♜", "b": "♝", "n": "♞", "p": "♟
 @onready var black_clock = $Layout/Side/BlackClock
 @onready var setup = $Setup
 @onready var resign_hint: Label = $Layout/Side/ResignHint
+@onready var resign_button: Button = $Layout/Side/ResignButton
 @onready var claim_draw: Button = $Layout/Side/ClaimDraw
 @onready var starting: Control = $Layout/BoardView/Starting
 
@@ -119,6 +120,7 @@ func _ready() -> void:
 	claim_draw.pressed.connect(func() -> void:
 		board_view.game.claim_draw()
 		_show_result())
+	resign_button.pressed.connect(_resign)
 	setup.started.connect(_start)
 	# The catalog takes seconds to parse: start it now so the first game does not wait for it.
 	setup.get_node("OpeningPicker").ensure_catalog()
@@ -141,7 +143,7 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	if clock:
 		clock.tick()
-	resign_hint.visible = resign_key.armed()
+	resign_hint.visible = clock != null and not board_view.game.is_over() and resign_key.armed()
 
 
 # Global input runs before GUI input: a flag or low-time warning must precede the drop
@@ -163,11 +165,15 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			if clock and not in_game:
 				_start(rematch(settings))
 		KEY_ESCAPE:
-			if in_game and resign_key.press():
-				board_view.game.resign(human)
-				_show_result()
+			_resign()
 		KEY_F11:
 			_set_focus(not focus)
+
+
+func _resign() -> void:
+	if not settings_screen.get_node("Panel").visible and clock != null and not board_view.game.is_over() and resign_key.press():
+		board_view.game.resign(human)
+		_show_result()
 
 
 func _start(new_settings: Dictionary) -> void:
@@ -233,6 +239,7 @@ func _start(new_settings: Dictionary) -> void:
 		label.text = ""
 	claim_draw.disabled = true
 	clock = Clock.new(settings.control, Time.get_ticks_msec)
+	resign_button.disabled = false
 	maia.clock = clock
 	maia.control = settings.control
 	maia.level = settings.level
@@ -248,6 +255,8 @@ func _start(new_settings: Dictionary) -> void:
 
 
 func _show_setup() -> void:
+	resign_button.disabled = true
+	resign_hint.hide()
 	review.hide()
 	clock = null
 	white_clock.clock = null
@@ -324,7 +333,7 @@ func _set_focus(on: bool) -> void:
 	focus = on
 	# The Esc hint and the result stay out of this list: criteria 4 and 2 show them when they apply,
 	# and the result is empty during play.
-	for node in [move_list, white_material, black_material, claim_draw, settings_screen]:
+	for node in [move_list, white_material, black_material, claim_draw, resign_button, settings_screen]:
 		node.visible = not on
 
 
@@ -366,6 +375,8 @@ func _on_flagged(side: String) -> void:
 
 # Every way a game ends lands here, after the game has its result.
 func _show_result() -> void:
+	resign_button.disabled = true
+	resign_hint.hide()
 	var game = board_view.game
 	board_view.cancel_premoves()
 	clock.stop()

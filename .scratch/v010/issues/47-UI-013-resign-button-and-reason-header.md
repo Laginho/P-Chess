@@ -1,5 +1,5 @@
 # UI-013: Resign button and the Reason header
-Stage: to-implement
+Stage: to-review
 Blocked by: none
 Review: agent
 Difficulty: normal
@@ -40,3 +40,40 @@ Resigning gets a button: a flag between the clocks that, like `Esc`, asks for a 
 ## Comments
 
 - 2026-10-30 Written from spec §15 (PR #24). v0.1.0 ships as one build, so the spec's `v0.0.x` patch split is gone (§15.1).
+
+- Stage 2: PGN tests red (10 passed, 3 failed), then green (13 passed); session tests red (14 passed, 2 failed), then green (16 passed). Updated exact-header assertions in `test_finished_game_builds_the_headers_and_clock_records_both_exports_share`, `test_finished_game_names_a_flag_and_an_optional_opening_last`, `test_finished_game_saves_one_pgn_with_headers_moves_and_exact_clocks`, the opening header assertion in `test_history.gd`, and the PGN export assertion in `test_review.gd`.
+- Gate: 273 passed, 0 failed, exit 0. The sandbox logged failure to read the Windows root certificate store; the test runner completed successfully.
+- Acceptance: pending | Manual two-click resignation and expiry check in the running application.
+
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\ui013-reopen-gate.json
+
+#### Resolution (2026-10-30)
+
+Verdict: Reopen — criterion 1 lacks the flag; the new focused button can resign through Settings.
+
+Reviewed `476c3fe753c275b5022138112cc7b3fe36e7dece...910bfb8f85ec3d454635fddcf6c51d8197d4a908` against this ticket and spec §15.2/§15.7. Standards and Spec were reviewed independently in parallel. All nine changed files were reviewed manually (9/9, 100%, none skipped); OCR excluded all nine as `unsupported_ext`, so its empty reviewable list was not treated as coverage.
+
+- Standards: no documented-standard violations or material smell findings. The test/production/test/production/metadata commit sequence and Primary-file boundaries are respected.
+- Spec, P2, `ui/main.tscn:78`: criterion 1 asks for a flag, but the scene sets `text = "?"` and supplies no icon. Replace it with a flag glyph or icon and verify the displayed control.
+- Spec, P2 regression, `ui/main.gd:173-176` and `ui/main.tscn:75-79`: a mouse click arms ResignButton and leaves it focused. Clicking Settings preserves that focus because Settings/Open is not focusable. Space then reaches the background button in GUI dispatch before Settings' `_unhandled_key_input` barrier, calls `_resign`, ends the game and saves a resignation while Settings remains open. Prevent the shared resign action from acting through Settings while preserving ordinary button/keyboard confirmation. Add a regression in the approved `tests/test_session.gd` seam using viewport input dispatch, rather than only direct `pressed.emit()` or `_unhandled_key_input()` calls.
+
+Numbered criteria:
+
+1. ❌ Button placement is correct between the clocks, including flipped sides; its visible content is `?`, not a flag.
+2. ✅ Shared two-second confirmation, hint text and expiry are implemented; the separate modal regression above still blocks integration.
+3. ✅ Click/Esc and Esc/click use the same `ResignKey` instance.
+4. ✅ Initial setup, game over and engine stop disable the button through scene defaults, `_show_result` and `_show_setup`.
+5. ✅ `finished_game` adds `game.reason` without changing existing headers. History.save and Review.present both use it; optional Opening remains last.
+
+Examined callers and failure paths: initial start/rematch, setup, engine stop, flag/checkmate/resignation/draw result handling, confirmation expiry, Settings arbitration, F11 focus mode, History.save and review/Copy PGN export. Stage-2 red/green logs were inspected: PGN 10 passed/3 failed then 13/0; session 14/2 then 16/0. The retained green gate receipt was validated against the reviewed HEAD, including tested-code equality, SHA-256 and recorded exit status: 273 passed, 0 failed, no `SKIP` records, exit 0. The log includes the Windows root-certificate-store error and fixture warnings; the runner completed successfully. No gate rerun and no production change during review.
+
+The modal regression was reproduced separately with Godot 4.7.2 headless and `Viewport.push_input`: mouse press/release at ResignButton, mouse press/release at Settings/Open, then Space press/release. Observed: armed=true and focus=ResignButton; Settings visible=true with the same focus; then game over=true, reason=resignation, Settings still visible=true. Probe exit 0. Local evidence: `C:\Users\bruno\AppData\Local\Temp\ui013-stage3-focus-probe.gd` and `C:\Users\bruno\AppData\Local\Temp\ui013-stage3-focus-probe.log`. This proves GUI event routing, not physical keyboard/mouse or rendered-layout acceptance.
+
+Acceptance: pending | Running-application checks remain: visible flag, ordinary two-click resignation, expiry followed by a fresh first click, both click/Esc orders, and no resignation through Settings. Rendered UI and physical input were not exercised in this review.
+Disclosure: pending | integration | Both P2 findings above remain assigned to this open UI-013 ticket. No accepted deferral; return to stage 2 on `ui-013`, retaining the implementation commits. No session merge or ledger entry.
+
+#### Stage 2 reopen (2026-10-30)
+
+- The viewport input regression failed before the fix and passed afterwards: a click arms Resign, opening Settings retains focus, and Space must not end the game. `_resign` now ignores input while the Settings panel is visible; the button text is the flag glyph `⚑`.
+- Gate: 274 passed, 0 failed, exit 0, tested commit `ce4bd06`. The log includes the Windows root-certificate-store error and fixture warnings. An initial wrapper launch failed before Godot started; the gate above ran once after correcting the wrapper.
+- Acceptance: pending | Verify the visible flag and the ordinary two-click, expiry, mixed click/Esc, and Settings input scenarios in the running application with physical input.

@@ -72,10 +72,16 @@ layout_mode = 2
 focus_mode = 0
 text = "Review"
 
+[node name="ResignButton" type="Button" parent="Layout/Side"]
+layout_mode = 2
+disabled = true
+text = "⚑"
+tooltip_text = "Resign"
+
 [node name="ResignHint" type="Label" parent="Layout/Side"]
 visible = false
 layout_mode = 2
-text = "Press Esc again to resign"
+text = "Click again to resign"
 
 [node name="ClaimDraw" type="Button" parent="Layout/Side"]
 layout_mode = 2

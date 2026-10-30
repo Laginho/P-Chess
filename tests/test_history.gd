@@ -169,7 +169,7 @@ func test_finished_game_saves_one_pgn_with_headers_moves_and_exact_clocks():
 	if parsed.games.size() == 1:
 		var saved: Dictionary = parsed.games[0]
 		assert_eq(saved.headers, {"White": "You", "Black": "Maia 1500", "TimeControl": "180+2",
-				"Result": "0-1", "Termination": "Normal"})
+				"Result": "0-1", "Termination": "Normal", "Reason": "checkmate"})
 		assert_eq(saved.result, "0-1")
 		assert_eq(saved.moves.map(func(move): return move.uci), ["f2f3", "e7e5", "g2g4", "d8h4"])
 		assert_eq(saved.moves.map(func(move): return move.clock_ms), [180000, 180000, 179534, 181001])
@@ -254,7 +254,7 @@ func test_headers_use_actual_level_colour_control_and_only_a_known_opening():
 		assert_eq(parsed.error, "")
 		assert_eq(parsed.games[0].headers, {"White": "Maia 1900", "Black": "You",
 				"TimeControl": {"1+0": "60+0", "3+2": "180+2", "5+0": "300+0"}[control],
-				"Result": "0-1", "Termination": "Normal", "Opening": "Bird Opening"})
+				"Result": "0-1", "Termination": "Normal", "Reason": "resignation", "Opening": "Bird Opening"})
 	HistoryStorage.clean(folder)
 
 
