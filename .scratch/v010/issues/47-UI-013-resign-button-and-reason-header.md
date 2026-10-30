@@ -1,5 +1,5 @@
 # UI-013: Resign button and the Reason header
-Stage: to-implement
+Stage: implementing
 Blocked by: none
 Review: agent
 Difficulty: normal

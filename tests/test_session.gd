@@ -403,3 +403,26 @@ func test_resign_button_disabled_in_setup_and_after_engine_stops():
 		main._on_engine_stopped()
 		assert_true(button.disabled, "disabled after engine stops")
 	main.free()
+
+
+func test_settings_blocks_focused_resign_button_from_space():
+	var main = _session(ManualWaits.new())
+	await Engine.get_main_loop().process_frame
+	await Engine.get_main_loop().process_frame
+	var viewport = main.get_viewport()
+	for control in [main.resign_button, main.settings_screen.get_node("Open")]:
+		for down in [true, false]:
+			var mouse := InputEventMouseButton.new()
+			mouse.button_index = MOUSE_BUTTON_LEFT
+			mouse.pressed = down
+			mouse.position = control.get_global_rect().get_center()
+			viewport.push_input(mouse, true)
+	assert_true(main.resign_key.armed(), "click arms resignation")
+	assert_true(main.settings_screen.get_node("Panel").visible, "Settings opened")
+	for down in [true, false]:
+		var key := InputEventKey.new()
+		key.keycode = KEY_SPACE
+		key.pressed = down
+		viewport.push_input(key, true)
+	assert_true(not main.board_view.game.is_over(), "Space in Settings cannot resign")
+	main.free()
