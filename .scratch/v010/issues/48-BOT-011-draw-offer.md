@@ -1,5 +1,5 @@
 # BOT-011: Draw offer, answered by Maia
-Stage: implementing
+Stage: to-review
 Blocked by: UI-013
 Review: agent
 Difficulty: hard
@@ -53,3 +53,12 @@ A ½ button beside the resign button offers Maia a draw (§15.2). Maia answers w
 - 2026-10-30: Lc0 v0.32.1, maia-1100, start position, `go nodes 1`: `info depth 1 seldepth 1 time 21 nodes 1 score cp 116 tbhits 0 pv e2e4`; `bestmove e2e4`.
 
 - 2026-10-30: The cooldown test was red with a nine-move mutant and green at ten; the live UCI test was red when score delivery was removed and green with it restored. The existing resignation session tests were updated for the action row.
+
+## Resolution
+
+- Added the draw-offer button, ten-human-move cooldown, timed notice and deterministic Maia decision using the evaluation of the reply search; agreement ends the game before the move and is saved in PGN and stats.
+- Focused tests demonstrated red/green for agreement, score parsing and delivery, decision boundaries, offer acceptance and button symbol; cooldown and score-delivery mutants were detected. Live Lc0 with maia-1100 supplied the score.
+- Gate `godot --headless -s tests/run.gd`: 281 passed, 0 failed, 0 skipped; exit 0. Layout and malformed-fixture warnings appear in the log.
+- Manual acceptance pending: offer in a dead-equal endgame with low clocks (accepted) and in the opening (declined); check the visible notice and side-panel layout.
+
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\bot011-gate.json
