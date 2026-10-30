@@ -1,5 +1,5 @@
 # OPEN-006: View a repertoire on a board
-Stage: implementing
+Stage: to-review
 Blocked by: OPEN-005
 Review: agent
 Difficulty: normal
@@ -36,3 +36,7 @@ The repertoire screen gets a board beside the list (§15.9), so you can see what
 
 - 2026-10-30 Stage stopped (incomplete handoff): Invalid committed handoff: Illegal characters in path. See C:\Users\bruno\Desktop\Pastinha\Programas\Projects\P-Chess\.artifacts-build\lanes\repertoire\.scratch\run-log\OPEN-006-implement-20261030-184720.txt.runtime.json and run-log/recovery.txt; inspect the saved work before retrying.
 - 2026-10-30 Foreman repair: the stop above was a corrupt `Gate evidence:` path in the stage-2 handoff (backslashes dropped by the writer; see OPEN-006-implement-20261030-184720.txt). The evidence JSON is intact (Code 84cfd26 = the feat commit, gate exit 0, 272 passed). Path repaired on the ticket branch (71b2b4a); work unchanged, sent to review.
+- 2026-10-30 Stage 2: focused red 9 passed, 1 failed (viewer missing); green 10 passed, 0 failed. Gate 272 reported passed, 0 failed, including 4 Lc0 skips (268 executed).
+- Acceptance: pending | Manually open a repertoire, select a line, and step with the physical arrow keys; inspect rendered layout and board highlighting.
+- Disclosure: pending | release | Manual viewer layout, highlighting, and physical input acceptance remain outstanding.
+Gate evidence: C:UsersrunoAppDataLocalTempopen-006-gate.json
