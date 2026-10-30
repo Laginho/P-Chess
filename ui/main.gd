@@ -46,6 +46,7 @@ var _history_saved := false
 var _recording_move := false
 var _starting := false
 var _review_repertoire: Array = []
+var _review_repertoire_colour := ""
 # Scores are half-points, attached to the players rather than board colours.
 var _human_score := 0
 var _maia_score := 0
@@ -214,6 +215,7 @@ func _start(new_settings: Dictionary) -> void:
 	var error := ""
 	var practice_book = setup.book
 	var review_repertoire: Array = []
+	var review_repertoire_colour := ""
 	var repertoire_name: String = new_settings.get("repertoire", "")
 	var repertoire_mode: bool = new_settings.opening == "My repertoire"
 	var repertoire_error := ""
@@ -224,6 +226,7 @@ func _start(new_settings: Dictionary) -> void:
 		if repertoire_error.is_empty():
 			# Snapshot even with checking off, so enabling it during play uses this PGN.
 			review_repertoire = setup.repertoire.lines.duplicate(true)
+			review_repertoire_colour = setup.repertoire.colour
 		if repertoire_mode and error.is_empty():
 			practice_book = setup.Book.new()
 			practice_book.load_repertoire(setup.repertoire.lines, "b" if new_settings.colour == "w" else "w")
@@ -251,6 +254,7 @@ func _start(new_settings: Dictionary) -> void:
 		_reset_match()
 	settings = new_settings.duplicate()
 	_review_repertoire = review_repertoire
+	_review_repertoire_colour = review_repertoire_colour
 	human = settings.colour
 	_show_match_score = _match_games > 0
 	white_score.visible = _show_match_score and not focus
@@ -467,7 +471,7 @@ func _show_result() -> void:
 			_maia_score += 2
 		_update_score_text()
 		_history_saved = true
-		history.save(game, _move_clocks, settings, "", maia.target_id)
+		history.save(game, _move_clocks, settings, "", maia.target_id, _review_repertoire, _review_repertoire_colour)
 	if history.error:
 		result_label.text += "\nHistory: " + history.error
 	review.present(game, _move_clocks, settings, result_label.text,
