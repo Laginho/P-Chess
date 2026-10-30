@@ -63,6 +63,40 @@ func test_invalid_fen_sends_nothing_and_cancellation_writes_nothing():
 	analyser.free()
 
 
+func test_terminal_and_forced_positions_are_recorded():
+	var bridge := FakeBridge.new()
+	var analyser = Analyser.new(bridge)
+	var path := "user://rev002-terminal.json"
+	DirAccess.remove_absolute(path)
+	var forced := "7k/8/6K1/8/8/8/8/7R b - - 0 1"
+	var mate := "7k/6Q1/6K1/8/8/8/8/8 b - - 0 1"
+	assert_true(analyser.analyse([forced, mate], path, false))
+	assert_eq(bridge.searches.size(), 1, "terminal position is not sent")
+	bridge.answer()
+	var positions: Array = Analyser.read_analysis(path, "Stockfish 19", 3000000).data.positions
+	assert_eq(positions[1].pv, [])
+	assert_eq(positions[1].terminal_score, -1000)
+	assert_eq(positions[0].pv.size(), 1)
+	DirAccess.remove_absolute(path)
+	analyser.free()
+
+
+func test_stop_waits_for_completed_multipv_depth_and_fires_once():
+	var bridge := FakeBridge.new()
+	var analyser = Analyser.new(bridge)
+	assert_true(analyser.analyse([START], "user://rev002-depth.json", false))
+	for depth in [10, 11, 12]:
+		bridge.callback.call("info depth %d multipv 1 score cp 30 pv e2e4" % depth)
+		if depth == 12:
+			assert_eq(bridge.stops, 0, "PV2 has not completed depth 12")
+		bridge.callback.call("info depth %d multipv 2 score cp 10 pv d2d4" % depth)
+	assert_eq(bridge.stops, 1)
+	analyser.cancel()
+	bridge.callback.call("bestmove e2e4")
+	assert_eq(bridge.stops, 1, "cancelling a stopped search does not send stop twice")
+	analyser.free()
+
+
 func test_convergence_requires_three_stable_completed_depths_at_depth_twelve():
 	var script = load("res://engine/analyser.gd")
 	if script == null:
