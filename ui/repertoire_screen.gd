@@ -12,12 +12,15 @@ var _selection := ""
 
 @onready var _list: ItemList = $Margin/Form/List
 @onready var _picker = $OpeningPicker
+@onready var _editor = $RepertoireEditor
 @onready var _line_list: ItemList = $Margin/Form/Viewer/Lines
 @onready var _board = $Margin/Form/Viewer/Board
 @onready var _status: Label = $Margin/Form/Status
 
 
 func _ready() -> void:
+	$Margin/Form/Edit.pressed.connect(func(): _editor.present(repertoire, _selection, _line))
+	_editor.saved.connect(_saved)
 	$Margin/Form/Import.pressed.connect(func(): importer.present())
 	$Margin/Form/FromOpenings.pressed.connect(func(): _picker.present_repertoire(repertoire))
 	$Margin/Form/Back.pressed.connect(hide)
@@ -93,7 +96,7 @@ func _show_position() -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if visible and not _picker.visible:
+	if visible and not _picker.visible and not _editor.visible:
 		_unhandled_key_input(event)
 
 
