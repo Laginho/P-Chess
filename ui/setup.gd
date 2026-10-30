@@ -31,6 +31,7 @@ var _engine_missing := false
 @onready var _repertoire_controls: HBoxContainer = $Center/Form/RepertoireControls
 @onready var _repertoires: OptionButton = $Center/Form/RepertoireControls/Saved
 @onready var _importer = $RepertoireImport
+@onready var _repertoire_screen = $RepertoireScreen
 
 
 func _ready() -> void:
@@ -50,7 +51,10 @@ func _ready() -> void:
 	_picker.saved.connect(_refresh_selections)
 	_importer.repertoire = repertoire
 	_importer.saved.connect(_refresh_repertoires)
-	$Center/Form/RepertoireControls/Import.pressed.connect(_importer.present)
+	$Center/Form/RepertoireControls/Import.pressed.connect(_repertoire_screen.present)
+	_repertoire_screen.repertoire = repertoire
+	_repertoire_screen.importer = _importer
+	_repertoire_screen.saved.connect(_refresh_repertoires)
 	_repertoires.item_selected.connect(func(_index): _on_opening_selected(_opening.selected))
 	_repertoires.tooltip_text = "Repertoire to check in review; also Maia's book in My repertoire mode"
 	visibility_changed.connect(func():

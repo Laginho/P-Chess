@@ -176,6 +176,9 @@ func test_real_import_and_setup_controls_adopt_saved_colour_and_reject_invalid_f
 	var start: Button = setup.get_node("Center/Form/Start")
 	assert_true(start.disabled, "no repertoire yet")
 	setup.get_node("Center/Form/RepertoireControls/Import").pressed.emit()
+	var screen = setup.get_node("RepertoireScreen")
+	assert_true(screen.visible, "repertoire screen opens")
+	screen.get_node("Margin/Form/Import").pressed.emit()
 	var importer = setup.get_node("RepertoireImport")
 	assert_true(importer.visible)
 	importer.get_node("Margin/Form/Name").text = "My study"
@@ -195,7 +198,7 @@ func test_real_import_and_setup_controls_adopt_saved_colour_and_reject_invalid_f
 	assert_eq(started[0].colour, "b")
 	assert_eq(started[0].repertoire, "My study")
 	assert_eq(started[0].opening, "My repertoire")
-	setup.get_node("Center/Form/RepertoireControls/Import").pressed.emit()
+	screen.get_node("Margin/Form/Import").pressed.emit()
 	assert_true(not importer.import_file("res://missing-study.pgn", "Missing", "w").is_empty())
 	DirAccess.make_dir_recursive_absolute(folder)
 	var bad_file := FileAccess.open(folder.path_join("bad.pgn"), FileAccess.WRITE)
@@ -357,4 +360,36 @@ func test_setup_keeps_engine_guidance_and_clears_repertoire_errors_when_changing
 	opening.item_selected.emit(2)
 	assert_true(status.visible and "Engine unavailable" in status.text, "repertoire colour loading must preserve missing-engine guidance")
 	setup.free()
+	_clean(folder)
+
+func test_catalog_selection_saves_repertoire_and_book_uses_it():
+	var repertoire = _repertoire()
+	var folder := _folder()
+	repertoire.storage_dir = folder
+	var catalog = load("res://bot/book.gd").new()
+	catalog.load_tsv("eco\tname\tpgn\nB12\tCaro-Kann Defense: Advance Variation\t1. e4 c6 2. d4 d5 3. e5\nB10\tCaro-Kann Defense: Two Knights\t1. e4 c6 2. Nc3 d5\n")
+	catalog.set_checked("Caro-Kann Defense", true)
+	assert_true(repertoire.has_method("save_openings"), "save checked catalog entries")
+	if not repertoire.has_method("save_openings"):
+		return
+	assert_true(not repertoire.save_openings(catalog, "b", "").is_empty())
+	var empty = load("res://bot/book.gd").new()
+	assert_true(not repertoire.save_openings(empty, "b", "Empty").is_empty())
+	assert_eq(repertoire.save_openings(catalog, "b", "Caro"), "")
+	var loaded = _repertoire()
+	loaded.storage_dir = folder
+	assert_eq(loaded.load_saved("Caro"), "")
+	assert_eq(loaded.colour, "b")
+	assert_eq(loaded.lines.size(), 2)
+	for entry in catalog.entries:
+		var found := false
+		for line in loaded.lines:
+			if line.moves == entry.moves:
+				found = true
+		assert_true(found, "catalog moves survive saving")
+	var book = load("res://bot/book.gd").new()
+	book.load_repertoire(loaded.lines, "w")
+	book.begin_game({}, RandomNumberGenerator.new(), "w")
+	var board = load("res://core/board.gd").from_fen(load("res://bot/book.gd").START)
+	assert_true(book.weights(board, 0).e2e4 > 1.0, "My repertoire follows the selected lines")
 	_clean(folder)
