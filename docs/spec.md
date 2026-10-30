@@ -344,7 +344,7 @@ UI strings stay English only (Portuguese is in §14).
 
 ### 15.1 Release and tickets
 
-One build, `v0.0.2`, holds all of §15. Bruno then plays it, tunes every threshold, and tags `v0.1.0`. The tickets live in `.scratch/v010/issues/`:
+One build, `v0.0.2`, holds all of §15. Bruno then plays it, tunes every threshold, and tags `v0.1.0`. The tickets run in three sweatshop lanes: `.scratch/analysis/` (CI-004, REV-001 to REV-004), `.scratch/repertoire/` (OPEN-005 to OPEN-007) and `.scratch/v010/` (the rest). A ticket blocked by another lane's ticket waits until that lane's PR is merged.
 
 | Content | Tickets |
 |---|---|
