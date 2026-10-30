@@ -434,6 +434,8 @@ Lichess's formulas (`AccuracyPercent.scala` in lila). Win% is `100·EP`, so drop
 - **Per game:** the mean of the volatility-weighted mean and the harmonic mean of that side's move accuracies. The window is plies/10 rounded down, clamped to 2–8. The win% series starts at the initial position; windows slide over it one ply at a time, and the first window is repeated so the opening plies also get one, as in lila. A move's weight is the std-dev of win% in its window, clamped to 0.5–12.
 - **A side with no moves** (you resigned before your first move) has no accuracy: the review and the history card show "–" for it, and the profile's accuracy over time leaves the game out.
 
+The headless `core/accuracy.gd` takes the stored analysis JSON and returns `white` and `black` accuracy values or null. It reads each position's PV1 or terminal score in the side-to-move perspective, converting them to a single white-perspective series; the starting FEN selects the first mover.
+
 chess.com's CAPS2 is not published.
 
 ### 15.6 Review screen
