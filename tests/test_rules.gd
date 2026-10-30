@@ -134,3 +134,13 @@ func test_play_records_legal_moves_and_refuses_the_rest():
 	game.flag("b")
 	_assert_end(game, "0-1", "resignation", "a flag after the end changes nothing")
 	assert_eq(game.moves, PackedStringArray(["e2e4", "e7e5"]))
+
+
+func test_draw_by_agreement_ends_only_a_running_game():
+	var game = Game.new()
+	game.agree_draw()
+	_assert_end(game, "1/2-1/2", "agreement")
+	var finished = Game.new()
+	finished.resign("w")
+	finished.agree_draw()
+	_assert_end(finished, "0-1", "resignation", "agreement cannot replace a result")
