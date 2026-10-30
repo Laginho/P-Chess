@@ -407,6 +407,8 @@ Both sides are classified, so you and Maia both get accuracy.
 
 These thresholds are chess.com's published expected-points table. Unlike chess.com, they do not depend on rating.
 
+- **One class per move**, the first that applies in this order: Forced, Repertoire, Book, Brilliant, Great, Best, then the loss bands (Excellent to Blunder) after the Miss and Lenient Blunder adjustments. Book and Repertoire replace the engine class; the summary counts each move once, under its class.
+
 - **Great and Brilliant are never given when:**
   - PV2 is still ≥ +700 cp for the mover (winning anyway);
   - the mover is below EP 0.5 after the move;
@@ -438,7 +440,7 @@ chess.com's CAPS2 is not published.
 - **On the board:** the classification icon on the destination square, and an arrow for the best move.
 - **Summary:** each side's accuracy, and the count of moves per class.
 - A "?" tooltip next to the accuracy and the class counts explains in plain English how each is computed and the thresholds.
-- Copy PGN and Open in Lichess stay. There is no coach text and no retry.
+- Copy PGN and Open in Lichess stay. Rematch and New game appear only when the review was opened from the post-game panel, whose game settings are still in memory; a review opened from the history has neither. There is no coach text and no retry.
 - **Icons:** our own SVGs in chess.com's style and colours; chess.com's icons are proprietary.
 - **Entry points:**
   - The post-game panel's **Review** button opens it and starts analysing at once on Max. Moves fill in as their analysis lands.
