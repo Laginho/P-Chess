@@ -30,6 +30,14 @@ static func evaluate(moves: PackedStringArray, analysis: Dictionary, catalog: Ar
 		var after_ep := _ep(played_score)
 		var loss := maxf(0.0, before_ep - after_ep)
 		var label := _mate_or_band(best, played, loss)
+		if label in ["Mistake", "Blunder"] and i > 0 and result[i - 1].class in ["Mistake", "Blunder"] \
+				and before_ep >= Tunables.CLASSIFICATION_MISS_BEFORE_EP \
+				and after_ep <= Tunables.CLASSIFICATION_MISS_AFTER_EP \
+				and loss >= Tunables.CLASSIFICATION_MISS_LOSS:
+			label = "Miss"
+		elif label == "Blunder" and (played_score >= Tunables.CLASSIFICATION_LENIENT_CP \
+				or _score(best) <= -Tunables.CLASSIFICATION_LENIENT_CP):
+			label = "Good"
 		var board = Board.from_fen(before.fen)
 		if board.legal_moves().size() == 1:
 			label = "Forced"
@@ -89,10 +97,7 @@ static func _mate_or_band(best: Dictionary, played: Dictionary, loss: float) -> 
 		if cp >= Tunables.CLASSIFICATION_MATE_INACCURACY_CP:
 			return "Inaccuracy"
 		return "Mistake" if cp >= 0 else "Blunder"
-	var band := _band(loss)
-	if band == "Blunder" and (_score(played) >= Tunables.CLASSIFICATION_LENIENT_CP or _score(best) <= -Tunables.CLASSIFICATION_LENIENT_CP):
-		return "Good"
-	return band
+	return _band(loss)
 
 
 static func _great(board, moves: PackedStringArray, i: int, lines: Array, after_ep: float) -> bool:
