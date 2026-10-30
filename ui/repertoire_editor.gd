@@ -112,7 +112,7 @@ func _mouse_selected(position: Vector2, button: int) -> void:
 	var move: String = path[path.size() - 1]
 	path.remove_at(path.size() - 1)
 	_node().children.erase(move)
-	_refresh()
+	_refresh.call_deferred()
 
 
 func save() -> void:
