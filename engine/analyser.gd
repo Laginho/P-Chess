@@ -19,6 +19,7 @@ var _lines := {}
 var _depths := {}
 var _completed := {}
 var _setup := PackedStringArray()
+var _waiting_for_engine := false
 
 
 func _init(bridge = null) -> void:
@@ -39,15 +40,24 @@ func analyse(fens: Array, path: String, maximum: bool) -> bool:
 	_active = true
 	var threads := maxi(1, OS.get_processor_count() - 1) if maximum else 1
 	_setup = PackedStringArray(["setoption name Threads value %d" % threads,
-			"setoption name MultiPV value 2", "ucinewgame"])
-	_next()
+			"setoption name MultiPV value 2"])
+	_bridge.new_game()
+	_waiting_for_engine = _bridge.engine_id.is_empty()
+	if not _waiting_for_engine:
+		_next()
 	return true
+
+
+func _process(_delta: float) -> void:
+	if _waiting_for_engine and (_cancelled or not _bridge.engine_id.is_empty()):
+		_waiting_for_engine = false
+		_next()
 
 
 func cancel() -> void:
 	if _active and not _cancelled:
 		_cancelled = true
-		if not _stop_sent:
+		if not _stop_sent and not _waiting_for_engine:
 			_stop_sent = true
 			_bridge.stop_search()
 
