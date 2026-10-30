@@ -1,8 +1,9 @@
 # REV-004: Accuracy per move and per game
-Stage: to-implement
+Stage: to-review
 Blocked by: REV-002
 Review: agent
 Difficulty: hard
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\rev004-stage2-gate.json
 
 - Primary files:
   - New: core/accuracy.gd
@@ -34,3 +35,7 @@ Each side's accuracy for a game, from its analysis JSON, with Lichess's formulas
 ## Comments
 
 - 2026-10-30 Written from spec §15.5. chess.com's CAPS2 is not published, so Lichess's formula it is.
+
+- 2026-10-30 Stage 2: move accuracy red without the module (0 passed, 1 failed), then green. Game and empty/black-start cases red without `evaluate` (1 passed, 2 failed), then green. A mutation forcing window size 2 failed the 40- and 200-ply cases; restored production passes all 5 focused tests.
+- Real-game fixtures project the score fields needed from Lichess exports [uqCv060v](https://lichess.org/uqCv060v) and [T1QrzasJ](https://lichess.org/T1QrzasJ); the site reports integer percentages (87/94 and 85/72). The code returns 86.9913/94.0677 and 84.9996/72.0022. Independently evaluating the full-precision lila formula on those exported scores yields 86.9901/94.0671 and 84.9982/71.9995 respectively; the initial score is 15 cp for the standard start. The fixtures are score projections, not complete analyser-produced game files.
+- Gate on `4cb5bb2575837a19c046efaaa64f4772285adc81`: 306 passed, 0 failed, 0 skips, exit 0. Log: `C:\Users\bruno\AppData\Local\Temp\rev004-stage2-gate.log`. Godot reported it could not read the system certificate store; the headless tests passed.
