@@ -116,7 +116,9 @@ func _on_line(line: String) -> void:
 				_depths[parsed.depth].cp = parsed.cp
 			else:
 				_depths[parsed.depth].mate = parsed.mate
-			var depths := _depths.keys()
+		var completed: bool = number == 2 or Board.from_fen(_fens[_index]).legal_moves().size() == 1
+		if completed and _depths.has(parsed.depth):
+			var depths := _depths.keys().filter(func(depth): return depth <= parsed.depth)
 			depths.sort()
 			var samples := []
 			for depth in depths:
@@ -179,9 +181,11 @@ static func converged(samples: Array) -> bool:
 	var first: Dictionary = recent[0]
 	var low := 1.0
 	var high := 0.0
+	var previous := -1
 	for sample: Dictionary in recent:
-		if sample.move != first.move:
+		if sample.move != first.move or sample.depth <= previous:
 			return false
+		previous = sample.depth
 		var cp: int = clampi(sample.get("cp", 1000 if sample.get("mate", 0) > 0 else -1000), -1000, 1000)
 		var ep := 1.0 / (1.0 + exp(-0.00368208 * cp))
 		low = minf(low, ep)
