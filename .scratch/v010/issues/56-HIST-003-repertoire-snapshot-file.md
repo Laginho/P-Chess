@@ -1,12 +1,12 @@
 # HIST-003: Save the repertoire snapshot beside the PGN
-Stage: blocked
+Stage: to-review
 Blocked by: none
 Review: agent
 Difficulty: normal
 
 - Primary files:
-  - core/history.gd (`save`)
-  - ui/main.gd (`_show_result`: pass `_review_repertoire`)
+  - core/history.gd (`save`; `read_repertoire`, the reader criterion 4 requires)
+  - ui/main.gd (`_start`: capture the repertoire colour beside `_review_repertoire`; `_show_result`: pass both)
   - tests/test_history.gd
   - docs/spec.md (§15.7)
 
