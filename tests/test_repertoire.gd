@@ -176,6 +176,9 @@ func test_real_import_and_setup_controls_adopt_saved_colour_and_reject_invalid_f
 	var start: Button = setup.get_node("Center/Form/Start")
 	assert_true(start.disabled, "no repertoire yet")
 	setup.get_node("Center/Form/RepertoireControls/Import").pressed.emit()
+	var screen = setup.get_node("RepertoireScreen")
+	assert_true(screen.visible, "repertoire screen opens")
+	screen.get_node("Margin/Form/Import").pressed.emit()
 	var importer = setup.get_node("RepertoireImport")
 	assert_true(importer.visible)
 	importer.get_node("Margin/Form/Name").text = "My study"
@@ -195,7 +198,7 @@ func test_real_import_and_setup_controls_adopt_saved_colour_and_reject_invalid_f
 	assert_eq(started[0].colour, "b")
 	assert_eq(started[0].repertoire, "My study")
 	assert_eq(started[0].opening, "My repertoire")
-	setup.get_node("Center/Form/RepertoireControls/Import").pressed.emit()
+	screen.get_node("Margin/Form/Import").pressed.emit()
 	assert_true(not importer.import_file("res://missing-study.pgn", "Missing", "w").is_empty())
 	DirAccess.make_dir_recursive_absolute(folder)
 	var bad_file := FileAccess.open(folder.path_join("bad.pgn"), FileAccess.WRITE)
