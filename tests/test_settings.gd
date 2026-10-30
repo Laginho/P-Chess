@@ -16,6 +16,18 @@ func _fresh() -> String:
 	return PATH
 
 
+func test_board_size_defaults_round_trips_and_rejects_invalid_values():
+	var store = Settings.new(_fresh())
+	assert_eq(store.get_value("board_size"), 0, "zero means fit to window")
+	assert_true(store.set_value("board_size", 480))
+	assert_eq(Settings.new(PATH).get_value("board_size"), 480)
+	assert_true(not store.set_value("board_size", -1))
+	var file := ConfigFile.new()
+	file.set_value("settings", "board_size", -1)
+	file.save(PATH)
+	assert_eq(Settings.new(PATH).get_value("board_size"), 0)
+
+
 func test_a_missing_file_gives_the_spec_defaults():
 	var settings = Settings.new(_fresh())
 	assert_eq(settings.get_value("legal_dots"), true)

@@ -1,5 +1,5 @@
 # UI-015: Board resize grip
-Stage: to-implement
+Stage: implementing
 Blocked by: none
 Review: agent
 Difficulty: normal
