@@ -1,5 +1,5 @@
-# UI-013: Resign button and the Reason header
-Stage: to-implement
+﻿# UI-013: Resign button and the Reason header
+Stage: implementing
 Blocked by: none
 Review: agent
 Difficulty: normal
@@ -12,11 +12,11 @@ Difficulty: normal
   - tests/test_pgn.gd
   - tests/test_history.gd (test-only: the exact-header assertions near lines 171 and 255)
   - tests/test_review.gd (test-only: the exact-header assertion near line 186)
-  - docs/spec.md (§15.2, §15.7)
+  - docs/spec.md (Â§15.2, Â§15.7)
 
 #### What to build
 
-Resigning gets a button: a flag between the clocks that, like `Esc`, asks for a second click within 2 s (§15.2). Every saved PGN also records why the game ended, in a `Reason` header, because `Termination: Normal` cannot tell an agreed draw from a claimed repetition (§15.7).
+Resigning gets a button: a flag between the clocks that, like `Esc`, asks for a second click within 2 s (Â§15.2). Every saved PGN also records why the game ended, in a `Reason` header, because `Termination: Normal` cannot tell an agreed draw from a claimed repetition (Â§15.7).
 
 #### Acceptance criteria
 
@@ -39,4 +39,4 @@ Resigning gets a button: a flag between the clocks that, like `Esc`, asks for a 
 
 ## Comments
 
-- 2026-10-30 Written from spec §15 (PR #24). v0.1.0 ships as one build, so the spec's `v0.0.x` patch split is gone (§15.1).
+- 2026-10-30 Written from spec Â§15 (PR #24). v0.1.0 ships as one build, so the spec's `v0.0.x` patch split is gone (Â§15.1).
