@@ -39,4 +39,4 @@ The repertoire screen gets a board beside the list (§15.9), so you can see what
 - 2026-10-30 Stage 2: focused red 9 passed, 1 failed (viewer missing); green 10 passed, 0 failed. Gate 272 reported passed, 0 failed, including 4 Lc0 skips (268 executed).
 - Acceptance: pending | Manually open a repertoire, select a line, and step with the physical arrow keys; inspect rendered layout and board highlighting.
 - Disclosure: pending | release | Manual viewer layout, highlighting, and physical input acceptance remain outstanding.
-Gate evidence: C:UsersrunoAppDataLocalTempopen-006-gate.json
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\open-006-gate.json
