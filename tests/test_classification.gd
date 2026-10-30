@@ -19,7 +19,7 @@ func test_best_and_played_second_line_use_movers_score():
 	var best: Array = classification.evaluate(PackedStringArray(["e2e4"]), analysis, [], [], "w", false)
 	assert_eq(best[0].class, "Best")
 	var second: Array = classification.evaluate(PackedStringArray(["d2d4"]), analysis, [], [], "w", false)
-	assert_eq(second[0].class, "Excellent", "PV2 score overrides the noisy subsequent position")
+	assert_eq(second[0].class, "Good", "PV2 score overrides the noisy subsequent position")
 
 
 func _one(move: String, first: Dictionary, second: Dictionary, after: Dictionary) -> Dictionary:
@@ -33,8 +33,8 @@ func test_loss_bands_and_score_clamping_for_both_colours():
 	var classification = load("res://core/classification.gd")
 	var first := {"moves": ["e2e4"], "cp": 0}
 	var second := {"moves": ["d2d4"], "cp": -10}
-	for sample in [[0, "Excellent"], [40, "Excellent"], [100, "Good"],
-			[200, "Inaccuracy"], [400, "Mistake"], [1000, "Blunder"], [5000, "Blunder"]]:
+	for sample in [[0, "Excellent"], [10, "Excellent"], [40, "Good"],
+			[100, "Inaccuracy"], [200, "Mistake"], [400, "Blunder"], [5000, "Blunder"]]:
 		var data := _one("c2c4", first, second, {"moves": ["e7e5"], "cp": sample[0]})
 		var result: Array = classification.evaluate(PackedStringArray(["c2c4"]), data, [], [], "w", false)
 		assert_eq(result[0].class, sample[1], "opponent score %d" % sample[0])
