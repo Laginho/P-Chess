@@ -1,5 +1,5 @@
 # UI-013: Resign button and the Reason header
-Stage: to-review
+Stage: done
 Blocked by: none
 Review: agent
 Difficulty: normal
@@ -77,3 +77,29 @@ Disclosure: pending | integration | Both P2 findings above remain assigned to th
 - The viewport input regression failed before the fix and passed afterwards: a click arms Resign, opening Settings retains focus, and Space must not end the game. `_resign` now ignores input while the Settings panel is visible; the button text is the flag glyph `⚑`.
 - Gate: 274 passed, 0 failed, exit 0, tested commit `ce4bd06`. The log includes the Windows root-certificate-store error and fixture warnings. An initial wrapper launch failed before Godot started; the gate above ran once after correcting the wrapper.
 - Acceptance: pending | Verify the visible flag and the ordinary two-click, expiry, mixed click/Esc, and Settings input scenarios in the running application with physical input.
+
+#### Resolution (2026-10-30)
+
+Verdict: Approve
+
+Re-reviewed `910bfb8..954175e` and both previous findings against the numbered criteria, with the complete `476c3fe...954175e` implementation diff as context. Standards and Spec were reviewed independently in parallel. All nine changed files were examined (9/9, none skipped); no additional defect or scope creep was found. This review changed only ticket and ledger metadata.
+
+- Standards: 0 findings. Primary-file boundaries and the separate test/production commits remain valid, including regression test `c195b05`, production fix `ce4bd06`, and metadata handoff `954175e`. No material smell finding.
+- Spec: 0 unresolved findings. Criterion 1's missing flag is corrected by `text = "⚑"` in `ui/main.tscn`. The shared `_resign` callback now checks Settings before mutating the confirmation window or game, resolving the focused-button regression.
+
+Numbered criteria:
+
+1. ✅ The flag button remains between the clocks, including when sides are flipped.
+2. ✅ The first action arms the shared two-second window and shows "Click again to resign"; a timely second action resigns, while expiry hides the hint and makes the next action a fresh first action.
+3. ✅ Both click/Esc orders use the same `ResignKey` through `_resign`.
+4. ✅ Scene defaults, `_show_setup`, `_on_engine_stopped`, and `_show_result` disable the button outside a running game.
+5. ✅ The shared `finished_game` builder preserves existing headers and adds `game.reason` for both History.save and Review export; Opening remains last when present.
+
+Examined callers and interactions: mouse-button callback and Esc, Settings GUI dispatch, confirmation expiry, game start/rematch/setup, engine stop, terminal game handling, flipped clocks, F11 focus mode, History.save, and Review/Copy PGN. The new regression sends mouse clicks and Space through `Viewport.push_input`; it does not merely emit `pressed`. Its pre-fix failure is recorded by stage 2 above; the retained script `C:\Users\bruno\AppData\Local\Temp\ui013-red.gd` exercises that test. This re-review independently inspected the original red/green logs (PGN 10 passed/3 failed then 13/0; session 14/2 then 16/0) and the reopened green gate, without claiming a new red execution.
+
+Gate evidence was validated against the reviewed HEAD and again after the no-op rebase: tested commit `ce4bd06f8e46d4faa98ccf0638d8f36812ab148b`, matching production, unchanged SHA-256 log, recorded exit 0, 274 PASS records, 0 failures and 0 SKIP records. The new Settings regression is among the passing tests. The log includes the Windows root-certificate-store error and fixture/layout warnings; the runner completed successfully. No code changed, so the gate was not rerun. Receipt: `C:\Users\bruno\AppData\Local\Temp\ui013-reopen-gate.json`.
+
+Integrated with `--no-ff` into `sweatshop/v010/2026-10-30-1831` as `4de18d7e84b7436a79e1a95a57cb200d5b901999`; no conflict, PR, or push. The earlier integration disclosure is resolved by the two verified corrections. No unresolved code finding remains.
+
+Acceptance: pending | Rendered flag and physical-input checks remain: ordinary two-click resignation, expiry followed by a fresh first click, both click/Esc orders, and no resignation through Settings. Headless GUI dispatch does not establish these product checks.
+Disclosure: pending | release | [Manual verification](#verification) and [stage-2 reopen evidence](#stage-2-reopen-2026-10-30): the visual/physical-input checklist above remains a release condition; implementation approval permits integration into the session branch.
