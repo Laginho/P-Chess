@@ -143,3 +143,25 @@ static func _collect(node: Dictionary, moves: PackedStringArray, positions: Pack
 		next_moves.append(move)
 		next_positions.append(node.children[move].position)
 		_collect(node.children[move], next_moves, next_positions, paths, human_colour)
+
+# Save the edited tree through the normal PGN validation and atomic-write path.
+func save_edited(edited: Dictionary, name: String) -> String:
+	var chapters: Array[String] = []
+	for root in edited.values():
+		_edit_chapters(root, Board.from_fen(root.position + " 0 1"), [], chapters, root.position)
+	if chapters.is_empty():
+		return "A repertoire needs at least one move."
+	return import_pgn("\n\n".join(chapters), colour, name)
+
+
+static func _edit_chapters(node: Dictionary, board, moves: Array, chapters: Array[String], root: String) -> void:
+	if node.children.is_empty():
+		if not moves.is_empty():
+			chapters.append("[SetUp \"1\"]\n[FEN \"%s 0 1\"]\n%s *" % [root, " ".join(moves)])
+		return
+	for move in node.children:
+		var next = board.copy()
+		var path := moves.duplicate()
+		path.append(next.san(move))
+		next.make_move(move)
+		_edit_chapters(node.children[move], next, path, chapters, root)
