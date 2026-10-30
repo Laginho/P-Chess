@@ -1,0 +1,6 @@
+extends RefCounted
+
+const ANALYSIS_NODES := 3000000
+const ANALYSIS_MIN_DEPTH := 12
+const ANALYSIS_STABLE_DEPTHS := 3
+const ANALYSIS_EP_CHANGE := 0.01
