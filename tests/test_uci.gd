@@ -146,6 +146,24 @@ func _live_engine(test_name: String) -> String:
 	return exe
 
 
+func test_stopping_one_bridge_leaves_the_other_running():
+	var exe := _live_engine("test_stopping_one_bridge_leaves_the_other_running")
+	if exe == "":
+		return
+	var first = UCI.new()
+	var second = UCI.new()
+	assert_true(first.start(), first.error)
+	assert_true(second.start(), second.error)
+	var second_pid: int = second.pid
+	assert_true(first.pid != second_pid, "separate engine processes")
+	first.stop()
+	assert_true(OS.is_process_running(second_pid), "second engine survives first stop")
+	second.set_level(exe.get_base_dir().get_base_dir().path_join("weights/maia-1100.pb.gz"))
+	assert_true(not _policy(second, "").is_empty(), "second engine still answers")
+	first.free()
+	second.free()
+
+
 func _wait_for_stop(uci, stops: Array) -> void:
 	var deadline := Time.get_ticks_msec() + 10000
 	while stops.is_empty() and Time.get_ticks_msec() < deadline:
