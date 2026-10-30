@@ -15,6 +15,7 @@ const MOVE_LINE := "^info string ([a-h][1-8][a-h][1-8][qrbn]?) .*\\(P: *([0-9.]+
 var available := false
 var error := ""
 var pid := -1
+var engine_id := ""
 
 var _stdio: FileAccess
 var _readers: Array[Thread] = []
@@ -133,6 +134,11 @@ func request_search(commands: PackedStringArray, callback: Callable) -> void:
 	_queue(commands, "bestmove", null, callback)
 
 
+func stop_search() -> void:
+	if available and _awaiting == "bestmove":
+		_stdio.store_line("stop")
+
+
 func poll() -> void:
 	if not available:
 		return
@@ -144,6 +150,8 @@ func poll() -> void:
 	_lines.clear()
 	_mutex.unlock()
 	for line in lines:
+		if line.begins_with("id name "):
+			engine_id = line.trim_prefix("id name ")
 		# A failed WeightsFile can produce readyok, then error, then a fallback bestmove.
 		if line.begins_with("error "):
 			_report_stopped(_engine_name + " stopped: " + line.trim_prefix("error ") + ". Run scripts/fetch-engine.ps1 if needed.")
@@ -175,6 +183,7 @@ func stop() -> void:
 	_stdio = null
 	pid = -1
 	available = false
+	engine_id = ""
 	_steps.clear()
 	_awaiting = ""
 	_board = null
