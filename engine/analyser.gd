@@ -2,6 +2,7 @@ extends Node
 
 const Tunables = preload("res://core/tunables.gd")
 const Board = preload("res://core/board.gd")
+const Pgn = preload("res://core/pgn.gd")
 
 signal progress(done: int, total: int)
 signal finished(success: bool, error: String)
@@ -57,6 +58,20 @@ static func read_analysis(path: String, version: String, budget: int) -> Diction
 	if not data is Dictionary or data.get("engine_version", "") != version or data.get("node_budget", 0) != budget:
 		return {"state": "stale"}
 	return {"state": "analysed", "data": data}
+
+
+static func positions_from_game(game: Dictionary) -> Array:
+	var board = Board.from_fen(game.get("headers", {}).get("FEN", Pgn.START))
+	if board == null:
+		return []
+	var positions := [board.to_fen()]
+	for move: Dictionary in game.get("moves", []):
+		var uci: String = move.get("uci", "")
+		if not uci in board.legal_moves():
+			return []
+		board.make_move(uci)
+		positions.append(board.to_fen())
+	return positions
 
 
 func _next() -> void:
