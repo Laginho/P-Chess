@@ -1,9 +1,9 @@
 # REV-003: Classify every move
-Stage: implementing
+Stage: to-review
 Blocked by: REV-002
 Review: human
 Difficulty: hard
-Gate evidence: C:\Users\bruno\AppData\Local\Temp\rev003-gate.json
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\rev003-reopen-gate.json
 Acceptance: pending | Review classifications by eye on a real analysed game, including Great and Brilliant sacrifices.
 
 - Primary files:
@@ -40,6 +40,7 @@ From a game, its analysis JSON (REV-002), the catalog and the repertoire, give e
 
 ## Comments
 
+- 2026-10-30 Stage 2 reopen: `63fccd0` tests a defended pawn captured after a non-capturing push; it failed with Best instead of Great before `94fc5a9` and passed afterward. `4882a86` tests free and defended en passant captures for both colours; both free captures failed with Great instead of Best before `ce9aae8` and all four cases passed afterward. The existing true-recapture and lost-mate boundary tests remain in the full gate. `ce9aae8` also moved the 0 cp mate cutoff into tunables. Gate on `ce9aae8904aaeee1d7ff01325a1e580e78e21457`: 301 passed, 0 failed, exit 0; log `C:\Users\bruno\AppData\Local\Temp\rev003-reopen-gate.log`.
 - 2026-10-30 Stage 2: focused red/green cycles cover stored JSON, both colours, opening precedence and FEN-rooted repertoire, score bands and clamping, mate rules, forced and terminal positions, Miss, Great/Brilliant, all named exclusions and a pre-existing material deficit. The complete gate on `734dd43056be17c8b8520ab024f2215a8f5d5a07` passed with 299 passed, 0 failed and exit 0; log `C:\Users\bruno\AppData\Local\Temp\rev003-gate.log`.
 - The initial expected loss-band examples used incorrect EP differences; commit `5f16013` corrected the test expectations, and the corrected tests were verified red against the preceding implementation before the production change. The PV2 fixture's resulting FEN was also corrected in `2890489`.
 - Under the clamped EP formula, ordinary centipawn bands cannot produce a Blunder when the resulting score is at least +600 cp, or when the initial best score is at most -600 cp: the largest possible EP loss in either case is about 0.075, below the 0.20 Blunder threshold. The tests verify these boundaries do not wrongly turn an Inaccuracy into Good, and exercise the already-losing leniency branch with an allowed mate. The +600 cp would-be-Blunder case has no reachable ordinary-score fixture under this contract.
@@ -66,5 +67,5 @@ Verdict: Reopen — criterion 5 misclassifies captures; criterion 9 leaves a nam
 - Targeted runtime evidence: an external Godot 4.7.2 probe validated both FENs and legal moves, printed `previous_move_captures=false`, `d5_defended_by_black=true`, the incorrect Best for the first capture, and `ep_victim=p`, `ep_victim_defended=false`, the incorrect Great for en passant. Probe: `C:\Users\bruno\AppData\Local\Temp\rev003-review-probe.gd`; output: `C:\Users\bruno\AppData\Local\Temp\rev003-review-probe.log`, exit 0. The process also reported a system certificate-store startup error; both local classification cases completed without script errors. This probe is separate from the earlier full gate.
 - Handoff: retain branch `rev-003` and its implementation. Stage 2 should address the three ❌ items above with focused red/green proof for the behavioral repairs and a fresh gate receipt after production changes. No production fix was authored in review; no merge, ledger entry or push was made.
 
-Disclosure: pending | integration | [Criterion 5 and 9 review findings](#resolution-2026-10-30): the two capture-classification defects and missing tunable remain open on REV-003 and must be resolved before session integration.
+Disclosure: pending | integration | [Criterion 5 and 9 review findings](#resolution-2026-10-30): fixes for the capture-classification defects and missing tunable await stage 3 review before session integration.
 Disclosure: pending | release | [Existing product acceptance](#comments): inspect classifications on a real analysed game, including Great and Brilliant sacrifices; fixture/headless checks and the external probes do not establish that visual acceptance.
