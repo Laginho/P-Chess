@@ -6,6 +6,13 @@
 [ext_resource type="PackedScene" path="res://ui/setup.tscn" id="4"]
 [ext_resource type="PackedScene" path="res://ui/clock.tscn" id="5"]
 
+[sub_resource type="StyleBoxFlat" id="ScoreBox"]
+bg_color = Color(0.2, 0.2, 0.2, 1)
+content_margin_left = 6.0
+content_margin_right = 6.0
+content_margin_top = 3.0
+content_margin_bottom = 3.0
+
 [node name="Main" type="Control"]
 layout_mode = 3
 anchors_preset = 15
@@ -64,6 +71,8 @@ side = "b"
 [node name="Score" type="Label" parent="Layout/Side/BlackClockRow"]
 visible = false
 layout_mode = 2
+size_flags_vertical = 4
+theme_override_styles/normal = SubResource("ScoreBox")
 
 [node name="BlackMaterial" type="Label" parent="Layout/Side"]
 layout_mode = 2
@@ -129,6 +138,8 @@ layout_mode = 2
 [node name="Score" type="Label" parent="Layout/Side/WhiteClockRow"]
 visible = false
 layout_mode = 2
+size_flags_vertical = 4
+theme_override_styles/normal = SubResource("ScoreBox")
 
 [node name="Setup" parent="." instance=ExtResource("4")]
 layout_mode = 1
