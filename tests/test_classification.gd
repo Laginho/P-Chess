@@ -97,3 +97,48 @@ func test_great_requires_only_good_move_and_respects_exclusions():
 	second.cp = -500
 	result = classification.evaluate(PackedStringArray(["e2e4"]), data, [], [], "w", false)
 	assert_eq(result[0].class, "Best", "mover remains below 0.5 EP")
+
+
+func _position(fen: String, move: String, pv: Array, alt: String, end_score := -100) -> Dictionary:
+	var board = Board.from_fen(fen)
+	board.make_move(move)
+	return {"positions": [{"fen": fen, "best_move": move, "pv": [
+			{"moves": pv, "cp": 100}, {"moves": [alt], "cp": -100}]},
+			{"fen": board.to_fen(), "best_move": "", "pv": [{"moves": ["g8h8"], "cp": end_score}]}]}
+
+
+func test_brilliant_material_sacrifice_and_existing_deficit():
+	var classification = load("res://core/classification.gd")
+	var fen := "3r2k1/8/8/8/8/8/8/3Q2K1 w - - 0 1"
+	var data := _position(fen, "d1d7", ["d1d7", "d8d7"], "d1a1")
+	var result: Array = classification.evaluate(PackedStringArray(["d1d7"]), data, [], [], "w", false)
+	assert_eq(result[0].class, "Brilliant", "a queen is sacrificed on the continuation")
+	fen = "3r2k1/8/8/8/8/8/8/6K1 w - - 0 1"
+	data = _position(fen, "g1f1", ["g1f1"], "g1h1")
+	result = classification.evaluate(PackedStringArray(["g1f1"]), data, [], [], "w", false)
+	assert_eq(result[0].class, "Great", "an existing deficit alone is not a sacrifice")
+
+
+func test_great_excludes_check_promotion_and_free_capture():
+	var classification = load("res://core/classification.gd")
+	for sample in [
+			["4r1k1/8/8/8/8/8/8/R3K3 w - - 0 1", "e1d1", "a1a2", "check"],
+			["6k1/P7/8/8/8/8/8/6K1 w - - 0 1", "a7a8q", "g1f1", "promotion"],
+			["6k1/3p4/8/8/8/8/8/3Q2K1 w - - 0 1", "d1d7", "d1a1", "free capture"]]:
+		var data := _position(sample[0], sample[1], [sample[1]], sample[2])
+		var result: Array = classification.evaluate(PackedStringArray([sample[1]]), data, [], [], "w", false)
+		assert_eq(result[0].class, "Best", sample[3])
+
+
+func test_forced_and_terminal_scores_override_engine_noise():
+	var classification = load("res://core/classification.gd")
+	var fen := "7k/8/6K1/8/8/8/8/7R b - - 0 1"
+	var board = Board.from_fen(fen)
+	var move: String = board.legal_moves()[0]
+	board.make_move(move)
+	var data := {"positions": [{"fen": fen, "best_move": move,
+			"pv": [{"moves": [move], "cp": 0}]},
+			{"fen": board.to_fen(), "pv": [], "terminal_score": 0}]}
+	var result: Array = classification.evaluate(PackedStringArray([move]), data, [], [], "b", false)
+	assert_eq(result[0].class, "Forced")
+	assert_eq(result[0].after_ep, 0.5)
