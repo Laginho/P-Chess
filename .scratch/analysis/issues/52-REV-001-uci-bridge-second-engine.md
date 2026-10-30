@@ -1,5 +1,5 @@
 # REV-001: A UCI bridge that can run a second engine
-Stage: to-implement
+Stage: implementing
 Blocked by: none
 Review: agent
 Difficulty: normal

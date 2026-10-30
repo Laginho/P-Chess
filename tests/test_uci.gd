@@ -79,6 +79,13 @@ func test_missing_engine_reports_unavailable_naming_the_fetch_script():
 	uci.free()
 
 
+func test_missing_stockfish_names_the_engine_and_path():
+	var uci = UCI.new("engine/stockfish/stockfish.exe", "Stockfish")
+	assert_eq(uci.start(PackedStringArray([OS.get_user_data_dir().path_join("test_uci/empty")])), false)
+	assert_eq(uci.error, "Stockfish is missing (engine/stockfish/stockfish.exe). Run scripts/fetch-engine.ps1 to download it.")
+	uci.free()
+
+
 # Polls on this thread, as the game's _process does, until bestmove or a 30 s timeout.
 func _policy(uci, moves: String) -> Dictionary:
 	var got := []
