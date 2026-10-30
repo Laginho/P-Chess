@@ -1,6 +1,6 @@
 extends Node
 
-# Runs a UCI engine (Lc0) as a child process and returns Maia's policy, Â§3.2. Generic UCI, so a
+# Runs a UCI engine (Lc0) as a child process and returns Maia's policy, §3.2. Generic UCI, so a
 # second engine can be added without touching the game code. The engine's output is read on worker
 # threads; poll(), called every frame, handles it on the main thread, which never waits on it.
 
@@ -45,7 +45,7 @@ func _notification(what: int) -> void:
 		stop()
 
 
-# Next to the executable; also the project root when run from the editor, Â§3.1.
+# Next to the executable; also the project root when run from the editor, §3.1.
 static func search_dirs() -> PackedStringArray:
 	var dirs := PackedStringArray([OS.get_executable_path().get_base_dir()])
 	if OS.has_feature("editor"):
