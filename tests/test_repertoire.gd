@@ -566,3 +566,44 @@ func test_editor_preserves_variation_opening_comment_on_save():
 	assert_eq(e4.comments, [])
 	assert_eq(e4.children.c7c5.comments_before, ["Sicilian"])
 	_clean(folder)
+
+func _editor_mouse(window: Window, point: Vector2, button: int, pressed: bool) -> void:
+	var motion := InputEventMouseMotion.new()
+	motion.position = point + Vector2(window.position)
+	motion.global_position = motion.position
+	Input.parse_input_event(motion)
+	var event := InputEventMouseButton.new()
+	event.position = motion.position
+	event.global_position = motion.position
+	event.button_index = button
+	event.pressed = pressed
+	Input.parse_input_event(event)
+
+func test_editor_right_click_refreshes_tree_and_board():
+	var repertoire = _repertoire()
+	var folder := _folder()
+	repertoire.storage_dir = folder
+	assert_eq(repertoire.import_pgn("1. e4 e5 2. Nf3 *", "w", "Study"), "")
+	var root: Window = Engine.get_main_loop().root
+	var old_embed := root.gui_embed_subwindows
+	var old_size := root.size
+	root.gui_embed_subwindows = true
+	root.size = Vector2i(1280, 800)
+	var editor = load("res://ui/repertoire_editor.tscn").instantiate()
+	root.add_child(editor)
+	editor.present(repertoire, "Study", 0)
+	editor.size = Vector2i(760, 520)
+	await Engine.get_main_loop().process_frame
+	var tree: Tree = editor.tree
+	var e5 = tree.get_root().get_first_child().get_first_child().get_first_child()
+	var point: Vector2 = tree.global_position + Vector2(100, tree.get_item_area_rect(e5).get_center().y)
+	_editor_mouse(editor, point, MOUSE_BUTTON_RIGHT, true)
+	_editor_mouse(editor, point, MOUSE_BUTTON_RIGHT, false)
+	await Engine.get_main_loop().process_frame
+	assert_eq(tree.get_root().get_first_child().get_first_child().get_child_count(), 0, "deleted subtree disappears")
+	assert_eq(editor.board.game.board.position_key(), editor._node().position, "board returns to parent")
+	assert_eq(editor.path, PackedStringArray(["e2e4"]))
+	editor.free()
+	root.gui_embed_subwindows = old_embed
+	root.size = old_size
+	_clean(folder)
