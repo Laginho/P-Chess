@@ -361,7 +361,7 @@ func test_two_rematches_drop_a_stale_white_move_legal_in_the_current_game():
 func test_resign_button_shares_the_two_second_window_with_escape():
 	for sequence in ["click_click", "click_escape", "escape_click", "expired_click"]:
 		var main = _session(ManualWaits.new())
-		var button = main.get_node_or_null("Layout/Side/ResignButton")
+		var button = main.get_node_or_null("Layout/Side/Actions/ResignButton")
 		assert_true(button != null, "resign button exists")
 		if button == null:
 			main.free()
@@ -394,7 +394,7 @@ func test_resign_button_shares_the_two_second_window_with_escape():
 
 func test_resign_button_disabled_in_setup_and_after_engine_stops():
 	var main = _session(ManualWaits.new())
-	var button = main.get_node_or_null("Layout/Side/ResignButton")
+	var button = main.get_node_or_null("Layout/Side/Actions/ResignButton")
 	assert_true(button != null, "resign button exists")
 	if button:
 		main._show_setup()
@@ -425,4 +425,42 @@ func test_settings_blocks_focused_resign_button_from_space():
 		key.pressed = down
 		viewport.push_input(key, true)
 	assert_true(not main.board_view.game.is_over(), "Space in Settings cannot resign")
+	main.free()
+
+
+func test_draw_offer_accepted_on_reply_without_playing_it():
+	var waits := ManualWaits.new()
+	var main = _session(waits)
+	var button = main.get_node_or_null("Layout/Side/Actions/DrawButton")
+	assert_true(button != null, "draw offer button exists")
+	if button == null:
+		main.free()
+		return
+	assert_true(not button.disabled, "offer available during game")
+	assert_true(main.board_view.play("e2e4"))
+	button.pressed.emit()
+	assert_true(button.disabled, "offer starts cooldown")
+	main.uci.evaluation = 9.0
+	main.uci.policy_ready.emit({"e2e4": 1.0})
+	main.uci.evaluation = -1.5
+	main.uci.policy_ready.emit({"e7e5": 1.0})
+	main.uci.evaluation = 9.0
+	_finish(waits, 0)
+	var game = main.board_view.game
+	assert_eq(game.moves, PackedStringArray(["e2e4"]), "Maia's move is not played")
+	assert_eq(game.result, "1/2-1/2")
+	assert_eq(game.reason, "agreement")
+	assert_eq(main.history.stats("maia-1700", "3+2").draws, 1)
+	var files := DirAccess.get_files_at(main.history._root.path_join("games"))
+	assert_eq(files.size(), 1, "one saved PGN")
+	if files.size() == 1:
+		var pgn := FileAccess.get_file_as_string(main.history._root.path_join("games").path_join(files[0]))
+		assert_true('[Result "1/2-1/2"]' in pgn)
+		assert_true('[Reason "agreement"]' in pgn)
+		assert_true('[Termination "Normal"]' in pgn)
+	var panel = main.board_view.get_node_or_null("GameOver")
+	assert_true(panel != null, "game-over panel")
+	if panel:
+		assert_eq(panel.get_node("Panel/Content/Headline").text, "Draw")
+		assert_eq(panel.get_node("Panel/Content/Reason").text, "by agreement")
 	main.free()
