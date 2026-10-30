@@ -142,3 +142,36 @@ func test_forced_and_terminal_scores_override_engine_noise():
 	var result: Array = classification.evaluate(PackedStringArray([move]), data, [], [], "b", false)
 	assert_eq(result[0].class, "Forced")
 	assert_eq(result[0].after_ep, 0.5)
+
+
+func test_miss_replaces_blunder_after_opponents_blunder():
+	var classification = load("res://core/classification.gd")
+	var board = Board.from_fen(START)
+	var first := {"fen": board.to_fen(), "best_move": "d2d4", "pv": [
+			{"moves": ["d2d4"], "cp": 0}, {"moves": ["g1f3"], "cp": -10}]}
+	board.make_move("e2e4")
+	var second := {"fen": board.to_fen(), "best_move": "d7d5", "pv": [
+			{"moves": ["d7d5"], "cp": 700}, {"moves": ["c7c5"], "cp": 0}]}
+	board.make_move("e7e5")
+	var last := {"fen": board.to_fen(), "pv": [{"moves": ["g1f3"], "cp": 300}]}
+	var result: Array = classification.evaluate(PackedStringArray(["e2e4", "e7e5"]),
+			{"positions": [first, second, last]}, [], [], "w", false)
+	assert_eq(result[0].class, "Blunder")
+	assert_eq(result[1].class, "Miss", "Black missed a winning position")
+
+
+func test_recapture_is_best_instead_of_great():
+	var classification = load("res://core/classification.gd")
+	var board = Board.from_fen(START)
+	var moves := PackedStringArray(["e2e4", "d7d5", "e4d5", "d8d5"])
+	var positions := []
+	for move: String in moves:
+		var legal: PackedStringArray = board.legal_moves()
+		assert_true(move in legal)
+		var alt: String = legal[0] if legal[0] != move else legal[1]
+		positions.append({"fen": board.to_fen(), "best_move": move, "pv": [
+				{"moves": [move], "cp": 100}, {"moves": [alt], "cp": -100}]})
+		board.make_move(move)
+	positions.append({"fen": board.to_fen(), "pv": [{"moves": ["b1c3"], "cp": -100}]})
+	var result: Array = classification.evaluate(moves, {"positions": positions}, [], [], "w", false)
+	assert_eq(result[3].class, "Best", "recapturing the last move cannot be Great")
