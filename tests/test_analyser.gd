@@ -97,6 +97,16 @@ func test_stop_waits_for_completed_multipv_depth_and_fires_once():
 	analyser.free()
 
 
+func test_positions_from_pgn_include_start_and_every_move():
+	var pgn = load("res://core/pgn.gd")
+	var game: Dictionary = pgn.parse("1. e4 e5 *").games[0]
+	var positions: Array = Analyser.positions_from_game(game)
+	assert_eq(positions.size(), 3)
+	assert_eq(positions[0], START)
+	assert_eq(positions[1], AFTER)
+	assert_eq(positions[2], "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2")
+
+
 func test_convergence_requires_three_stable_completed_depths_at_depth_twelve():
 	var script = load("res://engine/analyser.gd")
 	if script == null:
