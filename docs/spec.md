@@ -356,7 +356,7 @@ One build, `v0.0.2`, holds all of §15. Bruno then plays it, tunes every thresho
 | Home screen, searching screen, your name, profile (§15.8) | UI-016, UI-017, UI-018, UI-019 |
 | Repertoire from opening names, viewer and editor (§15.9) | OPEN-005, OPEN-006, OPEN-007 |
 
-Every tunable number in §15 (analysis budget, convergence, classification thresholds, the draw rule) lives in one constants file.
+Every tunable number in §15 (analysis budget, convergence, classification thresholds, the draw rule) lives in `core/tunables.gd`.
 
 ### 15.2 Draw offer and resign
 
@@ -369,7 +369,7 @@ Every tunable number in §15 (analysis budget, convergence, classification thres
   - `ft` = 1 − Maia's clock left / its starting time;
   - `v = (fp + ft) / 2`.
   - Maia accepts when `eval ≤ +0.5` **and** `v ≥ 0.6`, or always when `eval ≤ −1.5`. Otherwise it declines. The rule is deterministic.
-- Lc0 v0.32.1 with a Maia net reports `score cp` under `go nodes 1`; a reply without a centipawn score declines the offer. The evaluation is captured from the search for Maia?s reply, before its move is played.
+- Lc0 v0.32.1 with a Maia net reports `score cp` under `go nodes 1`; a reply without a centipawn score declines the offer. The evaluation is captured from the search for Maia's reply, before its move is played.
 
 ### 15.3 Analysis engine
 
