@@ -148,7 +148,9 @@ static func _collect(node: Dictionary, moves: PackedStringArray, positions: Pack
 func save_edited(edited: Dictionary, name: String) -> String:
 	var chapters: Array[String] = []
 	for root in edited.values():
-		_edit_chapters(root, Board.from_fen(root.position + " 0 1"), [], chapters, root.position)
+		if root.children.is_empty():
+			continue
+		_edit_chapters(root, Board.from_fen(root.position + " 0 1"), _edit_comments(root.comments), chapters, root.position)
 	if chapters.is_empty():
 		return "A repertoire needs at least one move."
 	return import_pgn("\n\n".join(chapters), colour, name)
@@ -162,6 +164,18 @@ static func _edit_chapters(node: Dictionary, board, moves: Array, chapters: Arra
 	for move in node.children:
 		var next = board.copy()
 		var path := moves.duplicate()
+		var child: Dictionary = node.children[move]
+		path.append_array(_edit_comments(child.comments_before))
 		path.append(next.san(move))
+		path.append_array(_edit_comments(child.comments))
+		for nag in child.nags:
+			path.append("$" + str(nag))
 		next.make_move(move)
 		_edit_chapters(node.children[move], next, path, chapters, root)
+
+
+static func _edit_comments(comments: Array) -> Array:
+	var result := []
+	for comment in comments:
+		result.append("{" + comment + "}")
+	return result
