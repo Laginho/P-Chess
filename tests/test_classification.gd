@@ -206,3 +206,14 @@ func test_json_fixture_uses_analysis_storage_format():
 		return
 	var result: Array = classification.evaluate(PackedStringArray(["e2e4", "e7e5"]), data, [], [], "w", false)
 	assert_eq(result.map(func(item): return item.class), ["Best", "Best"])
+
+
+func test_repertoire_uses_the_game_starting_fen():
+	var classification = load("res://core/classification.gd")
+	var board = Board.from_fen(AFTER_E4)
+	var repertoire := [{"moves": PackedStringArray(["e7e5"]),
+			"positions": PackedStringArray([board.position_key()])}]
+	var data := _position(AFTER_E4, "e7e5", ["e7e5"], "c7c5")
+	var result: Array = classification.evaluate(PackedStringArray(["e7e5"]), data, [], repertoire, "b", true)
+	assert_eq(result[0].class, "Repertoire", "FEN-rooted repertoire matches the actual starting position")
+	assert_true(not result[0].left_repertoire)
