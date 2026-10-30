@@ -101,6 +101,21 @@ func test_incomplete_depth_does_not_count_for_convergence():
 	analyser.free()
 
 
+func test_cancelling_when_a_position_lands_does_not_stop_the_next_search():
+	var bridge := FakeBridge.new()
+	var analyser = Analyser.new(bridge)
+	var path := "user://rev002-cancel-landed.json"
+	DirAccess.remove_absolute(path)
+	analyser.position_ready.connect(func(_index, _position): analyser.cancel())
+	assert_true(analyser.analyse([START, AFTER], path, true))
+	assert_true("setoption name Threads value %d" % maxi(1, OS.get_processor_count() - 1) in bridge.searches[0])
+	bridge.answer()
+	assert_eq(bridge.stops, 0)
+	assert_eq(bridge.searches.size(), 1)
+	assert_true(not FileAccess.file_exists(path))
+	analyser.free()
+
+
 func test_terminal_and_forced_positions_are_recorded():
 	var bridge := FakeBridge.new()
 	var analyser = Analyser.new(bridge)
