@@ -1,5 +1,5 @@
 # REV-002: Analyse a game with Stockfish and store the result
-Stage: to-implement
+Stage: blocked
 Blocked by: CI-004, REV-001
 Review: agent
 Difficulty: hard
@@ -41,3 +41,5 @@ Given a saved game, run Stockfish over every position and write `user://analysis
 
 - 2026-10-30 Written from spec §15.3. Speed figures in the spec are this machine's.
 - 2026-10-30 REV-001 review handoff: criteria 2 and 5 here need an in-search `stop` command and the handshake's `id name`. The bridge's public `request_search()` queues commands until `bestmove` and forwards only search `info`/`bestmove`, so these two access paths remain to be designed for REV-002. Its current `engine/uci.gd` Primary-files entry only permits MultiPV parsing; resolve the seam/scope with the stage-1 proxy before adding bridge behavior. This is not a failure of REV-001's numbered criteria.
+
+- 2026-10-30 Attempt 1 stopped to ask (its commits are on branch `recovery/asked/20261030-191713/REV-002`): REV-002 está bloqueado na branch `rev-002`, com o motivo registrado no commit `91f2d7a`. Nenhuma implementação foi iniciada. /  / O ticket precisa ampliar o escopo da ponte UCI para expor o `id name` recebido na inicialização e enviar `stop` durante uma busca ativa, inclusive no cancelamento. A [skill ticket-flow](C:/Users/bruno/.agents/skills/ticket-flow/SKILL.md) determina, quando o proxy falha: “set `Stage: blocked` with the question under `## Comments`, commit, stop.” /  / Você aprova ampliar `engine/uci.gd` e seus testes para essas duas interfaces, preservando o comportamento de Maia? Sua decisão permitiria retomar o ticket sem enviar o contexto ao proxy externo. /  / A revisão automática rejeitou a tentativa de executar o proxy com acesso de rede porque ela poderia enviar contexto do repositório a um serviço externo não especificado. A tentativa isolada anterior falhou com `ECONNREFUSED`.
