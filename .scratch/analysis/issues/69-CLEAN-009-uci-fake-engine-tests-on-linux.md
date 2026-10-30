@@ -42,8 +42,10 @@ Make both tests pass on Linux and Windows without changing what the bridge does.
 
 - Windows Godot 4.7 mutation checks: removing `_callback.call(line)` failed the forwarding test (and the queue callback assertion); removing `_stdio.store_line("stop")` failed the queue command assertion. Both mutations were reverted. Gate on e40f327: 306 passed, 0 failed.
 
-Acceptance: pending | The foreman must confirm Linux Godot 4.7.2 on session PR #26 and Windows Godot 4.7.2 before that PR merges into main. The existing Windows gate is Godot 4.7.stable, not 4.7.2; see the gate log and Resolution below.
-Disclosure: pending | integration | Before session PR #26 merges into main, the foreman must record both Linux 4.7.2 CI and Windows 4.7.2 verification. Local session integration is approved; exact-version acceptance remains pending. https://github.com/Laginho/P-Chess/actions/runs/41143449186 records the original Linux failure; C:\Users\bruno\AppData\Local\Temp\clean009-gate.log records Windows 4.7.stable only.
+- 2026-10-30 Foreman, exact-version checks after integration: PR #26's Linux `test` check (Godot 4.7.2) passed 306/0 at aad8460 (run 41145544373). Windows: `Godot_v4.7.2-stable_win64.exe.zip`, SHA-512 83decd58…2259993 = the release's SHA512-SUMS.txt, unzipped fresh; `Godot_v4.7.2-stable_win64_console.exe --headless -s tests/run.gd` on session 7067702 printed "Godot Engine v4.7.2.stable.official.ed1daf0bf", 306 passed, 0 failed, 0 SKIP, exit 0.
+
+Acceptance: passed | Foreman, 2026-10-30: Linux Godot 4.7.2 on session PR #26's `test` check at aad8460, 306 passed, 0 failed (https://github.com/Laginho/P-Chess/actions/runs/41145544373); Windows Godot 4.7.2 (official win64 zip, SHA-512 matching the release's SHA512-SUMS.txt) on session 7067702, 306 passed, 0 failed, 0 skips, exit 0. See ## Comments.
+Disclosure: decision | none | The integration condition set at review (Linux and Windows 4.7.2 verification before PR #26 merges) was met by the foreman after integration; evidence in Acceptance. The original Linux failure is https://github.com/Laginho/P-Chess/actions/runs/41143449186.
 Disclosure: decision | none | The existing proxy decision approves the tests-only child-process repair and assigns Linux confirmation to the foreman after session integration; receipt C:\Users\bruno\AppData\Local\Temp\sweatshop-proxy\20261030-202250-CLEAN-009-6460be.json. No production contract changed and the fallback seam was not used.
 Gate evidence: C:\Users\bruno\AppData\Local\Temp\clean009-gate.json
 
