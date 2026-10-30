@@ -491,3 +491,29 @@ func test_editor_opens_from_screen_branches_and_cancel_discards():
 		assert_eq(FileAccess.get_file_as_string(folder.path_join("Study.json")), original)
 	setup.free()
 	_clean(folder)
+
+func test_editor_saves_a_branch_and_deletes_a_subtree():
+	var repertoire = _repertoire()
+	var folder := _folder()
+	repertoire.storage_dir = folder
+	assert_eq(repertoire.import_pgn("1. e4 e5 2. Nf3 *", "w", "Study"), "")
+	var editor = load("res://ui/repertoire_editor.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(editor)
+	editor.present(repertoire, "Study")
+	var tree: Tree = editor.get_node("Margin/Form/Content/Tree")
+	var e4 = tree.get_root().get_first_child().get_first_child()
+	e4.select(0)
+	tree.item_selected.emit()
+	assert_true(editor.get_node("Margin/Form/Content/Board").play("c7c5"))
+	await Engine.get_main_loop().process_frame
+	var e5 = tree.get_root().get_first_child().get_first_child().get_first_child()
+	var point: Vector2 = tree.get_item_area_rect(e5).get_center()
+	tree.item_mouse_selected.emit(point, MOUSE_BUTTON_RIGHT)
+	editor.save()
+	var loaded = _repertoire()
+	loaded.storage_dir = folder
+	assert_eq(loaded.load_saved("Study"), "")
+	assert_eq(loaded.lines.size(), 1)
+	assert_eq(" ".join(loaded.lines[0].moves), "e2e4 c7c5")
+	editor.free()
+	_clean(folder)
