@@ -48,6 +48,11 @@ func claim_draw() -> void:
 		_end("1/2-1/2", "repetition")
 
 
+func agree_draw() -> void:
+	if not is_over():
+		_end("1/2-1/2", "agreement")
+
+
 # side is "w" or "b", as Board.side_to_move.
 func resign(side: String) -> void:
 	if not is_over():
