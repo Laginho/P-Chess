@@ -1,5 +1,5 @@
 # UI-014: Match score across rematches
-Stage: implementing
+Stage: to-review
 Blocked by: none
 Review: agent
 Difficulty: normal
@@ -41,7 +41,7 @@ Consecutive rematches form a match (§9.1). The game-over panel shows the runnin
 
 Acceptance: pending | Stage-3 findings below, then manual win, rematch, draw, rematch and visual inspection of the score boxes.
 Disclosure: pending | release | Manual match-score and layout acceptance remains to be performed.
-Gate evidence: C:/Users/bruno/AppData/Local/Temp/ui014-gate-box.json
+Gate evidence: C:/Users/bruno/AppData/Local/Temp/ui014-reopen-green.json
 
 #### Resolution (2026-10-30)
 Verdict: Reopen — criterion 3 fails after a rematch ends; new score boxes regress focus mode.
@@ -62,3 +62,5 @@ Verification: the stage-2 red log `C:/Users/bruno/AppData/Local/Temp/ui014-red.l
 Disclosure: pending | integration | Both P2 findings above must be fixed and reviewed before session integration; probe evidence: C:/Users/bruno/AppData/Local/Temp/ui014-stage3-probe-20261030.log.
 
 Return to stage 2 on the existing branch for these two findings only. Keep the manual match-score/layout acceptance as a release condition after the fixes.
+
+- 2026-10-30 Stage 2 reopen: the regression tests failed on both stale totals and focus visibility (281 passed, 2 failed; C:/Users/bruno/AppData/Local/Temp/ui014-reopen-red.log). Updated clock totals when counting a result and made visibility follow the current game's rematch and focus states. The final headless gate passed 283 tests, 0 failed, on `872e635`; see the receipt above. The two fixes await stage-3 review; manual match-score and layout acceptance remains pending for release.
