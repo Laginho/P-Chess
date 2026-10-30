@@ -1,6 +1,172 @@
 extends Node
 
 const Tunables = preload("res://core/tunables.gd")
+const Board = preload("res://core/board.gd")
+
+signal progress(done: int, total: int)
+signal finished(success: bool, error: String)
+
+var _bridge
+var _fens := []
+var _positions := []
+var _path := ""
+var _index := -1
+var _cancelled := false
+var _active := false
+var _stop_sent := false
+var _lines := {}
+var _depths := {}
+var _setup := PackedStringArray()
+
+
+func _init(bridge = null) -> void:
+	_bridge = bridge
+
+
+func analyse(fens: Array, path: String, maximum: bool) -> bool:
+	if _active or _bridge == null or fens.is_empty():
+		return false
+	for fen in fens:
+		if Board.from_fen(fen) == null:
+			return false
+	_fens = fens.duplicate()
+	_positions.resize(fens.size())
+	_path = path
+	_index = fens.size() - 1
+	_cancelled = false
+	_active = true
+	var threads := maxi(1, OS.get_processor_count() - 1) if maximum else 1
+	_setup = PackedStringArray(["setoption name Threads value %d" % threads,
+			"setoption name MultiPV value 2", "ucinewgame"])
+	_next()
+	return true
+
+
+func cancel() -> void:
+	if _active and not _cancelled:
+		_cancelled = true
+		if not _stop_sent:
+			_stop_sent = true
+			_bridge.stop_search()
+
+
+static func read_analysis(path: String, version: String, budget: int) -> Dictionary:
+	if not FileAccess.file_exists(path):
+		return {"state": "not analysed"}
+	var data = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if not data is Dictionary or data.get("engine_version", "") != version or data.get("node_budget", 0) != budget:
+		return {"state": "stale"}
+	return {"state": "analysed", "data": data}
+
+
+func _next() -> void:
+	if _cancelled:
+		_active = false
+		finished.emit(false, "cancelled")
+		return
+	if _index < 0:
+		_write_result()
+		return
+	var board = Board.from_fen(_fens[_index])
+	var legal: PackedStringArray = board.legal_moves()
+	if legal.is_empty() or board.halfmove_clock >= 100 or (board.cannot_mate("w") and board.cannot_mate("b")):
+		# Terminal scores use the side to move, just like UCI scores.
+		_positions[_index] = {"fen": _fens[_index], "pv": [], "best_move": "",
+				"terminal_score": -1000 if legal.is_empty() and board.in_check() else 0}
+		_advance()
+		return
+	_lines = {}
+	_depths = {}
+	_stop_sent = false
+	var commands := _setup
+	_setup = PackedStringArray()
+	commands.append("position fen " + _fens[_index])
+	commands.append("go nodes %d" % Tunables.ANALYSIS_NODES)
+	_bridge.request_search(commands, _on_line)
+
+
+func _on_line(line: String) -> void:
+	if not _active:
+		return
+	if line.begins_with("bestmove"):
+		if _cancelled:
+			_next()
+			return
+		var pv := []
+		for number in [1, 2]:
+			if _lines.has(number):
+				pv.append(_lines[number])
+		var legal: PackedStringArray = Board.from_fen(_fens[_index]).legal_moves()
+		if legal.size() == 1 and pv.size() > 1:
+			pv.resize(1)
+		_positions[_index] = {"fen": _fens[_index], "pv": pv,
+				"best_move": line.split(" ", false)[1]}
+		_advance()
+	elif not _cancelled and line.begins_with("info "):
+		var parsed := _parse_info(line)
+		if parsed.is_empty():
+			return
+		var number: int = parsed.multipv
+		parsed.erase("multipv")
+		if not _lines.has(number) or parsed.depth >= _lines[number].depth:
+			_lines[number] = parsed
+		if number == 1:
+			_depths[parsed.depth] = {"depth": parsed.depth, "move": parsed.moves[0]}
+			if parsed.has("cp"):
+				_depths[parsed.depth].cp = parsed.cp
+			else:
+				_depths[parsed.depth].mate = parsed.mate
+			var depths := _depths.keys()
+			depths.sort()
+			var samples := []
+			for depth in depths:
+				samples.append(_depths[depth])
+			if not _stop_sent and converged(samples):
+				_stop_sent = true
+				_bridge.stop_search()
+
+
+static func _parse_info(line: String) -> Dictionary:
+	var words := line.split(" ", false)
+	var d := words.find("depth")
+	var m := words.find("multipv")
+	var s := words.find("score")
+	var p := words.find("pv")
+	if d < 0 or d + 1 >= words.size() or s < 0 or s + 2 >= words.size() or p < 0 or p + 1 >= words.size():
+		return {}
+	if not words[d + 1].is_valid_int() or not words[s + 2].is_valid_int() or not words[s + 1] in ["cp", "mate"]:
+		return {}
+	if s + 3 < words.size() and words[s + 3] in ["lowerbound", "upperbound"]:
+		return {}
+	var number := words[m + 1].to_int() if m >= 0 and m + 1 < words.size() else 1
+	if number < 1 or number > 2:
+		return {}
+	var result := {"depth": words[d + 1].to_int(), "multipv": number, "moves": Array(words.slice(p + 1))}
+	result[words[s + 1]] = words[s + 2].to_int()
+	return result
+
+
+func _advance() -> void:
+	_index -= 1
+	progress.emit(_fens.size() - _index - 1, _fens.size())
+	_next()
+
+
+func _write_result() -> void:
+	var folder := _path.get_base_dir()
+	var error := DirAccess.make_dir_recursive_absolute(folder)
+	var temporary := _path + ".tmp"
+	var file := FileAccess.open(temporary, FileAccess.WRITE) if error == OK else null
+	if file == null:
+		_active = false
+		finished.emit(false, "Could not write analysis")
+		return
+	file.store_string(JSON.stringify({"engine_version": _bridge.engine_id,
+			"node_budget": Tunables.ANALYSIS_NODES, "positions": _positions}))
+	file.close()
+	error = DirAccess.rename_absolute(temporary, _path)
+	_active = false
+	finished.emit(error == OK, "" if error == OK else "Could not replace analysis")
 
 
 # Samples are completed PV1 depths, in ascending order, from the mover's side.
