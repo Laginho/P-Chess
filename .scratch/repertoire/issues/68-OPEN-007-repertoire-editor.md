@@ -1,5 +1,5 @@
 # OPEN-007: Edit a repertoire on the board
-Stage: implementing
+Stage: to-review
 Blocked by: OPEN-006
 Review: agent
 Difficulty: normal
@@ -41,7 +41,7 @@ An editor where you extend lines and add branches by playing moves on the board 
 - 2026-10-30 Stage 2: focused extension red 10 passed / 1 failed (editor absent), green 11 / 0; annotation preservation red 11 / 1, green 12 / 0; screen entry red 12 / 1, green 13 / 0; subtree deletion mutation red 13 / 1, green 14 / 0. Gate: 276 reported passed, 0 failed, including 4 Lc0 skips (272 executed).
 - Acceptance: pending | Manually add a branch to an imported repertoire, delete a sub-line, save, and play it in My repertoire mode; inspect rendered layout and physical input.
 - Disclosure: pending | release | Manual editor layout, physical input and My repertoire acceptance remain outstanding.
-Gate evidence: C:\Users\bruno\AppData\Local\Temp\open007-gate.json
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\open007-reopen-gate.json
 
 #### Stage 3 review (2026-10-30)
 Verdict: Reopen — criteria 1, 2, 4 and 5 fail; preserve the implementation branch and repair the four findings below.
@@ -63,3 +63,8 @@ Verdict: Reopen — criteria 1, 2, 4 and 5 fail; preserve the implementation bra
 Acceptance: pending | [Verification](#verification): the four implementation findings above must be repaired; manual editor layout, physical input and My repertoire acceptance remain outstanding.
 Disclosure: pending | integration | This open ticket tracks all four findings; repair and re-review are required before session integration.
 Disclosure: pending | release | [Verification](#verification): manual editor layout, physical input and My repertoire acceptance remain release conditions after implementation approval.
+
+- 2026-10-30 Reopened stage 2: enabled Edit only after successful load and reset it on refresh/failure; kept editor moves legal after automatic draws; deferred Tree refresh after right-click; retained leading variation comments on PGN round-trip. Focused red/green: availability 14/1 to 15/0; draw, comment and actual right-click reproductions each failed before and passed after their fixes. Gate: 280 reported passed, 0 failed, including 4 Lc0 skips (276 executed).
+- Acceptance: pending | [Verification](#verification): manually inspect editor layout and physical input, add and delete a branch, save, and play in My repertoire mode.
+- Disclosure: pending | integration | The four reopened findings require stage-3 re-review.
+- Disclosure: pending | release | Manual editor layout, physical input, and My repertoire acceptance remain outstanding.
