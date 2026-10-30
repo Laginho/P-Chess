@@ -1,5 +1,5 @@
 # CLEAN-009: UCI bridge tests that fake the engine fail on Linux CI
-Stage: to-review
+Stage: done
 Blocked by: none
 Review: agent
 Difficulty: normal
@@ -42,6 +42,19 @@ Make both tests pass on Linux and Windows without changing what the bridge does.
 
 - Windows Godot 4.7 mutation checks: removing `_callback.call(line)` failed the forwarding test (and the queue callback assertion); removing `_stdio.store_line("stop")` failed the queue command assertion. Both mutations were reverted. Gate on e40f327: 306 passed, 0 failed.
 
-Acceptance: pending | Linux Godot 4.7.2 session PR test check, to be verified by the foreman as specified above.
-Disclosure: pending | integration | PR #26 test check must pass on Linux; https://github.com/Laginho/P-Chess/actions/runs/41143449186 records the original failure.
+Acceptance: pending | The foreman must confirm Linux Godot 4.7.2 on session PR #26 and Windows Godot 4.7.2 before that PR merges into main. The existing Windows gate is Godot 4.7.stable, not 4.7.2; see the gate log and Resolution below.
+Disclosure: pending | integration | Before session PR #26 merges into main, the foreman must record both Linux 4.7.2 CI and Windows 4.7.2 verification. Local session integration is approved; exact-version acceptance remains pending. https://github.com/Laginho/P-Chess/actions/runs/41143449186 records the original Linux failure; C:\Users\bruno\AppData\Local\Temp\clean009-gate.log records Windows 4.7.stable only.
+Disclosure: decision | none | The existing proxy decision approves the tests-only child-process repair and assigns Linux confirmation to the foreman after session integration; receipt C:\Users\bruno\AppData\Local\Temp\sweatshop-proxy\20261030-202250-CLEAN-009-6460be.json. No production contract changed and the fallback seam was not used.
 Gate evidence: C:\Users\bruno\AppData\Local\Temp\clean009-gate.json
+
+#### Resolution (2026-10-30)
+Verdict: Approve
+
+- Standards: 0 findings. Independent Standards review found no documented violation or material smell. The change follows the existing subprocess pattern and remains within Primary files.
+- Spec: 0 implementation findings. Independent Spec review found no missing behavior, scope creep or regression. Criterion 1 is partially verified: all original callback, engine-id, conditional-stop and queue assertions remain, and both polling tests pass on Windows Godot 4.7.stable. Windows 4.7.2 and Linux 4.7.2 execution remain the explicit acceptance checks above. Criterion 2 passes: all three own-process PID fakes are removed and the only test assignments are the two real child PIDs. Criterion 3 passes for unchanged production and the Windows suite; Linux execution remains pending.
+- Coverage: fixed diff `14cf96471e90f376e5013f79978c89b96014ad4e...53ccccea243f633de607682cbcada407d2c0b886`; total_files=3, reviewed_files=3, skipped_files=0, coverage_rate=100%. OCR preview excluded all three files as unsupported_ext; all were reviewed directly using its resolved default rules. Reviewed `tests/test_uci.gd`, `tests/fixtures/idle_child.gd` and this ticket; also traced `engine/uci.gd`, `tests/test_runner.gd` and `tests/run.gd`.
+- Examined callers and failure paths: `_idle_child()` in both polling tests, child liveness before `poll()`, every search info/bestmove callback, `id name`, stop with and without an active search, queue advancement, `free()` -> `stop()` -> child termination, pipe closure in normal and missing-method paths, fixture exclusion from default discovery, and Maia/Stockfish request isolation. Production code is byte-for-byte unchanged. Exact-version Windows 4.7.2 and Linux runtime behavior were not executed during this review.
+- Red/green proof: read C:\Users\bruno\AppData\Local\Temp\clean009-callback.log (10 passed, 2 failed, missing forwarded callbacks) and C:\Users\bruno\AppData\Local\Temp\clean009-stop.log (11 passed, 1 failed, missing stop command). Both mutations were reverted before the green gate on test commit `e40f327`; the commit contains only tests and ticket metadata. Handoff `53cccce` contains only ticket metadata. The repaired harness preserves the original behavior assertions and follows the approved mutation-red recipe.
+- Gate: reused the existing receipt for tested commit `e40f3275b6eed48606ec3cf33ba95920f1c8a7f6`; validated command, exit 0, log SHA-256 and unchanged code using `Assert-GateEvidence`. Read 306 PASS lines, 0 FAIL lines and 0 SKIP lines, with summary `306 passed, 0 failed`. The log identifies Godot 4.7.stable on Windows. No gate rerun was needed because rebase/review changed no tested code.
+- Proxy decision reviewed: `Proxy decided (opus-5.5 xhigh): Approve CLEAN-009 as written and run it now in the analysis session, at Difficulty normal with Review agent.` The existing receipt and complete decision above authorize the real-child harness, keep the bridge unchanged and leave Linux confirmation to the foreman. The exact-version Windows evidence gap is also disclosed rather than treated as verified acceptance.
+- Integration: rebased `clean-009` onto `sweatshop/analysis/2026-10-30-1831` with no changes, then merged locally with `--no-ff` as `062eba2`. This resolution, `Stage: done` and the ledger line are committed together on the session. The foreman owns push and the remaining PR #26 checks.
