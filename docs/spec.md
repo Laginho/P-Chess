@@ -361,7 +361,7 @@ Every tunable number in §15 (analysis budget, convergence, classification thres
 ### 15.2 Draw offer and resign
 
 - The side panel shows a resign button (flag) and a draw-offer button (½) between the clocks.
-- **Resign** asks for a second click within 2 s, like `Esc`.
+- **Resign** asks for a second click within 2 s; clicks and `Esc` share the same confirmation window. The button is disabled outside a game.
 - **Draw offer:** at most one offer per 10 of your moves. Maia answers on its next move, and a notice says "Maia declined" or "Draw agreed". An agreed draw ends the game as a draw (`Termination: Normal`, reason "agreement") and counts as a draw in the stats.
 - Maia never offers a draw.
 - **Maia's decision** uses its own net's evaluation, the `score` Lc0 reports with each move (from Maia's side, in pawns):
@@ -457,7 +457,7 @@ chess.com's CAPS2 is not published.
   - the analysis state: not analysed / queued / analysing x% / both accuracies / stale.
 - **Actions per game:** Review, Analyze (Re-analyze when stale), Delete with confirmation, and Copy PGN as a discreet square icon that is still easy to hit. Delete removes the PGN, its analysis, and its share of the stats (read back from the PGN headers) and of the practice counts, so the profile always matches the history.
 - **Practice target in the PGN:** from v0.0.2, a game played with a target line (§6.3) records its id in a `PracticeTarget` header, so Delete can take it off the practice counts. Games saved earlier have no such header; deleting one leaves the practice counts as they are.
-- **Result reason:** from v0.0.2 every PGN records `game.reason` (`checkmate`, `resignation`, `time`, `agreement`, `repetition`, `stalemate`, `50-move`, `insufficient material`) in a `Reason` header, since `Termination: Normal` alone cannot tell an agreed draw from a claimed repetition. For older games the card replays the moves: checkmate, stalemate, insufficient material and the 50-move rule are read off the final position, a decisive `Normal` game that is not mate is a resignation, and any other draw shows just "Draw".
+- **Result reason:** every new PGN records `game.reason` (`checkmate`, `resignation`, `time`, `agreement`, `repetition`, `stalemate`, `50-move`, `insufficient material`) in a `Reason` header, since `Termination: Normal` alone cannot tell an agreed draw from a claimed repetition. For older games the card replays the moves: checkmate, stalemate, insufficient material and the 50-move rule are read off the final position, a decisive `Normal` game that is not mate is a resignation, and any other draw shows just "Draw".
 - **Repertoire snapshot:** from v0.0.2, when a game is played with a repertoire loaded, its lines (the snapshot `ui/main.gd` already keeps for the review) are saved next to the PGN as `<game file name>.repertoire.json`. A review opened from the history checks Repertoire and Left repertoire against that file, never against the repertoire as it is now. Games without the file get no repertoire markers. Delete removes it with the PGN.
 - **Batch:** select several games, or use **Analyze all** per tab.
 - **Queue:**
