@@ -156,22 +156,29 @@ func save_edited(edited: Dictionary, name: String) -> String:
 	return import_pgn("\n\n".join(chapters), colour, name)
 
 
-static func _edit_chapters(node: Dictionary, board, moves: Array, chapters: Array[String], root: String) -> void:
+static func _edit_chapters(node: Dictionary, board, moves: Array, chapters: Array[String], root: String, open_variations := 0) -> void:
 	if node.children.is_empty():
 		if not moves.is_empty():
-			chapters.append("[SetUp \"1\"]\n[FEN \"%s 0 1\"]\n%s *" % [root, " ".join(moves)])
+			chapters.append("[SetUp \"1\"]\n[FEN \"%s 0 1\"]\n%s%s *" % [root, " ".join(moves), " )".repeat(open_variations)])
 		return
 	for move in node.children:
 		var next = board.copy()
 		var path := moves.duplicate()
 		var child: Dictionary = node.children[move]
-		path.append_array(_edit_comments(child.comments_before))
-		path.append(next.san(move))
+		var san: String = next.san(move)
+		var variations := open_variations
+		if not child.comments_before.is_empty():
+			# PGN associates a leading comment with a move only inside a variation.
+			path.append(san)
+			path.append("(")
+			path.append_array(_edit_comments(child.comments_before))
+			variations += 1
+		path.append(san)
 		path.append_array(_edit_comments(child.comments))
 		for nag in child.nags:
 			path.append("$" + str(nag))
 		next.make_move(move)
-		_edit_chapters(node.children[move], next, path, chapters, root)
+		_edit_chapters(node.children[move], next, path, chapters, root, variations)
 
 
 static func _edit_comments(comments: Array) -> Array:
