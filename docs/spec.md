@@ -337,7 +337,7 @@ This section supersedes, where they conflict:
 - §7: resigning also has a button; `Esc` twice still works.
 - §9.1: the app opens on the home screen; the setup screen becomes "Custom game". `Space` rematch is unchanged.
 - §9.3: the review is replaced by §15.6.
-- §9.4: the player header holds your name, not "You", and the PGN gains `Reason` and `PracticeTarget` headers and a repertoire snapshot file (§15.7).
+- §9.4: the player header holds your name, not "You", and the PGN gains `Reason`, `PracticeTarget` and `HumanColor` headers and a repertoire snapshot file (§15.7, §15.8).
 - §10 and §12: the settings and the release additions below.
 
 UI strings stay English only (Portuguese is in §14).
