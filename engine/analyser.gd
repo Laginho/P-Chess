@@ -5,6 +5,7 @@ const Board = preload("res://core/board.gd")
 const Pgn = preload("res://core/pgn.gd")
 
 signal progress(done: int, total: int)
+signal position_ready(index: int, position: Dictionary)
 signal finished(success: bool, error: String)
 
 var _bridge
@@ -21,6 +22,7 @@ var _completed := {}
 var _setup := PackedStringArray()
 var _waiting_for_engine := false
 var _draw_at_end := false
+var _search_active := false
 
 
 func _init(bridge = null) -> void:
@@ -59,7 +61,7 @@ func _process(_delta: float) -> void:
 func cancel() -> void:
 	if _active and not _cancelled:
 		_cancelled = true
-		if not _stop_sent and not _waiting_for_engine:
+		if not _stop_sent and _search_active:
 			_stop_sent = true
 			_bridge.stop_search()
 
@@ -133,6 +135,7 @@ func _next() -> void:
 	_setup = PackedStringArray()
 	commands.append("position fen " + _fens[_index])
 	commands.append("go nodes %d" % Tunables.ANALYSIS_NODES)
+	_search_active = true
 	_bridge.request_search(commands, _on_line)
 
 
@@ -140,6 +143,7 @@ func _on_line(line: String) -> void:
 	if not _active:
 		return
 	if line.begins_with("bestmove"):
+		_search_active = false
 		if _cancelled:
 			_next()
 			return
@@ -201,6 +205,7 @@ static func _parse_info(line: String) -> Dictionary:
 
 
 func _advance() -> void:
+	position_ready.emit(_index, _positions[_index].duplicate(true))
 	_index -= 1
 	progress.emit(_fens.size() - _index - 1, _fens.size())
 	_next()
