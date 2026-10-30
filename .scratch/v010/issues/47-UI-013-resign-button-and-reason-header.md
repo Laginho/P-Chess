@@ -1,5 +1,5 @@
 # UI-013: Resign button and the Reason header
-Stage: implementing
+Stage: to-review
 Blocked by: none
 Review: agent
 Difficulty: normal
@@ -45,7 +45,7 @@ Resigning gets a button: a flag between the clocks that, like `Esc`, asks for a 
 - Gate: 273 passed, 0 failed, exit 0. The sandbox logged failure to read the Windows root certificate store; the test runner completed successfully.
 - Acceptance: pending | Manual two-click resignation and expiry check in the running application.
 
-Gate evidence: C:\Users\bruno\AppData\Local\Temp\ui013-gate.json
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\ui013-reopen-gate.json
 
 #### Resolution (2026-10-30)
 
@@ -71,3 +71,9 @@ The modal regression was reproduced separately with Godot 4.7.2 headless and `Vi
 
 Acceptance: pending | Running-application checks remain: visible flag, ordinary two-click resignation, expiry followed by a fresh first click, both click/Esc orders, and no resignation through Settings. Rendered UI and physical input were not exercised in this review.
 Disclosure: pending | integration | Both P2 findings above remain assigned to this open UI-013 ticket. No accepted deferral; return to stage 2 on `ui-013`, retaining the implementation commits. No session merge or ledger entry.
+
+#### Stage 2 reopen (2026-10-30)
+
+- The viewport input regression failed before the fix and passed afterwards: a click arms Resign, opening Settings retains focus, and Space must not end the game. `_resign` now ignores input while the Settings panel is visible; the button text is the flag glyph `⚑`.
+- Gate: 274 passed, 0 failed, exit 0, tested commit `ce4bd06`. The log includes the Windows root-certificate-store error and fixture warnings. An initial wrapper launch failed before Godot started; the gate above ran once after correcting the wrapper.
+- Acceptance: pending | Verify the visible flag and the ordinary two-click, expiry, mixed click/Esc, and Settings input scenarios in the running application with physical input.
