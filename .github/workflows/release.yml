@@ -106,7 +106,7 @@ jobs:
 
       - name: Verify package and zip
         run: |
-          $required = @('P-Chess.exe', 'P-Chess.pck', 'THIRD_PARTY.md', 'engine/lc0/lc0.exe', 'engine/lc0/COPYING', 'engine/weights/COPYING')
+          $required = @('P-Chess.exe', 'P-Chess.pck', 'THIRD_PARTY.md', 'engine/lc0/lc0.exe', 'engine/lc0/COPYING', 'engine/weights/COPYING', 'engine/stockfish/stockfish.exe', 'engine/stockfish/Copying.txt')
           $required += 11..19 | ForEach-Object { "engine/weights/maia-$($_ * 100).pb.gz" }
           $required += 'msvcp140.dll', 'vcruntime140.dll', 'vcruntime140_1.dll', 'vcomp140.dll' | ForEach-Object { "engine/lc0/$_" }
           $required += 'Godot-LICENSE.txt', 'Godot-COPYRIGHT.txt', 'AGPL-3.0.txt' | ForEach-Object { "licenses/$_" }

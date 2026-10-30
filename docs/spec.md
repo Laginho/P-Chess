@@ -36,7 +36,7 @@ P-Chess/
 
 ### 3.1 Engine files
 
-- `scripts/fetch-engine.ps1` downloads the pinned Lc0 zip and the 9 Maia nets into `engine/`, and checks their SHA-256 hashes. It must run in Windows PowerShell 5.1. CI uses the same script.
+- `scripts/fetch-engine.ps1` downloads the pinned Lc0 and Stockfish zips and the 9 Maia nets into `engine/`, and checks their SHA-256 hashes. It must run in Windows PowerShell 5.1. CI uses the same script.
 - At startup the app looks for `engine/lc0/lc0.exe` next to the executable (or in the project root inside the editor). If it is missing, the app shows how to run the fetch script.
 
 ### 3.2 Getting Maia's probabilities

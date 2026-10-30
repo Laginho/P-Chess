@@ -1,7 +1,7 @@
 #requires -Version 5.1
 <#
 .SYNOPSIS
-Downloads and verifies the pinned Windows CPU engine and nine Maia-1 networks.
+Downloads and verifies the pinned Windows engines and nine Maia-1 networks.
 .EXAMPLE
 powershell -NoProfile -File scripts/fetch-engine.ps1 -Root 'C:\Games\P Chess'
 #>
@@ -19,6 +19,13 @@ $ProgressPreference = 'SilentlyContinue'
 # GitHub's published SHA-256 digest. Maia v1.0 has no published asset digests;
 # its hashes below were computed from the actual official release downloads.
 $lc0Release = 'https://github.com/LeelaChessZero/lc0/releases/download/v0.32.1'
+$stockfishRelease = 'https://github.com/official-stockfish/Stockfish/releases/download/sf_19'
+$stockfishZip = 'stockfish-windows-x86-64-universal.zip'
+$stockfishZipHash = '3c8bf1f9ea66a09350a40df4f632288285ac206d99f33ab5842c408fc30b48a7'
+$stockfishFiles = [ordered]@{
+    'stockfish.exe' = @('stockfish/stockfish-windows-x86-64-universal.exe', '45bc8e4969147db9c2eb533810637994619bff0eacc81ccfd9854394901bcbd0')
+    'Copying.txt' = @('stockfish/Copying.txt', '3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986')
+}
 $maiaRelease = 'https://github.com/CSSLab/maia-chess/releases/download/v1.0'
 $zipName = 'lc0-v0.32.1-windows-cpu-dnnl.zip'
 $zipHash = 'b9cfcfbd3dabffbfd452f6e8e087c22273721bef48eba19640b6d92006c142f5'
@@ -90,6 +97,8 @@ try {
     $Root = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Root)
     $lc0Dir = Join-Path $Root 'engine/lc0'
     $weightsDir = Join-Path $Root 'engine/weights'
+    $stockfishDir = Join-Path $Root 'engine/stockfish'
+    [IO.Directory]::CreateDirectory($stockfishDir) | Out-Null
     [IO.Directory]::CreateDirectory($lc0Dir) | Out-Null
     [IO.Directory]::CreateDirectory($weightsDir) | Out-Null
 
@@ -119,10 +128,27 @@ try {
         $archive.Dispose()
     }
 
+    $stockfishZipPath = Join-Path $stockfishDir $stockfishZip
+    Get-PinnedDownload "$stockfishRelease/$stockfishZip" $stockfishZipPath $stockfishZipHash
+    $archive = [IO.Compression.ZipFile]::OpenRead($stockfishZipPath)
+    try {
+        foreach ($file in $stockfishFiles.GetEnumerator()) {
+            $path = Join-Path $stockfishDir $file.Key
+            if (Test-PinnedFile $path $file.Value[1]) { continue }
+            $entry = $archive.GetEntry($file.Value[0])
+            if ($null -eq $entry) { throw "Pinned archive is missing $($file.Value[0])" }
+            Write-Host "Extracting: $path"
+            [IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $path)
+            if (-not (Test-PinnedFile $path $file.Value[1])) { throw "Extraction did not create $path" }
+        }
+    } finally {
+        $archive.Dispose()
+    }
+
     foreach ($file in $maiaFiles.GetEnumerator()) {
         Get-PinnedDownload "$maiaRelease/$($file.Key)" (Join-Path $weightsDir $file.Key) $file.Value
     }
-    Write-Host 'Verified Lc0 v0.32.1 (CPU dnnl) and all nine Maia v1.0 networks.'
+    Write-Host 'Verified Lc0 v0.32.1, Stockfish 19 and all nine Maia v1.0 networks.'
 } catch {
     [Console]::Error.WriteLine($_.Exception.Message)
     exit 1

@@ -1,5 +1,5 @@
 # CI-004: Fetch and ship Stockfish 19
-Stage: to-implement
+Stage: to-review
 Blocked by: none
 Review: human
 Difficulty: normal
@@ -42,3 +42,34 @@ The analysis engine arrives the same way Lc0 does (§15.3): `fetch-engine.ps1` d
 
 - Proxy decided (opus-5.5 xhigh): Accept with one change: set CI-004 to `to-implement` and resume from `recovery/20261030-1847/CI-004` by cherry-picking only 423f2ed (drop aa2f15c entirely), then redo the manual check and run the gate once with the installed Godot - the code is done and the only problems were the environment and the stale ticket text. (receipt C:\Users\bruno\AppData\Local\Temp\sweatshop-proxy\20261030-190030-CI-004-9cf28d.json)
 - 2026-10-30 Resume, don't restart. This ticket's `Stage:` on the session branch is the real state. `recovery/20261030-1847/CI-004` is only code to reuse. Its copy of this ticket (`Stage: implementing`, "Stage remains implementing") is old evidence, not the state, and does not trigger the "interrupted implementing" rule. Steps: (1) cut the ticket branch from the session and `git cherry-pick 423f2ed` only, never aa2f15c; (2) do the Verification's manual step again: delete `engine/stockfish`, run `scripts/fetch-engine.ps1` twice, pipe `uci` into the exe, and record the new output here (criterion 5); (3) run the gate once. Resolve Godot in this order: `where.exe godot`; if that finds nothing, call `C:\Users\bruno\AppData\Local\Programs\Godot\godot.cmd` directly (the binary REV-001 passed 274/0 with in this sandbox); never download Godot. Attempt 1's gate does not count: it used a different binary, was killed and exited -1. If no installed Godot runs, or Godot can't create folders under `user://`, stop only your own child processes, write an environment note here and stop. That is not a code problem, so don't run the gate a second time. No Godot tests are owed (§15.11).
+
+- 2026-10-30 Verification: stockfish directory absent before first fetch; first run downloaded and verified the archive, executable and licence. Second run completed without downloads. Gate: 274 passed, 0 failed; exit 0.
+
+```text
+Stockfish 19 by the Stockfish developers (see AUTHORS file)
+id name Stockfish 19
+id author the Stockfish developers (see AUTHORS file)
+
+option name Debug Log File type string default <empty>
+option name NumaPolicy type string default auto
+option name Threads type spin default 1 min 1 max 1024
+option name Hash type spin default 16 min 1 max 33554432
+option name Clear Hash type button
+option name Ponder type check default false
+option name MultiPV type spin default 1 min 1 max 256
+option name Skill Level type spin default 20 min 0 max 20
+option name Move Overhead type spin default 10 min 0 max 5000
+option name nodestime type spin default 0 min 0 max 10000
+option name UCI_Chess960 type check default false
+option name UCI_LimitStrength type check default false
+option name UCI_Elo type spin default 1320 min 1320 max 3190
+option name UCI_ShowWDL type check default false
+option name SyzygyPath type string default <empty>
+option name SyzygyProbeDepth type spin default 1 min 1 max 100
+option name Syzygy50MoveRule type check default true
+option name SyzygyProbeLimit type spin default 7 min 0 max 7
+option name EvalFile type string default nn-1a298aa575a0.nnue
+uciok
+```
+
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\ci-004-gate-20261030.json
