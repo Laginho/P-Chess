@@ -11,6 +11,21 @@ const Tunables = preload("res://core/tunables.gd")
 const SETTINGS := {"colour": "w", "level": "maia-1500", "control": "3+2", "opening": "Free"}
 
 
+func test_unanalysed_history_explains_state_and_hides_analysis_summary():
+	var main = await _session(FakeTime.new())
+	var review = main.get_node("Review")
+	var game = Game.new()
+	game.play("e2e4")
+	review.present(game, [180000], SETTINGS, "")
+	review.present_history("user://ui026-missing-game.pgn", "user://ui026-missing-analysis.json", false)
+	var side = review.get_node("Margin/Content/ReviewBody/Side")
+	var notice = side.get_node_or_null("UnanalysedNotice")
+	assert_true(notice != null and notice.visible and notice.text.contains("hasn’t been analysed yet"), "unanalysed explanation is visible")
+	assert_true(side.get_node("Analyze").visible, "analysis can be started")
+	assert_true(not side.get_node("Counts").visible and not side.get_node("EvalGraph").visible, "empty analysis summary is hidden")
+	main.free()
+
+
 func test_summary_waits_for_analysis_and_shows_accuracy_and_counts():
 	var main = await _session(FakeTime.new())
 	var review = main.get_node("Review")

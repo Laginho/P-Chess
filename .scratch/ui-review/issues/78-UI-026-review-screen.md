@@ -1,5 +1,5 @@
 # UI-026: Review screen to the design
-Stage: to-implement
+Stage: implementing
 Blocked by: UI-021
 Review: human
 Difficulty: hard
