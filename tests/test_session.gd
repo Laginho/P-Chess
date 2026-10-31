@@ -207,11 +207,7 @@ func test_game_over_panel_actions():
 					assert_true(main.get_node("Home").visible, "New game opens Home")
 				_:
 					assert_true(not panel.visible, "the final board remains visible")
-					var review_button = main.get_node_or_null("Layout/Side/ReviewButton")
-					assert_true(review_button != null and review_button.visible, "side Review is available")
-					if review_button:
-						review_button.pressed.emit()
-						assert_true(main.review.visible, "side Review opens review")
+					assert_true(main.get_node_or_null("Layout/Side/ReviewButton") == null, "side Review is removed")
 		main.free()
 
 
@@ -959,4 +955,10 @@ func test_searching_engine_stop_during_catalog_closes_without_a_game():
 	await _wait_start(main)
 	assert_eq(main.clock, null, "finishing the catalog cannot start a failed game")
 	assert_eq(main.uci.requests.size(), 0)
+	main.free()
+
+
+func test_game_has_no_settings_button():
+	var main = await _session(ManualWaits.new())
+	assert_true(not main.settings_screen.get_node("Open").visible, "game has no Settings button")
 	main.free()

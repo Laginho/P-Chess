@@ -1,10 +1,12 @@
 # UI-023: Game screen: board and side panel to the design
-Stage: to-implement
+Stage: implementing
 Blocked by: UI-021
 Review: human
 Difficulty: hard
 
 - Primary files:
+  - ui/game_over.gd (remove the side Review button wiring only)
+  - scripts/screens.gd (update the GameOver call site only)
   - ui/main.gd, ui/main.tscn
   - ui/board_view.gd, ui/board_view.tscn
   - ui/clock.gd, ui/clock.tscn
@@ -40,3 +42,5 @@ Restyle the game screen to `docs/design/v0.1.0/png/Game.png`, `GameSidePanel.png
 ## Comments
 
 - 2026-10-31 Written from `.scratch/ui-redo/spec.md`. Bruno chose to drop the in-game Settings button, the material counters and the panel Review button, which the canvas leaves out.
+
+- Proxy decided (opus-5.5 xhigh): Yes. Add `ui/game_over.gd` and `scripts/screens.gd` to Primary files, scoped to removing the side Review button and updating the one call site. No restyling. Criterion 4 can't pass without them: `present` takes the side Button and calls `.show()` on it in `_close`. This is the same kind of scoped addition the proxy approved for CLEAN-001. (receipt C:\Users\bruno\AppData\Local\Temp\sweatshop-proxy\20261031-181943-UI-023-022105.json)
