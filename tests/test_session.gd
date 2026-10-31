@@ -418,13 +418,13 @@ func test_settings_blocks_focused_resign_button_from_space():
 	await Engine.get_main_loop().process_frame
 	await Engine.get_main_loop().process_frame
 	var viewport = main.get_viewport()
-	for control in [main.resign_button, main.settings_screen.get_node("Open")]:
-		for down in [true, false]:
-			var mouse := InputEventMouseButton.new()
-			mouse.button_index = MOUSE_BUTTON_LEFT
-			mouse.pressed = down
-			mouse.position = control.get_global_rect().get_center()
-			viewport.push_input(mouse, true)
+	for down in [true, false]:
+		var mouse := InputEventMouseButton.new()
+		mouse.button_index = MOUSE_BUTTON_LEFT
+		mouse.pressed = down
+		mouse.position = main.resign_button.get_global_rect().get_center()
+		viewport.push_input(mouse, true)
+	_push_key(viewport, KEY_COMMA, true)
 	assert_true(main.resign_key.armed(), "click arms resignation")
 	assert_true(main.settings_screen.get_node("Panel").visible, "Settings opened")
 	for down in [true, false]:
@@ -709,15 +709,14 @@ func test_settings_shortcut_availability_and_mouse_close():
 	_push_key(viewport, KEY_COMMA, true)
 	assert_true(not panel.visible, "shortcut disabled in review")
 	main.review.hide()
-	for control in [screen.get_node("Open"), screen.get_node("Panel/Center/Box/Close")]:
-		for down in [true, false]:
-			var mouse := InputEventMouseButton.new()
-			mouse.button_index = MOUSE_BUTTON_LEFT
-			mouse.pressed = down
-			mouse.position = control.get_global_rect().get_center()
-			viewport.push_input(mouse, true)
-		if control == screen.get_node("Open"):
-			assert_true(panel.visible and viewport.gui_get_focus_owner() == screen.get_node("Panel/Center/Box/Form").get_child(1), "mouse open focuses first row")
+	_push_key(viewport, KEY_COMMA, true)
+	assert_true(panel.visible and viewport.gui_get_focus_owner() == screen.get_node("Panel/Center/Box/Form").get_child(1), "shortcut focuses first row")
+	for down in [true, false]:
+		var mouse := InputEventMouseButton.new()
+		mouse.button_index = MOUSE_BUTTON_LEFT
+		mouse.pressed = down
+		mouse.position = screen.get_node("Panel/Center/Box/Close").get_global_rect().get_center()
+		viewport.push_input(mouse, true)
 	assert_true(not panel.visible and viewport.gui_get_focus_owner() == null, "mouse Close releases focus")
 	_push_key(viewport, KEY_F)
 	assert_true(main.board_view.flipped, "F still flips after closing")
