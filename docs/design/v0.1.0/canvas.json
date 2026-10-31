@@ -1,0 +1,237 @@
+{
+  "v": 3,
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-10-29T12:00:00Z"
+  },
+  "title": "P-Chess v0.1.0 screens",
+  "launch": {
+    "view": "canvas"
+  },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1280,
+      "h": 800,
+      "title": "1 · Home"
+    },
+    "NameDialog.dc.html": {
+      "x": 1360,
+      "y": 0,
+      "w": 1280,
+      "h": 800,
+      "title": "2 · First-launch name dialog"
+    },
+    "Searching.dc.html": {
+      "x": 2720,
+      "y": 0,
+      "w": 1280,
+      "h": 800,
+      "title": "3 · Searching"
+    },
+    "Game.dc.html": {
+      "x": 0,
+      "y": 1160,
+      "w": 1280,
+      "h": 800,
+      "title": "4 · Game"
+    },
+    "GamePanelStates.dc.html": {
+      "x": 1360,
+      "y": 1160,
+      "w": 952,
+      "h": 768,
+      "title": "4 · Side panel: resign confirm · Maia declined"
+    },
+    "GameSidePanel.dc.html": {
+      "x": 2856,
+      "y": 1160,
+      "w": 440,
+      "h": 720,
+      "title": "Component · Game side panel"
+    },
+    "GameOver.dc.html": {
+      "x": 3376,
+      "y": 1160,
+      "w": 1280,
+      "h": 800,
+      "title": "4 · Game over (win)"
+    },
+    "GameOverStates.dc.html": {
+      "x": 4736,
+      "y": 1160,
+      "w": 776,
+      "h": 468,
+      "title": "4 · Game over: loss · draw"
+    },
+    "GameOverCard.dc.html": {
+      "x": 4736,
+      "y": 1708,
+      "w": 340,
+      "h": 420,
+      "title": "Component · Game over card"
+    },
+    "History.dc.html": {
+      "x": 0,
+      "y": 2320,
+      "w": 1280,
+      "h": 800,
+      "title": "5 · History (all card states)"
+    },
+    "Review.dc.html": {
+      "x": 0,
+      "y": 3480,
+      "w": 1280,
+      "h": 800,
+      "title": "6 · Review: done"
+    },
+    "ReviewAnalysing.dc.html": {
+      "x": 1360,
+      "y": 3480,
+      "w": 1280,
+      "h": 800,
+      "title": "6 · Review: analysing"
+    },
+    "ReviewNotAnalysed.dc.html": {
+      "x": 2720,
+      "y": 3480,
+      "w": 1280,
+      "h": 800,
+      "title": "6 · Review: not analysed"
+    },
+    "ReviewSmall.dc.html": {
+      "x": 4080,
+      "y": 3480,
+      "w": 800,
+      "h": 600,
+      "title": "6 · Review at 800×600"
+    },
+    "Profile.dc.html": {
+      "x": 0,
+      "y": 4640,
+      "w": 1280,
+      "h": 800,
+      "title": "7 · Profile"
+    },
+    "Repertoire.dc.html": {
+      "x": 1360,
+      "y": 4640,
+      "w": 1280,
+      "h": 800,
+      "title": "8 · Repertoires"
+    },
+    "OpeningPicker.dc.html": {
+      "x": 2720,
+      "y": 4640,
+      "w": 1280,
+      "h": 800,
+      "title": "8 · From openings picker"
+    },
+    "RepertoireEditor.dc.html": {
+      "x": 4080,
+      "y": 4640,
+      "w": 1280,
+      "h": 800,
+      "title": "9 · Repertoire editor"
+    },
+    "Board.dc.html": {
+      "x": 0,
+      "y": 5800,
+      "w": 480,
+      "h": 480,
+      "title": "Component · Board"
+    },
+    "ClassIcon.dc.html": {
+      "x": 560,
+      "y": 5800,
+      "w": 48,
+      "h": 48,
+      "title": "Component · Class icon"
+    },
+    "ClassLegend.dc.html": {
+      "x": 688,
+      "y": 5800,
+      "w": 720,
+      "h": 560,
+      "title": "Move classes and colours"
+    },
+    "ReviewLegend.dc.html": {
+      "x": 4960,
+      "y": 3480,
+      "w": 1280,
+      "h": 800,
+      "title": "6 · Review: move class legend"
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "NameDialog.dc.html",
+    "Searching.dc.html",
+    "Game.dc.html",
+    "GamePanelStates.dc.html",
+    "GameSidePanel.dc.html",
+    "GameOver.dc.html",
+    "GameOverStates.dc.html",
+    "GameOverCard.dc.html",
+    "History.dc.html",
+    "Review.dc.html",
+    "ReviewAnalysing.dc.html",
+    "ReviewNotAnalysed.dc.html",
+    "ReviewSmall.dc.html",
+    "ReviewLegend.dc.html",
+    "Profile.dc.html",
+    "Repertoire.dc.html",
+    "OpeningPicker.dc.html",
+    "RepertoireEditor.dc.html",
+    "Board.dc.html",
+    "ClassIcon.dc.html",
+    "ClassLegend.dc.html"
+  ],
+  "notes": {
+    "t_launch": {
+      "x": 0,
+      "y": -250,
+      "text": "Launch: home, name, searching",
+      "kind": "title1",
+      "maxW": 4000
+    },
+    "t_game": {
+      "x": 0,
+      "y": 910,
+      "text": "Game screen",
+      "kind": "title1",
+      "maxW": 5512
+    },
+    "t_history": {
+      "x": 0,
+      "y": 2070,
+      "text": "History",
+      "kind": "title1",
+      "maxW": 1280
+    },
+    "t_review": {
+      "x": 0,
+      "y": 3230,
+      "text": "Game review",
+      "kind": "title1",
+      "maxW": 6240
+    },
+    "t_profile": {
+      "x": 0,
+      "y": 4390,
+      "text": "Profile and repertoires",
+      "kind": "title1",
+      "maxW": 5360
+    },
+    "t_parts": {
+      "x": 0,
+      "y": 5550,
+      "text": "Shared parts",
+      "kind": "title1",
+      "maxW": 1408
+    }
+  },
+  "designSystems": []
+}

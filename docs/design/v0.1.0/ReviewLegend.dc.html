@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Review: move class legend</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700;800&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="position: relative; width: 1280px; height: 800px; font-family: 'Noto Sans', system-ui, sans-serif">
+  <dc-import name="Review" hint-size="1280px,800px"></dc-import>
+  <div role="dialog" aria-label="Move classes" style="position: absolute; z-index: 3; left: 268px; top: 96px; width: 484px; box-sizing: border-box; padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 8px; background: #363430; color: #ece9e4; border: 1px solid #45423d; border-radius: 10px; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55)">
+    <span aria-hidden="true" style="position: absolute; top: 150px; right: -7px; width: 12px; height: 12px; background: #363430; border-right: 1px solid #45423d; border-top: 1px solid #45423d; transform: rotate(45deg)"></span>
+    <div style="display: flex; align-items: center">
+      <h2 style="margin: 0; font-size: 15px; font-weight: 800">Move classes, best to worst</h2>
+      <button aria-label="Close" style="margin-left: auto; width: 28px; height: 28px; padding: 0; display: flex; align-items: center; justify-content: center; background: transparent; border: 0; border-radius: 6px; cursor: pointer">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a8a49c" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+      </button>
+    </div>
+    <dl style="margin: 0; display: flex; flex-direction: column; gap: 4px">
+      <sc-for list="{{items}}" as="c" hint-placeholder-count="12">
+        <div style="min-height: 44px; display: flex; align-items: center; gap: 12px">
+          <dc-import name="ClassIcon" cls="{{c.key}}" size="24" hint-size="24px,24px"></dc-import>
+          <div style="flex: 1 1 0; display: flex; flex-direction: column">
+            <dt style="font-size: 14px; font-weight: 700">{{c.label}}</dt>
+            <dd style="margin: 0; font-size: 12px; line-height: 1.35; color: #a8a49c">{{c.desc}}</dd>
+          </div>
+        </div>
+      </sc-for>
+    </dl>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const items = [
+      ['brilliant', 'Brilliant', 'The best move, and it sacrifices a piece.'],
+      ['great', 'Great', 'The only good move here, or one that turns the game around.'],
+      ['best', 'Best', "The engine's top choice."],
+      ['excellent', 'Excellent', 'Almost as good as the best move (loses under 2% win chance).'],
+      ['good', 'Good', 'A solid move with a slightly better option (under 5%).'],
+      ['book', 'Book', 'A known opening move, from opening theory.'],
+      ['repertoire', 'Repertoire', 'A move from your own repertoire.'],
+      ['inaccuracy', 'Inaccuracy', 'A weaker move that gives away a little (under 10%).'],
+      ['mistake', 'Mistake', 'A bad move that gives away a clear edge (under 20%).'],
+      ['miss', 'Miss', "Your opponent erred and you didn't punish it, letting a winning position slip."],
+      ['blunder', 'Blunder', 'A serious error that costs over 20% win chance, often material or the game.'],
+      ['forced', 'Forced', 'The only legal move.']
+    ].map(([key, label, desc]) => ({ key, label, desc }));
+    return { items };
+  }
+}
+</script>
+</body>
+</html>

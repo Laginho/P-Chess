@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Board</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700;800&amp;display=swap">
+<style>body{margin:0}</style>
+</helmet>
+<div role="img" aria-label="Chess board" style="position: relative; width: {{px}}; height: {{px}}; flex: none; display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); grid-template-rows: repeat(8, minmax(0, 1fr)); font-family: 'Noto Sans', system-ui, sans-serif">
+  <sc-for list="{{squares}}" as="sq" hint-placeholder-count="64">
+    <div style="position: relative; background: {{sq.bg}}">
+      <sc-if value="{{sq.hasPiece}}" hint-placeholder-val="{{ false }}">
+        <img src="{{sq.img}}" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%; display: block">
+      </sc-if>
+      <sc-if value="{{sq.showRank}}" hint-placeholder-val="{{ false }}">
+        <span style="position: absolute; top: 2px; left: 3px; font-size: {{coordSize}}; line-height: 1; font-weight: 700; color: {{sq.coordColor}}">{{sq.rank}}</span>
+      </sc-if>
+      <sc-if value="{{sq.showFile}}" hint-placeholder-val="{{ false }}">
+        <span style="position: absolute; right: 3px; bottom: 2px; font-size: {{coordSize}}; line-height: 1; font-weight: 700; color: {{sq.coordColor}}">{{sq.file}}</span>
+      </sc-if>
+    </div>
+  </sc-for>
+  <sc-if value="{{hasArrow}}" hint-placeholder-val="{{ false }}">
+    <svg viewBox="0 0 8 8" aria-hidden="true" style="position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none">
+      <line x1="{{arrow.x1}}" y1="{{arrow.y1}}" x2="{{arrow.x2}}" y2="{{arrow.y2}}" stroke="{{arrowColor}}" stroke-width="0.16" stroke-linecap="round" opacity="0.85"></line>
+      <polygon points="{{arrow.head}}" fill="{{arrowColor}}" opacity="0.85"></polygon>
+    </svg>
+  </sc-if>
+  <sc-if value="{{hasBadge}}" hint-placeholder-val="{{ false }}">
+    <div style="position: absolute; left: {{badge.left}}; top: {{badge.top}}; width: {{badge.size}}px; height: {{badge.size}}px">
+      <dc-import name="ClassIcon" cls="{{badge.cls}}" size="{{badge.size}}" hint-size="32px,32px"></dc-import>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"fen":{"editor":"text","default":"rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR"},"size":{"editor":"int","default":480,"min":64,"max":900},"flipped":{"editor":"boolean","default":false},"last":{"editor":"text","default":"e2e4"},"coords":{"editor":"boolean","default":true},"badge":{"editor":"text","default":""},"arrow":{"editor":"text","default":""},"$preview":{"width":480,"height":480}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const P = {
+      K: '/_blob/1a9bf889a878a310f7cc02e9fdd7433e', Q: '/_blob/d7684de562a136a5fb0a38e52f793157',
+      R: '/_blob/72ae5864d2289f171448dc8fec0802ba', B: '/_blob/661fe688dd91b2efa2731a3694191fe6',
+      N: '/_blob/72f77df61a8746abccb0aaf0235ef853', P: '/_blob/d7f1569a29b0aa1c670736667b664fd3',
+      k: '/_blob/0fd7783fd87430dbb114f9801cec7c67', q: '/_blob/d89cc683ccd6fbd1fbcf540ae2ef1245',
+      r: '/_blob/7062c368d4328e0e3a8ef04d28dc3cd7', b: '/_blob/3badc3ee9a10f59b9cda404696154f2c',
+      n: '/_blob/096c3a05bb57e7619d98747bd00daa42', p: '/_blob/11782091e7cb35762a1f756c5a8b9ebd'
+    };
+    const fen = this.props.fen ?? 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR';
+    const size = Number(this.props.size ?? 480);
+    const flipped = this.props.flipped === true || this.props.flipped === 'true';
+    const coords = !(this.props.coords === false || this.props.coords === 'false');
+    const last = this.props.last ?? (this.props.fen ? '' : 'e2e4');
+    const grid = fen.split(' ')[0].split('/').map((row) => {
+      const out = [];
+      for (const ch of row) {
+        if (/[1-8]/.test(ch)) for (let i = 0; i < Number(ch); i++) out.push(null);
+        else out.push(ch);
+      }
+      return out;
+    });
+    const hl = [last.slice(0, 2), last.slice(2, 4)];
+    const squares = [];
+    for (let dr = 0; dr < 8; dr++) {
+      for (let dc = 0; dc < 8; dc++) {
+        const r = flipped ? 7 - dr : dr;
+        const c = flipped ? 7 - dc : dc;
+        const file = 'abcdefgh'[c];
+        const rank = String(8 - r);
+        const light = (r + c) % 2 === 0;
+        const lit = hl.includes(file + rank);
+        const piece = grid[r] && grid[r][c];
+        squares.push({
+          bg: lit ? (light ? '#cdd26a' : '#aaa23a') : (light ? '#f0d9b5' : '#b58863'),
+          hasPiece: !!piece, img: piece ? P[piece] : '',
+          file, rank,
+          showRank: coords && dc === 0, showFile: coords && dr === 7,
+          coordColor: light ? '#b58863' : '#f0d9b5'
+        });
+      }
+    }
+    const sq = size / 8;
+    const toXY = (s) => {
+      const c = 'abcdefgh'.indexOf(s[0]);
+      const r = 8 - Number(s[1]);
+      return flipped ? [7 - c + 0.5, 7 - r + 0.5] : [c + 0.5, r + 0.5];
+    };
+    let arrow = null;
+    const a = this.props.arrow ?? '';
+    if (a.length >= 4) {
+      const [x1, y1] = toXY(a.slice(0, 2));
+      const [tx, ty] = toXY(a.slice(2, 4));
+      const len = Math.hypot(tx - x1, ty - y1);
+      const ux = (tx - x1) / len, uy = (ty - y1) / len;
+      const bx = tx - ux * 0.42, by = ty - uy * 0.42;
+      const px = -uy * 0.24, py = ux * 0.24;
+      arrow = {
+        x1, y1, x2: bx, y2: by,
+        head: [[tx - ux * 0.08, ty - uy * 0.08], [bx + px, by + py], [bx - px, by - py]].map((p) => p.join(',')).join(' ')
+      };
+    }
+    let badge = null;
+    const b = this.props.badge ?? '';
+    if (b.includes(':')) {
+      const [s, cls] = b.split(':');
+      const [cx, cy] = toXY(s);
+      const bs = Math.round(Math.max(18, sq * 0.42));
+      badge = { cls, size: bs, left: Math.round((cx + 0.5) * sq - bs * 0.7) + 'px', top: Math.round((cy - 0.5) * sq - bs * 0.3) + 'px' };
+    }
+    return {
+      squares, px: size + 'px', radius: size > 200 ? '4px' : '2px',
+      coordSize: Math.max(9, Math.round(sq * 0.18)) + 'px',
+      hasArrow: !!arrow, arrow: arrow || {}, arrowColor: '#98bc49',
+      hasBadge: !!badge, badge: badge || {}
+    };
+  }
+}
+</script>
+</body>
+</html>

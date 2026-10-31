@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Game review at 800 by 600</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700;800&amp;display=swap">
+<style>
+body{margin:0}
+button,input{font-family:inherit}
+</style>
+</helmet>
+<div style="width: 800px; height: 600px; box-sizing: border-box; padding: 12px 16px; display: flex; gap: 12px; background: #1f1e1c; color: #ece9e4; font-family: 'Noto Sans', system-ui, sans-serif">
+  <div style="width: 530px; flex: none; display: flex; flex-direction: column; gap: 6px">
+    <div style="height: 28px; display: flex; align-items: center; gap: 8px; padding-left: 26px">
+      <span aria-label="Black" style="width: 12px; height: 12px; box-sizing: border-box; border-radius: 50%; background: #141412; border: 1px solid #8c887f"></span>
+      <span style="font-size: 14px; font-weight: 700">Maia 1500</span>
+    </div>
+    <div style="display: flex; gap: 6px">
+      <div role="img" aria-label="Evaluation: Black is better by 1.2" style="position: relative; width: 20px; height: 504px; flex: none; display: flex; flex-direction: column; background: #403d39; border-radius: 3px; overflow: hidden">
+        <div style="flex: 1 1 0"></div>
+        <div style="height: 38%; background: #ece9e4"></div>
+        <span style="position: absolute; top: 5px; left: 0; right: 0; text-align: center; font-size: 9px; font-weight: 800; color: #ece9e4">1.2</span>
+      </div>
+      <dc-import name="Board" fen="r2qkb1r/pp1n1p2/2p1p1bp/3pPn2/3P1B2/1N1B4/PPP3PP/R2QNRK1" last="e2d3" badge="d3:mistake" arrow="e1f3" size="504" hint-size="504px,504px"></dc-import>
+    </div>
+    <div style="height: 28px; display: flex; align-items: center; gap: 8px; padding-left: 26px">
+      <span aria-label="White" style="width: 12px; height: 12px; box-sizing: border-box; border-radius: 50%; background: #ece9e4; border: 1px solid #8c887f"></span>
+      <span style="font-size: 14px; font-weight: 700">Bruno</span>
+    </div>
+  </div>
+  <div style="flex: 1 1 0; min-width: 0; height: 576px; box-sizing: border-box; display: flex; flex-direction: column; background: #2b2a27; border: 1px solid #45423d; border-radius: 8px; overflow: hidden">
+    <div style="height: 40px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 12px; border-bottom: 1px solid #45423d">
+      <h1 style="margin: 0; font-size: 15px; font-weight: 800">Game Review</h1>
+      <button aria-label="How accuracy and classes are computed" style="margin-left: auto; width: 24px; height: 24px; padding: 0; display: flex; align-items: center; justify-content: center; background: #45423d; color: #ece9e4; border: 0; border-radius: 50%; font-size: 12px; font-weight: 800; cursor: pointer">?</button>
+    </div>
+    <div style="flex: none; padding: 10px 12px 6px; display: flex; flex-direction: column; gap: 6px">
+      <div style="display: flex; align-items: center; gap: 8px">
+        <span style="flex: 1 1 0; font-size: 13px; font-weight: 600">Bruno</span>
+        <span style="width: 60px; height: 28px; display: flex; align-items: center; justify-content: center; background: #ece9e4; color: #141412; border-radius: 5px; font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums">86.4</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px">
+        <span style="flex: 1 1 0; font-size: 13px; font-weight: 600">Maia 1500</span>
+        <span style="width: 60px; height: 28px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; background: #141412; color: #ece9e4; border: 1px solid #6b675f; border-radius: 5px; font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums">78.1</span>
+      </div>
+    </div>
+    <button aria-label="Evaluation graph. Click a point to jump to that move." style="flex: none; margin: 0 12px 6px; padding: 0; height: 44px; background: #403d39; border: 0; border-radius: 5px; overflow: hidden; cursor: pointer">
+      <svg width="100%" height="44" viewBox="0 0 200 44" preserveAspectRatio="none" aria-hidden="true" style="display: block">
+        <path d="M0 44 L0 20 L30 19 L37 22 L46 18 L54 19 L56 27 L59 26 L61 35 L63 20 L83 17 L112 13 L146 15 L171 9 L200 6 L200 44 Z" fill="#ece9e4"></path>
+        <line x1="0" y1="22" x2="200" y2="22" stroke="#8c887f" stroke-width="1" stroke-dasharray="3 3"></line>
+        <line x1="56" y1="0" x2="56" y2="44" stroke="#7fa650" stroke-width="2"></line>
+      </svg>
+    </button>
+    <button aria-expanded="false" style="flex: none; height: 32px; margin: 0 12px 6px; padding: 0 10px; display: flex; align-items: center; justify-content: space-between; background: #363430; color: #ece9e4; border: 0; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer">
+      Move classes
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a8a49c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+    </button>
+    <ol aria-label="Moves" style="flex: 1 1 0; min-height: 0; margin: 0; padding: 4px 0; list-style: none; overflow: hidden; border-top: 1px solid #45423d; font-size: 13px">
+      <sc-for list="{{rows}}" as="m" hint-placeholder-count="9">
+        <li style="height: 24px; display: grid; grid-template-columns: 26px minmax(0, 1fr) minmax(0, 1fr); align-items: center; padding: 0 8px">
+          <span style="color: #a8a49c; font-variant-numeric: tabular-nums">{{m.n}}.</span>
+          <span style="justify-self: start; height: 22px; display: flex; align-items: center; gap: 4px; padding: 0 4px; border-radius: 4px; background: {{m.wBg}}">
+            <dc-import name="ClassIcon" cls="{{m.wCls}}" size="16" hint-size="16px,16px"></dc-import>
+            <span style="font-weight: 600">{{m.w}}</span>
+          </span>
+          <span style="justify-self: start; height: 22px; display: flex; align-items: center; gap: 4px; padding: 0 4px">
+            <dc-import name="ClassIcon" cls="{{m.bCls}}" size="16" hint-size="16px,16px"></dc-import>
+            <span style="font-weight: 600">{{m.b}}</span>
+          </span>
+        </li>
+        <sc-if value="{{m.leftRep}}" hint-placeholder-val="{{ false }}">
+          <li style="min-height: 24px; display: flex; align-items: center; gap: 6px; margin: 0 8px 0 34px; padding: 2px 6px; border: 1px solid #3f94e0; border-radius: 4px; font-size: 11px; font-weight: 600; color: #7db8ee">Left repertoire · expected 8.Nh4</li>
+        </sc-if>
+      </sc-for>
+    </ol>
+    <div style="flex: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; padding: 6px 12px; border-top: 1px solid #45423d">
+      <button aria-label="First move" style="height: 36px; display: flex; align-items: center; justify-content: center; background: #363430; border: 0; border-radius: 5px; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ece9e4" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 5v14M18 6l-7 6 7 6"></path></svg></button>
+      <button aria-label="Previous move (Left arrow)" style="height: 36px; display: flex; align-items: center; justify-content: center; background: #363430; border: 0; border-radius: 5px; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ece9e4" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></button>
+      <button aria-label="Next move (Right arrow)" style="height: 36px; display: flex; align-items: center; justify-content: center; background: #363430; border: 0; border-radius: 5px; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ece9e4" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"></path></svg></button>
+      <button aria-label="Last move" style="height: 36px; display: flex; align-items: center; justify-content: center; background: #363430; border: 0; border-radius: 5px; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ece9e4" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 5v14M6 6l7 6-7 6"></path></svg></button>
+    </div>
+    <div style="flex: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; padding: 0 12px 10px">
+      <button style="height: 34px; background: #2b2a27; color: #ece9e4; border: 1px solid #45423d; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer">Copy PGN</button>
+      <button style="height: 34px; background: #2b2a27; color: #ece9e4; border: 1px solid #45423d; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer">Open in Lichess</button>
+      <button style="grid-column: 1 / -1; height: 34px; background: #7fa650; color: #141412; border: 0; border-radius: 6px; font-size: 12px; font-weight: 800; cursor: pointer">New game</button>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":800,"height":600}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const data = [
+      [5, 'Be2', 'repertoire', 'Nd7', 'book'], [6, 'O-O', 'repertoire', 'Ne7', 'best'],
+      [7, 'Nbd2', 'repertoire', 'h6', 'good'], [8, 'Nb3', 'inaccuracy', 'g5', 'excellent'],
+      [9, 'Ne1', 'good', 'Bg6', 'best'], [10, 'f4', 'great', 'gxf4', 'best'],
+      [11, 'Bxf4', 'best', 'Nf5', 'excellent'], [12, 'Bd3', 'mistake', 'Qb6', 'best']
+    ];
+    const rows = data.map(([n, w, wCls, b, bCls]) => ({
+      n, w, wCls, b, bCls, leftRep: n === 8, wBg: n === 12 ? '#4a4741' : 'transparent'
+    }));
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

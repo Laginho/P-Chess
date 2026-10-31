@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>First-launch name dialog</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700;800&amp;display=swap">
+<style>
+body{margin:0}
+button,input{font-family:inherit}
+#player-name::placeholder{color:#6b675f;opacity:1}
+</style>
+</helmet>
+<div style="position: relative; width: 1280px; height: 800px; overflow: hidden; font-family: 'Noto Sans', system-ui, sans-serif">
+  <dc-import name="Main" hint-size="1280px,800px"></dc-import>
+  <div style="position: absolute; inset: 0; background: rgba(10, 10, 9, 0.72); display: flex; align-items: center; justify-content: center">
+    <div role="dialog" aria-modal="true" aria-labelledby="name-title" style="width: 420px; box-sizing: border-box; padding: 28px; display: flex; flex-direction: column; gap: 20px; background: #2b2a27; border: 1px solid #45423d; border-radius: 12px; color: #ece9e4">
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <h2 id="name-title" style="margin: 0; font-size: 22px; font-weight: 800">What should I call you?</h2>
+        <p style="margin: 0; font-size: 14px; color: #a8a49c">Your name appears in game history and in exported PGNs.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label for="player-name" style="font-size: 13px; font-weight: 600; color: #a8a49c">Name</label>
+        <input id="player-name" type="text" placeholder="Your name" style="height: 44px; box-sizing: border-box; padding: 0 12px; background: #1f1e1c; color: #ece9e4; border: 2px solid #7fa650; border-radius: 8px; font-size: 16px; outline: none">
+      </div>
+      <button style="height: 48px; background: #7fa650; color: #141412; border: 0; border-radius: 8px; font-size: 16px; font-weight: 800; cursor: pointer">OK</button>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Game side panel</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700;800&amp;display=swap">
+<style>
+body{margin:0}
+button,input{font-family:inherit}
+</style>
+</helmet>
+<div style="width: 440px; height: 720px; box-sizing: border-box; display: flex; flex-direction: column; background: #2b2a27; border: 1px solid #45423d; border-radius: 10px; overflow: hidden; color: #ece9e4; font-family: 'Noto Sans', system-ui, sans-serif">
+  <div style="height: 72px; flex: none; padding: 0 12px 0 16px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #45423d">
+    <sc-if value="{{hasScore}}" hint-placeholder-val="{{ false }}"><span aria-label="Match score {{botScore}}" style="min-width: 16px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums">{{botScore}}</span></sc-if>
+    <div style="width: 36px; height: 36px; border-radius: 6px; background: #5a5650; display: flex; align-items: center; justify-content: center">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ece9e4" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="4" y="6" width="16" height="13" rx="3"></rect><circle cx="9" cy="12" r="1.3"></circle><circle cx="15" cy="12" r="1.3"></circle><path d="M12 6V3"></path></svg>
+    </div>
+    <div style="display: flex; flex-direction: column; flex: 1 1 0">
+      <span style="font-size: 15px; font-weight: 700">Maia</span>
+    </div>
+    <div style="width: 132px; height: 48px; display: flex; align-items: center; justify-content: flex-end; padding: 0 14px; box-sizing: border-box; background: #1f1e1c; color: #a8a49c; border-radius: 6px; font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums">2:41</div>
+  </div>
+  <ol aria-label="Moves" style="flex: 1 1 0; margin: 0; padding: 8px 0; list-style: none; overflow: hidden; font-size: 15px">
+    <sc-for list="{{moves}}" as="m" hint-placeholder-count="10">
+      <li style="height: 32px; display: grid; grid-template-columns: 52px minmax(0, 1fr) minmax(0, 1fr); align-items: center; padding: 0 12px; background: {{m.rowBg}}">
+        <span style="color: #a8a49c; font-variant-numeric: tabular-nums">{{m.n}}.</span>
+        <span style="font-weight: 600; padding: 3px 8px; border-radius: 4px; justify-self: start; background: {{m.wBg}}">{{m.w}}</span>
+        <span style="font-weight: 600; padding: 3px 8px; border-radius: 4px; justify-self: start; background: {{m.bBg}}">{{m.b}}</span>
+      </li>
+    </sc-for>
+  </ol>
+  <sc-if value="{{isDeclined}}" hint-placeholder-val="{{ false }}">
+    <p role="status" style="margin: 0 12px 10px; height: 40px; display: flex; align-items: center; gap: 10px; padding: 0 14px; background: #363430; border: 1px solid #45423d; border-radius: 8px; font-size: 14px; font-weight: 600">
+      <span style="width: 22px; height: 22px; border-radius: 50%; background: #45423d; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800">½</span>
+      Maia declined
+    </p>
+  </sc-if>
+  <div style="flex: none; display: flex; flex-direction: row-reverse; gap: 8px; padding: 0 12px 12px">
+    <sc-if value="{{isConfirm}}" hint-placeholder-val="{{ false }}">
+      <button style="position: relative; overflow: hidden; flex: 1 1 0; height: 44px; display: flex; align-items: center; justify-content: center; gap: 8px; background: #c93230; color: #ffffff; border: 0; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V4"></path><path d="M5 4h11l-2 4 2 4H5"></path></svg>
+        Click again to resign
+        <span aria-hidden="true" style="position: absolute; left: 0; bottom: 0; height: 4px; width: 60%; background: rgba(255,255,255,0.55)"></span>
+      </button>
+    </sc-if>
+    <sc-if value="{{notConfirm}}" hint-placeholder-val="{{ true }}">
+      <button aria-label="Resign" title="Resign" style="flex: 1 1 0; height: 44px; display: flex; align-items: center; justify-content: center; gap: 8px; background: #363430; color: #ece9e4; border: 1px solid #45423d; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ece9e4" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V4"></path><path d="M5 4h11l-2 4 2 4H5"></path></svg>
+        Resign
+      </button>
+    </sc-if>
+    <button aria-label="Offer draw" title="Offer draw" style="flex: 1 1 0; height: 44px; display: flex; align-items: center; justify-content: center; gap: 8px; background: #363430; color: {{drawColor}}; border: 1px solid #45423d; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer">
+      <span style="font-size: 20px; font-weight: 800; line-height: 1">½</span>
+      Offer draw
+    </button>
+  </div>
+  <div style="height: 72px; flex: none; padding: 0 12px 0 16px; display: flex; align-items: center; gap: 12px; border-top: 1px solid #45423d">
+    <sc-if value="{{hasScore}}" hint-placeholder-val="{{ false }}"><span aria-label="Match score {{meScore}}" style="min-width: 16px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums">{{meScore}}</span></sc-if>
+    <div style="width: 36px; height: 36px; border-radius: 6px; background: #7fa650; color: #141412; display: flex; align-items: center; justify-content: center; font-weight: 800">B</div>
+    <div style="display: flex; flex-direction: column; flex: 1 1 0">
+      <span style="font-size: 15px; font-weight: 700">Bruno</span>
+      <span style="font-size: 12px; color: #a8a49c">White</span>
+    </div>
+    <div style="width: 132px; height: 48px; display: flex; align-items: center; justify-content: flex-end; padding: 0 14px; box-sizing: border-box; background: {{myClockBg}}; color: #141412; border-radius: 6px; font-size: 30px; font-weight: 800; font-variant-numeric: tabular-nums">2:58</div>
+  </div>
+  <div style="flex: none; display: flex; gap: 8px; padding: 12px; border-top: 1px solid #45423d">
+    <button style="flex: 1 1 0; height: 40px; background: #2b2a27; color: #ece9e4; border: 1px solid #45423d; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer">Claim draw</button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["normal","confirm","declined"],"default":"normal"},"meScore":{"editor":"text","default":""},"botScore":{"editor":"text","default":""},"$preview":{"width":440,"height":720}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const mode = this.props.mode ?? 'normal';
+    const san = 'e4 e5 Nf3 Nc6 Bc4 Nf6 d3 Bc5 c3 d6 O-O O-O Re1 a6 Bb3 Ba7 h3 h6 Nbd2 Re8'.split(' ');
+    const moves = [];
+    for (let i = 0; i < san.length; i += 2) {
+      const lastRow = i + 2 >= san.length;
+      moves.push({
+        n: i / 2 + 1, w: san[i], b: san[i + 1] || '',
+        rowBg: (i / 2) % 2 ? 'transparent' : '#2f2e2a',
+        wBg: 'transparent', bBg: lastRow ? '#4a4741' : 'transparent'
+      });
+    }
+    return {
+      moves,
+      isConfirm: mode === 'confirm', notConfirm: mode !== 'confirm',
+      isDeclined: mode === 'declined',
+      drawColor: '#ece9e4',
+      myClockBg: '#ece9e4',
+      hasScore: !!(this.props.meScore || this.props.botScore), meScore: this.props.meScore ?? '', botScore: this.props.botScore ?? ''
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -2,6 +2,8 @@
 
 Paste this into `/design`. The artboards are a visual reference only. The app is built in **Godot 4** (GDScript, Control nodes), so keep effects simple: flat panels, borders, rounded corners and plain text. No blur, no web-only CSS tricks.
 
+The finished canvas is in `docs/design/v0.1.0/` (one HTML file per screen; see its README).
+
 ## The app
 
 P-Chess is a native Windows app for bullet and blitz practice against **Maia**, a human-like chess bot. Levels are named after the net: "Maia 1100" to "Maia 1900". There are three time controls only: 1+0, 3+2 and 5+0. v0.1.0 adds a chess.com-style game review powered by Stockfish, a game history and a home screen.

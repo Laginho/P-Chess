@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Game review</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700;800&amp;display=swap">
+<style>
+body{margin:0}
+button,input{font-family:inherit}
+</style>
+</helmet>
+<div style="width: 1280px; height: 800px; box-sizing: border-box; padding: 16px 24px; display: flex; gap: 24px; background: #1f1e1c; color: #ece9e4; font-family: 'Noto Sans', system-ui, sans-serif">
+  <div style="width: 716px; flex: none; display: flex; flex-direction: column; gap: 8px">
+    <div style="height: 36px; display: flex; align-items: center; gap: 10px; padding-left: 36px">
+      <span aria-label="Black" style="width: 14px; height: 14px; box-sizing: border-box; border-radius: 50%; background: #141412; border: 1px solid #8c887f"></span>
+      <span style="font-size: 15px; font-weight: 700">Maia 1500</span>
+    </div>
+    <div style="display: flex; gap: 8px">
+      <div role="img" aria-label="{{evalLabel}}" style="position: relative; width: 28px; height: 680px; flex: none; display: flex; flex-direction: column; background: #403d39; border-radius: 4px; overflow: hidden">
+        <div style="flex: 1 1 0"></div>
+        <div style="height: {{whitePct}}; background: #ece9e4"></div>
+        <span style="position: absolute; top: 6px; left: 0; right: 0; text-align: center; font-size: 11px; font-weight: 800; color: #ece9e4">{{evalText}}</span>
+      </div>
+      <dc-import name="Board" fen="{{fen}}" last="e2d3" badge="{{badge}}" arrow="{{arrow}}" size="680" hint-size="680px,680px"></dc-import>
+    </div>
+    <div style="height: 36px; display: flex; align-items: center; gap: 10px; padding-left: 36px">
+      <span aria-label="White" style="width: 14px; height: 14px; box-sizing: border-box; border-radius: 50%; background: #ece9e4; border: 1px solid #8c887f"></span>
+      <span style="font-size: 15px; font-weight: 700">Bruno</span>
+    </div>
+  </div>
+  <div style="position: relative; flex: 1 1 0; min-width: 0; height: 768px; box-sizing: border-box; display: flex; flex-direction: column; background: #2b2a27; border: 1px solid #45423d; border-radius: 10px; overflow: hidden">
+    <div style="height: 48px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 16px; border-bottom: 1px solid #45423d">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7fa650" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V5M4 19h16M8 15l4-5 3 3 5-6"></path></svg>
+      <h1 style="margin: 0; font-size: 17px; font-weight: 800">Game Review</h1>
+      <span style="margin-left: auto; font-size: 13px; color: #a8a49c">3+2 · Won on time · 41 moves</span>
+    </div>
+
+    <sc-if value="{{isDone}}" hint-placeholder-val="{{ true }}">
+      <div style="position: relative; flex: none; padding: 12px 16px 8px; display: flex; flex-direction: column; gap: 8px">
+        <div style="display: flex; align-items: center; gap: 6px">
+          <span style="font-size: 13px; font-weight: 700; color: #a8a49c">Accuracy</span>
+          <button aria-label="How accuracy is computed" aria-expanded="true" style="width: 24px; height: 24px; padding: 0; display: flex; align-items: center; justify-content: center; background: #45423d; color: #ece9e4; border: 0; border-radius: 50%; font-size: 13px; font-weight: 800; cursor: pointer">?</button>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+          <div style="display: flex; align-items: center; gap: 10px">
+            <span style="width: 88px; height: 44px; display: flex; align-items: center; justify-content: center; background: #ece9e4; color: #141412; border-radius: 6px; font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums">86.4</span>
+            <span style="font-size: 14px; font-weight: 600; flex: 1 1 0">Bruno</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px">
+            <span style="font-size: 14px; font-weight: 600; flex: 1 1 0; text-align: right">Maia 1500</span>
+            <span style="width: 88px; height: 44px; display: flex; align-items: center; justify-content: center; background: #141412; color: #ece9e4; border: 1px solid #6b675f; box-sizing: border-box; border-radius: 6px; font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums">78.1</span>
+          </div>
+        </div>
+        <div role="tooltip" style="position: absolute; z-index: 2; top: 102px; left: 104px; width: 300px; box-sizing: border-box; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; background: #ece9e4; color: #141412; border-radius: 8px; font-size: 13px; line-height: 1.45">
+          <strong style="font-size: 13px">How accuracy is computed</strong>
+          <span>Each move scores 100 when it keeps your win chance, and less the more win chance it gives away.</span>
+          <span>It uses the same formula as Lichess.</span>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isAnalysing}}" hint-placeholder-val="{{ false }}">
+      <div style="flex: none; padding: 14px 16px 10px; display: flex; flex-direction: column; gap: 8px">
+        <div style="display: flex; align-items: baseline; justify-content: space-between">
+          <span style="font-size: 15px; font-weight: 700">Analysing game…</span>
+          <span style="font-size: 13px; color: #a8a49c; font-variant-numeric: tabular-nums">18 of 82 moves</span>
+        </div>
+        <div role="progressbar" aria-label="Analysis progress" aria-valuenow="22" aria-valuemin="0" aria-valuemax="100" style="height: 10px; background: #1f1e1c; border-radius: 5px; overflow: hidden">
+          <div style="width: 22%; height: 100%; background: #7fa650"></div>
+        </div>
+        <span style="font-size: 12px; color: #a8a49c">Stockfish · accuracy appears when every move is done</span>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{hasTable}}" hint-placeholder-val="{{ true }}">
+      <div style="flex: none; padding: 0 16px 8px">
+        <div style="height: 24px; display: grid; grid-template-columns: minmax(0, 1fr) 56px 24px 56px; align-items: center; column-gap: 8px; font-size: 12px; font-weight: 700; color: #a8a49c">
+          <span style="display: flex; align-items: center; gap: 6px">Moves
+            <button aria-label="How moves are classified" style="width: 20px; height: 20px; padding: 0; display: flex; align-items: center; justify-content: center; background: #45423d; color: #ece9e4; border: 0; border-radius: 50%; font-size: 11px; font-weight: 800; cursor: pointer">?</button>
+          </span>
+          <span style="text-align: center">Bruno</span>
+          <span></span>
+          <span style="text-align: center">Maia</span>
+        </div>
+        <sc-for list="{{classes}}" as="c" hint-placeholder-count="12">
+          <div style="height: 18px; display: grid; grid-template-columns: minmax(0, 1fr) 56px 24px 56px; align-items: center; column-gap: 8px; font-size: 13px">
+            <span>{{c.label}}</span>
+            <span style="text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; color: {{c.wColor}}">{{c.w}}</span>
+            <dc-import name="ClassIcon" cls="{{c.key}}" size="18" hint-size="18px,18px"></dc-import>
+            <span style="text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; color: {{c.bColor}}">{{c.b}}</span>
+          </div>
+        </sc-for>
+      </div>
+      <button aria-label="Evaluation graph. Click a point to jump to that move." style="flex: none; margin: 0 16px 8px; padding: 0; height: 72px; background: #403d39; border: 0; border-radius: 6px; overflow: hidden; cursor: pointer">
+        <svg width="100%" height="72" viewBox="0 0 460 72" preserveAspectRatio="none" aria-hidden="true" style="display: block">
+          <path d="{{graphArea}}" fill="#ece9e4"></path>
+          <line x1="0" y1="36" x2="460" y2="36" stroke="#8c887f" stroke-width="1" stroke-dasharray="3 3"></line>
+          <line x1="{{curX}}" y1="0" x2="{{curX}}" y2="72" stroke="#7fa650" stroke-width="2"></line>
+          <sc-for list="{{dots}}" as="d" hint-placeholder-count="4">
+            <circle cx="{{d.x}}" cy="{{d.y}}" r="3.5" fill="{{d.color}}" stroke="#141412" stroke-width="1"></circle>
+          </sc-for>
+        </svg>
+      </button>
+    </sc-if>
+
+    <sc-if value="{{isNone}}" hint-placeholder-val="{{ false }}">
+      <div style="flex: none; margin: 16px; padding: 24px; display: flex; flex-direction: column; align-items: center; gap: 12px; background: #1f1e1c; border: 1px solid #45423d; border-radius: 10px; text-align: center">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#a8a49c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V5M4 19h16M8 15l4-5 3 3 5-6"></path></svg>
+        <span style="font-size: 16px; font-weight: 700">This game hasn’t been analysed yet</span>
+        <span style="font-size: 13px; color: #a8a49c">Stockfish classifies every move and scores both sides’ accuracy.</span>
+        <button style="height: 48px; padding: 0 32px; background: #7fa650; color: #141412; border: 0; border-radius: 8px; font-size: 16px; font-weight: 800; cursor: pointer">Analyze</button>
+      </div>
+    </sc-if>
+
+    <ol aria-label="Moves" style="position: relative; flex: 1 1 0; min-height: 0; margin: 0; padding: 4px 0; list-style: none; overflow: hidden; border-top: 1px solid #45423d; font-size: 14px">
+      <sc-for list="{{rows}}" as="m" hint-placeholder-count="5">
+        <li style="height: 26px; display: grid; grid-template-columns: 40px minmax(0, 1fr) minmax(0, 1fr); align-items: center; padding: 0 16px">
+          <span style="color: #a8a49c; font-variant-numeric: tabular-nums">{{m.n}}.</span>
+          <span style="justify-self: start; height: 24px; display: flex; align-items: center; gap: 6px; padding: 0 6px; border-radius: 4px; background: {{m.wBg}}">
+            <sc-if value="{{m.wIcon}}" hint-placeholder-val="{{ true }}"><dc-import name="ClassIcon" cls="{{m.wCls}}" size="18" hint-size="18px,18px"></dc-import></sc-if>
+            <sc-if value="{{m.wPending}}" hint-placeholder-val="{{ false }}"><span aria-label="Pending" style="width: 18px; height: 18px; box-sizing: border-box; border-radius: 50%; border: 2px dashed #6b675f"></span></sc-if>
+            <span style="font-weight: 600">{{m.w}}</span>
+          </span>
+          <span style="justify-self: start; height: 24px; display: flex; align-items: center; gap: 6px; padding: 0 6px; border-radius: 4px">
+            <sc-if value="{{m.bIcon}}" hint-placeholder-val="{{ true }}"><dc-import name="ClassIcon" cls="{{m.bCls}}" size="18" hint-size="18px,18px"></dc-import></sc-if>
+            <sc-if value="{{m.bPending}}" hint-placeholder-val="{{ false }}"><span aria-label="Pending" style="width: 18px; height: 18px; box-sizing: border-box; border-radius: 50%; border: 2px dashed #6b675f"></span></sc-if>
+            <span style="font-weight: 600">{{m.b}}</span>
+          </span>
+        </li>
+        <sc-if value="{{m.leftRep}}" hint-placeholder-val="{{ false }}">
+          <li style="height: 26px; display: flex; align-items: center; gap: 8px; margin: 0 16px 0 56px; padding: 0 8px; border: 1px solid #3f94e0; border-radius: 4px; font-size: 12px; font-weight: 600; color: #7db8ee">
+            <dc-import name="ClassIcon" cls="repertoire" size="16" hint-size="16px,16px"></dc-import>
+            Left repertoire · expected 8.Nh4
+          </li>
+        </sc-if>
+      </sc-for>
+    </ol>
+
+    <div style="flex: none; display: flex; justify-content: center; gap: 6px; padding: 8px 16px; border-top: 1px solid #45423d">
+      <button aria-label="First move" style="width: 64px; height: 40px; display: flex; align-items: center; justify-content: center; background: #363430; border: 0; border-radius: 6px; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ece9e4" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 5v14M18 6l-7 6 7 6"></path></svg></button>
+      <button aria-label="Previous move (Left arrow)" style="width: 64px; height: 40px; display: flex; align-items: center; justify-content: center; background: #363430; border: 0; border-radius: 6px; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ece9e4" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></button>
+      <button aria-label="Next move (Right arrow)" style="width: 64px; height: 40px; display: flex; align-items: center; justify-content: center; background: #363430; border: 0; border-radius: 6px; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ece9e4" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"></path></svg></button>
+      <button aria-label="Last move" style="width: 64px; height: 40px; display: flex; align-items: center; justify-content: center; background: #363430; border: 0; border-radius: 6px; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ece9e4" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 5v14M6 6l7 6-7 6"></path></svg></button>
+    </div>
+    <div style="flex: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 0 16px 14px">
+      <button style="height: 40px; padding: 0 6px; background: #2b2a27; color: #ece9e4; border: 1px solid #45423d; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer">Copy PGN</button>
+      <button style="height: 40px; padding: 0 6px; background: #2b2a27; color: #ece9e4; border: 1px solid #45423d; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer">Open in Lichess</button>
+      <button style="height: 40px; padding: 0 6px; background: #7fa650; color: #141412; border: 0; border-radius: 8px; font-size: 13px; font-weight: 800; cursor: pointer">New game</button>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["done","analysing","none"],"default":"done"},"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const mode = this.props.mode ?? 'done';
+    const done = mode === 'done', analysing = mode === 'analysing', none = mode === 'none';
+    const analysedPlies = done ? 999 : analysing ? 18 : 0;
+
+    // Bruno (White) vs Maia 1500, Caro-Kann Advance; current move 12.Bd3 (ply 23).
+    const plies = [
+      ['e4', 'repertoire'], ['c6', 'book'], ['d4', 'repertoire'], ['d5', 'book'], ['e5', 'repertoire'], ['Bf5', 'book'],
+      ['Nf3', 'repertoire'], ['e6', 'book'], ['Be2', 'repertoire'], ['Nd7', 'book'], ['O-O', 'repertoire'], ['Ne7', 'best'],
+      ['Nbd2', 'repertoire'], ['h6', 'good'], ['Nb3', 'inaccuracy'], ['g5', 'excellent'], ['Ne1', 'good'], ['Bg6', 'best'],
+      ['f4', 'great'], ['gxf4', 'best'], ['Bxf4', 'best'], ['Nf5', 'excellent'], ['Bd3', 'mistake'], ['Qb6', 'best'],
+      ['Kh1', 'blunder'], ['O-O-O', 'miss'], ['c3', 'good'], ['c5', 'inaccuracy']
+    ];
+    const CUR = 22;
+    const all = [];
+    for (let i = 0; i < plies.length; i += 2) {
+      const wi = i, bi = i + 1;
+      const known = (p) => !none && p < analysedPlies;
+      const repKnown = (p) => plies[p][1] === 'repertoire' || plies[p][1] === 'book';
+      // Book and repertoire need no engine, so they show before analysis.
+      const showW = known(wi) || repKnown(wi);
+      const showB = known(bi) || repKnown(bi);
+      all.push({
+        n: i / 2 + 1, w: plies[wi][0], b: plies[bi][0], wCls: plies[wi][1], bCls: plies[bi][1],
+        wIcon: showW, bIcon: showB,
+        wPending: analysing && !showW, bPending: analysing && !showB,
+        wBg: wi === CUR ? '#4a4741' : 'transparent',
+        leftRep: i / 2 + 1 === 8
+      });
+    }
+    const rows = none ? all.slice(0, 12) : all.slice(7, 12);
+
+    const C = [
+      ['brilliant', 'Brilliant', 1, 0], ['great', 'Great', 1, 0], ['best', 'Best', 11, 10], ['excellent', 'Excellent', 9, 8],
+      ['good', 'Good', 6, 7], ['book', 'Book', 0, 5], ['repertoire', 'Repertoire', 7, 0], ['inaccuracy', 'Inaccuracy', 3, 5],
+      ['mistake', 'Mistake', 1, 3], ['miss', 'Miss', 0, 1], ['blunder', 'Blunder', 1, 2], ['forced', 'Forced', 1, 0]
+    ];
+    const partial = { repertoire: [7, 0], book: [0, 5], inaccuracy: [1, 0], good: [1, 1], best: [0, 2], excellent: [0, 1] };
+    const classes = C.map(([key, label, w, b]) => {
+      if (analysing) { [w, b] = partial[key] || [0, 0]; }
+      return { key, label, w, b, wColor: w ? '#ece9e4' : '#6b675f', bColor: b ? '#ece9e4' : '#6b675f' };
+    });
+
+    // White's win chance per ply, sketched from the game's story.
+    const anchors = [[0, .55], [14, .56], [16, .5], [20, .6], [22, .58], [23, .38], [24, .4], [25, .2], [26, .55], [34, .62], [46, .7], [60, .66], [70, .8], [82, .86]];
+    const N = 82, W = 460, H = 72;
+    const wp = [];
+    for (let p = 0; p <= N; p++) {
+      let k = 0; while (anchors[k + 1] && anchors[k + 1][0] < p) k++;
+      const [x0, y0] = anchors[k], [x1, y1] = anchors[Math.min(k + 1, anchors.length - 1)];
+      const t = x1 === x0 ? 0 : (p - x0) / (x1 - x0);
+      wp.push(Math.min(.97, Math.max(.03, y0 + (y1 - y0) * t + Math.sin(p * 1.7) * .02)));
+    }
+    const last = done ? N : analysedPlies;
+    const xs = (p) => (p / N * W).toFixed(1);
+    const ys = (v) => ((1 - v) * H).toFixed(1);
+    let d = `M0 ${H} `;
+    for (let p = 0; p <= last; p++) d += `L${xs(p)} ${ys(wp[p])} `;
+    d += done ? `L${W} ${H} Z` : `L${xs(last)} ${H} Z`;
+    const marks = { 23: '#e28c28', 25: '#c93230', 26: '#ff7769', 40: '#c93230', 52: '#e28c28' };
+    const dots = Object.keys(marks).map(Number).filter((p) => p <= last).map((p) => ({ x: xs(p), y: ys(wp[p]), color: marks[p] }));
+
+    return {
+      isDone: done, isAnalysing: analysing, isNone: none, hasTable: !none,
+      rows, classes, graphArea: d, dots, curX: done ? xs(23) : xs(analysedPlies),
+      fen: 'r2qkb1r/pp1n1p2/2p1p1bp/3pPn2/3P1B2/1N1B4/PPP3PP/R2QNRK1',
+      badge: done ? 'd3:mistake' : '', arrow: done ? 'e1f3' : '',
+      whitePct: done ? '38%' : '50%', evalText: done ? '1.2' : '',
+      evalLabel: done ? 'Evaluation: Black is better by 1.2' : 'Evaluation not available yet'
+    };
+  }
+}
+</script>
+</body>
+</html>

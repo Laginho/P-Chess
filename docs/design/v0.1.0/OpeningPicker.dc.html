@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>New repertoire from openings</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700;800&amp;display=swap">
+<style>
+body{margin:0}
+button,input{font-family:inherit}
+</style>
+</helmet>
+<div style="position: relative; width: 1280px; height: 800px; overflow: hidden; font-family: 'Noto Sans', system-ui, sans-serif">
+  <dc-import name="Repertoire" hint-size="1280px,800px"></dc-import>
+  <div style="position: absolute; inset: 0; background: rgba(10, 10, 9, 0.72); display: flex; align-items: center; justify-content: center">
+    <div role="dialog" aria-modal="true" aria-labelledby="picker-title" style="width: 640px; height: 700px; box-sizing: border-box; display: flex; flex-direction: column; background: #2b2a27; border: 1px solid #45423d; border-radius: 12px; color: #ece9e4; overflow: hidden">
+      <div style="padding: 20px 24px 16px; display: flex; flex-direction: column; gap: 16px; border-bottom: 1px solid #45423d">
+        <h2 id="picker-title" style="margin: 0; font-size: 20px; font-weight: 800">New repertoire from openings</h2>
+        <div style="display: flex; gap: 16px">
+          <div style="flex: 1 1 0; display: flex; flex-direction: column; gap: 6px">
+            <label for="rep-name" style="font-size: 13px; font-weight: 600; color: #a8a49c">Name</label>
+            <input id="rep-name" type="text" value="Caro-Kann" style="height: 44px; box-sizing: border-box; padding: 0 12px; background: #1f1e1c; color: #ece9e4; border: 1px solid #45423d; border-radius: 8px; font-size: 15px">
+          </div>
+          <div role="radiogroup" aria-label="Colour" style="display: flex; flex-direction: column; gap: 6px">
+            <span style="font-size: 13px; font-weight: 600; color: #a8a49c">Colour</span>
+            <div style="height: 44px; display: flex; gap: 4px; padding: 4px; box-sizing: border-box; background: #1f1e1c; border-radius: 8px">
+              <button role="radio" aria-checked="false" style="height: 36px; padding: 0 14px; display: flex; align-items: center; gap: 8px; background: transparent; color: #ece9e4; border: 0; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer">
+                <span style="width: 12px; height: 12px; box-sizing: border-box; border-radius: 50%; background: #ece9e4; border: 1px solid #8c887f"></span>White
+              </button>
+              <button role="radio" aria-checked="true" style="height: 36px; padding: 0 14px; display: flex; align-items: center; gap: 8px; background: #45423d; color: #ece9e4; border: 0; border-radius: 6px; font-size: 14px; font-weight: 700; cursor: pointer">
+                <span style="width: 12px; height: 12px; box-sizing: border-box; border-radius: 50%; background: #141412; border: 1px solid #8c887f"></span>Black
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <ul role="tree" aria-label="Openings" style="flex: 1 1 0; min-height: 0; margin: 0; padding: 8px 12px; list-style: none; overflow: hidden">
+        <sc-for list="{{rows}}" as="r" hint-placeholder-count="12">
+          <li role="treeitem" aria-expanded="{{r.ariaExpanded}}" style="height: 36px; display: flex; align-items: center; gap: 4px; padding-left: {{r.indent}}">
+            <sc-if value="{{r.hasKids}}" hint-placeholder-val="{{ true }}">
+              <button aria-label="{{r.toggleLabel}}" style="width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center; background: transparent; border: 0; border-radius: 6px; cursor: pointer">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a8a49c" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="transform: rotate({{r.rot}})"><path d="M9 5l7 7-7 7"></path></svg>
+              </button>
+            </sc-if>
+            <sc-if value="{{r.leaf}}" hint-placeholder-val="{{ false }}"><span style="width: 32px; flex: none"></span></sc-if>
+            <button role="checkbox" aria-checked="{{r.ariaChecked}}" style="height: 36px; padding: 0 8px; display: flex; align-items: center; gap: 10px; background: transparent; color: #ece9e4; border: 0; border-radius: 6px; cursor: pointer; font-size: {{r.fs}}; font-weight: {{r.fw}}">
+              <span style="width: 18px; height: 18px; box-sizing: border-box; flex: none; display: flex; align-items: center; justify-content: center; border-radius: 4px; background: {{r.boxBg}}; border: 2px solid {{r.boxBorder}}">
+                <sc-if value="{{r.checked}}" hint-placeholder-val="{{ false }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#141412" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>
+                <sc-if value="{{r.mixed}}" hint-placeholder-val="{{ false }}"><span style="width: 8px; height: 2px; background: #141412"></span></sc-if>
+              </span>
+              {{r.name}}
+            </button>
+          </li>
+        </sc-for>
+      </ul>
+      <div style="padding: 14px 24px; display: flex; align-items: center; gap: 10px; border-top: 1px solid #45423d">
+        <span style="font-size: 14px; color: #a8a49c">4 openings selected</span>
+        <button style="margin-left: auto; height: 44px; padding: 0 18px; background: #363430; color: #ece9e4; border: 1px solid #45423d; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer">Cancel</button>
+        <button style="height: 44px; padding: 0 20px; background: #7fa650; color: #141412; border: 0; border-radius: 8px; font-size: 14px; font-weight: 800; cursor: pointer">Create repertoire</button>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+  renderVals() {
+    // [depth, name, state ('on'|'off'|'mixed'), children ('open'|'closed'|null)]
+    const tree = [
+      [0, 'Caro-Kann Defense', 'mixed', 'open'],
+      [1, 'Advance Variation', 'on', 'open'],
+      [2, 'Short Variation', 'on', null],
+      [2, 'Tal Variation', 'on', null],
+      [2, 'Bayonet Attack', 'on', null],
+      [1, 'Classical Variation', 'off', 'closed'],
+      [1, 'Exchange Variation', 'on', 'closed'],
+      [1, 'Panov Attack', 'off', 'closed'],
+      [1, 'Two Knights Attack', 'off', 'closed'],
+      [0, 'French Defense', 'off', 'closed'],
+      [0, 'Scandinavian Defense', 'off', 'closed'],
+      [0, 'Sicilian Defense', 'off', 'closed']
+    ];
+    const rows = tree.map(([depth, name, state, kids]) => ({
+      name, indent: depth * 28 + 'px',
+      hasKids: !!kids, leaf: !kids, rot: kids === 'open' ? '90deg' : '0deg',
+      ariaExpanded: kids ? String(kids === 'open') : undefined,
+      toggleLabel: (kids === 'open' ? 'Collapse ' : 'Expand ') + name,
+      checked: state === 'on', mixed: state === 'mixed',
+      ariaChecked: state === 'mixed' ? 'mixed' : String(state === 'on'),
+      boxBg: state === 'off' ? 'transparent' : '#7fa650',
+      boxBorder: state === 'off' ? '#8c887f' : '#7fa650',
+      fs: depth === 0 ? '15px' : '14px', fw: depth === 0 ? 700 : 500
+    }));
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

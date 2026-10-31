@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Repertoire editor</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700;800&amp;display=swap">
+<style>
+body{margin:0}
+button,input{font-family:inherit}
+</style>
+</helmet>
+<div style="width: 1280px; height: 800px; box-sizing: border-box; padding: 40px; display: flex; gap: 40px; background: #1f1e1c; color: #ece9e4; font-family: 'Noto Sans', system-ui, sans-serif">
+  <dc-import name="Board" fen="rn1qkbnr/pp3ppp/4p3/2ppPb2/3P4/5N2/PPP1BPPP/RNBQK2R" last="c6c5" flipped="true" size="720" hint-size="720px,720px"></dc-import>
+  <div style="position: relative; width: 440px; height: 720px; box-sizing: border-box; display: flex; flex-direction: column; background: #2b2a27; border: 1px solid #45423d; border-radius: 10px">
+    <div style="padding: 16px; display: flex; flex-direction: column; gap: 4px; border-bottom: 1px solid #45423d">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <span aria-label="Black" style="width: 14px; height: 14px; box-sizing: border-box; border-radius: 50%; background: #141412; border: 1px solid #8c887f"></span>
+        <h1 style="margin: 0; font-size: 18px; font-weight: 800">Caro-Kann</h1>
+        <span style="margin-left: auto; font-size: 12px; font-weight: 700; color: #f4bf44">Unsaved changes</span>
+      </div>
+      <p style="margin: 0; font-size: 13px; color: #a8a49c">Play moves to add them. Right-click a move to delete it.</p>
+    </div>
+    <ul role="tree" aria-label="Branches" style="flex: 1 1 0; min-height: 0; margin: 0; padding: 10px 8px; list-style: none; overflow: hidden; font-size: 14px">
+      <sc-for list="{{rows}}" as="r" hint-placeholder-count="12">
+        <li role="treeitem" style="min-height: 32px; display: flex; align-items: center; flex-wrap: wrap; gap: 2px; margin-left: {{r.indent}}; padding-left: 6px; border-left: {{r.guide}}">
+          <sc-for list="{{r.tokens}}" as="t" hint-placeholder-count="3">
+            <button style="height: 28px; padding: 0 6px; background: {{t.bg}}; color: {{t.fg}}; border: {{t.border}}; border-radius: 4px; font-size: 14px; font-weight: {{t.fw}}; cursor: pointer">{{t.label}}</button>
+          </sc-for>
+        </li>
+      </sc-for>
+    </ul>
+    <div role="menu" aria-label="Move actions" style="position: absolute; z-index: 2; left: 240px; top: 248px; width: auto; padding: 4px; display: flex; flex-direction: column; background: #363430; border: 1px solid #5a5650; border-radius: 8px">
+      <button role="menuitem" aria-label="Delete 4.h4 and what follows" title="Delete 4.h4 and what follows" style="width: 36px; height: 36px; padding: 0; display: flex; align-items: center; justify-content: center; background: #45423d; color: #ff8f86; border: 0; border-radius: 5px; font-size: 13px; font-weight: 700; text-align: left; cursor: pointer">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ff8f86" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 7V4.5h4V7M6.5 7l1 13h9l1-13"></path></svg>
+      </button>
+    </div>
+    <div style="padding: 12px 16px; display: flex; gap: 10px; border-top: 1px solid #45423d">
+      <button style="flex: 1 1 0; height: 44px; background: #363430; color: #ece9e4; border: 1px solid #45423d; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer">Cancel</button>
+      <button style="flex: 1 1 0; height: 44px; background: #7fa650; color: #141412; border: 0; border-radius: 8px; font-size: 15px; font-weight: 800; cursor: pointer">Save</button>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+  renderVals() {
+    // [depth, moves]; '*' marks the selected move, '!' the right-clicked one, '+' a move added this session.
+    const tree = [
+      [0, '1.e4 c6'],
+      [1, '2.d4 d5'],
+      [2, '3.e5 Bf5'],
+      [3, '4.Nf3 e6 5.Be2 *c5'],
+      [3, '!4.h4 h5 5.g4 Bd7'],
+      [3, '4.g4 Bd7 5.h4 h5'],
+      [3, '+4.c3 e6 +5.Be2 +c5'],
+      [2, '3.Nc3 dxe4 4.Nxe4 Bf5'],
+      [2, '3.exd5 cxd5'],
+      [3, '4.Bd3 Nc6 5.c3 Nf6'],
+      [3, '4.c4 Nf6 5.Nc3 e6'],
+      [2, '3.f3 e6 4.Nc3 Bb4'],
+      [1, '2.Nc3 d5 3.Nf3 Bg4'],
+      [1, '2.c4 d5 3.exd5 cxd5']
+    ];
+    const rows = tree.map(([depth, line]) => ({
+      indent: (depth ? 8 : 4) + 'px',
+      guide: depth ? '2px solid #45423d' : '0',
+      tokens: line.split(' ').map((tok) => {
+        const sel = tok.startsWith('*'), menu = tok.startsWith('!'), added = tok.startsWith('+');
+        return {
+          label: tok.replace(/^[*!+]/, ''),
+          bg: sel ? '#7fa650' : menu ? '#4a4741' : 'transparent',
+          fg: sel ? '#141412' : added ? '#a6cf7a' : '#ece9e4',
+          border: menu ? '1px solid #8c887f' : '0',
+          fw: sel ? 800 : 600
+        };
+      })
+    }));
+    rows.forEach((r, i) => { r.indent = (tree[i][0] * 20 + 4) + 'px'; });
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>
