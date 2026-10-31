@@ -127,7 +127,7 @@ func _show_names() -> void:
 			if entry.moves == line.moves and entry.positions[0] == line.positions[0]:
 				label = entry.name
 				break
-		_line_list.add_item(label + "  ·  " + _move_text(line))
+		_line_list.add_item(label + "\n" + _move_text(line))
 	if _line >= 0 and _line < _line_list.item_count:
 		_line_list.select(_line)
 
