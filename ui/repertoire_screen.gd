@@ -38,6 +38,8 @@ func present() -> void:
 		importer.saved.connect(_saved)
 	_refresh()
 	popup_centered(get_tree().root.size - Vector2i(32, 32))
+	if get_tree().root.gui_embed_subwindows:
+		size = get_tree().root.size - Vector2i(32, 32)
 
 
 func _refresh() -> void:

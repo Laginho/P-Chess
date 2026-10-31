@@ -46,6 +46,8 @@ func present(source, name: String, line: int = -1) -> void:
 	status.text = ""
 	_refresh()
 	popup_centered(get_tree().root.size - Vector2i(64, 64))
+	if get_tree().root.gui_embed_subwindows:
+		size = get_tree().root.size - Vector2i(64, 64)
 
 
 func _node() -> Dictionary:
