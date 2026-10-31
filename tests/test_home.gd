@@ -191,3 +191,16 @@ func test_home_shows_quick_play_and_navigation_icons():
 	var level: OptionButton = home.find_child("Level", true, false)
 	assert_eq(level.get_item_text(level.selected), "Maia 1500")
 	home.free()
+
+
+func test_missing_engine_message_does_not_overlap_navigation_at_minimum_window():
+	var home = load("res://ui/home.tscn").instantiate()
+	home.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	home.size = Vector2(800, 600)
+	Engine.get_main_loop().root.add_child(home)
+	home.show_missing("Lc0 is missing (engine/lc0/lc0.exe). Run scripts/fetch-engine.ps1 to download it.")
+	await Engine.get_main_loop().process_frame
+	var message: Label = home.get_node("Center/Form/Missing")
+	var history: Button = home.get_node("Center/Form/History")
+	assert_true(message.get_global_rect().end.y <= history.get_global_rect().position.y, "engine guidance stays above navigation")
+	home.free()
