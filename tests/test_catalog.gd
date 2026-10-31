@@ -19,6 +19,17 @@ func test_repertoire_picker_identifies_name_and_colour_fields():
 	picker.free()
 
 
+func test_opening_tree_uses_visible_checkboxes():
+	var picker = load("res://ui/opening_picker.tscn").instantiate()
+	picker.book = _sample()
+	Engine.get_main_loop().root.add_child(picker)
+	var tree: Tree = picker.get_node("Margin/Form/Tree")
+	assert_eq(tree.get_theme_icon("checked"), tree.get_theme_icon("checked", "CheckBox"))
+	assert_eq(tree.get_theme_icon("unchecked"), tree.get_theme_icon("unchecked", "CheckBox"))
+	assert_true(tree.has_theme_icon_override("indeterminate"), "partial selections have a distinct icon")
+	picker.free()
+
+
 func test_every_committed_lichess_row_loads_with_san_moves_and_position_keys():
 	var book = Book.new()
 	book.load_catalog()
