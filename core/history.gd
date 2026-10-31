@@ -46,7 +46,7 @@ func save(game, clocks: Array, settings: Dictionary, opening_name := "", target_
 	if file == null:
 		error = "Could not save game PGN (%s)." % error_string(FileAccess.get_open_error())
 		return ""
-	file.store_string(Pgn.write(Pgn.finished_game(game, clocks, settings, opening_name)))
+	file.store_string(Pgn.write(Pgn.finished_game(game, clocks, settings, opening_name, target_id)))
 	file.flush()
 	status = file.get_error()
 	file.close()

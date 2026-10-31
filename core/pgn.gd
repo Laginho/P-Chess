@@ -144,7 +144,7 @@ static func write(game: Dictionary) -> String:
 
 # The game write() takes for a finished game against Maia: player names, time control, result,
 # termination and one clock per move, then the Opening header when one is named.
-static func finished_game(game, clocks: Array, settings: Dictionary, opening_name := "") -> Dictionary:
+static func finished_game(game, clocks: Array, settings: Dictionary, opening_name := "", target_id := "") -> Dictionary:
 	var maia_name: String = "Maia " + settings.level.trim_prefix("maia-")
 	var control: Array = Clock.CONTROLS[settings.control]
 	var headers := {
@@ -157,6 +157,8 @@ static func finished_game(game, clocks: Array, settings: Dictionary, opening_nam
 	}
 	if opening_name:
 		headers.Opening = opening_name
+	if target_id:
+		headers.PracticeTarget = target_id
 	var moves := []
 	for i in game.moves.size():
 		moves.append({"uci": game.moves[i], "clock_ms": clocks[i]})
