@@ -61,15 +61,12 @@ func _ready() -> void:
 	var summary: Label = $Margin/Content/ReviewBody/Side/Summary
 	summary.custom_minimum_size.y = 44
 	summary.add_theme_color_override("font_color", Color.TRANSPARENT)
-	var cards := HBoxContainer.new()
+	var cards := GridContainer.new()
+	cards.columns = 4
 	cards.name = "AccuracyCards"
 	cards.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	summary.add_child(cards)
 	for side in ["White", "Black"]:
-		if side == "Black":
-			var spacer := Control.new()
-			spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			cards.add_child(spacer)
 		var card := PanelContainer.new()
 		card.name = side + "Score"
 		var style := StyleBoxFlat.new()
@@ -86,6 +83,7 @@ func _ready() -> void:
 		name_label.name = side + "Name"
 		name_label.add_theme_font_size_override("font_size", 11)
 		cards.add_child(name_label)
+	cards.move_child(cards.get_node("BlackName"), 2)
 	var table: GridContainer = $Margin/Content/ReviewBody/Side/Counts
 	for label in CLASS_NAMES:
 		var name_label := Label.new()
@@ -222,6 +220,8 @@ func _layout_review() -> void:
 
 func _resize_classes() -> void:
 	var compact := size.x <= 800
+	$Margin/Content/ReviewBody/Side/Summary/AccuracyCards.columns = 2 if compact else 4
+	$Margin/Content/ReviewBody/Side/Summary.custom_minimum_size.y = 88 if compact else 44
 	var unanalysed: bool = $Margin/Content/ReviewBody/Side/UnanalysedNotice.visible
 	$Margin/Content/ReviewBody/Side/ClassToggle.visible = compact and not unanalysed
 	$Margin/Content/ReviewBody/Side/Counts.visible = not compact and not unanalysed
