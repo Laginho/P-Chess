@@ -147,9 +147,12 @@ func test_a_rematch_drops_the_piece_held_when_the_game_ended():
 	board.free()
 
 
-func _session(waits, start_game := true, queue = null):
+func _session(waits, start_game := true, queue = null, catalog = null):
 	var main = MainScene.instantiate()
-	main.get_node("Setup").book.load_tsv("eco\tname\tpgn\nA00\tFixture\t1. h3\n")
+	if catalog == null:
+		main.get_node("Setup").book.load_tsv("eco\tname\tpgn\nA00\tFixture\t1. h3\n")
+	else:
+		main.get_node("Setup").book = catalog
 	var folder := "user://test_session_history_%d" % Time.get_ticks_usec()
 	main.history = load("res://core/history.gd").new(folder)
 	main.tree_exiting.connect(func(): HistoryStorage.clean(folder))
@@ -605,6 +608,8 @@ func test_searching_waits_for_the_net_before_starting_the_clock():
 	assert_true(screen.visible, "slow work outlasts the minimum display time")
 	assert_eq(main.clock, null, "no clock after 0.5 seconds if the net is still loading")
 	assert_eq(main.uci.requests.size(), 0, "no game policy before the net is ready")
+	main._start(Main.rematch(SETTINGS))
+	assert_eq(screen.get_node("Center/Content/Match").text, "3+2  ·  Maia 1700", "duplicate start keeps the pending game")
 	main.uci.emit_signal("level_ready")
 	while main._starting:
 		await Engine.get_main_loop().process_frame
@@ -634,6 +639,8 @@ func test_searching_fast_quick_custom_and_rematch_last_half_a_second():
 			"custom": main.setup.started.emit(SETTINGS.duplicate())
 			"rematch": main.review.rematch_requested.emit()
 		assert_true(main.searching.visible, route + " shows searching")
+		_key(main, KEY_F11)
+		assert_true(not main.focus, "game hotkeys wait for searching to close")
 		assert_eq(main.searching.get_node("Center/Content/Status").text, "Preparing game\u2026")
 		assert_eq(main.searching.get_node("Center/Content/Match").text,
 				"3+2  \u00b7  Maia " + ("1500" if route == "quick" else "1700"))
@@ -745,4 +752,24 @@ func test_searching_engine_stop_before_analysis_pause_keeps_queue_resumed():
 	assert_true(not main.searching.visible)
 	assert_true(main.get_node("Home").visible)
 	assert_eq(main.analysis_queue.current(), fixture.path, "Home keeps analysis running after failure")
+	main.free()
+
+
+func test_searching_engine_stop_during_catalog_closes_without_a_game():
+	var book = load("res://tests/test_book.gd").DelayedBook.new()
+	var main = await _session(ManualWaits.new(), false, null, book)
+	main._start(SETTINGS.duplicate())
+	book.entered.wait()
+	assert_true(main.searching.visible)
+	assert_eq(main.searching.get_node("Center/Content/Status").text, "Preparing game\u2026")
+	assert_eq(main.clock, null)
+	main.uci.error = "Maia stopped during catalog loading"
+	main.uci.stopped.emit()
+	assert_true(not main.searching.visible, "engine failure closes searching immediately")
+	assert_true(main.get_node("Home").visible)
+	assert_true(main.get_node("Home/Center/Form/Missing").visible)
+	book.release.post()
+	await _wait_start(main)
+	assert_eq(main.clock, null, "finishing the catalog cannot start a failed game")
+	assert_eq(main.uci.requests.size(), 0)
 	main.free()
