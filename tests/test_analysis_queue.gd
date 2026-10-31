@@ -48,3 +48,27 @@ func test_priority_pause_resume_and_removal():
 	assert_eq(queue.pending(), [])
 	queue.free()
 	DirAccess.remove_absolute(file)
+
+class DelayedAnalyser extends FakeAnalyser:
+	func cancel() -> void:
+		pass
+
+func test_delayed_cancel_never_overlaps_and_batch_uses_max_setting():
+	var script = load("res://core/analysis_queue.gd")
+	var file := "user://test_analysis_queue_delayed.cfg"
+	DirAccess.remove_absolute(file)
+	var runner := DelayedAnalyser.new()
+	var queue = script.new(runner, file)
+	queue.maximum = true
+	queue.enqueue("first.pgn")
+	queue.enqueue("second.pgn")
+	queue.prioritize("second.pgn")
+	assert_eq(runner.starts, [["first.pgn", true]], "wait for cancellation")
+	runner.finished.emit(false, "cancelled")
+	assert_eq(runner.starts.back(), ["second.pgn", true])
+	queue.remove("second.pgn")
+	assert_eq(runner.starts.size(), 2, "deletion also waits for cancellation")
+	runner.finished.emit(false, "cancelled")
+	assert_eq(runner.starts.back(), ["first.pgn", true])
+	queue.free()
+	DirAccess.remove_absolute(file)
