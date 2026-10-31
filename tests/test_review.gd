@@ -342,3 +342,48 @@ func test_analysis_landing_shows_class_icon_and_best_move_on_board():
 	assert_eq(board.review_arrow, "e2e4")
 	assert_true(board.review_icon != null)
 	main.free()
+
+
+class FakeAnalysisBridge extends Node:
+	signal stopped
+	var engine_id := "Stockfish 19"
+	var error := ""
+	func start() -> bool:
+		return true
+
+
+class FakeReviewAnalyser extends Node:
+	signal position_ready(index: int, position: Dictionary)
+	signal progress(done: int, total: int)
+	signal finished(success: bool, error: String)
+	var called := false
+	var maximum := false
+	var fens := []
+	func analyse(positions: Array, _path: String, max_threads: bool, _draw: bool) -> bool:
+		called = true
+		maximum = max_threads
+		fens = positions
+		return true
+	func cancel() -> void:
+		pass
+
+
+func test_open_review_starts_max_analysis_and_tracks_progress():
+	var main = _session(FakeTime.new())
+	var fake = FakeReviewAnalyser.new()
+	main.review.analysis_bridge_factory = func(): return FakeAnalysisBridge.new()
+	main.review.analyser_factory = func(_bridge): return fake
+	main.board_view.play("e2e4")
+	_key(main, KEY_ESCAPE)
+	_key(main, KEY_ESCAPE)
+	main.board_view.get_node("GameOver/Panel/Content/Review").pressed.emit()
+	assert_true(fake.called and fake.maximum, "review requests Max analysis")
+	assert_eq(fake.fens.size(), 2)
+	var progress = main.review.get_node_or_null("Margin/Content/Progress")
+	assert_true(progress != null and progress.visible)
+	if progress != null:
+		fake.progress.emit(1, 2)
+		assert_eq(progress.value, 50.0)
+		fake.finished.emit(true, "")
+		assert_true(not progress.visible)
+	main.free()
