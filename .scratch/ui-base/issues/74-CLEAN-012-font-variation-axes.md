@@ -37,3 +37,6 @@ Make the existing shared font variations render their declared weights. This rep
 
 Acceptance: pending | Rendered font weights and new graphical comparisons after the repair.
 Disclosure: pending | integration | UI-022 and the remaining screen redesigns require the correct shared font weights before visual acceptance/integration.
+- 2026-10-31 New graphical comparisons after the repair: PR #36's fidelity pass captured Home, name dialog, Searching, game, panel states and game-over boards at 1280x800 with the weights applied (e409f39 sets each label's canvas weight from these variations).
+Acceptance: done | Weights render; post-repair captures in PR #36.
+Disclosure: resolved | integration | Merged in PR #37; the dependent screen tickets no longer wait on it.
