@@ -360,3 +360,33 @@ func test_counts_queue_and_inline_delete():
 	screen.free()
 	queue.free()
 	Storage.clean(folder)
+
+func test_history_select_all_and_active_progress():
+	var folder := "user://history_toolbar_%d" % Time.get_ticks_usec()
+	var history = History.new(folder)
+	var game = Game.new()
+	game.resign("b")
+	var first: String = history.save(game, [], {"colour": "w", "level": "maia-1500", "control": "1+0"})
+	var second: String = history.save(game, [], {"colour": "w", "level": "maia-1500", "control": "3+2"})
+	var runner := FakeQueueAnalyser.new()
+	var queue = load("res://core/analysis_queue.gd").new(runner, folder.path_join("queue.cfg"))
+	var screen = load("res://ui/history_screen.tscn").instantiate()
+	screen.analysis_queue = queue
+	Engine.get_main_loop().root.add_child(screen)
+	screen.present(history, Settings.new(folder.path_join("settings.cfg")))
+	var all = screen.find_child("SelectAll", true, false)
+	assert_true(all != null, "toolbar offers select all")
+	if all != null:
+		all.button_pressed = true
+		assert_true(all.text == "2 selected", "selection count updates")
+		var selected = screen.find_child("AnalyzeSelected", true, false)
+		selected.pressed.emit()
+		assert_eq(queue.pending().size(), 2)
+		var current: String = queue.current()
+		var card = screen.get_node("Margin/Content/Cards/List").get_node(current.get_file().validate_node_name())
+		var action: Button = card.find_child("Analyze", true, false)
+		assert_true(action.disabled and action.text == "Analysing…")
+		assert_true(card.find_child("AnalysisProgress", true, false) != null, "active analysis has a progress bar")
+	screen.free()
+	queue.free()
+	Storage.clean(folder)
