@@ -1,4 +1,4 @@
-﻿extends "res://tests/run.gd".Test
+extends "res://tests/run.gd".Test
 
 const History = preload("res://core/history.gd")
 const Settings = preload("res://core/settings.gd")

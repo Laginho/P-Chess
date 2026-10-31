@@ -1,4 +1,4 @@
-﻿extends "res://tests/run.gd".Test
+extends "res://tests/run.gd".Test
 
 class FakeAnalyser extends RefCounted:
 	signal finished(success: bool, error: String)
@@ -26,6 +26,8 @@ func test_queue_runs_one_at_a_time_and_persists():
 	assert_eq(saved.pending(), ["first.pgn", "second.pgn"])
 	runner.finished.emit(true, "")
 	assert_eq(runner.starts, [["first.pgn", false], ["second.pgn", false]])
+	queue.free()
+	saved.free()
 	DirAccess.remove_absolute(file)
 
 func test_priority_pause_resume_and_removal():
