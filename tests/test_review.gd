@@ -578,6 +578,19 @@ func test_review_help_popups_fit_minimum_window():
 			assert_true(popup.position.x >= 0 and popup.position.y >= 0 and popup.position.x + popup.size.x <= 800 and popup.position.y + popup.size.y <= 600, help_name + " tooltip fits")
 			var label = popup.get_child(0)
 			assert_true(label is Label and label.text == help.tooltip_text, help_name + " displays the full explanation")
+		# Keyboard users reach the same text: focus the "?" and press Enter.
+		var dialog: AcceptDialog = main.review.get_node("HelpDialog")
+		assert_eq(help.focus_mode, Control.FOCUS_ALL, help_name + " takes keyboard focus")
+		help.grab_focus()
+		var enter := InputEventKey.new()
+		enter.keycode = KEY_ENTER
+		enter.pressed = true
+		root.push_input(enter)
+		await tree.process_frame
+		assert_true(dialog.visible and dialog.dialog_text == help.tooltip_text, help_name + " opens its explanation with Enter")
+		var rect := Rect2(dialog.position, dialog.size)
+		assert_true(Rect2(0, 0, 800, 600).encloses(rect), help_name + " dialog fits")
+		dialog.hide()
 	var classes: String = main.review.get_node("Margin/Content/ReviewBody/Side/ClassHelp").tooltip_text
 	assert_true(classes.contains("up to %s moves slower" % Tunables.CLASSIFICATION_MATE_SLOWER))
 	assert_true(classes.contains("moves made while in check"))

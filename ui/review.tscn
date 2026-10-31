@@ -81,22 +81,24 @@ layout_mode = 2
 size_flags_horizontal = 3
 size_flags_stretch_ratio = 0.6
 
-[node name="AccuracyHelp" type="Label" parent="Margin/Content/ReviewBody/Side"]
+[node name="AccuracyHelp" type="Button" parent="Margin/Content/ReviewBody/Side"]
 layout_mode = 2
-mouse_filter = 0
 theme_override_font_sizes/font_size = 11
 text = "Accuracy  ?"
+flat = true
+alignment = 0
 
 [node name="Summary" type="Label" parent="Margin/Content/ReviewBody/Side"]
 visible = false
 layout_mode = 2
 autowrap_mode = 3
 
-[node name="ClassHelp" type="Label" parent="Margin/Content/ReviewBody/Side"]
+[node name="ClassHelp" type="Button" parent="Margin/Content/ReviewBody/Side"]
 layout_mode = 2
-mouse_filter = 0
 theme_override_font_sizes/font_size = 11
 text = "Move classes  ?"
+flat = true
+alignment = 0
 
 [node name="Counts" type="Label" parent="Margin/Content/ReviewBody/Side"]
 layout_mode = 2

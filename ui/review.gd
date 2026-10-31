@@ -61,6 +61,15 @@ func _ready() -> void:
 	_graph.ply_selected.connect(_show_ply)
 	$Margin/Content/ReviewBody/Side/AccuracyHelp.tooltip_text = "Accuracy uses the change in win probability for each move.\nThe game score averages a volatility-weighted mean and\nthe harmonic mean of those move scores."
 	$Margin/Content/ReviewBody/Side/ClassHelp.tooltip_text = _class_help()
+	# Tooltips need a mouse; Enter on the focused "?" shows the same text in a dialog.
+	var help_dialog := AcceptDialog.new()
+	help_dialog.name = "HelpDialog"
+	add_child(help_dialog)
+	for help: Button in [$Margin/Content/ReviewBody/Side/AccuracyHelp, $Margin/Content/ReviewBody/Side/ClassHelp]:
+		help.pressed.connect(func():
+			help_dialog.title = help.text.trim_suffix("?").strip_edges()
+			help_dialog.dialog_text = help.tooltip_text
+			help_dialog.popup_centered())
 	visibility_changed.connect(func():
 		if not visible:
 			_cancel_analysis())
