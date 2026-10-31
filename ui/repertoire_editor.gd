@@ -92,13 +92,20 @@ func _populate(node: Dictionary, key: String, prefix: PackedStringArray, depth: 
 		rows.add_child(margin)
 		var line := HFlowContainer.new()
 		line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		line.add_theme_constant_override("h_separation", 6)
 		margin.add_child(line)
 		var current: Dictionary = node
 		var next_move: String = move
 		while true:
 			var at = Board.from_fen(current.position + " 0 1")
 			moves.append(next_move)
-			_add_move(line, key, moves.duplicate(), at.san(next_move))
+			var san: String = at.san(next_move)
+			var ply := moves.size() - 1 + (1 if key.split(" ")[1] == "b" else 0)
+			if at.side_to_move == "w":
+				san = "%d.%s" % [ply / 2 + 1, san]
+			elif moves.size() == 1:
+				san = "1..." + san
+			_add_move(line, key, moves.duplicate(), san)
 			current = current.children[next_move]
 			if current.children.size() != 1:
 				break
