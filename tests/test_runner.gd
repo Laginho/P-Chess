@@ -139,6 +139,11 @@ func _run(dir: String) -> Dictionary:
 	errors.append_array(child.stderr.get_buffer(65536))
 	child.stdio.close()
 	child.stderr.close()
+	# A written case is only needed by its one run; leave nothing in the player's user folder.
+	if dir.begins_with("user://runner_cases/"):
+		DirAccess.remove_absolute(dir.path_join("test_case.gd"))
+		DirAccess.remove_absolute(dir)
+		DirAccess.remove_absolute("user://runner_cases")
 	return {"code": code, "output": output.get_string_from_utf8() + errors.get_string_from_utf8(), "elapsed_ms": Time.get_ticks_msec() - started}
 
 

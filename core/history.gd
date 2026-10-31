@@ -22,6 +22,11 @@ func analysis_folder() -> String:
 	return _root.path_join("analysis")
 
 
+# The analysis queue's state file sits beside the history, so an isolated root isolates it too.
+func queue_file() -> String:
+	return _root.path_join("analysis_queue.cfg")
+
+
 # clocks contains the moving side's remaining milliseconds after each played move.
 # Returns the PGN path, or "" with a reportable error. An explicit Opening overrides recognition.
 # Main supplies the selected target only once, with its completed-game save.
