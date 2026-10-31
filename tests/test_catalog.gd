@@ -205,7 +205,7 @@ func test_picker_search_checks_partial_parents_and_save_load_buttons_use_the_cat
 	var names: Array = []
 	picker.saved.connect(func(name): names.append(name))
 	picker.get_node("Margin/Form/SaveRow/Name").text = "Najdorf"
-	picker.get_node("Margin/Form/SaveRow/Save").pressed.emit()
+	picker.get_node("Margin/Form/Footer/Save").pressed.emit()
 	assert_eq(names, ["Najdorf"])
 	assert_eq(picker.book.selection_names(), ["Najdorf"])
 	# Checking a filtered family still selects its hidden descendants.
@@ -218,7 +218,7 @@ func test_picker_search_checks_partial_parents_and_save_load_buttons_use_the_cat
 	search.text_changed.emit("")
 	assert_true(_find_item(tree.get_root(), "King's Pawn Game") != null)
 	assert_true(_find_item(tree.get_root(), english).is_checked(0))
-	picker.get_node("Margin/Form/Done").pressed.emit()
+	picker.get_node("Margin/Form/Footer/Done").pressed.emit()
 	assert_true(not picker.visible)
 	picker.free()
 	_remove_folder(folder)
@@ -253,7 +253,7 @@ func test_setup_lists_saved_selections_and_emits_catalog_choice_while_free_stays
 	var picker = setup.get_node("OpeningPicker")
 	assert_true(picker.visible)
 	picker.get_node("Margin/Form/SaveRow/Name").text = "New practice"
-	picker.get_node("Margin/Form/SaveRow/Save").pressed.emit()
+	picker.get_node("Margin/Form/Footer/Save").pressed.emit()
 	assert_eq(selections.item_count, 2)
 	assert_eq(selections.get_item_text(selections.selected), "New practice")
 	setup.free()
