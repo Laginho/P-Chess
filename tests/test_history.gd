@@ -10,6 +10,51 @@ const HistoryStorage = preload("res://tests/history_storage.gd")
 const SETTINGS := {"colour": "w", "level": "maia-1500", "control": "3+2", "opening": "Free"}
 
 
+func test_same_named_players_use_human_colour_for_stats_and_delete():
+	var folder := _folder()
+	var history = History.new(folder)
+	for colour in ["w", "b"]:
+		var settings := SETTINGS.duplicate()
+		settings.colour = colour
+		settings.player_name = "Maia 1500"
+		for outcome in ["win", "loss", "draw"]:
+			var game = Game.new()
+			if outcome == "draw":
+				game.agree_draw()
+			else:
+				game.flag(("b" if colour == "w" else "w") if outcome == "win" else colour)
+			var path: String = history.save(game, [], settings)
+			var counts := {"wins": 0, "draws": 0, "losses": 0, "flag_wins": 0, "flag_losses": 0}
+			counts[{"win": "wins", "loss": "losses", "draw": "draws"}[outcome]] = 1
+			if outcome != "draw":
+				counts["flag_wins" if outcome == "win" else "flag_losses"] = 1
+			assert_eq(History.new(folder).stats("maia-1500", "3+2"), counts)
+			assert_true(history.delete(path))
+			assert_eq(History.new(folder).stats("maia-1500", "3+2"),
+					{"wins": 0, "draws": 0, "losses": 0, "flag_wins": 0, "flag_losses": 0}, colour + " " + outcome)
+	HistoryStorage.clean(folder)
+
+
+func test_legacy_delete_falls_back_to_you_in_either_colour():
+	var folder := _folder()
+	var history = History.new(folder)
+	for colour in ["w", "b"]:
+		var settings := SETTINGS.duplicate()
+		settings.colour = colour
+		var game = Game.new()
+		game.flag("b" if colour == "w" else "w")
+		var path: String = history.save(game, [], settings)
+		var saved: Dictionary = Pgn.parse(FileAccess.get_file_as_string(path)).games[0]
+		saved.headers.erase("HumanColor")
+		var file := FileAccess.open(path, FileAccess.WRITE)
+		file.store_string(Pgn.write(saved))
+		file.close()
+		assert_true(history.delete(path))
+		assert_eq(History.new(folder).stats("maia-1500", "3+2"),
+				{"wins": 0, "draws": 0, "losses": 0, "flag_wins": 0, "flag_losses": 0})
+	HistoryStorage.clean(folder)
+
+
 # Hold the external UCI reply while the real analyser, queue and screen run.
 class HeldAnalysisBridge extends RefCounted:
 	var engine_id := "Stockfish 19"
