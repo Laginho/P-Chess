@@ -10,6 +10,14 @@ const HistoryStorage = preload("res://tests/history_storage.gd")
 const SETTINGS := {"colour": "w", "level": "maia-1500", "control": "3+2", "opening": "Free"}
 
 
+func test_games_is_empty_before_the_first_save():
+	var folder := _folder()
+	assert_eq(History.new(folder).games(), [])
+	assert_eq(DirAccess.make_dir_recursive_absolute(folder), OK)
+	assert_eq(History.new(folder).games(), [])
+	HistoryStorage.clean(folder)
+
+
 func test_thumbnail_uses_deepest_named_position_or_fallback():
 	var history = History.new(_folder())
 	var book = load("res://bot/book.gd").new()
