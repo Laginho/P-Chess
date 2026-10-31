@@ -16,6 +16,7 @@ var _selected := {}
 var history
 var preferences
 var copy_text: Callable = DisplayServer.clipboard_set
+var _delete_path := ""
 
 
 func _ready() -> void:
@@ -43,6 +44,7 @@ func _ready() -> void:
 		$Margin/Content/Tabs.add_tab(tab)
 	$Margin/Content/Tabs.tab_changed.connect(func(_index): _refresh())
 	$Margin/Content/Back.pressed.connect(func(): back_requested.emit())
+	$DeleteConfirmation.confirmed.connect(_confirm_delete)
 
 
 func present(store, settings) -> void:
@@ -127,6 +129,21 @@ func _add_card(list: Node, record: Dictionary) -> void:
 	copy.custom_minimum_size = Vector2(44, 44)
 	copy.pressed.connect(func(): copy_text.call(FileAccess.get_file_as_string(record.path)))
 	actions.add_child(copy)
+	var delete := Button.new()
+	delete.name = "Delete"
+	delete.text = "Delete"
+	delete.pressed.connect(func():
+		_delete_path = record.path
+		$DeleteConfirmation.popup_centered())
+	actions.add_child(delete)
+
+
+func _confirm_delete() -> void:
+	if history.delete(_delete_path):
+		_refresh()
+	else:
+		$DeleteError.dialog_text = history.error
+		$DeleteError.popup_centered()
 
 
 func _result_text(game: Dictionary, colour: String) -> String:
