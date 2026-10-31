@@ -1,5 +1,5 @@
 # UI-023: Game screen: board and side panel to the design
-Stage: to-review
+Stage: done
 Blocked by: UI-021
 Review: human
 Difficulty: hard
@@ -107,3 +107,31 @@ Acceptance: pending | Human visual comparison and manual play, drag/premove, dra
 Disclosure: pending | integration | [CLEAN-012](../../ui-base/issues/74-CLEAN-012-font-variation-axes.md) must be resolved before visual acceptance and integration. The two review regressions are corrected and await stage-3 review.
 Disclosure: pending | release | Complete the recorded manual play/input and Lc0 acceptance.
 Gate evidence: C:/Users/bruno/AppData/Local/Temp/ui023-reopen-gate.json
+
+#### Resolution (2026-10-31, regression re-review)
+Verdict: Approve
+
+##### Standards
+
+Zero findings. Independent reviewer `/root/standards` examined the complete four-file diff `4a07735e7ddfec563bb2d066c2ba01f0a3e95c66...3b2d9c4be934af89b077bf300a657696a288dfa7`: this ticket, `tests/test_session.gd`, `ui/main.gd` and `ui/move_list.gd`. OCR excluded all four as `unsupported_ext`; all were reviewed directly, for coverage 4/4 (100%), zero skipped. The changes respect Primary files and existing conventions. Test-only commits `0fa4411`, `6b684f1` and `b83c123` precede production-only `411ab35`; reopen/handoff commits change only tracker metadata. No production changes were authored during this review.
+
+##### Spec
+
+- Previous P2 scroll finding resolved: `ui/move_list.gd:22-39` preserves the reading position through rebuilding and enables following only when the list was already at its bottom. `tests/test_session.gd:989` checks position 100, then following after a new row extends the bottom. The retained red log shows the old code jumping from 100 to 1513; the following mutant fails with 1548 expected and 1513 observed.
+- Previous P2 rematch-notice finding resolved: `ui/main.gd:378` clears `_notice_before_focus` with the new game's notice reset. `tests/test_session.gd:1016` exercises notice, focus, flag, Space rematch and leaving focus, requiring both a hidden notice and a stopped timer. The retained red log detects the stale notice; the corrected run has zero failures.
+- Independent reviewer `/root/spec` found no missing behavior, scope creep or new defect in the delta. Examined callers and interactions include move-list add/reset/resize, `_start`, `_set_focus`, `_on_maia_move`, rematch and test setup. Criteria 1-5 retain the first review's implementation approval; criterion 6's two behavioral regressions are now resolved. Shared visual acceptance remains pending the recorded font repair and human comparison.
+
+Standards: 0 findings. Spec: 0 remaining UI-023 findings. The two integration blockers raised by the first UI-023 review are resolved. The first review's reference/before/after screenshot table remains the visual evidence; this delta changes state preservation, not the design, and does not claim new visual or physical acceptance.
+
+##### Verification and session delivery
+
+Inspected `C:/Users/bruno/AppData/Local/Temp/ui023-reopen-{red,interior-red,follow-mutant,follow}.log`: the regressions fail against the old implementation, disabling following is detected, and the fixed version passes. `Assert-GateEvidence` passed at reviewed HEAD, after the no-op rebase onto `sweatshop/ui-game/2026-10-31-1734`, and after the session merge. It verifies command, exit 0, log SHA-256 and equality of non-tracker code against tested commit `411ab35f17bf807e2a95a399d5feb6fd57c90704`. The log reports 420 passed, 0 failed, including seven skips (six Lc0 and one graphical pixel test): 413 executed. The existing gate was reused because code did not change.
+
+The existing `Proxy decided (opus-5.5 xhigh)` records authorizing scoped GameOver wiring (`20261031-181943-UI-023-022105.json`) and the four screenshot fixtures (`20261031-182516-UI-023-7773a8.json`) remain valid and unchanged; their full receipts are linked above. No new contract decision was made. The [UI-022 workflow decision](74-UI-022-home-name-dialog-searching.md#resolution-2026-10-31-long-name-re-review), recorded by the proxy with receipt `C:/Users/bruno/AppData/Local/Temp/sweatshop-proxy/20261031-181515-UI-022-7181c6.json`, already establishes that CLEAN-012 holds the session PR's integration into `main`, while allowing consolidation into the session branch. That condition is preserved here.
+
+Merged without squashing into `sweatshop/ui-game/2026-10-31-1734` as `44de404ca84f006af6fb255b7831589a97678bae`. This closure changes only the ticket and ledger. The driver owns pushing and opening the session PR; no push or merge into `main` was performed.
+
+Acceptance: pending | Human visual comparison after CLEAN-012 and the recorded manual play/input and Lc0 checks remain.
+Disclosure: decision | none | Both P2 findings from the first UI-023 review are resolved by this re-review; session consolidation follows the existing UI-022 workflow decision without waiving any product requirement.
+Disclosure: pending | integration | [CLEAN-012](../../ui-base/issues/74-CLEAN-012-font-variation-axes.md) must be completed and reviewed before this session PR lands on `main` and before final visual acceptance.
+Disclosure: pending | release | Manual drag/premove, draw offer, Esc, finish, grip, F11, Ctrl+, real Lc0 play and final visual QA remain. No new graphical, physical-input, audio or clean-machine checks were performed in this re-review.
