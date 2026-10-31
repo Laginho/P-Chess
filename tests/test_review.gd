@@ -62,7 +62,8 @@ func test_summary_waits_for_analysis_and_shows_accuracy_and_counts():
 	var counts = review.get_node_or_null("Margin/Content/ReviewBody/Side/Counts")
 	assert_true(counts != null, "class table exists")
 	if counts != null:
-		assert_true(counts.text.contains("Best") and counts.text.contains("1"))
+		assert_eq(counts.get_node("BestWhite").text, "1")
+		assert_true(counts.get_node("BestIcon").texture != null, "class icon is shown between the counts")
 	main.free()
 
 
@@ -118,11 +119,13 @@ func test_fixture_updates_counts_before_final_accuracy():
 	review.receive_position(2, fixture.positions[2])
 	review.receive_position(1, fixture.positions[1])
 	assert_true(not side.get_node("Summary").visible)
-	assert_true(side.get_node("Counts").text.contains("Best:  0   1"), "black's final class appears while analysis runs")
+	assert_eq(side.get_node("Counts/BestWhite").text, "0")
+	assert_eq(side.get_node("Counts/BestBlack").text, "1", "black's final class appears while analysis runs")
 	review.receive_position(0, fixture.positions[0])
 	assert_true(side.get_node("Summary").visible)
 	assert_true(side.get_node("Summary").text.contains("100.0%"))
-	assert_true(side.get_node("Counts").text.contains("Best:  1   1"))
+	assert_eq(side.get_node("Counts/BestWhite").text, "1")
+	assert_eq(side.get_node("Counts/BestBlack").text, "1")
 	main.free()
 
 
