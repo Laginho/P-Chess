@@ -1,9 +1,9 @@
 # REV-006: Review summary, eval graph and tooltips
-Stage: implementing
+Stage: to-review
 Blocked by: REV-004, REV-005
 Review: agent
 Difficulty: normal
-Gate evidence: C:\Users\bruno\AppData\Local\Temp\rev006-stage2-gate.json
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\rev006-reopen-gate.json
 Acceptance: pending | Review a real analysed game, inspect both accuracies and final counts, click the graph in both orientations and hover both help controls, including at the minimum window size.
 
 - Primary files:
@@ -65,3 +65,10 @@ Verification: independently validated receipt `C:\Users\bruno\AppData\Local\Temp
 Acceptance: pending | Repair criterion 4, then review a real analysed game, inspect both accuracies and final counts, click the graph in both orientations and read both help controls at the minimum window size.
 Disclosure: pending | integration | Criterion 4 must be repaired and re-reviewed before REV-006 is integrated; the existing ticket branch is preserved at to-implement, with no merge or ledger entry.
 Disclosure: pending | release | Real Stockfish, rendered layout/tooltips, physical input/orientation and long-game responsiveness remain product acceptance checks, separate from the reused green gate.
+
+
+#### Stage 2 rework (2026-10-31)
+
+The actual tooltip popups now fit the 800?600 viewport using bounded text lines, and the mate-distance and in-check explanations are corrected. The regression hovers each help control after analysis completes, checks the displayed full text and popup bounds, and checks both corrected phrases. Before the fix it failed on both popup bounds and both phrases; after the fix it passed. The first test harness looked only at direct root children and was corrected to search recursively before the red test was committed.
+
+Gate on code commit `69773246cd8a290ebf02dd40a6435b63e8e25ede`: 351 passed, 0 failed, exit 0. The receipt and log are local. Rendered tooltip readability, physical input and a real analysed Stockfish game remain pending acceptance as described above. The prior integration disclosure remains pending until stage 3 re-reviews this fix.
