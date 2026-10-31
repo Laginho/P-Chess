@@ -17,6 +17,7 @@ const History = preload("res://core/history.gd")
 const AnalysisQueue = preload("res://core/analysis_queue.gd")
 const ReviewScreen = preload("res://ui/review.tscn")
 const HistoryScreen = preload("res://ui/history_screen.tscn")
+const NameDialog = preload("res://ui/name_dialog.tscn")
 
 const WINNERS := {"1-0": "White wins", "0-1": "Black wins", "1/2-1/2": "Draw"}
 const MIN_BOARD_SIZE := 320
@@ -36,6 +37,7 @@ var preferences := Settings.new()
 var settings_screen := SettingsScreen.instantiate()
 var review := ReviewScreen.instantiate()
 var history_screen := HistoryScreen.instantiate()
+var name_dialog := NameDialog.instantiate()
 var analysis_queue
 var review_analysis_path := ""
 var resign_key := ResignKey.new(Time.get_ticks_msec)
@@ -172,6 +174,7 @@ func _ready() -> void:
 	add_child(settings_screen)
 	add_child(review)
 	add_child(history_screen)
+	add_child(name_dialog)
 	history_screen.back_requested.connect(_show_home)
 	history_screen.review_requested.connect(_review_history_game)
 	review.back_history_requested.connect(_show_history)
@@ -186,6 +189,7 @@ func _ready() -> void:
 	elif not FileAccess.file_exists(MaiaPlayer.net_path(setup.LEVELS[0])):
 		setup.show_missing("The Maia nets are missing from engine/weights. Run scripts/fetch-engine.ps1 to download them.")
 		$Home.show_missing("The Maia nets are missing from engine/weights.")
+	name_dialog.present(preferences)
 
 
 func _process(_delta: float) -> void:
@@ -319,6 +323,8 @@ func _start(new_settings: Dictionary) -> void:
 		preferences.save_last_game(new_settings)
 		new_settings = new_settings.duplicate()
 		new_settings.erase("colour_choice")
+	new_settings = new_settings.duplicate()
+	new_settings.player_name = preferences.get_value("player_name")
 	_move_clocks.clear()
 	_history_saved = false
 	if settings.is_empty() or new_settings != rematch(settings) or not board_view.game.is_over():
@@ -400,7 +406,7 @@ func _show_history() -> void:
 
 func _review_history_game(path: String, saved: Dictionary) -> void:
 	var headers: Dictionary = saved.headers
-	var colour := "w" if headers.get("White", "") == "You" else "b"
+	var colour: String = History.human_colour(headers)
 	var game = Game.new()
 	var clocks := []
 	for move in saved.moves:
@@ -410,6 +416,8 @@ func _review_history_game(path: String, saved: Dictionary) -> void:
 	game.reason = history.reason(saved)
 	var other: String = headers.get("Black" if colour == "w" else "White", "Maia 1500")
 	var review_settings := {"colour": colour, "level": "maia-" + other.trim_prefix("Maia "), "control": "1+0"}
+	var player_name: String = headers.get("White" if colour == "w" else "Black", "You")
+	review_settings.player_name = preferences.get_value("player_name") if not headers.has("HumanColor") and player_name == "You" else player_name
 	var snapshot: Dictionary = history.read_repertoire(path)
 	review.present(game, clocks, review_settings, history_screen._result_text(saved, colour),
 			setup.book.entries, snapshot.lines, not snapshot.lines.is_empty())
@@ -650,4 +658,4 @@ static func _format_score(half_points: int) -> String:
 
 
 func match_score_text() -> String:
-	return "You %s %s %s Maia %s" % [_format_score(_human_score), String.chr(0x2013), _format_score(_maia_score), settings.level.trim_prefix("maia-")]
+	return "%s %s %s %s Maia %s" % [preferences.get_value("player_name"), _format_score(_human_score), String.chr(0x2013), _format_score(_maia_score), settings.level.trim_prefix("maia-")]

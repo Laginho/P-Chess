@@ -247,7 +247,7 @@ The review screen opens on request:
 
 ### 9.4 History and stats
 
-- Every game is saved to `user://games/` as PGN, with `%clk` on each move. Headers: players ("Maia 1500" / "You"), `TimeControl`, `Result`, `Termination`, and the opening name.
+- Every game is saved to `user://games/` as PGN, with `%clk` on each move. Headers: players ("Maia 1500" / your `player_name`), `HumanColor` (`w` or `b`), `TimeControl`, `Result`, `Termination`, and the opening name. Your side is read from `HumanColor`, falling back to the player named "You" in older PGNs (§15.8).
 - The level is shown as the net's name only.
 - Stats per (level, time control): wins, draws and losses, plus flag wins and flag losses.
 - A practice count per opening line, used to pick the target line (§6.3).
@@ -479,9 +479,9 @@ chess.com's CAPS2 is not published.
   - Also: Custom game (today's setup screen), History, Profile, Settings and Quit.
 - **Searching screen:** Quick play, Custom game and rematch show the time control and Maia level between the click and the game for at least 0.5 s, and until startup work finishes. Its status follows the real work in order: "Pausing analysis…" only when analysis is active, "Loading Maia 1500…" (with the selected level) until that net's `readyok`, then "Preparing game…" while loading the catalog, repertoire and opening selection. The new game and clock start only after it closes. Startup errors close it and use the existing Custom game or Home error message.
 - **Your name:**
-  - On first launch, a dialog asks for it, prefilled with "You". It has only OK, no skip.
+  - On first launch, a modal over Home asks "What should I call you?", prefilled with "You". It has only OK, no skip or dismissal with Esc. A blank or whitespace-only name is refused; confirming stores the trimmed name in `player_name` in `settings.cfg`, and the dialog stays closed on later launches. Confirming "You" is a valid choice; changing another setting does not count as choosing a name.
   - The name changes in the Profile.
-  - New PGNs write it in the player header, plus a `HumanColor` header (`w` or `b`), since a name such as "Maia 1500" could match the opponent's. Stats, thumbnails and Delete read your side from `HumanColor`; older PGNs have none, and there your side is the one named "You". Old PGNs keep "You" in the file but show the current name.
+  - New PGNs write it in the player header, plus a `HumanColor` header (`w` or `b`), since a name such as "Maia 1500" could match the opponent's. Stats, thumbnails and Delete read your side from `HumanColor`; older PGNs have none, and there your side is the one named "You". Old PGNs keep "You" in the file and in copied PGN but show the current name in History and review. Named PGNs retain their saved player name when the current name changes.
 - **Profile:** your name, W/D/L per level and time control (with flag wins and losses), and your accuracy over time.
 
 ### 15.9 Repertoire from names, viewer and editor
