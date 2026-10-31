@@ -670,3 +670,18 @@ func test_review_navigation_buttons_visit_first_and_last_move():
 		nav.get_node("Last").pressed.emit()
 		assert_eq(main.review.get_node("Margin/Content/ReviewBody/BoardView").game.moves.size(), 2)
 	main.free()
+
+func test_unanalysed_history_keeps_book_icon():
+	var main = await _session(FakeTime.new())
+	var game = Game.new()
+	game.play("h2h3")
+	var path := "user://ui026-unanalysed.pgn"
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	file.store_string("1. h3 *")
+	file.close()
+	main.review.present(game, [180000, 180000], SETTINGS, "", main.get_node("Setup").book.entries)
+	main.review.present_history(path, "user://ui026-missing-analysis.json", false)
+	var moves: Tree = main.review.get_node("Margin/Content/ReviewBody/Side/Moves")
+	assert_true(moves.get_root().get_first_child().get_icon(1) != null, "book move retains its icon without analysis")
+	DirAccess.remove_absolute(path)
+	main.free()
