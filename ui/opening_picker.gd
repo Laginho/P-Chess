@@ -17,10 +17,10 @@ var _catalog_error := ""
 @onready var _search: LineEdit = $Margin/Form/Search
 @onready var _tree: Tree = $Margin/Form/Tree
 @onready var _name: LineEdit = $Margin/Form/SaveRow/Name
-@onready var _save: Button = $Margin/Form/SaveRow/Save
+@onready var _save: Button = $Margin/Form/Footer/Save
 @onready var _saved: OptionButton = $Margin/Form/LoadRow/Saved
 @onready var _load: Button = $Margin/Form/LoadRow/Load
-@onready var _status: Label = $Margin/Form/Status
+@onready var _status: Label = $Margin/Form/Footer/Status
 
 
 func _ready() -> void:
@@ -28,7 +28,7 @@ func _ready() -> void:
 	_tree.item_edited.connect(_on_item_edited)
 	_save.pressed.connect(_save_selection)
 	_load.pressed.connect(_load_selection)
-	$Margin/Form/Done.pressed.connect(hide)
+	$Margin/Form/Footer/Done.pressed.connect(hide)
 	$Margin/Form/SaveRow/White.pressed.connect(func(): _choose_colour(0))
 	$Margin/Form/SaveRow/Black.pressed.connect(func(): _choose_colour(1))
 	_loaded = not book.entries.is_empty()
@@ -45,7 +45,7 @@ func present_repertoire(target) -> void:
 	$Margin/Form/SaveRow/White.show()
 	$Margin/Form/SaveRow/Black.show()
 	$Margin/Form.move_child($Margin/Form/SaveRow, 1)
-	$Margin/Form/Done.text = "Cancel"
+	$Margin/Form/Footer/Done.text = "Cancel"
 	_name.placeholder_text = "Repertoire name"
 	_save.text = "Create repertoire"
 	present()

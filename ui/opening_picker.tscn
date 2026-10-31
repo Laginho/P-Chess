@@ -27,21 +27,6 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 24
 text = "Opening catalog"
 
-[node name="Search" type="LineEdit" parent="Margin/Form"]
-layout_mode = 2
-placeholder_text = "Search openings (e.g. Sicilian or Najdorf)"
-clear_button_enabled = true
-
-[node name="Tree" type="Tree" parent="Margin/Form"]
-custom_minimum_size = Vector2(0, 300)
-layout_mode = 2
-size_flags_vertical = 3
-hide_root = true
-
-[node name="Status" type="Label" parent="Margin/Form"]
-layout_mode = 2
-autowrap_mode = 3
-
 [node name="SaveRow" type="HBoxContainer" parent="Margin/Form"]
 layout_mode = 2
 
@@ -74,10 +59,16 @@ layout_mode = 2
 toggle_mode = true
 text = "○ Black"
 
-[node name="Save" type="Button" parent="Margin/Form/SaveRow"]
+[node name="Search" type="LineEdit" parent="Margin/Form"]
 layout_mode = 2
-theme_type_variation = &"PrimaryButton"
-text = "Save selection"
+placeholder_text = "Search openings (e.g. Sicilian or Najdorf)"
+clear_button_enabled = true
+
+[node name="Tree" type="Tree" parent="Margin/Form"]
+custom_minimum_size = Vector2(0, 300)
+layout_mode = 2
+size_flags_vertical = 3
+hide_root = true
 
 [node name="LoadRow" type="HBoxContainer" parent="Margin/Form"]
 layout_mode = 2
@@ -90,6 +81,22 @@ size_flags_horizontal = 3
 layout_mode = 2
 text = "Load selection"
 
-[node name="Done" type="Button" parent="Margin/Form"]
+[node name="Footer" type="HBoxContainer" parent="Margin/Form"]
 layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Status" type="Label" parent="Margin/Form/Footer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Done" type="Button" parent="Margin/Form/Footer"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 44)
 text = "Done"
+
+[node name="Save" type="Button" parent="Margin/Form/Footer"]
+layout_mode = 2
+theme_type_variation = &"PrimaryButton"
+custom_minimum_size = Vector2(0, 44)
+text = "Save selection"
+
