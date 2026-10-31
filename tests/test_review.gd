@@ -1,4 +1,4 @@
-﻿extends "res://tests/run.gd".Test
+extends "res://tests/run.gd".Test
 
 const Review = preload("res://ui/review.gd")
 const Game = preload("res://core/game.gd")
@@ -939,7 +939,10 @@ func test_long_review_keeps_selected_move_visible():
 		var legal = game.board.legal_moves()
 		game.play(legal[rng.randi_range(0, legal.size() - 1)])
 	assert_true(game.moves.size() >= 40, "fixture must exceed the visible move list")
-	main.review.present(game, [], SETTINGS, "Fixture")
+	var clocks := []
+	clocks.resize(game.moves.size())
+	clocks.fill(180000)
+	main.review.present(game, clocks, SETTINGS, "Fixture")
 	await root.get_tree().process_frame
 	await root.get_tree().process_frame
 	var list: Tree = main.review.get_node("Margin/Content/ReviewBody/Side/Moves")
