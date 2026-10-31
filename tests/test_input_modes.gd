@@ -9,7 +9,7 @@ const MainScene = preload("res://ui/main.tscn")
 const History = preload("res://core/history.gd")
 const HistoryStorage = preload("res://tests/history_storage.gd")
 const PROMOTION := "4k3/P7/8/8/8/8/8/4K3 w - - 0 1"
-const SETTINGS_PATH := "user://test_ui006_settings.cfg"
+var SETTINGS_PATH := "user://test_ui006_settings_%d_%d.cfg" % [OS.get_process_id(), Time.get_ticks_usec()]
 
 
 # Replace only the external engine so the actual settings scene and Main lifecycle run.

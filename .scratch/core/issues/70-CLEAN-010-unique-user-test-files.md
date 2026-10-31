@@ -1,5 +1,5 @@
 # CLEAN-010: Tests that write fixed file names in the shared user:// folder
-Stage: to-implement
+Stage: implementing
 Status: needs-triage
 Blocked by: none
 Review: agent
@@ -30,3 +30,5 @@ Give each of these files a per-run name in the same pattern, removed when the te
 ## Comments
 
 - 2026-10-30 Opened by the PR #26 review loop: the human asked to fix the fixed `user://` names in that PR's tests (done there) and ticket the rest. Not a runtime defect; it only bites concurrent gates.
+
+- Stage 2: the criterion 1 filename scan was red on all four named paths before the change. This ticket changes test infrastructure only and adds no test methods; the pre-change tree declares 344 test methods.
