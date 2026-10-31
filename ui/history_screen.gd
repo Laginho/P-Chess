@@ -347,6 +347,9 @@ func _add_card(list: Node, record: Dictionary) -> void:
 	delete.tooltip_text = "Delete game"
 	delete.custom_minimum_size = Vector2(40, 40)
 	delete.pressed.connect(func():
+		for other in list.get_children():
+			other.get_node("Details/DeleteInline").hide()
+			other.get_node("Details/HBoxContainer").show()
 		_delete_path = record.path
 		actions.hide()
 		details.get_node("DeleteInline").show())
@@ -368,7 +371,7 @@ func _add_card(list: Node, record: Dictionary) -> void:
 	red.set_corner_radius_all(8)
 	red.set_content_margin_all(10)
 	yes.add_theme_stylebox_override("normal", red)
-	yes.pressed.connect(_confirm_delete)
+	yes.pressed.connect(func(): _confirm_delete(record.path))
 	confirm.add_child(yes)
 	var cancel := Button.new()
 	cancel.name = "Cancel"
@@ -400,9 +403,11 @@ func _update_selection() -> void:
 	box.set_pressed_no_signal(checked)
 
 
-func _confirm_delete() -> void:
-	if history.delete(_delete_path):
-		var deleted := _delete_path
+func _confirm_delete(path: String) -> void:
+	if path != _delete_path:
+		return
+	if history.delete(path):
+		var deleted := path
 		_delete_path = ""
 		_selected.erase(deleted)
 		if analysis_queue != null:
