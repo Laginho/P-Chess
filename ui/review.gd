@@ -163,17 +163,25 @@ func _ready() -> void:
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		icon.custom_minimum_size = Vector2(24, 24)
 		row.add_child(icon)
+		var text := VBoxContainer.new()
+		text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		text.add_theme_constant_override("separation", 0)
+		var title := Label.new()
+		title.text = line.get_slice(" \u2014 ", 0)
+		title.theme_type_variation = "BoldText"
+		title.add_theme_font_size_override("font_size", 11)
+		text.add_child(title)
 		var description := Label.new()
-		description.text = line
-		description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		description.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		description.add_theme_font_size_override("font_size", 11)
-		row.add_child(description)
+		description.text = line.get_slice(" \u2014 ", 1)
+		description.theme_type_variation = "MutedText"
+		description.add_theme_font_size_override("font_size", 10)
+		text.add_child(description)
+		row.add_child(text)
 		rows.add_child(row)
 	$Margin/Content/ReviewBody/Side/ClassHelp.pressed.connect(func():
-		legend.popup_centered(Vector2i(480, 430))
+		legend.popup_centered(Vector2i(480, 540))
 		await get_tree().process_frame
-		legend.size = Vector2i(480, 430)
+		legend.size = Vector2i(480, 540)
 		legend.move_to_center())
 	var toggle: Button = $Margin/Content/ReviewBody/Side/ClassToggle
 	toggle.pressed.connect(func():
