@@ -1,5 +1,5 @@
 # HIST-005: Delete a game, and the PracticeTarget header
-Stage: implementing
+Stage: to-review
 Blocked by: HIST-004
 Review: agent
 Difficulty: normal
@@ -76,3 +76,10 @@ Each history card gets Delete, with confirmation (§15.7). Deleting removes the 
 - 2026-10-31 Second reopen: foreman diagnosis required before retrying. Classify new defect, earlier review miss, contract gap, or review-induced churn; record cause and next action, then return to-implement only when ready.
 
 - 2026-10-31 Reopen diagnosis (foreman, run 3): **new integration defect**, not an implementation miss of round 1, not drip-feed, not review churn, not a contract gap. Evidence: round 1 (00:53, review log `HIST-005-review-20261031-004959.txt`) raised only the missing rollback proof; round 2 (02:03, `HIST-005-review-20261031-015641.txt`) found that deleting a game while the HIST-006 analysis queue is analysing it lets `engine/analyser.gd` rewrite the deleted JSON (criterion 3), proven by a controlled-UCI probe. HIST-006's queue merged on the session at 01:27, after HIST-005 was branched (00:40) and after round 1, so neither stage 2 nor review could see it before the rebase. The round-1 finding is closed. Next action (stage 2, on `HIST-005-delete-a-game`, keep everything): the reviewer's repair in its round-2 comment — a red test in `tests/test_history.gd` (delete an actively analysed queued game, deliver the held final response, then assert cancellation and no recreated JSON after the missing-file scan; also a waiting queue entry; Cancel and failed delete unchanged), then the production-only fix calling the existing `analysis_queue.remove(_delete_path)` after a successful `history.delete`, before refreshing the cards. Then the full gate, with one `Gate evidence:` field line.
+- 2026-10-31 Stage 2: added the optional PracticeTarget header, deletion with confirmation and error reporting, removal of associated files, and reversal of result, flag and practice counts. Separate red/green cycles covered the header, history deletion and confirmation. Focused PGN tests: 14 passed; history tests: 18 passed. The full gate passed 364 tests, 0 failed, on `1ce2381` (exit 0). The missing-file failure was tested; failures during final file removal or stats replacement were inspected but not injected.
+
+Acceptance: pending | Manually note a level's W/D/L, delete a game and confirm the count dropped by one; inspect confirmation, cancel and error presentation in the rendered UI.
+
+Disclosure: pending | release | Manual deletion, statistics and rendered confirmation acceptance remain outstanding (verification above).
+
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\p-chess-hist005-handoff.json
