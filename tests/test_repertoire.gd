@@ -124,6 +124,22 @@ func test_editor_numbers_a_line_that_starts_with_black():
 	_clean(folder)
 
 
+func test_editor_numbers_a_black_variation_at_the_start_of_its_row():
+	var repertoire = _repertoire()
+	var folder := _folder()
+	repertoire.storage_dir = folder
+	assert_eq(repertoire.import_pgn("1. e4 e5 (1... c5) 2. Nf3 *", "w", "Study"), "")
+	var editor = load("res://ui/repertoire_editor.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(editor)
+	editor.present(repertoire, "Study", 0)
+	var variation := _find_move(editor.find_child("Tree", true, false), PackedStringArray(["e2e4", "c7c5"]))
+	assert_true(variation != null)
+	if variation != null:
+		assert_eq(variation.text, "1...c5")
+	editor.free()
+	_clean(folder)
+
+
 func test_editor_delete_button_remains_available_to_keyboard_focus():
 	var repertoire = _repertoire()
 	var folder := _folder()
