@@ -946,7 +946,7 @@ func test_long_repertoire_name_keeps_viewer_and_editor_inside_minimum_window():
 	await Engine.get_main_loop().process_frame
 	await Engine.get_main_loop().process_frame
 	var heading = screen.find_child("LineHeading", true, false)
-	assert_true(screen.size.x <= 768 and screen.size.y <= 568, "viewer fits the minimum viewport")
+	assert_eq(screen.size, Vector2i(800, 600), "viewer fills the minimum viewport")
 	assert_eq(heading.text, name)
 	assert_eq(heading.tooltip_text, name, "full name remains available")
 	var editor = screen.get_node("RepertoireEditor")
@@ -976,7 +976,7 @@ func test_embedded_repertoire_windows_fill_the_available_viewport():
 	root.add_child(setup)
 	var screen = setup.get_node("RepertoireScreen")
 	screen.present()
-	assert_eq(screen.size, Vector2i(1248, 768), "screen uses the embedded viewport")
+	assert_eq(screen.size, Vector2i(1280, 800), "Repertoires is a full screen, as in the design")
 	var editor = screen.get_node("RepertoireEditor")
 	editor.present(setup.repertoire, "Study", 0)
 	assert_eq(editor.size, Vector2i(1280, 800), "editor is a full screen, as in the design")
