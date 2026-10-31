@@ -107,9 +107,9 @@ func test_review_help_explains_accuracy_and_class_thresholds():
 		assert_true(accuracy_help.tooltip_text.contains("win"))
 		class_help.pressed.emit()
 		var legend = review.get_node_or_null("ClassLegend")
-		assert_true(legend != null and legend.dialog_text.contains("2%") and legend.dialog_text.contains("20%"), "legend gives class thresholds")
+		assert_true(legend != null and legend.get_node("Content/LegendRows").get_child(3).get_child(1).get_child(1).text.contains("2%") and legend.get_node("Content/LegendRows").get_child(10).get_child(1).get_child(1).text.contains("20%"), "legend gives class thresholds")
 		if legend != null:
-			var rows = legend.get_node_or_null("LegendRows")
+			var rows = legend.get_node_or_null("Content/LegendRows")
 			assert_true(rows != null and rows.get_child_count() == 12, "legend has an icon and description for each class")
 	main.free()
 
@@ -673,12 +673,11 @@ func test_move_classes_help_opens_ordered_legend():
 	var legend = review.get_node_or_null("ClassLegend")
 	assert_true(legend != null and legend.visible, "move classes opens the legend")
 	if legend != null:
-		var text: String = legend.dialog_text
-		var previous := -1
-		for name in ["Brilliant", "Great", "Best", "Excellent", "Good", "Book", "Repertoire", "Inaccuracy", "Mistake", "Miss", "Blunder", "Forced"]:
-			var at := text.find(name, previous + 1)
-			assert_true(at > previous, name + " appears in order")
-			previous = at
+		var rows = legend.get_node("Content/LegendRows").get_children()
+		var names = ["Brilliant", "Great", "Best", "Excellent", "Good", "Book", "Repertoire", "Inaccuracy", "Mistake", "Miss", "Blunder", "Forced"]
+		assert_eq(rows.size(), names.size())
+		for i in mini(rows.size(), names.size()):
+			assert_eq(rows[i].get_child(1).get_child(0).text, names[i])
 	main.free()
 
 func test_move_classes_collapse_in_small_review():
@@ -980,8 +979,8 @@ func test_move_class_legend_is_anchored_and_contained():
 		var rect := Rect2i(legend.position, legend.size)
 		assert_true(rect.position.x >= 0 and rect.position.y >= 0 and rect.end.x <= window_size.x and rect.end.y <= window_size.y, "legend fits inside window")
 		assert_true(absf(rect.end.x - help.global_position.x) <= 24, "legend sits beside the Moves help")
-		assert_true(legend.get_ok_button().text == "Close", "legend offers a close action")
-		legend.get_ok_button().pressed.emit()
+		assert_true(legend.get_node("Content/Header/Close").text == "×", "legend offers a close action")
+		legend.get_node("Content/Header/Close").pressed.emit()
 		assert_true(not legend.visible, "close dismisses legend")
 		main.free()
 	root.gui_embed_subwindows = old_embed
