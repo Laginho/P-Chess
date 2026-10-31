@@ -55,6 +55,10 @@ theme_type_variation = &"ExtraBoldText"
 theme_override_font_sizes/font_size = 26
 text = "History"
 
+[node name="TabsSpacing" type="Control" parent="Margin/Content/Header"]
+custom_minimum_size = Vector2(16, 0)
+layout_mode = 2
+
 [node name="Tabs" type="TabBar" parent="Margin/Content/Header"]
 custom_minimum_size = Vector2(350, 44)
 layout_mode = 2

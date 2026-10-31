@@ -10,6 +10,9 @@ const Accuracy = preload("res://core/accuracy.gd")
 const Tunables = preload("res://core/tunables.gd")
 const TABS := ["All", "1+0", "3+2", "5+0"]
 const CONTROLS := {"60+0": "1+0", "180+2": "3+2", "300+0": "5+0"}
+const TREND_ICON := '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141412" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-6 4 4 8-9"/></svg>'
+const CLOCK_ICON := '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a8a49c" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>'
+const WARNING_ICON := '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f4bf44" stroke-width="2.4" stroke-linecap="round"><path d="M12 3l10 18H2z"/><path d="M12 10v4M12 17.5v.5"/></svg>'
 
 var analysis_queue
 var _selected := {}
@@ -35,6 +38,7 @@ func _ready() -> void:
 	var selected := Button.new()
 	selected.name = "AnalyzeSelected"
 	selected.text = "Analyze selected"
+	selected.icon = _icon(TREND_ICON)
 	selected.theme_type_variation = "PrimaryButton"
 	selected.custom_minimum_size.y = 40
 	selected.pressed.connect(func():
@@ -277,6 +281,14 @@ func _add_card(list: Node, record: Dictionary) -> void:
 		if state == "Stale":
 			boxes.modulate.a = 0.5
 	if state == "Stale":
+		var stale_row := HBoxContainer.new()
+		stale_row.add_theme_constant_override("separation", 6)
+		status.add_child(stale_row)
+		var warning := TextureRect.new()
+		warning.name = "StaleIcon"
+		warning.texture = _icon(WARNING_ICON)
+		warning.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		stale_row.add_child(warning)
 		var reason := Label.new()
 		reason.name = "StaleReason"
 		var analysis_path: String = history.analysis_folder().path_join(record.path.get_file() + ".json")
@@ -287,7 +299,7 @@ func _add_card(list: Node, record: Dictionary) -> void:
 		reason.text = "Stale: " + reason_text
 		reason.add_theme_color_override("font_color", Color("f4bf44"))
 		reason.add_theme_font_size_override("font_size", 12)
-		status.add_child(reason)
+		stale_row.add_child(reason)
 	elif state.begins_with("Analysing"):
 		var label := Label.new()
 		label.text = state
@@ -303,10 +315,30 @@ func _add_card(list: Node, record: Dictionary) -> void:
 		progress.add_theme_stylebox_override("fill", fill)
 		status.add_child(progress)
 	elif state == "Queued":
+		var pill := PanelContainer.new()
+		pill.name = "QueuePill"
+		pill.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		var pill_style := StyleBoxFlat.new()
+		pill_style.bg_color = Color("363430")
+		pill_style.set_corner_radius_all(14)
+		pill_style.content_margin_left = 10
+		pill_style.content_margin_right = 10
+		pill_style.content_margin_top = 4
+		pill_style.content_margin_bottom = 4
+		pill.add_theme_stylebox_override("panel", pill_style)
+		status.add_child(pill)
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 6)
+		pill.add_child(row)
+		var clock := TextureRect.new()
+		clock.name = "QueueIcon"
+		clock.texture = _icon(CLOCK_ICON)
+		clock.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		row.add_child(clock)
 		var label := Label.new()
 		var place: int = analysis_queue.pending().find(record.path) + (1 if analysis_queue.current().is_empty() else 0)
 		label.text = "Queued · %d%s in line" % [place, _ordinal(place)]
-		status.add_child(label)
+		row.add_child(label)
 	elif cached.is_empty():
 		var label := Label.new()
 		label.text = "Not analysed"
@@ -384,6 +416,12 @@ func _add_card(list: Node, record: Dictionary) -> void:
 		confirm.hide()
 		actions.show())
 	confirm.add_child(cancel)
+
+
+func _icon(svg: String) -> ImageTexture:
+	var image := Image.new()
+	image.load_svg_from_string(svg)
+	return ImageTexture.create_from_image(image)
 
 
 func _ordinal(number: int) -> String:
