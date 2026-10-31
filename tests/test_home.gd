@@ -65,6 +65,7 @@ func test_custom_choices_survive_restart_and_new_game_returns_home():
 		main.board_view.get_node("GameOver/Panel/Content/NewGame").pressed.emit()
 		assert_true(home.visible, "New game returns Home")
 		assert_eq(main._human_score, 0, "match score reset")
+		assert_eq(home.get_node("Center/Form/Level").get_item_text(home.get_node("Center/Form/Level").selected), "Maia 1700", "selector follows custom game")
 	main.free()
 	var next = MainScene.instantiate()
 	next.get_node("Setup").book.load_tsv("eco\tname\tpgn\nA00\tFixture\t1. h3\n")
@@ -82,3 +83,20 @@ func test_custom_choices_survive_restart_and_new_game_returns_home():
 		assert_eq(next.settings.get("control"), "1+0")
 	next.free()
 	DirAccess.remove_absolute(path)
+
+
+func test_missing_engine_disables_quick_play():
+	var main = MainScene.instantiate()
+	main.uci.free()
+	main.uci = Session.HeldBridge.new()
+	main.maia = main.MaiaPlayer.new(main.uci)
+	main.preferences = main.Settings.new("res://tests/fixtures/no_session_settings.cfg")
+	Engine.get_main_loop().root.add_child(main)
+	main.uci.error = "Engine unavailable"
+	main._on_engine_stopped()
+	var home = main.get_node("Home")
+	assert_true(home.visible)
+	assert_true(home.get_node("Center/Form/Missing").visible)
+	for button in home.get_node("Center/Form/Quick").get_children():
+		assert_true(button.disabled, "quick play is disabled")
+	main.free()
