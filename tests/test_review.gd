@@ -263,3 +263,25 @@ func test_review_returns_to_setup_and_starts_a_fresh_game():
 	assert_true(review.visible)
 	assert_eq(review.get_node("Margin/Content/Moves").get_root().get_child_count(), 0)
 	main.free()
+
+func test_review_steps_through_game_with_arrow_keys():
+	var time := FakeTime.new()
+	var main = _session(time)
+	main.board_view.play("e2e4")
+	main._on_maia_move("e7e5")
+	_key(main, KEY_ESCAPE)
+	_key(main, KEY_ESCAPE)
+	main.board_view.get_node("GameOver/Panel/Content/Review").pressed.emit()
+	var review = main.get_node("Review")
+	var board = review.get_node_or_null("Margin/Content/ReviewBody/BoardView")
+	assert_true(board != null, "review has its own board")
+	if board != null:
+		var event := InputEventKey.new()
+		event.pressed = true
+		event.keycode = KEY_LEFT
+		review._input(event)
+		assert_eq(board.game.moves, PackedStringArray(["e2e4"]))
+		event.keycode = KEY_RIGHT
+		review._input(event)
+		assert_eq(board.game.moves, PackedStringArray(["e2e4", "e7e5"]))
+	main.free()
