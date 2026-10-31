@@ -808,6 +808,30 @@ func test_repertoire_screen_fits_the_smallest_window():
 	setup.free()
 	_clean(folder)
 
+
+func test_embedded_repertoire_windows_fill_the_available_viewport():
+	var root: Window = Engine.get_main_loop().root
+	var old_embed := root.gui_embed_subwindows
+	var old_size := root.size
+	root.gui_embed_subwindows = true
+	root.size = Vector2i(1280, 800)
+	var setup = load("res://ui/setup.tscn").instantiate()
+	var folder := _folder()
+	setup.repertoire.storage_dir = folder
+	assert_eq(setup.repertoire.import_pgn("1. e4 e5 *", "w", "Study"), "")
+	root.add_child(setup)
+	var screen = setup.get_node("RepertoireScreen")
+	screen.present()
+	assert_eq(screen.size, Vector2i(1248, 768), "screen uses the embedded viewport")
+	var editor = screen.get_node("RepertoireEditor")
+	editor.present(setup.repertoire, "Study", 0)
+	assert_eq(editor.size, Vector2i(1216, 736), "editor uses the embedded viewport")
+	setup.free()
+	root.gui_embed_subwindows = old_embed
+	root.size = old_size
+	_clean(folder)
+
+
 func _editor_mouse(window: Window, point: Vector2, button: int, pressed: bool) -> void:
 	var motion := InputEventMouseMotion.new()
 	motion.position = point + Vector2(window.position)
