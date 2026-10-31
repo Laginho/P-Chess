@@ -985,3 +985,35 @@ func test_move_class_legend_is_anchored_and_contained():
 		main.free()
 	root.gui_embed_subwindows = old_embed
 	root.size = old_size
+
+func test_legend_opens_and_dismisses_with_keyboard_without_review_shortcuts():
+	var root = Engine.get_main_loop().root
+	var old_embed: bool = root.gui_embed_subwindows
+	root.gui_embed_subwindows = true
+	var main = await _session(FakeTime.new())
+	var review = main.review
+	review.present(Game.new(), [180000, 180000], SETTINGS, "")
+	await root.get_tree().process_frame
+	var triggered := [false]
+	review.rematch_requested.connect(func(): triggered[0] = true)
+	var help: Button = review.get_node("Margin/Content/ReviewBody/Side/ClassHelp")
+	help.grab_focus()
+	for pressed in [true, false]:
+		var event := InputEventKey.new()
+		event.keycode = KEY_ENTER
+		event.pressed = pressed
+		root.push_input(event)
+	await root.get_tree().process_frame
+	await root.get_tree().process_frame
+	var legend = review.get_node("ClassLegend")
+	assert_true(legend.visible, "Enter opens the legend")
+	for pressed in [true, false]:
+		var event := InputEventKey.new()
+		event.keycode = KEY_ESCAPE
+		event.pressed = pressed
+		root.push_input(event)
+	await root.get_tree().process_frame
+	assert_true(not legend.visible, "Escape closes the legend")
+	assert_true(not triggered[0], "legend keyboard input does not trigger rematch")
+	main.free()
+	root.gui_embed_subwindows = old_embed
