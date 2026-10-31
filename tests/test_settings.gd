@@ -39,6 +39,28 @@ func _fresh() -> String:
 	return PATH
 
 
+func test_name_dialog_shows_the_question_above_the_name_field():
+	var dialog = load("res://ui/name_dialog.tscn").instantiate()
+	var tree = Engine.get_main_loop()
+	tree.root.add_child(dialog)
+	dialog.present(Settings.new(_fresh()))
+	await tree.process_frame
+	await tree.process_frame
+	var question: Label
+	for label in dialog.find_children("*", "Label", true, false):
+		if label.text == "What should I call you?" and label.is_visible_in_tree():
+			question = label
+	assert_true(question != null, "the first-launch question is visible")
+	if question != null:
+		var input = dialog.find_child("Name", true, false)
+		var question_rect = question.get_global_rect()
+		var input_rect = input.get_global_rect()
+		assert_true(question_rect.has_area() and input_rect.has_area())
+		assert_true(not question_rect.intersects(input_rect), "the name field must not cover the question")
+		assert_true(question_rect.end.y <= input_rect.position.y, "the question is above the name field")
+	dialog.free()
+
+
 func test_name_dialog_requires_a_nonempty_choice_and_stays_closed_after_restart():
 	var scene = load("res://ui/name_dialog.tscn")
 	assert_true(scene != null, "first-launch name dialog exists")
@@ -50,7 +72,7 @@ func test_name_dialog_requires_a_nonempty_choice_and_stays_closed_after_restart(
 	dialog.present(store)
 	assert_true(dialog.visible and dialog.exclusive)
 	assert_true(not dialog.dialog_close_on_escape and dialog.borderless, "only OK dismisses the modal")
-	var input = dialog.get_node("Name")
+	var input = dialog.find_child("Name", true, false)
 	assert_eq(input.text, "You")
 	input.text = "   "
 	input.text_changed.emit(input.text)
