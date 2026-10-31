@@ -8,10 +8,20 @@ const Clock = preload("res://core/clock.gd")
 const Pgn = preload("res://core/pgn.gd")
 const Board = preload("res://core/board.gd")
 const Game = preload("res://core/game.gd")
+const Uci = preload("res://engine/uci.gd")
+const Analyser = preload("res://engine/analyser.gd")
+const Tunables = preload("res://core/tunables.gd")
 const Classification = preload("res://core/classification.gd")
 const Badges = preload("res://bot/badges.gd")
 
 # System boundaries stay replaceable for headless tests.
+var analysis_bridge_factory: Callable = func(): return Uci.new("engine/stockfish/stockfish.exe", "Stockfish")
+var analyser_factory: Callable = func(bridge): return Analyser.new(bridge)
+var _analysis_bridge
+var _analyser
+var _waiting_engine := false
+var _analysis_path := ""
+var _draw_at_end := false
 var copy_text: Callable = DisplayServer.clipboard_set
 var open_browser: Callable = OS.shell_open
 var _pgn := ""
@@ -34,6 +44,9 @@ var _check_repertoire := false
 
 
 func _ready() -> void:
+	visibility_changed.connect(func():
+		if not visible:
+			_cancel_analysis())
 	_moves.select_mode = Tree.SELECT_SINGLE
 	_moves.item_selected.connect(func():
 		var selected := _moves.get_selected()
@@ -52,6 +65,80 @@ func _ready() -> void:
 	$Margin/Content/Actions/Lichess.pressed.connect(func(): open_browser.call(_url))
 	$Margin/Content/Actions/Rematch.pressed.connect(func(): rematch_requested.emit())
 	$Margin/Content/Actions/Setup.pressed.connect(func(): setup_requested.emit())
+
+
+func open_analysis(path: String, draw_at_end: bool) -> void:
+	show()
+	if _analysis_bridge != null:
+		return
+	_analysis_path = path
+	_draw_at_end = draw_at_end
+	$Margin/Content/Progress.value = 0
+	$Margin/Content/Progress.show()
+	_analysis_bridge = analysis_bridge_factory.call()
+	add_child(_analysis_bridge)
+	_analysis_bridge.stopped.connect(_engine_stopped)
+	if not _analysis_bridge.start():
+		_analysis_error(_analysis_bridge.error)
+		return
+	_waiting_engine = true
+	_check_engine()
+
+
+func _process(_delta: float) -> void:
+	if _waiting_engine:
+		_check_engine()
+
+
+func _check_engine() -> void:
+	if _analysis_bridge == null or _analysis_bridge.engine_id.is_empty():
+		return
+	_waiting_engine = false
+	var cached := Analyser.read_analysis(_analysis_path, _analysis_bridge.engine_id, Tunables.ANALYSIS_NODES)
+	if cached.state == "analysed":
+		var saved: Array = cached.data.positions
+		if saved.size() == _positions.size():
+			for i in saved.size():
+				receive_position(i, saved[i])
+			$Margin/Content/Progress.hide()
+			return
+	_analyser = analyser_factory.call(_analysis_bridge)
+	add_child(_analyser)
+	_analyser.position_ready.connect(receive_position)
+	_analyser.progress.connect(func(done: int, total: int):
+		$Margin/Content/Progress.value = 100.0 * done / maxi(total, 1))
+	_analyser.finished.connect(func(success: bool, error: String):
+		$Margin/Content/Progress.hide()
+		if not success:
+			_analysis_error(error))
+	var fens := []
+	for position in _positions:
+		fens.append(position.fen)
+	if not _analyser.analyse(fens, _analysis_path, true, _draw_at_end):
+		_analysis_error("Could not start analysis")
+
+
+func _engine_stopped() -> void:
+	if visible and _analysis_bridge != null:
+		_analysis_error(_analysis_bridge.error)
+
+
+func _analysis_error(message: String) -> void:
+	_waiting_engine = false
+	$Margin/Content/Progress.hide()
+	$Margin/Content/AnalysisError.text = "Analysis: " + message
+	$Margin/Content/AnalysisError.show()
+
+
+func _cancel_analysis() -> void:
+	_waiting_engine = false
+	if _analyser != null:
+		_analyser.cancel()
+		_analyser.queue_free()
+		_analyser = null
+	if _analysis_bridge != null:
+		_analysis_bridge.queue_free()
+		_analysis_bridge = null
 
 
 # Handle Space before the focused move list or a button consumes it as GUI input.
@@ -127,6 +214,7 @@ func _update_eval_bar() -> void:
 
 func present(game, clocks: Array, settings: Dictionary, result_text: String,
 		catalog: Array = [], repertoire: Array = [], check_repertoire := false) -> void:
+	$Margin/Content/AnalysisError.hide()
 	_game_moves = game.moves.duplicate()
 	_classes = []
 	_move_rows = []

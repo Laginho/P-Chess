@@ -44,7 +44,7 @@ func _close() -> void:
 func _open_review() -> void:
 	hide()
 	review_button.hide()
-	main.review.show()
+	main.review.open_analysis(main.review_analysis_path, game.result == "1/2-1/2")
 
 
 func _rematch() -> void:
