@@ -139,9 +139,15 @@ func _add_move(line: HFlowContainer, key: String, moves: PackedStringArray, san:
 	trash.pressed.connect(func(): _delete_path(key, moves))
 	group.add_child(trash)
 	group.mouse_entered.connect(trash.show)
-	group.mouse_exited.connect(trash.hide)
+	group.mouse_exited.connect(func(): call_deferred("_hide_delete_if_idle", group, button, trash))
 	button.focus_entered.connect(trash.show)
-	button.focus_exited.connect(trash.hide)
+	button.focus_exited.connect(func(): call_deferred("_hide_delete_if_idle", group, button, trash))
+	trash.focus_exited.connect(func(): call_deferred("_hide_delete_if_idle", group, button, trash))
+
+
+func _hide_delete_if_idle(group: Control, button: Button, trash: Button) -> void:
+	if is_instance_valid(group) and is_instance_valid(button) and is_instance_valid(trash) and not button.has_focus() and not trash.has_focus() and not group.get_global_rect().has_point(group.get_global_mouse_position()):
+		trash.hide()
 
 
 func _select_move(key: String, moves: PackedStringArray) -> void:
