@@ -12,7 +12,7 @@ Written 2026-10-31. The v0.1.0 tickets were built from the text of `docs/design-
   - The **game screen drops** what the canvas leaves out: the Settings button on the game screen (Settings stays reachable from Home and with `Ctrl+,`), the material-difference counters (§8.4), and the Review button that stays in the side panel after the game-over card is closed (§9.3: after closing the card, the game is reviewed from History).
 - **Canvas additions adopted** (display-only or reuse of existing actions): game counts on the History tabs; a Copy PGN icon on the game-over card; the review header line ("3+2 · Won on time · 41 moves") and the number on the eval bar; the editor's "Unsaved changes" marker; the per-repertoire edit (pencil) button that opens the editor; the "Move classes" legend popover on the review.
 
-## Foundation (one ticket, before every screen)
+## Foundation (one ticket, before every screen: UI-021, in `.scratch/ui-base/` so it runs as its own lane)
 
 - **Theme:** one project-wide Godot `Theme` resource built from the README tokens (ground, panel, raised, border, text, muted, placeholder, accent green with dark text, gold, red; corner radii and borders as in the canvas), set as the project default (`gui/theme/custom`). Screens use theme type variations (for example a primary green button, a raised button, a panel card) instead of per-node colour overrides.
 - **Font:** Noto Sans (SIL OFL 1.1) bundled in the repo, weights 400–800 as the canvas uses them, set as the theme default font. Attribution in `docs/THIRD_PARTY.md`.
