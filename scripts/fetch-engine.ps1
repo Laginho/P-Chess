@@ -102,9 +102,12 @@ try {
     [IO.Directory]::CreateDirectory($lc0Dir) | Out-Null
     [IO.Directory]::CreateDirectory($weightsDir) | Out-Null
 
-    # Retain the verified archive inside the ignored engine folder for reruns
-    # and offline recovery of missing extracted files.
-    $zipPath = Join-Path $lc0Dir $zipName
+    # Keep the verified archives outside -Root, so a release package built in
+    # -Root never ships them, but still cache them for reruns and offline
+    # recovery of missing extracted files.
+    $cacheDir = Join-Path ([IO.Path]::GetTempPath()) 'P-Chess-engine-cache'
+    [IO.Directory]::CreateDirectory($cacheDir) | Out-Null
+    $zipPath = Join-Path $cacheDir $zipName
     Get-PinnedDownload "$lc0Release/$zipName" $zipPath $zipHash
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     $archive = [IO.Compression.ZipFile]::OpenRead($zipPath)
@@ -128,7 +131,7 @@ try {
         $archive.Dispose()
     }
 
-    $stockfishZipPath = Join-Path $stockfishDir $stockfishZip
+    $stockfishZipPath = Join-Path $cacheDir $stockfishZip
     Get-PinnedDownload "$stockfishRelease/$stockfishZip" $stockfishZipPath $stockfishZipHash
     $archive = [IO.Compression.ZipFile]::OpenRead($stockfishZipPath)
     try {

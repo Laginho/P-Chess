@@ -115,6 +115,9 @@ jobs:
               throw "Release package is missing $file"
             }
           }
+          if (Get-ChildItem build/windows -Recurse -File -Filter *.zip) {
+            throw 'Release package contains a downloaded archive'
+          }
           Compress-Archive -Path build/windows/* -DestinationPath "$env:RUNNER_TEMP/P-Chess-windows-x86_64.zip"
 
       - name: Publish GitHub release
