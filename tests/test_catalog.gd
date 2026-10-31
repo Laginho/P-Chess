@@ -6,6 +6,19 @@ const E4_KEY := "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq -"
 const E5_KEY := "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq -"
 
 
+func test_repertoire_picker_identifies_name_and_colour_fields():
+	var picker = load("res://ui/opening_picker.tscn").instantiate()
+	picker.book = _sample()
+	Engine.get_main_loop().root.add_child(picker)
+	picker.present_repertoire(load("res://bot/repertoire.gd").new())
+	var labels = picker.get_node_or_null("Margin/Form/FieldLabels")
+	assert_true(labels != null and labels.visible, "name and colour labels are visible")
+	if labels != null:
+		assert_eq(labels.get_node("Name").text, "Name")
+		assert_eq(labels.get_node("Colour").text, "Colour")
+	picker.free()
+
+
 func test_every_committed_lichess_row_loads_with_san_moves_and_position_keys():
 	var book = Book.new()
 	book.load_catalog()
