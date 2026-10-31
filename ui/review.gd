@@ -285,8 +285,8 @@ func _layout_review() -> void:
 	result.position = at + Vector2(4, 18)
 	result.size = Vector2(side.size.x - 8, 28)
 	var progress: Control = $Margin/Content/Progress
-	var progress_y := 58.0 if size.x <= 800 else 43.0
-	$Margin/Content/ReviewBody/Side/HeaderSpace.custom_minimum_size.y = 85 if size.x <= 800 and progress.visible else 64
+	var progress_y := maxf(58.0 if size.x <= 800 else 43.0, result.position.y + result.size.y - at.y + 4)
+	$Margin/Content/ReviewBody/Side/HeaderSpace.custom_minimum_size.y = maxf(64, progress_y + 22) if progress.visible else 64
 	progress.position = at + Vector2(4, progress_y)
 	progress.size = Vector2(maxf(side.size.x - 100, 0), 16)
 	var progress_text: Control = $Margin/Content/ProgressText
@@ -642,7 +642,7 @@ func present(game, clocks: Array, settings: Dictionary, result_text: String,
 	_update_player_labels()
 	_show_ply(_game_moves.size())
 	var moves: int = (game.moves.size() + 1) / 2
-	_result.text = "%s \u00b7 %s \u00b7 %d %s" % [settings.get("control", ""), result_text, moves, "move" if moves == 1 else "moves"]
+	_result.text = "%s \u00b7 %s \u00b7 %d %s" % [settings.get("control", ""), result_text.get_slice("\n", 0), moves, "move" if moves == 1 else "moves"]
 	_moves.clear()
 	var root := _moves.create_item()
 	var board = Board.from_fen(Pgn.START)
