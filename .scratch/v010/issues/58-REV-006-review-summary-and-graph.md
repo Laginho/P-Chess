@@ -1,5 +1,5 @@
 # REV-006: Review summary, eval graph and tooltips
-Stage: to-review
+Stage: done
 Blocked by: REV-004, REV-005
 Review: agent
 Difficulty: normal
@@ -72,3 +72,30 @@ Disclosure: pending | release | Real Stockfish, rendered layout/tooltips, physic
 The actual tooltip popups now fit the 800?600 viewport using bounded text lines, and the mate-distance and in-check explanations are corrected. The regression hovers each help control after analysis completes, checks the displayed full text and popup bounds, and checks both corrected phrases. Before the fix it failed on both popup bounds and both phrases; after the fix it passed. The first test harness looked only at direct root children and was corrected to search recursively before the red test was committed.
 
 Gate on code commit `69773246cd8a290ebf02dd40a6435b63e8e25ede`: 351 passed, 0 failed, exit 0. The receipt and log are local. Rendered tooltip readability, physical input and a real analysed Stockfish game remain pending acceptance as described above. The prior integration disclosure remains pending until stage 3 re-reviews this fix.
+
+#### Resolution (2026-10-31)
+Verdict: Approve
+
+Re-reviewed every reopened item and the complete repair diff `0ab235f0543792cfe666e013e6a34b8117876e0c...e3a83a9317d0e724550ee2892beaddf0dbb3ba1b`. All five files in the full session diff `a7762daa7f66aa907c9c04c59a093fb9828bc705...e3a83a9317d0e724550ee2892beaddf0dbb3ba1b` were examined, with no skipped files. Independent reviewers `/root/standards_review` and `/root/spec_review` examined the Standards and Spec axes. Stage 3 authored no production behavior.
+
+- Standards: zero new findings. The repair respects Primary files and the test/production split: `7241348` adds the red regression, `6977324` repairs production, and `e3a83a9` records the handoff. It uses local text wrapping without new dependencies. The first review's nonblocking historical commit-body observation remains recorded above.
+- Spec: zero unresolved findings. Criterion 4 is repaired: both native tooltips fit the supported window, retain the live tunable values and explain relative mate distance and moves made while in check correctly. The regression opens each actual popup through viewport input after analysis completes and checks its bounds, displayed full text and corrected wording.
+- Coverage: summary/count updates, graph navigation and orientation, minimum-window geometry, tooltip construction/input and the classification/accuracy/tunables contracts were checked. The prior review's passed criteria and coverage limits remain applicable; no new regression or scope expansion was established.
+
+Criterion verdicts:
+
+1. ✅ Both player names and per-side accuracy are shown; a side with no moves displays "–".
+2. ✅ Each settled move is counted once under its final class and side.
+3. ✅ The PV1 graph supports navigation, the current-ply marker and board orientation.
+4. ✅ Both explanations fit 800×600, preserve current thresholds and use the corrected mate/in-check wording.
+5. ✅ Counts and graph fill incrementally; accuracy waits for complete analysis.
+
+Verification: stage 2 records that `7241348` failed on both popup bounds and both phrases before the fix, then passed after `6977324`. Stage 3 independently validated receipt `C:\Users\bruno\AppData\Local\Temp\rev006-reopen-gate.json` with `Assert-GateEvidence`: the bound command, available tested commit `69773246cd8a290ebf02dd40a6435b63e8e25ede`, log SHA256 `7FC3FC03A54037ED39531EFD9C5C534A8C21E503FCC34ED0961E6E11974AE4C2` and `ExitCode: 0` all match. The log prints **351 passed, 0 failed**, including the actual-tooltip regression; no standalone SKIP or script-error records were found. Only this ticket changed after the tested commit. The gate was reused, not rerun.
+
+Stage 3 also reran the existing observational probe `C:\Users\bruno\AppData\Local\Temp\rev006-stage3-probe.gd` with installed Godot 4.7. The new log `C:\Users\bruno\AppData\Local\Temp\rev006-rereview-probe.log` records an 800×600 viewport, AccuracyHelp at `(328,113)` sized **472×79**, and ClassHelp at `(262,157)` sized **538×443**. Both fit completely; the graph click selected board ply 1 and marker 1. This is headless geometry and synthetic viewport input, not rendered or physical-input acceptance.
+
+Rebase onto `sweatshop/v010/2026-10-30-2302` required no changes. Merge `d3e9aa60399e2cd1cb8c6bbcb7d706236b9f5ebf` preserves the reviewed code. The closing commit changes only this ticket and the feature ledger.
+
+Acceptance: pending | Review a real Stockfish-analysed game, inspect both accuracies and final class counts, click the graph in both orientations using physical input, read both rendered help controls at 800×600, and check long-game responsiveness. These remain release checks; the headless probe and reused green gate do not establish them.
+Disclosure: decision | none | This approval resolves the earlier integration disclosure for criterion 4. REV-006 is integrated into the local session branch.
+Disclosure: pending | release | The manual real-Stockfish, rendered-layout/tooltips, physical-input/orientation and long-game checks listed in this Resolution remain required before release.
