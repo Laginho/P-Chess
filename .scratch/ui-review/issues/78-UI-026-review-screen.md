@@ -1,5 +1,5 @@
 # UI-026: Review screen to the design
-Stage: to-implement
+Stage: blocked
 Blocked by: UI-021
 Review: human
 Difficulty: hard
@@ -44,3 +44,5 @@ Restyle the review to chess.com's layout as drawn in `docs/design/v0.1.0/png/Rev
 - Proxy decided (opus-5.5 xhigh): (a), resume once on the same lineup - both attempts were green, cheap ($0.77, 10.5 of 240 min) and stopped on their own with no error; the ticket is clear, so splitting it would only work around how the model behaved, and a lineup change isn't mine to make. (receipt C:\Users\bruno\AppData\Local\Temp\sweatshop-proxy\20261031-182950-UI-026-4b70fe.json)
 
 - 2026-10-31 Resume: continue from `UI-026-review-screen` at efc1d4b; its commits are the work so far. The recovery ref `refs/sweatshop-recovery/aa946201260b4eccbb7d7b7834b86b5d` is cleanup only (an untracked copy of `tests/test_review.gd`), ignore it. Put scratch copies and captures under `%TEMP%`, never inside the repo, so no untracked file is left. The stage has 240 min: do not end the turn at `implementing` with partial work. Either finish criteria 1-8 (what remains is the list in the efc1d4b comment), record the visual comparison against `docs/design/v0.1.0/png/Review*.png` and one gate log with its exit code, then hand off at `to-review`; or end `blocked` on a specific question.
+
+- 2026-10-31 Second reopen: foreman diagnosis required before retrying. Classify new defect, earlier review miss, contract gap, or review-induced churn; record cause and next action, then return to-implement only when ready.
