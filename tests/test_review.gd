@@ -614,3 +614,13 @@ func _visible_tooltip(node: Node):
 func _wait_start(main) -> void:
 	while main._starting:
 		await Engine.get_main_loop().process_frame
+
+func test_unsettled_move_has_placeholder_while_analysis_arrives():
+	var main = await _session(FakeTime.new())
+	var game = Game.new()
+	game.play("e2e4")
+	main.review.present(game, [180000, 180000], SETTINGS, "")
+	main.review.receive_position(0, {"pv": [{"cp": 0, "moves": ["e2e4"]}], "best_move": "e2e4"})
+	var moves: Tree = main.review.get_node("Margin/Content/ReviewBody/Side/Moves")
+	assert_true(moves.get_root().get_first_child().get_icon(1) != null, "unsettled move has a placeholder")
+	main.free()
