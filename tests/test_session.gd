@@ -443,7 +443,7 @@ func test_draw_offer_accepted_on_reply_without_playing_it():
 	if button == null:
 		main.free()
 		return
-	assert_eq(button.text, String.chr(0x00bd), "draw button label")
+	assert_eq(button.text, String.chr(0x00bd) + "  Offer draw", "draw button label")
 	assert_true(not button.disabled, "offer available during game")
 	assert_true(main.board_view.play("e2e4"))
 	button.pressed.emit()
