@@ -2,6 +2,7 @@ extends RefCounted
 
 # Finished games and per-level/control results (§9.4). A different root isolates tests.
 const Pgn = preload("res://core/pgn.gd")
+const Game = preload("res://core/game.gd")
 
 var error := ""
 # Shared loaded catalog; recognition applies in every mode, independently of its checks.
@@ -100,6 +101,41 @@ func read_repertoire(path: String) -> Dictionary:
 		line.moves = PackedStringArray(line.moves)
 		line.positions = PackedStringArray(line.positions)
 	return data
+
+
+func thumbnail(moves: PackedStringArray) -> Dictionary:
+	var endings := {}
+	if book != null:
+		for entry in book.entries:
+			endings[entry.positions[-1]] = entry.name
+	var game = Game.new()
+	var match_ply := 0
+	var opening := ""
+	for i in moves.size():
+		if not game.play(moves[i]):
+			break
+		var key: String = game.board.position_key()
+		if endings.has(key):
+			match_ply = i + 1
+			opening = endings[key]
+	return {"ply": match_ply if not opening.is_empty() else mini(10, moves.size()), "opening": opening}
+
+
+func reason(game: Dictionary) -> String:
+	var headers: Dictionary = game.headers
+	if not headers.get("Reason", "").is_empty():
+		return headers.Reason
+	if headers.get("Termination", "") == "Time forfeit":
+		return "time"
+	var replay = Game.new(headers.get("FEN", Pgn.START))
+	for move in game.moves:
+		if not replay.play(move.uci):
+			break
+	if replay.reason in ["checkmate", "stalemate", "insufficient material", "50-move"]:
+		return replay.reason
+	if game.result in ["1-0", "0-1"] and headers.get("Termination", "") == "Normal":
+		return "resignation"
+	return ""
 
 
 # Counters are from the human's perspective; flag results are subsets of wins/losses.
