@@ -3,6 +3,7 @@
 [ext_resource type="Script" path="res://ui/review.gd" id="1"]
 [ext_resource type="PackedScene" path="res://ui/board_view.tscn" id="2"]
 [ext_resource type="Script" path="res://ui/eval_bar.gd" id="3"]
+[ext_resource type="Script" path="res://ui/eval_graph.gd" id="4"]
 
 [node name="Review" type="Control"]
 visible = false
@@ -79,6 +80,32 @@ custom_minimum_size = Vector2(220, 0)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_stretch_ratio = 0.6
+
+[node name="AccuracyHelp" type="Label" parent="Margin/Content/ReviewBody/Side"]
+layout_mode = 2
+mouse_filter = 0
+theme_override_font_sizes/font_size = 11
+text = "Accuracy  ?"
+
+[node name="Summary" type="Label" parent="Margin/Content/ReviewBody/Side"]
+visible = false
+layout_mode = 2
+autowrap_mode = 3
+
+[node name="ClassHelp" type="Label" parent="Margin/Content/ReviewBody/Side"]
+layout_mode = 2
+mouse_filter = 0
+theme_override_font_sizes/font_size = 11
+text = "Move classes  ?"
+
+[node name="Counts" type="Label" parent="Margin/Content/ReviewBody/Side"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+
+[node name="EvalGraph" type="Control" parent="Margin/Content/ReviewBody/Side"]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+script = ExtResource("4")
 
 [node name="Moves" type="Tree" parent="Margin/Content/ReviewBody/Side"]
 layout_mode = 2
