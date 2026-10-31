@@ -321,3 +321,24 @@ func test_eval_bar_tracks_current_position_and_board_orientation():
 		review.receive_position(1, {"pv": [{"cp": -200, "moves": ["e7e5"]}]})
 		assert_true(bar.flipped, "bar follows the board orientation")
 	main.free()
+
+
+func test_analysis_landing_shows_class_icon_and_best_move_on_board():
+	var main = _session(FakeTime.new())
+	main.board_view.play("e2e4")
+	_key(main, KEY_ESCAPE)
+	_key(main, KEY_ESCAPE)
+	main.board_view.get_node("GameOver/Panel/Content/Review").pressed.emit()
+	var review = main.review
+	var list: Tree = review.get_node("Margin/Content/Moves")
+	var row: TreeItem = list.get_root().get_first_child()
+	assert_true(row.get_icon(1) == null, "unanalysed move has no class")
+	review.receive_position(1, {"pv": [{"cp": -20, "moves": ["e7e5"]}], "best_move": "e7e5"})
+	assert_true(row.get_icon(1) == null, "both positions must land")
+	review.receive_position(0, {"pv": [{"cp": 20, "moves": ["e2e4"]}], "best_move": "e2e4"})
+	assert_true(row.get_icon(1) != null, "settled move has its class icon")
+	var board = review.get_node("Margin/Content/ReviewBody/BoardView")
+	assert_eq(board.review_square, "e4")
+	assert_eq(board.review_arrow, "e2e4")
+	assert_true(board.review_icon != null)
+	main.free()
