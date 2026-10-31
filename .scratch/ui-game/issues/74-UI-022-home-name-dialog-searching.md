@@ -1,5 +1,5 @@
-﻿# UI-022: Home, name dialog and searching screen to the design
-Stage: implementing
+# UI-022: Home, name dialog and searching screen to the design
+Stage: to-review
 Blocked by: UI-021
 Review: agent
 Difficulty: normal
@@ -34,3 +34,23 @@ Restyle Home, the first-launch name dialog and the searching screen to `docs/des
 ## Comments
 
 - 2026-10-31 Written from `.scratch/ui-redo/spec.md`.
+
+
+- 2026-10-31 Stage 2: Home, first-launch dialog and Searching restyled. Focused tests were committed red before production changes: icons (8 failures), missing-engine layout (1), Profile Settings access (1), theme propagation (6), and restoring layout after the warning hides (1).
+- Final gate on `83e6b3a`: `godot --headless -s tests/run.gd`, exit 0, 418 reported passed including 6 Lc0 SKIPs (412 executed).
+- Final captures: `C:/Users/bruno/AppData/Local/Temp/pchess-ui022-verified-d17186cb-4643-4aac-98eb-709fc243232a/` contains Main, NameDialog and Searching at 1280x800 and 800x600; each used a separate data directory. The 800x600 missing-engine state was also checked at `C:/Users/bruno/AppData/Local/Temp/pchess-ui022-missing-fixed-053ee4dc-f676-43d8-a359-ca9fb5bab399/missing.png`.
+- Before captures: `C:/Users/bruno/AppData/Local/Temp/pchess-ui022-before-eaa0e393-ab2c-4de1-abe9-900c41460eb8/`. The before NameDialog files are not valid evidence of the dialog because that batch reused the preceding capture's player-name data.
+
+### Foundation review UI-021
+
+The shared `ui/theme/p_chess.tres` FontVariation resources use string `wght` keys (for example lines 112-116). In Godot 4.7, `TextServer.font_get_variation_coordinates()` returns `{}` for that resource; a duplicated variation using numeric OpenType tag `2003265652` returns `{2003265652: 800}`. The selected weights are therefore not applied and the headings and buttons render lighter than the canvas. Probe: `C:/Users/bruno/AppData/Local/Temp/ui022-fontaxes.gd`. This shared theme is outside UI-022's Primary files and must be corrected before integration.
+
+### Visual review UI-022
+
+The native `AcceptDialog` retains its own button height and window layout (the canvas OK button is taller); the level selector lacks the canvas robot icon, and the Searching card uses the shared Godot button/card styles and a rotating fixed arc rather than the canvas's animated arc and exact header/footer decorations. These are observable differences from the references, retained with the existing native dialog and shared theme controls; review against the canvas is still required. One earlier Main capture omitted the board for a frame; a repeat and the final captures rendered it.
+
+Acceptance: pending | Human visual comparison and first-launch/quick-play with an installed Lc0 remain; the screenshots use isolated fixture data and the real engine executable is absent.
+Disclosure: pending | integration | [Foundation review UI-021](#foundation-review-ui-021) - fix shared font-variation axes before visual acceptance.
+Disclosure: pending | integration | [Visual review UI-022](#visual-review-ui-022) - assess and resolve the listed canvas differences.
+Disclosure: pending | release | [UI-022 acceptance](#comments) - perform first-launch and a real quick-play with Lc0 installed.
+Gate evidence: C:/Users/bruno/AppData/Local/Temp/ui022-last-gate.json
