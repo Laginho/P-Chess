@@ -250,3 +250,16 @@ func test_home_and_searching_boards_follow_theme_preferences():
 		assert_eq(board.piece_theme, "cburnett", "pieces follow theme changes")
 	main.free()
 	Session.HistoryStorage.clean(folder)
+
+
+func test_home_restores_quick_play_size_when_engine_warning_is_hidden():
+	var home = load("res://ui/home.tscn").instantiate()
+	home.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	home.size = Vector2(800, 600)
+	Engine.get_main_loop().root.add_child(home)
+	home.show_missing("Engine unavailable")
+	var quick: Button = home.get_node("Center/Form/Quick/OneZero")
+	var compact_height := quick.size.y
+	home.get_node("Center/Form/Missing").hide()
+	assert_true(quick.size.y > compact_height, "quick play grows after the warning is hidden")
+	home.free()
