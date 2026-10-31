@@ -1,5 +1,5 @@
 # UI-020: Keyboard access to the Settings screen
-Stage: implementing
+Stage: to-review
 Status: needs-triage
 Blocked by: none
 Review: agent
@@ -48,7 +48,6 @@ Notes for stage 2 (from the proxy's reading of the code; it ran no Godot, so the
 
 Acceptance: pending | Manual keyboard and visual acceptance of Settings across setup, play and post-game remains.
 Disclosure: pending | release | Manual keyboard and visual acceptance remains for UI-020.
-Gate evidence: C:\Users\bruno\AppData\Local\Temp\ui020-gate.json
 
 #### Stage 3 review (2026-10-31)
 
@@ -63,5 +62,7 @@ Verdict: Reopen — criterion 1 fails while editing a SpinBox or using an Option
 - The existing `Proxy decided (opus-5.5 xhigh)` decision is retained: Ctrl+, toggles Settings, Open stays unfocusable, opening focuses the first row, closing releases focus, and focus/review screens exclude the shortcut. Its receipt is `C:\Users\bruno\AppData\Local\Temp\sweatshop-proxy\20261031-033111-UI-020-53c4d8.json`; the review changes no criterion or product decision.
 
 Disclosure: decision | none | Existing proxy receipt above defines the approved keyboard contract; no new contract change in review.
-Disclosure: pending | integration | UI-020 criterion 1: Esc must close Settings from a focused SpinBox; reproduce with the review Esc probe above.
-Disclosure: pending | integration | UI-020 criterion 1: Ctrl+, must close Settings from an open OptionButton popup; reproduce with the review popup-routing probe above.
+Disclosure: decision | none | The two criterion 1 findings above were addressed in the subsequent test-first commits; the new viewport tests cover both paths and Esc from the popup.
+
+- Reopen verification: focused session tests 27 passed; full headless gate 342 passed, 0 failed, including 6 Lc0 skips (336 executed). Manual keyboard and visual acceptance remains pending.
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\ui020-reopen-gate.json
