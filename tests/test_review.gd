@@ -765,3 +765,20 @@ func test_navigation_marks_current_move_in_list():
 	assert_eq(list.get_selected_column(), 1, "the selected cell follows navigation")
 	assert_eq(list.get_selected().get_text(1), "e4")
 	main.free()
+
+
+func test_graph_receives_classifications_as_analysis_arrives():
+	var main = await _session(FakeTime.new())
+	var game = Game.new()
+	game.play("e2e4")
+	game.play("e7e5")
+	var review = main.get_node("Review")
+	review.present(game, [180000, 180000], SETTINGS, "")
+	var fixture: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/analysis/rev003-opening.json"))
+	for i in 3:
+		review.receive_position(i, fixture.positions[i])
+	var graph = review.get_node("Margin/Content/ReviewBody/Side/EvalGraph")
+	assert_eq(graph.classes.size(), 2)
+	assert_eq(graph.classes[0].class, "Best")
+	assert_eq(graph.classes[1].class, "Best")
+	main.free()
