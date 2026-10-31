@@ -43,12 +43,14 @@ const CLASS_NAMES := ["Brilliant", "Great", "Best", "Excellent", "Good", "Book",
 
 @onready var _eval_bar = $Margin/Content/ReviewBody/EvalBar
 @onready var _board_view = $Margin/Content/ReviewBody/BoardView
+@onready var _graph = $Margin/Content/ReviewBody/Side/EvalGraph
 
 @onready var _result: Label = $Margin/Content/Result
 @onready var _moves: Tree = $Margin/Content/ReviewBody/Side/Moves
 
 
 func _ready() -> void:
+	_graph.ply_selected.connect(_show_ply)
 	visibility_changed.connect(func():
 		if not visible:
 			_cancel_analysis())
@@ -236,6 +238,10 @@ func _update_board_annotations() -> void:
 
 
 func _update_eval_bar() -> void:
+	_graph.positions = _positions
+	_graph.current_ply = _ply
+	_graph.flipped = _board_view.flipped
+	_graph.queue_redraw()
 	_eval_bar.flipped = _board_view.flipped
 	_eval_bar.white_fraction = 0.5
 	if _positions.is_empty() or not _positions[_ply].has("pv"):
