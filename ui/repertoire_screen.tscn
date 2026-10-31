@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://ui/repertoire_screen.gd" id="1"]
 [ext_resource type="PackedScene" path="res://ui/opening_picker.tscn" id="2"]
@@ -8,6 +8,9 @@
 [ext_resource type="Texture2D" path="res://ui/icons/back.svg" id="6"]
 [ext_resource type="Texture2D" path="res://ui/icons/import.svg" id="7"]
 [ext_resource type="Texture2D" path="res://ui/icons/book.svg" id="8"]
+
+[sub_resource type="StyleBoxFlat" id="Ground"]
+bg_color = Color(0.121569, 0.117647, 0.109804, 1)
 
 [sub_resource type="StyleBoxFlat" id="LinesPanel"]
 content_margin_left = 8.0
@@ -29,15 +32,16 @@ corner_radius_bottom_right = 10
 title = "Repertoires"
 size = Vector2i(1200, 720)
 exclusive = false
+theme_override_styles/panel = SubResource("Ground")
 script = ExtResource("1")
 
 [node name="Margin" type="MarginContainer" parent="."]
 offset_right = 1200.0
 offset_bottom = 720.0
-theme_override_constants/margin_left = 16
-theme_override_constants/margin_top = 16
-theme_override_constants/margin_right = 16
-theme_override_constants/margin_bottom = 16
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 8
 
 [node name="Form" type="VBoxContainer" parent="Margin"]
 layout_mode = 2
