@@ -58,7 +58,7 @@ func _input(event: InputEvent) -> void:
 
 
 func _popup_input(event: InputEvent, popup: PopupMenu) -> void:
-	if event is InputEventKey and event.is_pressed() and not event.is_echo() and event.ctrl_pressed and event.keycode == KEY_COMMA:
+	if event is InputEventKey and event.is_pressed() and not event.is_echo() and (event.keycode == KEY_ESCAPE or (event.ctrl_pressed and event.keycode == KEY_COMMA)):
 		popup.hide()
 		_panel.hide()
 		popup.set_input_as_handled()
