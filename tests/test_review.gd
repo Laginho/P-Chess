@@ -751,3 +751,17 @@ func test_review_header_and_actions_are_in_the_side_card():
 	assert_true(title.global_position.x >= side.global_position.x, "review header belongs above the side card")
 	assert_true(actions.global_position.x >= side.global_position.x, "actions belong below the side card")
 	main.free()
+
+
+func test_navigation_marks_current_move_in_list():
+	var main = await _session(FakeTime.new())
+	var game = Game.new()
+	game.play("e2e4")
+	game.play("e7e5")
+	var review = main.get_node("Review")
+	review.present(game, [180000, 180000], SETTINGS, "")
+	var list: Tree = review.get_node("Margin/Content/ReviewBody/Side/Moves")
+	review.get_node("Margin/Content/ReviewBody/Side/Navigation/Previous").pressed.emit()
+	assert_eq(list.get_selected_column(), 1, "the selected cell follows navigation")
+	assert_eq(list.get_selected().get_text(1), "e4")
+	main.free()
