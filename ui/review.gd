@@ -416,6 +416,8 @@ func present(game, clocks: Array, settings: Dictionary, result_text: String,
 			row.set_text(0, "%d." % (i / 2 + 1))
 		row.set_text(i % 2 + 1, board.san(game.moves[i]) + (" (left)" if badges[i].left_repertoire else ""))
 		row.set_metadata(i % 2 + 1, i + 1)
+		if badges[i].repertoire or badges[i].book:
+			row.set_icon(i % 2 + 1, _class_icon("Repertoire" if badges[i].repertoire else "Book"))
 		_move_rows.append(row)
 		var text := _badge_text(badges[i])
 		row.set_tooltip_text(i % 2 + 1, text)
