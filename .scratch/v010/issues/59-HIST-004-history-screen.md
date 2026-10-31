@@ -1,5 +1,5 @@
 # HIST-004: The history screen
-Stage: to-implement
+Stage: implementing
 Blocked by: REV-004, REV-005, HIST-003
 Review: agent
 Difficulty: hard
