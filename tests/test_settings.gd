@@ -32,6 +32,7 @@ func test_player_name_is_chosen_once_and_survives_restart():
 	file.save(PATH)
 	assert_eq(Settings.new(PATH).get_value("player_name"), "You")
 	assert_true(not Settings.new(PATH).has_player_name())
+	DirAccess.remove_absolute(PATH)
 
 
 func _fresh() -> String:
@@ -87,6 +88,7 @@ func test_name_dialog_requires_a_nonempty_choice_and_stays_closed_after_restart(
 	dialog.present(Settings.new(PATH))
 	assert_true(not dialog.visible, "a confirmed name survives restart")
 	dialog.free()
+	DirAccess.remove_absolute(PATH)
 
 
 func test_board_size_defaults_round_trips_and_rejects_invalid_values():
@@ -259,6 +261,7 @@ func test_history_tab_defaults_and_accepts_only_supported_tabs():
 		assert_true(settings.set_value("history_tab", tab))
 		assert_eq(Settings.new(PATH).get_value("history_tab"), tab)
 	assert_true(not settings.set_value("history_tab", "other"))
+	DirAccess.remove_absolute(PATH)
 
 func test_analysis_threads_defaults_and_choices():
 	var settings = Settings.new(_fresh())
@@ -266,3 +269,4 @@ func test_analysis_threads_defaults_and_choices():
 	assert_true(settings.set_value("analysis_threads", "Max"))
 	assert_eq(Settings.new(PATH).get_value("analysis_threads"), "Max")
 	assert_true(not settings.set_value("analysis_threads", "other"))
+	DirAccess.remove_absolute(PATH)
