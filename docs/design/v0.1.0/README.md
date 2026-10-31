@@ -35,6 +35,36 @@ Behaviour lives in `docs/spec.md`; `docs/design-brief-v0.1.0.md` is the brief th
 
 `canvas.json` holds the board layout and titles.
 
+## Capturing the current application
+
+Run the following from the repository root in PowerShell. Each invocation gets a
+new temporary data directory before Godot starts, including for its log; the
+player's settings, games and repertoires are not used. A graphical display is
+required. Replace `Main`, the dimensions and output path as needed.
+
+```powershell
+$captureData = Join-Path $env:TEMP ("pchess-capture-" + [guid]::NewGuid())
+New-Item -ItemType Directory -Path $captureData | Out-Null
+$oldAppData = $env:APPDATA
+try {
+    $env:APPDATA = $captureData
+    $env:PCHESS_SCREENSHOTS_ROOT = $captureData
+    godot --log-file "$captureData/godot.log" -s scripts/screens.gd -- Main 1280 800 "$captureData/Main.png"
+} finally {
+    $env:APPDATA = $oldAppData
+    Remove-Item Env:PCHESS_SCREENSHOTS_ROOT -ErrorAction SilentlyContinue
+}
+```
+
+The first argument is a board name from `canvas.json` without `.dc.html`.
+`Settings`, `Setup`, `PromotionPicker`, and `RepertoireImport` are also
+available. `GameOverStates` accepts an optional fifth argument `loss` or `draw`
+(the default is a win). The fixture uses a short game and a repertoire; its
+data and PNG remain in the printed temporary folder. Components and states
+whose redesign has not landed use the current screen or its current help
+dialog, so they may differ from the canvas. The script refuses to run without
+an isolated data root or with headless rendering.
+
 ## Tokens
 
 | Token | Value |
