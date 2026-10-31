@@ -738,3 +738,16 @@ func test_review_player_labels_follow_board_orientation():
 		review._input(flip)
 		assert_true(top.text.contains("Bruno") and bottom.text.contains("Maia 1500"), "labels follow the flipped board")
 	main.free()
+
+
+func test_review_header_and_actions_are_in_the_side_card():
+	var main = await _session(FakeTime.new())
+	var review = main.get_node("Review")
+	review.present(Game.new(), [180000, 180000], SETTINGS, "")
+	await Engine.get_main_loop().process_frame
+	var side: Control = review.get_node("Margin/Content/ReviewBody/Side")
+	var title: Control = review.get_node("Margin/Content/Title")
+	var actions: Control = review.get_node("Margin/Content/Actions")
+	assert_true(title.global_position.x >= side.global_position.x, "review header belongs above the side card")
+	assert_true(actions.global_position.x >= side.global_position.x, "actions belong below the side card")
+	main.free()
