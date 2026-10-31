@@ -120,30 +120,36 @@ theme_type_variation = &"MutedText"
 theme_override_font_sizes/font_size = 12
 mouse_filter = 2
 
-[node name="Board" parent="Margin/Form/Viewer" instance=ExtResource("3")]
-custom_minimum_size = Vector2(280, 280)
+[node name="BoardArea" type="VBoxContainer" parent="Margin/Form/Viewer"]
+custom_minimum_size = Vector2(280, 0)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_stretch_ratio = 2.0
+
+[node name="Board" parent="Margin/Form/Viewer/BoardArea" instance=ExtResource("3")]
+custom_minimum_size = Vector2(280, 280)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
 mouse_filter = 2
 
-[node name="Navigation" type="HBoxContainer" parent="Margin/Form"]
+[node name="Navigation" type="HBoxContainer" parent="Margin/Form/Viewer/BoardArea"]
 layout_mode = 2
-alignment = 2
 
-[node name="Previous" type="Button" parent="Margin/Form/Navigation"]
+[node name="Previous" type="Button" parent="Margin/Form/Viewer/BoardArea/Navigation"]
 layout_mode = 2
 text = "←"
 tooltip_text = "Previous move"
 
-[node name="Next" type="Button" parent="Margin/Form/Navigation"]
+[node name="Next" type="Button" parent="Margin/Form/Viewer/BoardArea/Navigation"]
 layout_mode = 2
 text = "→"
 tooltip_text = "Next move"
 
-[node name="Moves" type="RichTextLabel" parent="Margin/Form/Navigation"]
-custom_minimum_size = Vector2(260, 26)
+[node name="Moves" type="RichTextLabel" parent="Margin/Form/Viewer/BoardArea/Navigation"]
+custom_minimum_size = Vector2(150, 26)
 layout_mode = 2
+size_flags_horizontal = 3
 bbcode_enabled = true
 fit_content = true
 text = ""

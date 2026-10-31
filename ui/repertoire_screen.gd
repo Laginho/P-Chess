@@ -16,7 +16,7 @@ var _selection := ""
 # Child of this popup, so closing it hands focus back here instead of closing the screen too.
 @onready var importer = $RepertoireImport
 @onready var _line_list: ItemList = $Margin/Form/Viewer/Lines
-@onready var _board = $Margin/Form/Viewer/Board
+@onready var _board = $Margin/Form/Viewer/BoardArea/Board
 @onready var _status: Label = $Margin/Form/Status
 
 
@@ -29,8 +29,8 @@ func _ready() -> void:
 	_picker.saved.connect(_saved)
 	_list.item_selected.connect(_select_repertoire)
 	_line_list.item_selected.connect(_select_line)
-	$Margin/Form/Navigation/Previous.pressed.connect(func(): _step(-1))
-	$Margin/Form/Navigation/Next.pressed.connect(func(): _step(1))
+	$Margin/Form/Viewer/BoardArea/Navigation/Previous.pressed.connect(func(): _step(-1))
+	$Margin/Form/Viewer/BoardArea/Navigation/Next.pressed.connect(func(): _step(1))
 
 
 func present() -> void:
@@ -56,7 +56,7 @@ func _refresh() -> void:
 	_board.game = null
 	_board.queue_redraw()
 	_status.text = ""
-	$Margin/Form/Navigation/Moves.text = ""
+	$Margin/Form/Viewer/BoardArea/Navigation/Moves.text = ""
 	for name in repertoire.names():
 		_list.add_item(name)
 		var index := _list.item_count - 1
@@ -183,9 +183,9 @@ func _show_position() -> void:
 	_board.game = Game.new(line.positions[_ply] + " 0 1")
 	_board.game.moves = line.moves.slice(0, _ply)
 	_board.queue_redraw()
-	$Margin/Form/Navigation/Moves.text = _move_text(line, true)
-	$Margin/Form/Navigation/Previous.disabled = _ply == 0
-	$Margin/Form/Navigation/Next.disabled = _ply == line.moves.size()
+	$Margin/Form/Viewer/BoardArea/Navigation/Moves.text = _move_text(line, true)
+	$Margin/Form/Viewer/BoardArea/Navigation/Previous.disabled = _ply == 0
+	$Margin/Form/Viewer/BoardArea/Navigation/Next.disabled = _ply == line.moves.size()
 
 
 func _move_text(line: Dictionary, highlight := false) -> String:
