@@ -1,5 +1,5 @@
 # UI-028: Repertoires, opening picker and editor to the design
-Stage: to-implement
+Stage: blocked
 Blocked by: UI-021
 Review: agent
 Difficulty: normal
@@ -40,3 +40,5 @@ Restyle the repertoire screens to `docs/design/v0.1.0/png/Repertoire.png`, `Open
 
 - Proxy decided (opus-5.5 xhigh): Relaunch the lane so stage 2 picks up branch `ui-028` again for two more attempts. Leave splitting for later. - Both attempts ended on their own, made real progress with green tests, and left a clear checklist. Nothing in them needs the owner, so splitting now would only make a human pull 15 commits that mix all three screens and `bot/repertoire.gd` apart again. (receipt C:\Users\bruno\AppData\Local\Temp\sweatshop-proxy\20261031-182157-UI-028-115909.json)
 - 2026-10-31 Foreman: attempts 1-2 each ended voluntarily at a checkpoint (exit 0, ~6 min, no question, no denial in the logs). Resume from branch `ui-028` (3bce61b). The work-remaining list on that branch is the checklist: repertoire cards and lines, editor card and move tree, picker styling and checkbox states. Do not end the session at a checkpoint: reach `to-review` only after captures at 1280x800 and 800x600 match the three references, the ticket's manual acceptance, and a gate receipt.
+
+- 2026-10-31 Stage stopped (incomplete handoff): Invalid committed handoff: UI-028: code changed after gate (tests/test_repertoire.gd, ui/repertoire_editor.gd, ui/repertoire_editor.tscn, ui/repertoire_screen.gd, ui/repertoire_screen.tscn); reuse evidence only for identical code. See C:\Users\bruno\Desktop\Pastinha\Programas\Projects\P-Chess\.artifacts-build\lanes\ui-screens\.scratch\run-log\UI-028-implement-20261031-190919.txt.runtime.json and run-log/recovery.txt; inspect the saved work before retrying.
