@@ -402,8 +402,8 @@ func test_long_analysis_error_keeps_toolbar_inside_minimum_window():
 	var path: String = history.save(game, [], {"colour": "w", "level": "maia-1500", "control": "1+0"})
 	var runner := FakeQueueAnalyser.new()
 	var queue = load("res://core/analysis_queue.gd").new(runner, folder.path_join("queue.cfg"))
-	var root := Engine.get_main_loop().root
-	var old_size := root.size
+	var root: Window = Engine.get_main_loop().root
+	var old_size: Vector2i = root.size
 	root.size = Vector2i(800, 600)
 	var screen = load("res://ui/history_screen.tscn").instantiate()
 	screen.analysis_queue = queue
