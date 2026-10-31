@@ -1,5 +1,5 @@
 # UI-022: Home, name dialog and searching screen to the design
-Stage: implementing
+Stage: to-review
 Blocked by: UI-021
 Review: agent
 Difficulty: normal
@@ -52,9 +52,9 @@ The native `AcceptDialog` retains its own button height and window layout (the c
 Acceptance: pending | Human visual comparison and first-launch/quick-play with an installed Lc0 remain; the screenshots use isolated fixture data and the real engine executable is absent.
 Disclosure: pending | integration | [CLEAN-012](../../ui-base/issues/74-CLEAN-012-font-variation-axes.md) - confirmed shared font-variation defect; fix before visual acceptance and integration.
 Disclosure: decision | none | [Resolution](#resolution-2026-10-31) - the documented native-control and layout differences were compared with the canvas under shared acceptance item 1; no behavior exception was accepted.
-Disclosure: pending | integration | [Resolution](#resolution-2026-10-31) - criterion 4 fails for a valid long player name on Searching at 800x600; repair on this branch before re-review.
+Disclosure: decision | none | [Long-name correction](#long-name-correction-2026-10-31) - the Searching label now fits the card at 800x600 and displays an ellipsis; the full name remains stored.
 Disclosure: pending | release | [UI-022 acceptance](#comments) - perform first-launch and a real quick-play with Lc0 installed.
-Gate evidence: C:/Users/bruno/AppData/Local/Temp/ui022-last-gate.json
+Gate evidence: C:/Users/bruno/AppData/Local/Temp/ui022-long-name-gate.json
 
 #### Resolution (2026-10-31)
 Verdict: Reopen — criterion 4: a valid long player name overflows Searching at 800x600.
@@ -92,3 +92,10 @@ The following directories hold the paired screenshots; each row names both windo
 - Review: `C:/Users/bruno/AppData/Local/Temp/pchess-ui022-review-49a91834-fd8a-477e-a4e5-e18183901cda/`.
 
 No merge or ledger closure: UI-022 returns to `to-implement` on its existing branch. The font follow-up and release acceptance remain explicitly open.
+
+
+#### Long-name correction (2026-10-31)
+
+The regression test was committed red: the player label overflowed the card and lacked ellipsis. The production scene now clips and ellipsizes the displayed name without changing the stored value. The graphical 800x600 probe measured the label at x=564..764 inside the card at x=500..780; the capture is `C:/Users/bruno/AppData/Local/Temp/ui022-long-name-e3e66035-b361-46c6-a776-89f65437b9d9/Searching-long-name-800.png`.
+
+Gate on `4da5475`: exit 0, 419 reported passed including 6 Lc0 SKIPs (413 executed), 0 failed. Existing foundation and human acceptance disclosures remain open.
