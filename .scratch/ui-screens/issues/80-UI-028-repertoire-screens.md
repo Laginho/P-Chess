@@ -1,5 +1,5 @@
 # UI-028: Repertoires, opening picker and editor to the design
-Stage: to-review
+Stage: to-implement
 Blocked by: UI-021
 Review: agent
 Difficulty: normal
@@ -61,3 +61,39 @@ Restyle the repertoire screens to `docs/design/v0.1.0/png/Repertoire.png`, `Open
 Acceptance: pending | Human visual and physical-input acceptance remains; the GUI flow above used injected input.
 Disclosure: pending | release | Human acceptance of the three screens and physical input remains before v0.1.0, as described in `.scratch/ui-redo/spec.md`.
 Gate evidence: C:/Users/bruno/AppData/Local/Temp/ui028-gate-handoff.json
+
+#### Resolution (2026-10-31)
+Verdict: Reopen — criteria 1 and 4 fail for Black-start lines and long repertoire names; criterion 3 also fails for the editor's long heading.
+
+##### Standards
+
+No documented-standard violations or actionable smell findings. Reviewed all ten changed files and the complete commit history in `72ad4c47328a89ac236fefd141ccdc727fb6e05d...66c3970c29519fbecc3fffe0de75b15c86c9a773`. Test-only and production-only commits remain separate, and Primary files are respected. The optional version-1 source field retains validation, atomic replacement, existing three-argument callers and legacy loading.
+
+##### Spec
+
+- **P2, criterion 4 (shared acceptance 2), also criterion 3:** `ui/repertoire_screen.tscn:114` and `ui/repertoire_editor.tscn:50` put unbounded repertoire names in the new headings. The valid 99-character name `My favourite repertoire for studying the Caro-Kann Defense and its classical and advance variations`, with `1. e4 e5 *`, makes the viewer 1196x568 and editor 1218x536 in an 800x600 viewport. The viewer's board and the editor's Save fall outside the visible window. Constrain the headings so text cannot enlarge the minimum width, retaining access to the full name. Add a regression through the existing repertoire scenes at 800x600. Graphical proof: [viewer](C:/Users/bruno/AppData/Local/Temp/ui028-spec-probe/viewer-long.png), [editor](C:/Users/bruno/AppData/Local/Temp/ui028-spec-probe/editor-long.png).
+- **P2, criterion 1:** `ui/repertoire_screen.gd:232` numbers SAN by array-index parity, ignoring the starting side. The accepted PGN `[SetUp "1"] [FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1"] 1... e5 2. e4 *` displays `1.e5 e4`, where the line and navigation must show `1...e5 2.e4`. Derive the numbering from the initial position's side, as the editor already does, and cover the viewer's line text and current-move highlight with a Black-start fixture.
+- **Shared pre-existing P2, criterion 4 (shared acceptance 1):** the three captures use regular text where the canvas requires bold weights. The theme's `FontVariation.variation_opentype` dictionaries use string `"wght"` keys, which the installed Godot 4.7 does not apply. A graphical probe gives `Repertoires` at size 28 a width of 152 px for both the default font and the existing 800-weight variation; changing only the axis key to integer `2003265652` gives 166 px and visible bold text. This predates UI-028 and is outside its Primary files; tracked in [CLEAN-012](../../ui-base/issues/82-CLEAN-012-theme-font-weights.md), also linked from the closed UI-021 ticket. Do not duplicate the shared-theme repair in these screens.
+
+Criterion dispositions: 1 fails on the Black-start viewer text; the card/edit/source/selection/navigation behavior otherwise matches the contract. 2's fields, segmented choice, partial checkboxes and creation/cancel actions are present; final visual signoff is withheld by the shared font defect. 3 fails for long names; the gold dirty marker, selectable branches, hovered/focused delete, right-click deletion, Cancel and Save are otherwise present. 4 fails on clipping and font weights. The implementation remains on this branch for stage 2; no production fix, merge, push or ledger closure was made in this review.
+
+Coverage: examined every changed script, scene, test and ticket; connected callers include Setup's repertoire/catalog controls, RepertoireImport, Book/catalog loading, BoardView and the repertoire serializer. Traced load/save errors, legacy and invalid source values, source retention after editing, card/pencil selection, SAN/FEN roots, board orientation, viewer stepping, branch selection/deletion and deferred refresh, keyboard access to delete, dirty-state/save/cancel, picker filtering/partial parents and minimum-window layout. The invalid-filename picker error was also rendered at 800x600: the popup grows to 702 px and its right edge remains at x=782, so that case is not a finding. Independent Standards reviewer: `/root/standards`; Spec reviewer: `/root/spec`; root additionally verified the font rendering and screenshots. Physical input, screen-reader acceptance, audio and live Lc0 play were not examined.
+
+Both existing proxy decisions were examined: `Proxy decided (opus-5.5 xhigh): Relaunch the lane so stage 2 picks up branch ui-028 again for two more attempts` explains retaining the implementation after the earlier checkpoints; `Proxy decided (opus-5.5 xhigh): Add the seam: an optional source key in the existing version-1 file` is reflected in the Primary files, criterion 1 and persistence tests. Their original receipt-backed records above are preserved; this review adds no proxy decision.
+
+Verification: the external graphical probe `C:/Users/bruno/AppData/Local/Temp/ui028-spec-probe/probe.gd` exited 0 and its `godot.log` records both failures and dimensions. The font probe and PNG are under `C:/Users/bruno/AppData/Local/Temp/ui028-review-20261031/font-compare.{gd,log,png}`. The existing gate receipt was validated with `Assert-GateEvidence` against the reviewed HEAD: command, tested commit `bfb09c8`, exit 0, log SHA-256 and unchanged production all match. Its log reports 431 passed, 0 failed, including six Lc0 SKIPs (425 executed). The full gate was reused, not repeated; the green suite does not cover these two failure cases. Stage 2 must provide red/green regression proof and a new gate receipt after repairs.
+
+Screenshot comparison: before is the archived session base `72ad4c4`; after is tested production `bfb09c8` (identical to reviewed HEAD). The before capture script selects the displayed line and waits for the picker catalog; picker fixtures select different openings, which is sample data rather than a design difference. All captures use isolated data roots. Columns below put each reference next to the before/after paths; the 800x600 rows check usability against the same design reference.
+
+| Screen / size | Reference | Before | After |
+| --- | --- | --- | --- |
+| Repertoire 1280x800 | [PNG](../../../docs/design/v0.1.0/png/Repertoire.png) | [PNG](C:/Users/bruno/AppData/Local/Temp/ui028-review-20261031/before-Repertoire-1280x800.png) | [PNG](C:/Users/bruno/AppData/Local/Temp/pchess-ui028-handoff/Repertoire-1280x800.png) |
+| Repertoire 800x600 | [PNG](../../../docs/design/v0.1.0/png/Repertoire.png) | [PNG](C:/Users/bruno/AppData/Local/Temp/ui028-review-20261031/before-Repertoire-800x600.png) | [PNG](C:/Users/bruno/AppData/Local/Temp/pchess-ui028-handoff/Repertoire-800x600.png) |
+| OpeningPicker 1280x800 | [PNG](../../../docs/design/v0.1.0/png/OpeningPicker.png) | [PNG](C:/Users/bruno/AppData/Local/Temp/ui028-review-20261031/before-OpeningPicker-1280x800.png) | [PNG](C:/Users/bruno/AppData/Local/Temp/pchess-ui028-handoff/OpeningPicker-1280x800.png) |
+| OpeningPicker 800x600 | [PNG](../../../docs/design/v0.1.0/png/OpeningPicker.png) | [PNG](C:/Users/bruno/AppData/Local/Temp/ui028-review-20261031/before-OpeningPicker-800x600.png) | [PNG](C:/Users/bruno/AppData/Local/Temp/pchess-ui028-handoff/OpeningPicker-800x600.png) |
+| RepertoireEditor 1280x800 | [PNG](../../../docs/design/v0.1.0/png/RepertoireEditor.png) | [PNG](C:/Users/bruno/AppData/Local/Temp/ui028-review-20261031/before-RepertoireEditor-1280x800.png) | [PNG](C:/Users/bruno/AppData/Local/Temp/pchess-ui028-handoff/RepertoireEditor-1280x800.png) |
+| RepertoireEditor 800x600 | [PNG](../../../docs/design/v0.1.0/png/RepertoireEditor.png) | [PNG](C:/Users/bruno/AppData/Local/Temp/ui028-review-20261031/before-RepertoireEditor-800x600.png) | [PNG](C:/Users/bruno/AppData/Local/Temp/pchess-ui028-handoff/RepertoireEditor-800x600.png) |
+
+Acceptance: pending | The two UI-028 regressions above and the shared font defect prevent implementation approval; the previously disclosed human visual and physical-input acceptance also remains.
+Disclosure: pending | integration | Correct the two UI-028 findings before integrating this ticket; preserve the branch's existing work and tests.
+Disclosure: pending | integration | CLEAN-012 tracks the shared font-weight defect required by this ticket's visual acceptance; no deferral has been accepted.

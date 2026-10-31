@@ -1,0 +1,38 @@
+# CLEAN-012: Apply the shared theme's variable-font weights in Godot
+Stage: to-implement
+Status: needs-triage
+Blocked by: none
+Review: agent
+Difficulty: normal
+
+- Primary files:
+  - ui/theme/p_chess.tres (FontVariation weight axes only)
+  - tests/test_ui_theme.gd
+
+#### What to build
+
+Make the shared Noto Sans variations render the weights already required by UI-021 criterion 2 and the v0.1.0 canvas. The theme currently stores `variation_opentype` with string `"wght"` keys, which Godot 4.7 ignores. This was confirmed while reviewing [UI-028](../../ui-screens/issues/80-UI-028-repertoire-screens.md); it also affects other screens using these variations. Correct the shared resource without changing screen layouts or adding fonts/dependencies.
+
+#### Acceptance criteria
+
+1. Existing theme variations apply their intended 400-800 font weights to the bundled Noto Sans font, using supported axis keys rather than silently rendering every weight as 400. The existing family, sizes and variation names remain compatible with callers.
+2. A graphical comparison shows the intended bold headings and primary-button text; a heavier variation has different rendered metrics from the regular font for the same test string and size. Verify actual font behavior, not just a dictionary's declared weight.
+3. The gate stays green and the shared theme's colors, styleboxes and non-font behavior remain unchanged.
+
+#### Verification
+
+    Manual: compare the weighted labels/buttons with the v0.1.0 reference PNGs using the screenshot tool and isolated data.
+    godot --headless -s tests/run.gd
+
+## Tests stage 2 writes (own commit, red)
+
+- `tests/test_ui_theme.gd`: load the actual theme and compare each non-regular weight's font metrics with the same bundled font configured through a supported numeric weight-axis key. Include a check that the intended bold and regular strings render differently; the current string-key variations must fail before the resource correction.
+
+## Comments
+
+- 2026-10-31 Opened by UI-028 stage-3 review as the destination for a confirmed pre-existing defect in closed [UI-021](73-UI-021-theme-font-icons-screenshots.md), criterion 2. This is the implementation of that existing weight requirement, not an additional font/design choice.
+- Reproduction on Godot 4.7: the theme's ExtraBoldText font has `variation_opentype = {"wght": 800}`, but `get_string_size("Repertoires", HORIZONTAL_ALIGNMENT_LEFT, -1, 28)` is `(152, 39)`, identical to its regular base. Duplicating only that font and setting `{2003265652: 800.0}` gives `(166, 39)` and visible bold text. Probe, log and PNG: `C:/Users/bruno/AppData/Local/Temp/ui028-review-20261031/font-compare.{gd,log,png}`. The probe exited 0 and did not change repository sources.
+- Keep this repair shared; UI-028 should not introduce local font copies to compensate. Recheck all screen captures after the heavier fonts are applied, since text widths will change.
+
+Acceptance: pending | The shared variable-font weights have not been corrected or accepted visually.
+Disclosure: pending | integration | UI-028's shared visual acceptance requires this correction before integration; other v0.1.0 screens also inherit the defect. No deferral was accepted.
