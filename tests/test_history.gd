@@ -76,6 +76,54 @@ func test_delete_legacy_and_failure_preserve_practice_and_never_go_negative():
 	HistoryStorage.clean(folder)
 
 
+func test_delete_restores_files_when_final_removal_fails():
+	_check_delete_rollback("removal")
+
+
+func test_delete_restores_files_and_counts_when_stats_save_fails():
+	_check_delete_rollback("stats")
+
+
+func _check_delete_rollback(failure: String) -> void:
+	var folder := _folder()
+	var history = History.new(folder)
+	var game = Game.new()
+	game.flag("b")
+	var path: String = history.save(game, [], SETTINGS, "", "line-1")
+	var snapshot := path.trim_suffix(".pgn") + ".repertoire.json"
+	DirAccess.make_dir_recursive_absolute("user://analysis")
+	var analysis := "user://analysis".path_join(path.get_file() + ".json")
+	for item in [snapshot, analysis]:
+		var file := FileAccess.open(item, FileAccess.WRITE)
+		file.store_string("original " + item.get_file())
+		file.close()
+	var paths := [path, snapshot, analysis]
+	var contents := {}
+	for item in paths:
+		contents[item] = FileAccess.get_file_as_bytes(item)
+	var temp := folder.path_join("stats.cfg.deleting")
+	if failure == "removal":
+		assert_eq(FileAccess.set_read_only_attribute(analysis, true), OK)
+	else:
+		assert_eq(DirAccess.make_dir_absolute(temp), OK)
+	assert_true(not history.delete(path), "delete must report the injected failure")
+	assert_true(not history.error.is_empty())
+	var expected := {"wins": 1, "draws": 0, "losses": 0, "flag_wins": 1, "flag_losses": 0}
+	for store in [history, History.new(folder)]:
+		assert_eq(store.stats("maia-1500", "3+2"), expected)
+		assert_eq(store.practice_counts().get("line-1"), 1)
+	for item in paths:
+		assert_true(FileAccess.file_exists(item), "original file restored: " + item)
+		assert_eq(FileAccess.get_file_as_bytes(item), contents[item])
+		assert_true(not FileAccess.file_exists(item + ".deleting"))
+	FileAccess.set_read_only_attribute(analysis, false)
+	DirAccess.remove_absolute(analysis)
+	if DirAccess.dir_exists_absolute(temp):
+		DirAccess.remove_absolute(temp)
+	assert_true(not FileAccess.file_exists(temp))
+	HistoryStorage.clean(folder)
+
+
 func test_games_is_empty_before_the_first_save():
 	var folder := _folder()
 	assert_eq(History.new(folder).games(), [])
