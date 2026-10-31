@@ -16,6 +16,9 @@ var _spins := {} # key -> [SpinBox, scale]
 
 
 func _ready() -> void:
+	# Keep the additional history row within the minimum window height.
+	$Panel/Center/Box.add_theme_constant_override("separation", 0)
+	_form.add_theme_constant_override("v_separation", 0)
 	$Open.pressed.connect(func() -> void: _panel.visible = not _panel.visible)
 	$Panel/Center/Box/Close.pressed.connect(_panel.hide)
 	_choice("premove_style", "Premove style", Settings.CHOICES.premove_style)
