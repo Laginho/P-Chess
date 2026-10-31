@@ -49,7 +49,7 @@ func present_repertoire(target) -> void:
 	$Margin/Form/SaveRow/Colour.hide()
 	$Margin/Form/SaveRow/White.show()
 	$Margin/Form/SaveRow/Black.show()
-	$Margin/Form/FieldLabels.show()
+	$Margin/Form/FieldLabels/Colour.show()
 	$Margin/Form/Footer/Done.text = "Cancel"
 	_name.placeholder_text = "Repertoire name"
 	_save.text = "Create repertoire"
