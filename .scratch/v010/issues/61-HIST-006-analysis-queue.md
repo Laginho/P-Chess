@@ -1,5 +1,5 @@
 # HIST-006: The analysis queue
-Stage: to-implement
+Stage: implementing
 Blocked by: REV-002, HIST-004
 Review: agent
 Difficulty: hard
