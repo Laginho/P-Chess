@@ -84,11 +84,11 @@ func test_history_shows_saved_names_and_renames_legacy_you_without_changing_pgn(
 			Engine.get_main_loop().root.add_child(main)
 			main.get_node("Home/Center/Form/History").pressed.emit()
 			var card = main.history_screen.get_node("Margin/Content/Cards/List").get_child(0)
-			assert_eq(card.get_child(0).flipped, colour == "b", "thumbnail follows HumanColor")
+			assert_eq(card.get_node("Details/Thumbnail").flipped, colour == "b", "thumbnail follows HumanColor")
 			var displayed := "Current name" if legacy else "Maia 1500"
-			var text: String = card.get_node("Details/Text").text
-			assert_true(text.contains(displayed + (" (White)" if colour == "w" else " (Black)")))
-			assert_true(text.contains("Won on time"), "result follows HumanColor")
+			var text: String = card.get_node("Details/Info/Players").text
+			assert_true(text.contains(displayed))
+			assert_true(card.get_node("Details/Info/Metadata/Result").text.contains("Won on time"), "result follows HumanColor")
 			card.get_node("Details/HBoxContainer/Review").pressed.emit()
 			assert_eq(main.review.get_node("Margin/Content/ReviewBody/BoardView").flipped, colour == "b")
 			main.review.receive_position(0, {"pv": [{"cp": 0, "moves": ["e2e4"]}]})
@@ -142,9 +142,9 @@ class HeldAnalysis extends RefCounted:
 func test_confirm_delete_cancels_active_analysis_before_its_final_reply():
 	var fixture := _queued_history()
 	var path: String = fixture.paths[0]
-	fixture.cards[path].get_child(1).button_pressed = true
+	fixture.cards[path].get_node("Details/Select").button_pressed = true
 	fixture.cards[path].get_node("Details/HBoxContainer/Delete").pressed.emit()
-	fixture.screen.get_node("DeleteConfirmation").get_ok_button().pressed.emit()
+	fixture.cards[path].get_node("Details/DeleteInline/Confirm").pressed.emit()
 	assert_true(not FileAccess.file_exists(path))
 	assert_eq(fixture.screen.get_node("Margin/Content/Cards/List").get_child_count(), 0)
 	_assert_pending_history(fixture, [])
@@ -155,7 +155,7 @@ func test_confirm_delete_cancels_active_analysis_before_its_final_reply():
 	assert_true(not FileAccess.file_exists(output), "the final reply cannot recreate deleted analysis")
 	fixture.queue._process(1.1)
 	assert_true(not FileAccess.file_exists(output), "no orphan survives the missing-file scan")
-	fixture.screen.get_node("Margin/Content/BatchActions").get_child(0).pressed.emit()
+	fixture.screen.get_node("Margin/Content/BatchActions/AnalyzeSelected").pressed.emit()
 	_assert_pending_history(fixture, [])
 	_clean_queued_history(fixture)
 
@@ -165,7 +165,7 @@ func test_confirm_delete_removes_waiting_game_without_cancelling_active_analysis
 	var active: String = fixture.paths[0]
 	var waiting: String = fixture.paths[1]
 	fixture.cards[waiting].get_node("Details/HBoxContainer/Delete").pressed.emit()
-	fixture.screen.get_node("DeleteConfirmation").get_ok_button().pressed.emit()
+	fixture.cards[waiting].get_node("Details/DeleteInline/Confirm").pressed.emit()
 	assert_true(not FileAccess.file_exists(waiting) and FileAccess.file_exists(active))
 	_assert_pending_history(fixture, [active])
 	assert_eq(fixture.queue.current(), active)
@@ -185,9 +185,9 @@ func test_cancel_and_failed_delete_preserve_active_analysis_and_stats():
 	var path: String = fixture.paths[0]
 	var counts: Dictionary = fixture.history.stats("maia-1500", "3+2")
 	var button = fixture.cards[path].get_node("Details/HBoxContainer/Delete")
-	var dialog = fixture.screen.get_node("DeleteConfirmation")
+	var dialog = fixture.cards[path].get_node("Details/DeleteInline")
 	button.pressed.emit()
-	dialog.get_cancel_button().pressed.emit()
+	dialog.get_node("Cancel").pressed.emit()
 	assert_true(FileAccess.file_exists(path))
 	_assert_pending_history(fixture, [path])
 	assert_eq(fixture.queue.current(), path)
@@ -196,7 +196,7 @@ func test_cancel_and_failed_delete_preserve_active_analysis_and_stats():
 	var temporary: String = fixture.folder.path_join("stats.cfg.deleting")
 	assert_eq(DirAccess.make_dir_absolute(temporary), OK)
 	button.pressed.emit()
-	dialog.get_ok_button().pressed.emit()
+	dialog.get_node("Confirm").pressed.emit()
 	assert_true(FileAccess.file_exists(path))
 	assert_true(not fixture.history.error.is_empty())
 	assert_true(fixture.screen.get_node("DeleteError").visible)
@@ -274,12 +274,12 @@ func test_history_delete_requires_confirmation():
 	assert_true(button != null)
 	if button != null:
 		button.pressed.emit()
-		var dialog = screen.get_node("DeleteConfirmation")
+		var dialog = list.get_child(0).get_node("Details/DeleteInline")
 		assert_true(dialog.visible and FileAccess.file_exists(path))
-		dialog.canceled.emit()
+		dialog.get_node("Cancel").pressed.emit()
 		assert_true(FileAccess.file_exists(path) and list.get_child_count() == 1)
 		button.pressed.emit()
-		dialog.confirmed.emit()
+		dialog.get_node("Confirm").pressed.emit()
 		assert_true(not FileAccess.file_exists(path) and list.get_child_count() == 0)
 	screen.free()
 	HistoryStorage.clean(folder)
