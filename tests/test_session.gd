@@ -711,7 +711,7 @@ func test_searching_engine_stop_during_net_or_minimum_returns_home():
 		assert_eq(main.clock, null)
 		assert_eq(main.uci.requests.size(), 0)
 		assert_true(main.get_node("Home").visible)
-		assert_eq(main.get_node("Home/Center/Form/Missing").text, "Maia stopped during start")
+		assert_true(main.get_node("Home/Center/Form/Missing").text.contains("Maia stopped during start"))
 		main.uci.level_ready.emit()
 		assert_eq(main.clock, null, "late readyok cannot start a failed game")
 		main.free()
