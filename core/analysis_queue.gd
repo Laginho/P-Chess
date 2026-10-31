@@ -195,7 +195,7 @@ class StockfishRunner extends Node:
 		analyser.progress.connect(func(done, total): progress.emit(done, total))
 		analyser.position_ready.connect(func(index, position): position_ready.emit(index, position))
 		analyser.finished.connect(_done)
-		var output := "user://analysis".path_join(path.get_file() + ".json")
+		var output := path.get_base_dir().get_base_dir().path_join("analysis").path_join(path.get_file() + ".json")
 		if not analyser.analyse(positions, output, maximum, game.result == "1/2-1/2"):
 			_cleanup()
 			return false

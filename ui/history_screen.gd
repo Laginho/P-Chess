@@ -172,7 +172,7 @@ func _result_text(game: Dictionary, colour: String) -> String:
 func _analysis_text(path: String) -> String:
 	if analysis_queue != null and path in analysis_queue.pending():
 		return "Analysing %d%%" % analysis_queue.percent if analysis_queue.current() == path else "Queued"
-	var analysis_path := "user://analysis".path_join(path.get_file() + ".json")
+	var analysis_path := history._root.path_join("analysis").path_join(path.get_file() + ".json")
 	var analysis := Analyser.read_analysis(analysis_path, "Stockfish 19", Tunables.ANALYSIS_NODES)
 	if analysis.state != "analysed":
 		return analysis.state.capitalize()
