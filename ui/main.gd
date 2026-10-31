@@ -202,7 +202,7 @@ func _input(_event: InputEvent) -> void:
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
-	if not event.is_pressed() or event.is_echo():
+	if not event.is_pressed() or event.is_echo() or clock == null:
 		return
 	# No clock means no game has started: the setup screen is up.
 	var in_game: bool = clock != null and not board_view.game.is_over()
@@ -352,6 +352,7 @@ func _show_setup() -> void:
 
 func _show_home() -> void:
 	_show_setup()
+	_set_focus(false)
 	setup.hide()
 	$Home.sync_level()
 	$Home.show()
