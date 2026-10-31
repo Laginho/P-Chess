@@ -25,6 +25,13 @@ var _ply := 0
 
 
 func _ready() -> void:
+	_moves.select_mode = Tree.SELECT_SINGLE
+	_moves.item_selected.connect(func():
+		var selected := _moves.get_selected()
+		if selected:
+			var ply = selected.get_metadata(_moves.get_selected_column())
+			if ply != null:
+				_show_ply(ply))
 	_moves.set_column_title(0, "Move")
 	_moves.set_column_title(1, "White · time spent")
 	_moves.set_column_title(2, "Black · time spent")
@@ -76,6 +83,7 @@ func present(game, clocks: Array, settings: Dictionary, result_text: String,
 			row = _moves.create_item(root)
 			row.set_text(0, "%d." % (i / 2 + 1))
 		row.set_text(i % 2 + 1, "%s (%.3f s)" % [board.san(game.moves[i]), times[i] / 1000.0])
+		row.set_metadata(i % 2 + 1, i + 1)
 		var text := _badge_text(badges[i])
 		row.set_text(i % 2 + 3, text)
 		row.set_tooltip_text(i % 2 + 3, text)
