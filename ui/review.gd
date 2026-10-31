@@ -44,7 +44,7 @@ var _check_repertoire := false
 var _player_names := ["White", "Black"]
 var _from_history := false
 var _history_draw := false
-const CLASS_NAMES := ["Brilliant", "Great", "Best", "Excellent", "Good", "Book", "Repertoire", "Forced", "Inaccuracy", "Mistake", "Miss", "Blunder"]
+const CLASS_NAMES := ["Brilliant", "Great", "Best", "Excellent", "Good", "Book", "Repertoire", "Inaccuracy", "Mistake", "Miss", "Blunder", "Forced"]
 
 @onready var _eval_bar = $Margin/Content/ReviewBody/EvalBar
 @onready var _board_view = $Margin/Content/ReviewBody/BoardView
@@ -58,14 +58,79 @@ func _ready() -> void:
 	if analysis_queue != null:
 		analysis_queue.position_ready.connect(_queue_position)
 		analysis_queue.changed.connect(_queue_changed)
+	var summary: Label = $Margin/Content/ReviewBody/Side/Summary
+	summary.custom_minimum_size.y = 44
+	summary.add_theme_color_override("font_color", Color.TRANSPARENT)
+	var cards := GridContainer.new()
+	cards.columns = 4
+	cards.name = "AccuracyCards"
+	cards.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	summary.add_child(cards)
+	for side in ["White", "Black"]:
+		var card := PanelContainer.new()
+		card.name = side + "Score"
+		var style := StyleBoxFlat.new()
+		style.bg_color = Color("ece9e4") if side == "White" else Color("141412")
+		style.set_corner_radius_all(5)
+		style.set_content_margin_all(8)
+		card.add_theme_stylebox_override("panel", style)
+		var value := Label.new()
+		value.name = "Value"
+		value.theme_type_variation = "ExtraBoldText"
+		value.add_theme_font_size_override("font_size", 20)
+		value.add_theme_color_override("font_color", Color("141412") if side == "White" else Color("ece9e4"))
+		card.add_child(value)
+		cards.add_child(card)
+		var name_label := Label.new()
+		name_label.name = side + "Name"
+		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		if side == "Black":
+			name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		name_label.add_theme_font_size_override("font_size", 11)
+		cards.add_child(name_label)
+	cards.move_child(cards.get_node("BlackName"), 2)
+	var table: GridContainer = $Margin/Content/ReviewBody/Side/Counts
+	for label in CLASS_NAMES:
+		var name_label := Label.new()
+		name_label.name = label + "Label"
+		name_label.text = label
+		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		name_label.add_theme_font_size_override("font_size", 12)
+		table.add_child(name_label)
+		var white := Label.new()
+		white.name = label + "White"
+		white.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		white.custom_minimum_size.x = 26
+		white.add_theme_font_size_override("font_size", 12)
+		table.add_child(white)
+		var icon := TextureRect.new()
+		icon.name = label + "Icon"
+		icon.texture = _class_icon(label)
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.custom_minimum_size = Vector2(16, 16)
+		table.add_child(icon)
+		var black := Label.new()
+		black.name = label + "Black"
+		black.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		black.custom_minimum_size.x = 26
+		black.add_theme_font_size_override("font_size", 12)
+		table.add_child(black)
+	$Margin/Content/Progress.visibility_changed.connect(func():
+		$Margin/Content/ProgressText.visible = $Margin/Content/Progress.visible
+		_layout_review())
 	_graph.ply_selected.connect(_show_ply)
+	_board_view.resized.connect(_update_player_labels)
+	_result.resized.connect(_layout_review)
+	$Margin/Content/ReviewBody/Side.resized.connect(_layout_review)
+	resized.connect(_layout_review)
+	_layout_review.call_deferred()
 	$Margin/Content/ReviewBody/Side/AccuracyHelp.tooltip_text = "Accuracy uses the change in win probability for each move.\nThe game score averages a volatility-weighted mean and\nthe harmonic mean of those move scores."
-	$Margin/Content/ReviewBody/Side/ClassHelp.tooltip_text = _class_help()
 	# Tooltips need a mouse; Enter on the focused "?" shows the same text in a dialog.
 	var help_dialog := AcceptDialog.new()
 	help_dialog.name = "HelpDialog"
 	add_child(help_dialog)
-	for help: Button in [$Margin/Content/ReviewBody/Side/AccuracyHelp, $Margin/Content/ReviewBody/Side/ClassHelp]:
+	for help: Button in [$Margin/Content/ReviewBody/Side/AccuracyHelp]:
 		# Label height, so the review still fits 800x600; the focus box still shows.
 		for style in ["normal", "hover", "pressed", "hover_pressed"]:
 			help.add_theme_stylebox_override(style, StyleBoxEmpty.new())
@@ -73,10 +138,97 @@ func _ready() -> void:
 			help_dialog.title = help.text.trim_suffix("?").strip_edges()
 			help_dialog.dialog_text = help.tooltip_text
 			help_dialog.popup_centered())
+	var legend := PopupPanel.new()
+	legend.name = "ClassLegend"
+	var legend_text := ("Brilliant — The best move, and it sacrifices a piece.\n"
+			+ "Great — The only good move here, or one that turns the game around.\n"
+			+ "Best — The engine's top choice.\n"
+			+ "Excellent — Almost as good as the best move (under 2%).\n"
+			+ "Good — A solid move with a slightly better option (under 5%).\n"
+			+ "Book — A known opening move, from opening theory.\n"
+			+ "Repertoire — A move from your own repertoire.\n"
+			+ "Inaccuracy — A weaker move that gives away a little (under 10%).\n"
+			+ "Mistake — A bad move that gives away a clear edge (under 20%).\n"
+			+ "Miss — An opponent's error was not punished.\n"
+			+ "Blunder — A serious error that costs over 20%.\n"
+			+ "Forced — The only legal move.")
+	add_child(legend)
+	var content := VBoxContainer.new()
+	content.name = "Content"
+	legend.add_child(content)
+	var header := HBoxContainer.new()
+	header.name = "Header"
+	content.add_child(header)
+	var heading := Label.new()
+	heading.text = "Move classes, best to worst"
+	heading.theme_type_variation = "BoldText"
+	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_child(heading)
+	var close := Button.new()
+	close.name = "Close"
+	close.text = "×"
+	close.tooltip_text = "Close"
+	close.pressed.connect(legend.hide)
+	header.add_child(close)
+	var rows := VBoxContainer.new()
+	rows.name = "LegendRows"
+	rows.custom_minimum_size.x = 420
+	rows.add_theme_constant_override("separation", 2)
+	content.add_child(rows)
+	for line in legend_text.split("\n"):
+		var row := HBoxContainer.new()
+		var icon := TextureRect.new()
+		icon.texture = _class_icon(line.get_slice(" \u2014 ", 0))
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.custom_minimum_size = Vector2(24, 24)
+		row.add_child(icon)
+		var text := VBoxContainer.new()
+		text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		text.add_theme_constant_override("separation", 0)
+		var title := Label.new()
+		title.text = line.get_slice(" \u2014 ", 0)
+		title.theme_type_variation = "BoldText"
+		title.add_theme_font_size_override("font_size", 12)
+		text.add_child(title)
+		var description := Label.new()
+		description.text = line.get_slice(" \u2014 ", 1)
+		description.theme_type_variation = "MutedText"
+		description.add_theme_font_size_override("font_size", 11)
+		text.add_child(description)
+		row.add_child(text)
+		rows.add_child(row)
+	var class_help: Button = $Margin/Content/ReviewBody/Side/ClassHelp
+	class_help.pressed.connect(func():
+		legend.popup(Rect2i(Vector2i.ZERO, Vector2i(480, 540)))
+		await get_tree().process_frame
+		if not legend.visible:
+			return
+		var bounds := Vector2i(get_viewport_rect().size)
+		var anchor := Vector2i(class_help.global_position)
+		var origin := Vector2i(clampi(anchor.x - legend.size.x - 8, 0, maxi(0, bounds.x - legend.size.x)),
+				clampi(anchor.y - 60, 0, maxi(0, bounds.y - legend.size.y)))
+		if not get_window().gui_embed_subwindows:
+			origin += get_window().position
+		legend.position = origin
+		close.grab_focus())
+	var toggle: Button = $Margin/Content/ReviewBody/Side/ClassToggle
+	toggle.pressed.connect(func():
+		var side: Control = $Margin/Content/ReviewBody/Side
+		var expanded: bool = not side.get_node("Counts").visible
+		side.get_node("Counts").visible = expanded
+		side.get_node("AccuracyHelp").visible = not expanded
+		side.get_node("EvalGraph").visible = not expanded
+		side.get_node("Moves").visible = not expanded
+		side.get_node("RepertoireExit").visible = not expanded and not side.get_node("RepertoireExit").text.is_empty()
+		_update_summary())
+	resized.connect(_resize_classes)
+	_resize_classes()
 	visibility_changed.connect(func():
 		if not visible:
 			_cancel_analysis())
 	_moves.select_mode = Tree.SELECT_SINGLE
+	_moves.resized.connect(func(): _moves.ensure_cursor_is_visible.call_deferred())
 	_moves.item_selected.connect(func():
 		var selected := _moves.get_selected()
 		if selected:
@@ -88,6 +240,10 @@ func _ready() -> void:
 	_moves.set_column_title(2, "Black")
 	_moves.set_column_expand(0, false)
 	_moves.set_column_custom_minimum_width(0, 60)
+	$Margin/Content/ReviewBody/Side/Navigation/First.pressed.connect(func(): _show_ply(0))
+	$Margin/Content/ReviewBody/Side/Navigation/Previous.pressed.connect(func(): _show_ply(_ply - 1))
+	$Margin/Content/ReviewBody/Side/Navigation/Next.pressed.connect(func(): _show_ply(_ply + 1))
+	$Margin/Content/ReviewBody/Side/Navigation/Last.pressed.connect(func(): _show_ply(_game_moves.size()))
 	$Margin/Content/Actions/CopyPgn.pressed.connect(func(): copy_text.call(_pgn))
 	$Margin/Content/Actions/Lichess.pressed.connect(func(): open_browser.call(_url))
 	$Margin/Content/Actions/Rematch.pressed.connect(func(): rematch_requested.emit())
@@ -98,14 +254,96 @@ func _ready() -> void:
 	back.pressed.connect(func(): back_history_requested.emit())
 	$Margin/Content/Actions.add_child(back)
 	back.hide()
+	var notice: Label = $Margin/Content/ReviewBody/Side/UnanalysedNotice
+	notice.custom_minimum_size.y = 150
+	notice.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	var notice_bg := Panel.new()
+	notice_bg.show_behind_parent = true
+	notice_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	notice.add_child(notice_bg)
+	notice_bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	notice_bg.offset_bottom = 46
+	var notice_style := StyleBoxFlat.new()
+	notice_style.bg_color = Color("1f1e1c")
+	notice_style.border_color = Color("45423d")
+	notice_style.set_border_width_all(1)
+	notice_style.set_corner_radius_all(8)
+	notice_bg.add_theme_stylebox_override("panel", notice_style)
+	var description := Label.new()
+	description.name = "AnalysisDescription"
+	description.text = "Stockfish classifies every move and scores both sides' accuracy."
+	description.theme_type_variation = "MutedText"
+	description.add_theme_font_size_override("font_size", 11)
+	description.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	description.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	notice.add_child(description)
+	description.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+	description.offset_left = 8
+	description.offset_right = -8
+	description.offset_top = -40
+	description.offset_bottom = -4
 	var analyze := Button.new()
 	analyze.name = "Analyze"
+	analyze.custom_minimum_size = Vector2(125, 40)
+	analyze.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	analyze.text = "Analyze"
+	analyze.theme_type_variation = "PrimaryButton"
 	analyze.pressed.connect(func():
 		analyze.hide()
 		open_analysis(_analysis_path, _history_draw))
 	$Margin/Content/ReviewBody/Side.add_child(analyze)
+	$Margin/Content/ReviewBody/Side.move_child(analyze, $Margin/Content/ReviewBody/Side/Moves.get_index())
 	analyze.hide()
+
+
+func _layout_review() -> void:
+	var content: Control = $Margin/Content
+	var side: Control = $Margin/Content/ReviewBody/Side
+	var at := side.global_position - content.global_position
+	var card: Control = $Margin/Content/Card
+	card.position = at - Vector2(10, 24)
+	card.size = side.size + Vector2(20, 48)
+	var title: Control = $Margin/Content/Title
+	title.position = at + Vector2(4, -12)
+	title.size = Vector2(side.size.x - 8, 28)
+	var result: Control = $Margin/Content/Result
+	result.position = at + Vector2(4, 18)
+	result.size = Vector2(side.size.x - 8, 28)
+	var progress: Control = $Margin/Content/Progress
+	var progress_y := maxf(58.0 if size.x <= 800 else 43.0, result.position.y + result.size.y - at.y + 4)
+	$Margin/Content/ReviewBody/Side/HeaderSpace.custom_minimum_size.y = maxf(64, progress_y + 22) if progress.visible else 64
+	progress.position = at + Vector2(4, progress_y)
+	progress.size = Vector2(maxf(side.size.x - 100, 0), 16)
+	var progress_text: Control = $Margin/Content/ProgressText
+	progress_text.position = at + Vector2(side.size.x - 94, progress_y - 2)
+	progress_text.size = Vector2(90, 20)
+	var error: Control = $Margin/Content/AnalysisError
+	error.position = at + Vector2(4, 43)
+	error.size = Vector2(side.size.x - 8, 20)
+	var actions: Control = $Margin/Content/Actions
+	var footer_height := 70.0 if size.x <= 800 else 35.0
+	$Margin/Content/ReviewBody/Side/FooterSpace.custom_minimum_size.y = footer_height
+	actions.position = at + Vector2(4, side.size.y - footer_height)
+	actions.size = Vector2(side.size.x - 8, footer_height)
+
+
+func _resize_classes() -> void:
+	var compact := size.x <= 800
+	var side: Control = $Margin/Content/ReviewBody/Side
+	side.custom_minimum_size.x = 190 if compact else 220
+	side.size_flags_stretch_ratio = 0.4 if compact else 0.72
+	$Margin/Content/ReviewBody/Side/Summary/AccuracyCards.columns = 2 if compact else 4
+	$Margin/Content/ReviewBody/Side/Summary.custom_minimum_size.y = 88 if compact else 44
+	var unanalysed: bool = $Margin/Content/ReviewBody/Side/UnanalysedNotice.visible
+	$Margin/Content/ReviewBody/Side/ClassToggle.visible = compact and not unanalysed
+	$Margin/Content/ReviewBody/Side/Counts.visible = not compact and not unanalysed
+	$Margin/Content/ReviewBody/Side/ClassHelp.visible = not unanalysed
+	$Margin/Content/ReviewBody/Side/AccuracyHelp.visible = not unanalysed
+	_moves.visible = true
+	$Margin/Content/ReviewBody/Side/RepertoireExit.visible = not $Margin/Content/ReviewBody/Side/RepertoireExit.text.is_empty()
+	_graph.visible = not unanalysed
+	_update_summary()
 
 
 func _class_help() -> String:
@@ -139,6 +377,10 @@ func _wrap_help(text: String) -> String:
 
 func open_analysis(path: String, draw_at_end: bool) -> void:
 	show()
+	$Margin/Content/ReviewBody/Side/UnanalysedNotice.hide()
+	$Margin/Content/ReviewBody/Side/Analyze.hide()
+	_resize_classes()
+	_update_summary()
 	var cached := Analyser.read_analysis(path, "Stockfish 19", Tunables.ANALYSIS_NODES)
 	var positions = cached.get("data", {}).get("positions", [])
 	var current_cache: bool = cached.state == "analysed" and positions is Array and positions.size() == _positions.size()
@@ -241,14 +483,41 @@ func _input(event: InputEvent) -> void:
 	elif visible and event is InputEventKey and event.is_pressed() and not event.is_echo() and event.keycode == KEY_F:
 		get_viewport().set_input_as_handled()
 		_board_view.flipped = not _board_view.flipped
+		_update_player_labels()
 		_update_eval_bar()
 	elif visible and event is InputEventKey and event.is_pressed() and not event.is_echo() and event.keycode in [KEY_LEFT, KEY_RIGHT]:
 		get_viewport().set_input_as_handled()
 		_show_ply(_ply + (-1 if event.keycode == KEY_LEFT else 1))
 
 
+func _update_player_labels() -> void:
+	var side: float = minf(_board_view.size.x, _board_view.size.y)
+	var corner: Vector2 = (_board_view.size - Vector2.ONE * side) / 2.0
+	var top: Label = _board_view.get_node("TopPlayer")
+	var bottom: Label = _board_view.get_node("BottomPlayer")
+	top.text = _player_names[0 if _board_view.flipped else 1]
+	bottom.text = _player_names[1 if _board_view.flipped else 0]
+	top.position = corner + Vector2(18, -24)
+	bottom.position = corner + Vector2(18, side + 2)
+	for entry in [["TopDot", top.position, _board_view.flipped], ["BottomDot", bottom.position, not _board_view.flipped]]:
+		var dot: Panel = _board_view.get_node(entry[0])
+		dot.position = entry[1] + Vector2(-18, 5)
+		dot.size = Vector2(12, 12)
+		var style := StyleBoxFlat.new()
+		style.bg_color = Color("ece9e4") if entry[2] else Color("1f1e1c")
+		style.border_color = Color("8a857c")
+		style.set_border_width_all(1)
+		style.set_corner_radius_all(6)
+		dot.add_theme_stylebox_override("panel", style)
+
+
 func _show_ply(ply: int) -> void:
 	_ply = clampi(ply, 0, _game_moves.size())
+	if _ply > 0 and _ply <= _move_rows.size():
+		_move_rows[_ply - 1].select((_ply - 1) % 2 + 1)
+		_moves.ensure_cursor_is_visible.call_deferred()
+	elif _moves.get_selected() != null:
+		_moves.deselect_all()
 	var position = Game.new()
 	for i in _ply:
 		position.play(_game_moves[i])
@@ -262,6 +531,11 @@ func receive_position(index: int, position: Dictionary) -> void:
 	if index < 0 or index >= _positions.size():
 		return
 	_positions[index].merge(position, true)
+	var settled := 0
+	for i in range(1, _positions.size()):
+		if _positions[i - 1].has("pv") and _positions[i].has("pv"):
+			settled += 1
+	$Margin/Content/ProgressText.text = "%d of %d moves" % [settled, _game_moves.size()]
 	_refresh_classes()
 	_update_summary()
 	_update_board_annotations()
@@ -275,11 +549,16 @@ func _update_summary() -> void:
 	for i in _classes.size():
 		if _classes[i] != null:
 			counts[_classes[i].class][i % 2] += 1
-	var lines := PackedStringArray(["Class             White   Black"])
+	var table: GridContainer = $Margin/Content/ReviewBody/Side/Counts
 	for label in CLASS_NAMES:
-		lines.append("%s:  %d   %d" % [label, counts[label][0], counts[label][1]])
-	$Margin/Content/ReviewBody/Side/Counts.text = "\n".join(lines)
+		for side in 2:
+			var value: Label = table.get_node(label + ("White" if side == 0 else "Black"))
+			value.text = str(counts[label][side])
+			value.modulate = Color("8a857c") if counts[label][side] == 0 else Color("ece9e4")
 	var summary: Label = $Margin/Content/ReviewBody/Side/Summary
+	if _positions.is_empty():
+		summary.hide()
+		return
 	for position in _positions:
 		if not position.has("pv"):
 			summary.hide()
@@ -288,14 +567,18 @@ func _update_summary() -> void:
 	var white := "–" if accuracy.white == null else "%.1f%%" % accuracy.white
 	var black := "–" if accuracy.black == null else "%.1f%%" % accuracy.black
 	summary.text = "White: %s  %s\nBlack: %s  %s" % [_player_names[0], white, _player_names[1], black]
-	summary.show()
+	for side in ["White", "Black"]:
+		var index := 0 if side == "White" else 1
+		summary.get_node("AccuracyCards/" + side + "Score/Value").text = white if index == 0 else black
+		summary.get_node("AccuracyCards/" + side + "Name").text = _player_names[index]
+	summary.visible = not $Margin/Content/ReviewBody/Side/UnanalysedNotice.visible and not (size.x <= 800 and $Margin/Content/ReviewBody/Side/Counts.visible)
 
 
 func _refresh_classes() -> void:
 	# ponytail: reevaluate all plies as positions land; incremental classification if long games stutter.
 	_classes = Classification.evaluate(_game_moves, {"positions": _positions}, _catalog, _repertoire, _colour, _check_repertoire)
 	for i in _classes.size():
-		var icon: Texture2D = null if _classes[i] == null else _class_icon(_classes[i].class)
+		var icon: Texture2D = _class_icon("Pending" if _classes[i] == null else _classes[i].class)
 		_move_rows[i].set_icon(i % 2 + 1, icon)
 		if _classes[i] != null:
 			var detail: String = _move_rows[i].get_tooltip_text(i % 2 + 1)
@@ -305,8 +588,16 @@ func _refresh_classes() -> void:
 
 func _class_icon(label: String) -> Texture2D:
 	if not _icons.has(label):
-		var path := "res://ui/icons/classes/" + label.to_lower() + ".svg"
-		_icons[label] = load(path) if ResourceLoader.exists(path) else ThemeLoader.load_texture(path)
+		if label == "Pending":
+			var image := Image.create(16, 16, false, Image.FORMAT_RGBA8)
+			for degrees in range(0, 360, 8):
+				if degrees % 64 < 40:
+					var angle := deg_to_rad(float(degrees))
+					image.set_pixel(roundi(7.5 + 6.0 * cos(angle)), roundi(7.5 + 6.0 * sin(angle)), Color(0.65, 0.64, 0.61))
+			_icons[label] = ImageTexture.create_from_image(image)
+		else:
+			var path := "res://ui/icons/classes/" + label.to_lower() + ".svg"
+			_icons[label] = load(path) if ResourceLoader.exists(path) else ThemeLoader.load_texture(path)
 	return _icons[label]
 
 
@@ -325,30 +616,41 @@ func _update_board_annotations() -> void:
 
 func _update_eval_bar() -> void:
 	_graph.positions = _positions
+	_graph.classes = _classes
 	_graph.current_ply = _ply
 	_graph.flipped = _board_view.flipped
 	_graph.queue_redraw()
 	_eval_bar.flipped = _board_view.flipped
 	_eval_bar.white_fraction = 0.5
+	_eval_bar.get_node("Score").text = ""
 	if _positions.is_empty() or not _positions[_ply].has("pv"):
 		return
 	var position: Dictionary = _positions[_ply]
 	var line: Dictionary = position.pv[0] if not position.pv.is_empty() else {"cp": position.get("terminal_score", 0)}
 	var cp: int = line.get("cp", 1000 if line.get("mate", 0) > 0 else -1000)
-	if Board.from_fen(position.fen).side_to_move == "b":
+	var black_to_move: bool = Board.from_fen(position.fen).side_to_move == "b"
+	if black_to_move:
 		cp = -cp
+	if line.has("mate"):
+		var mate: int = -line.mate if black_to_move else line.mate
+		_eval_bar.get_node("Score").text = ("+" if mate > 0 else "-") + "M%d" % absi(mate)
+	else:
+		_eval_bar.get_node("Score").text = ("+" if cp > 0 else "") + "%.1f" % (cp / 100.0)
 	_eval_bar.white_fraction = 1.0 / (1.0 + exp(-0.00368208 * clampi(cp, -1000, 1000)))
 
 
 func present(game, clocks: Array, settings: Dictionary, result_text: String,
 		catalog: Array = [], repertoire: Array = [], check_repertoire := false) -> void:
 	_from_history = false
+	$Margin/Content/ReviewBody/Side/UnanalysedNotice.hide()
+	_resize_classes()
 	$Margin/Content/Actions/Rematch.show()
 	$Margin/Content/Actions/Setup.show()
 	$Margin/Content/Actions/BackHistory.hide()
 	$Margin/Content/ReviewBody/Side/Analyze.hide()
 	$Margin/Content/AnalysisError.hide()
 	_game_moves = game.moves.duplicate()
+	$Margin/Content/ProgressText.text = "0 of %d moves" % _game_moves.size()
 	_classes = []
 	_move_rows = []
 	_catalog = catalog
@@ -364,8 +666,10 @@ func present(game, clocks: Array, settings: Dictionary, result_text: String,
 		position.play(move)
 		_positions.append({"fen": position.board.to_fen()})
 	_board_view.flipped = settings.colour == "b"
+	_update_player_labels()
 	_show_ply(_game_moves.size())
-	_result.text = result_text
+	var moves: int = (game.moves.size() + 1) / 2
+	_result.text = "%s \u00b7 %s \u00b7 %d %s" % [settings.get("control", ""), result_text.replace("\nSpace for a rematch", ""), moves, "move" if moves == 1 else "moves"]
 	_moves.clear()
 	var root := _moves.create_item()
 	var board = Board.from_fen(Pgn.START)
@@ -376,18 +680,31 @@ func present(game, clocks: Array, settings: Dictionary, result_text: String,
 		if i % 2 == 0:
 			row = _moves.create_item(root)
 			row.set_text(0, "%d." % (i / 2 + 1))
+		row.set_icon_max_width(i % 2 + 1, 18)
 		row.set_text(i % 2 + 1, board.san(game.moves[i]) + (" (left)" if badges[i].left_repertoire else ""))
 		row.set_metadata(i % 2 + 1, i + 1)
+		if badges[i].repertoire or badges[i].book:
+			row.set_icon(i % 2 + 1, _class_icon("Repertoire" if badges[i].repertoire else "Book"))
 		_move_rows.append(row)
 		var text := _badge_text(badges[i])
 		row.set_tooltip_text(i % 2 + 1, text)
 		if badges[i].left_repertoire:
 			exit_text = "%d. %s: %s" % [i / 2 + 1, "White" if i % 2 == 0 else "Black", text]
+			var exit_row := _moves.create_item(root)
+			exit_row.set_text(1, text)
+			exit_row.set_expand_right(1, true)
+			exit_row.set_icon(1, _class_icon("Repertoire"))
+			exit_row.set_icon_max_width(1, 16)
+			exit_row.set_custom_color(1, Color("4ca9f0"))
+			exit_row.set_custom_bg_color(1, Color("4ca9f0"), true)
+			for column in 3:
+				exit_row.set_selectable(column, false)
 		board.make_move(game.moves[i])
 	# Keep expected moves readable even when a badge column is narrow.
 	$Margin/Content/ReviewBody/Side/RepertoireExit.text = exit_text
 	$Margin/Content/ReviewBody/Side/RepertoireExit.visible = not exit_text.is_empty()
 	_update_summary()
+	_show_ply(_game_moves.size())
 	_pgn = Pgn.write(Pgn.finished_game(game, clocks, settings))
 	_url = lichess_url(game)
 	show()
@@ -399,6 +716,14 @@ func present_history(path: String, analysis_path: String, draw_at_end: bool) -> 
 	_analysis_path = analysis_path
 	_history_draw = draw_at_end
 	_pgn = FileAccess.get_file_as_string(path)
+	var saved := Pgn.parse(_pgn)
+	if saved.error.is_empty() and saved.games.size() == 1:
+		var time_control: String = saved.games[0].headers.get("TimeControl", "")
+		for control in Clock.CONTROLS:
+			var values: Array = Clock.CONTROLS[control]
+			if time_control == "%d+%d" % [values[0] / 1000, values[1] / 1000]:
+				_result.text = control + _result.text.substr(_result.text.find(" ·"))
+				break
 	$Margin/Content/Actions/Rematch.hide()
 	$Margin/Content/Actions/Setup.hide()
 	$Margin/Content/Actions/BackHistory.show()
@@ -409,6 +734,9 @@ func present_history(path: String, analysis_path: String, draw_at_end: bool) -> 
 			receive_position(i, positions[i])
 	else:
 		$Margin/Content/ReviewBody/Side/Analyze.show()
+		$Margin/Content/ReviewBody/Side/UnanalysedNotice.show()
+		$Margin/Content/ReviewBody/Side/Summary.hide()
+		_resize_classes()
 	if analysis_queue != null and path in analysis_queue.pending():
 		$Margin/Content/ReviewBody/Side/Analyze.hide()
 		open_analysis(analysis_path, draw_at_end)
