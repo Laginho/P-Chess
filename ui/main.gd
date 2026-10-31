@@ -434,7 +434,7 @@ func _review_history_game(path: String, saved: Dictionary) -> void:
 	review.present(game, clocks, review_settings, history_screen._result_text(saved, colour),
 			setup.book.entries, snapshot.lines, not snapshot.lines.is_empty())
 	history_screen.hide()
-	var analysis_path: String = history._root.path_join("analysis").path_join(path.get_file() + ".json")
+	var analysis_path: String = history.analysis_folder().path_join(path.get_file() + ".json")
 	review.present_history(path, analysis_path, saved.result == "1/2-1/2")
 
 
@@ -609,7 +609,7 @@ func _show_result() -> void:
 		_history_saved = true
 		var game_path: String = history.save(game, _move_clocks, named_settings, "", maia.target_id, _review_repertoire, _review_repertoire_colour)
 		var name := game_path.get_file() if not game_path.is_empty() else "unsaved-%d.pgn" % Time.get_ticks_usec()
-		review_analysis_path = history._root.path_join("analysis").path_join(name + ".json")
+		review_analysis_path = history.analysis_folder().path_join(name + ".json")
 	if history.error:
 		result_label.text += "\nHistory: " + history.error
 	review.present(game, _move_clocks, named_settings, result_label.text,
