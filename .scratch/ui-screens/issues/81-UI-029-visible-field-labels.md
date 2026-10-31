@@ -23,3 +23,5 @@ Raised in the PR #33 review (UI-021). The placeholder token itself was lightened
 ## Comments
 
 - 2026-10-31 Triaged by Claude for Bruno ("do what you think best"): runs in the `ui-screens` lane after UI-028, which restyles the opening picker (its canvas board already has a visible Name label).
+
+- 2026-10-31 Attempt 1 failed: exit 0. Log tail: UI-029 implementado e encaminhado para revisão (`Stage: to-review`). Os campos de importação e do seletor agora mantêm rótulos visíveis após a digitação. /  / O gate terminou com saída 0: **429 testes executados e 6 pulados** por ausência do Lc0. As [capturas gráficas](C:/Users/bruno/AppData/Local/Temp/ui029-captures/) foram geradas em 1280×800 e 800×600. /  / A revisão independente e a aceitação visual e de entrada física permanecem pendentes. As capturas do seletor mostram o catálogo ainda carregando; a correção de fonte CLEAN-012 também permanece como condição de release. /  /
