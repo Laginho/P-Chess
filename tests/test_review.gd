@@ -843,6 +843,7 @@ func test_repertoire_exit_is_a_move_list_row():
 	for row in rows:
 		if row.get_text(1).contains("Left repertoire") and row.get_text(1).contains("Nf3"):
 			found = true
+			assert_true(row.get_expand_right(1), "expected moves can use both move columns")
 	assert_true(found, "the exit and expected move appear inside the move list")
 	main.free()
 
@@ -855,6 +856,7 @@ func test_legend_keyboard_does_not_activate_review_shortcuts():
 	review.rematch_requested.connect(func(): triggered[0] = true)
 	review.get_node("Margin/Content/ReviewBody/Side/ClassHelp").pressed.emit()
 	await Engine.get_main_loop().process_frame
+	assert_true(review.get_node("ClassLegend").visible, "legend is open before keyboard input")
 	var event := InputEventKey.new()
 	event.keycode = KEY_SPACE
 	event.pressed = true
