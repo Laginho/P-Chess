@@ -905,3 +905,22 @@ func test_history_review_uses_saved_time_control_and_legacy_fallback():
 	main._review_history_game(path, Pgn.parse(FileAccess.get_file_as_string(path)).games[0])
 	assert_true(main.review.get_node("Margin/Content/Result").text.begins_with("1+0 ·"), "legacy game keeps its fallback")
 	main.free()
+
+func test_postgame_analysis_progress_follows_real_result():
+	var root = Engine.get_main_loop().root
+	var old_size: Vector2i = root.size
+	root.size = Vector2i(1280, 800)
+	var main = await _session(FakeTime.new())
+	main.board_view.play("e2e4")
+	_key(main, KEY_ESCAPE)
+	_key(main, KEY_ESCAPE)
+	main.board_view.get_node("GameOver/Panel/Content/Review").pressed.emit()
+	var result: Control = main.review.get_node("Margin/Content/Result")
+	var progress: Control = main.review.get_node("Margin/Content/Progress")
+	progress.show()
+	await root.get_tree().process_frame
+	await root.get_tree().process_frame
+	assert_true(not result.text.contains("Space for a rematch"), "review summary omits game-over shortcuts")
+	assert_true(result.global_position.y + result.size.y <= progress.global_position.y, "progress stays below post-game result")
+	main.free()
+	root.size = old_size
