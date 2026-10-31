@@ -1,5 +1,5 @@
 # HIST-004: The history screen
-Stage: implementing
+Stage: to-review
 Blocked by: REV-004, REV-005, HIST-003
 Review: agent
 Difficulty: hard
@@ -53,3 +53,11 @@ A screen lists every saved game as a card, in tabs, and opens any of them in the
 - 2026-10-31 Attempt 2 failed: exit 0; blocked after two attempts. Log tail: O HIST-004 está **incompleto**. O ticket na branch da sessão está em `Stage: to-implement`, mas a tentativa anterior deixou dois commits recuperáveis sem uma branch ativa: `1558ea2` e `2c6272b`. Neles, o ticket está em `Stage: implementing` e apenas o primeiro ciclo, da configuração `history_tab`, foi concluído. /  / Parei para preservar esse trabalho: a regra do `ticket-flow` para `implementing` determina relatar o estado e não continuar às cegas. Ainda faltam a tela de histórico, a integração com revisão e navegação, os demais testes e o gate final. Nenhum arquivo foi alterado nesta sessão.
 
 - 2026-10-31 Foreman reopen diagnosis (run 3, the foreman's one diagnosis-and-restart): no code, contract or environment defect. The first try (log `.scratch/run-log/HIST-004-implement-20261031-001705.txt`) wrote one clean red/green pair (`1558ea2` test, `2c6272b` the `history_tab` setting, 10/0), then ended its turn with a progress report and the ticket unfinished, with 57 minutes left: the same early stop terra high made on REV-005 in run 2. The second try (`...-002029.txt`) found those commits in recovery, read them as work in progress it must not continue blind, and stopped without changes. Next action, as for REV-005 (which then merged on terra xhigh): `Difficulty: hard`. **Start from the earlier work**: `git checkout -b HIST-004-history-screen 2c6272b` (kept under `refs/sweatshop-recovery/27d10361222949558bf5e40aa67f96b5`), then merge the session branch into it; it is this ticket's own work, approved for reuse here. Keep its pair, then finish **every** acceptance criterion (the history screen, review and navigation wiring, the remaining tests) and the full gate, each with its red/green pair, **before ending the turn**. A progress report is not a handoff: the turn ends only at `to-review` with gate evidence, or at a real question.
+
+- 2026-10-31 Stage 2: implemented history cards, catalog thumbnails, legacy reasons, settings, saved-game review and Max analysis. Red/green tests cover the listed seams, snapshot markers, cached accuracy and catalog completion; mutation checks verified the Max and saved-snapshot assertions. The first full gate exposed a settings panel height regression; the layout was corrected and the subsequent gate passed 359 tests with 0 failures on `be81f14`.
+
+Acceptance: pending | Open History with saved games, switch tabs, open a review and return with Esc; inspect the rendered cards and settings at the minimum window size. Headless tests do not replace this manual check.
+
+Disclosure: pending | release | Manual history screen, keyboard navigation and minimum-size layout acceptance remain outstanding (verification above).
+
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\p-chess-hist004-gate-fixed.json
