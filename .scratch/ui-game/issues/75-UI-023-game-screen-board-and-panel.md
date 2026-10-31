@@ -1,5 +1,5 @@
 # UI-023: Game screen: board and side panel to the design
-Stage: implementing
+Stage: to-review
 Blocked by: UI-021
 Review: human
 Difficulty: hard
@@ -56,7 +56,7 @@ Restyle the game screen to `docs/design/v0.1.0/png/Game.png`, `GameSidePanel.png
 - Stage 2 verification: gate on commit 6948bd6 printed 418 passed, 0 failed; seven are skips (six require Lc0 and one requires graphical rendering), so 411 executed in the headless run. The last-move pixel test separately passed with a graphical display. The unrelated Main screenshot was byte-identical before and after the fixture change. The four final 1280x800 and 800x600 captures and declined state are under `C:/Users/bruno/AppData/Local/Temp/pchess-ui023-work/`.
 - Acceptance: pending | Manual play, drag/premove, draw offer, Esc, finish, grip, F11 and Ctrl+, remain for human verification.
 - Disclosure: pending | release | UI-023 manual play and visual acceptance remain pending; screenshot fixtures do not exercise physical input or Lc0.
-Gate evidence: C:\Users\bruno\AppData\Local\Temp\pchess-ui023-gate-final.json
+Previous gate receipt: C:\Users\bruno\AppData\Local\Temp\pchess-ui023-gate-final.json
 
 #### Resolution (2026-10-31)
 Verdict: Reopen — criterion 6: preserve manual move-list scrolling and clear the saved draw notice between games.
@@ -95,3 +95,15 @@ Disclosure: pending | integration | The two P2 regressions above must be fixed b
 Disclosure: pending | integration | [CLEAN-012](../../ui-base/issues/74-CLEAN-012-font-variation-axes.md) already requires corrected shared font weights before visual acceptance/integration of the screen redesigns; this existing condition remains in force.
 Disclosure: pending | release | The existing manual drag/premove, draw, Esc, finish, grip, F11, Ctrl+, and actual Lc0 acceptance remain pending.
 Disclosure: decision | none | The two existing proxy receipts above authorize only the GameOver wiring and four game-screen fixtures; no further contract change was made in review.
+
+
+### Stage 2: review regressions (2026-10-31)
+
+- Preserved an existing scroll position through move-list reconstruction and retained automatic following when the list is already at the bottom. Reset the saved focus-mode draw notice when a new game starts.
+- The two regression tests failed against the reviewed production code, then passed after the fixes. The scroll test checks a nonzero position and a new row; disabling following made the latter assertion fail. Logs: `C:/Users/bruno/AppData/Local/Temp/ui023-reopen-{red,interior-red,follow-mutant,follow}.log`.
+- Gate on `411ab35f17bf807e2a95a399d5feb6fd57c90704`: 420 reported passed, 0 failed, exit 0; 413 executed and 7 skipped (6 require Lc0 and 1 requires a graphical display). Log: `C:/Users/bruno/AppData/Local/Temp/ui023-reopen-gate.log`.
+
+Acceptance: pending | Human visual comparison and manual play, drag/premove, draw, Esc, finish, grip, F11, Ctrl+, and Lc0 remain pending.
+Disclosure: pending | integration | [CLEAN-012](../../ui-base/issues/74-CLEAN-012-font-variation-axes.md) must be resolved before visual acceptance and integration. The two review regressions are corrected and await stage-3 review.
+Disclosure: pending | release | Complete the recorded manual play/input and Lc0 acceptance.
+Gate evidence: C:/Users/bruno/AppData/Local/Temp/ui023-reopen-gate.json
