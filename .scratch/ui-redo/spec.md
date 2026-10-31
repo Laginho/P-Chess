@@ -32,6 +32,8 @@ Written 2026-10-31. The v0.1.0 tickets were built from the text of `docs/design-
 | Profile | `Profile` |
 | Repertoires, picker, editor | `Repertoire`, `OpeningPicker`, `RepertoireEditor` |
 
+The tickets run in three lanes split by the files they touch: `.scratch/ui-game/` (UI-022, UI-023, UI-024: `ui/main.gd` and `tests/test_session.gd`), `.scratch/ui-review/` (UI-025, UI-026) and `.scratch/ui-screens/` (UI-027, UI-028). All wait for the `ui-base` lane (UI-021) to merge.
+
 Only the game screen ticket changes `ui/board_view.gd`'s look (highlight colours, coordinates); the other screens reuse the board as it is.
 
 ## Acceptance shared by every screen ticket
