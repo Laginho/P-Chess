@@ -656,6 +656,25 @@ func test_selected_repertoire_card_has_an_accent_outline():
 	_clean(folder)
 
 
+func test_repertoire_card_shows_readable_name_and_origin():
+	var setup = load("res://ui/setup.tscn").instantiate()
+	var folder := _folder()
+	setup.repertoire.storage_dir = folder
+	assert_eq(setup.repertoire.import_pgn("1. e4 e5 *", "w", "Study"), "")
+	Engine.get_main_loop().root.add_child(setup)
+	var screen = setup.get_node("RepertoireScreen")
+	screen.present()
+	var card = screen.find_child("Cards", true, false).get_child(0)
+	var title = card.find_child("CardTitle", true, false)
+	var detail = card.find_child("CardDetail", true, false)
+	assert_true(title != null and detail != null, "name and origin are separate labels")
+	if title != null and detail != null:
+		assert_eq(title.text, "Study")
+		assert_eq(detail.text, "1 line · imported PGN")
+	setup.free()
+	_clean(folder)
+
+
 func test_editor_button_tracks_repertoire_selection():
 	var setup = load("res://ui/setup.tscn").instantiate()
 	var folder := _folder()
