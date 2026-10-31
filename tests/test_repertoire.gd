@@ -57,6 +57,15 @@ func test_repertoire_selection_shows_its_name_colour_and_line_count():
 	_clean(folder)
 
 
+func test_editor_places_its_controls_in_a_card():
+	var editor = load("res://ui/repertoire_editor.tscn").instantiate()
+	var card = editor.find_child("Card", true, false)
+	assert_true(card is PanelContainer, "editor controls have a card background")
+	if card != null:
+		assert_true(card.is_ancestor_of(editor.find_child("Tree", true, false)))
+	editor.free()
+
+
 func test_viewer_displays_opening_name_and_moves_on_separate_lines():
 	var setup = load("res://ui/setup.tscn").instantiate()
 	var folder := _folder()
@@ -568,12 +577,12 @@ func test_editor_opens_from_screen_branches_and_cancel_discards():
 	if button != null:
 		button.pressed.emit()
 		var editor = screen.get_node("RepertoireEditor")
-		var tree: Tree = editor.get_node("Margin/Form/Content/Panel/Tree")
+		var tree: Tree = editor.find_child("Tree", true, false)
 		var first = tree.get_root().get_first_child().get_first_child()
 		first.select(0)
 		tree.item_selected.emit()
 		assert_true(editor.get_node("Margin/Form/Content/Board").play("c7c5"))
-		editor.get_node("Margin/Form/Content/Panel/Buttons/Cancel").pressed.emit()
+		editor.find_child("Cancel", true, false).pressed.emit()
 		assert_eq(FileAccess.get_file_as_string(folder.path_join("Study.json")), original)
 	setup.free()
 	_clean(folder)
@@ -586,7 +595,7 @@ func test_editor_saves_a_branch_and_deletes_a_subtree():
 	var editor = load("res://ui/repertoire_editor.tscn").instantiate()
 	Engine.get_main_loop().root.add_child(editor)
 	editor.present(repertoire, "Study")
-	var tree: Tree = editor.get_node("Margin/Form/Content/Panel/Tree")
+	var tree: Tree = editor.find_child("Tree", true, false)
 	var e4 = tree.get_root().get_first_child().get_first_child()
 	e4.select(0)
 	tree.item_selected.emit()
