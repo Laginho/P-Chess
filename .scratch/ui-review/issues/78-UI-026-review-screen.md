@@ -1,5 +1,5 @@
 # UI-026: Review screen to the design
-Stage: implementing
+Stage: to-implement
 Blocked by: UI-021
 Review: human
 Difficulty: hard
@@ -38,3 +38,5 @@ Restyle the review to chess.com's layout as drawn in `docs/design/v0.1.0/png/Rev
 - 2026-10-31 Written from `.scratch/ui-redo/spec.md`. The canvas omits Rematch on the post-game review; the spec keeps it.
 
 - 2026-10-31 Implementation in progress on UI-026-review-screen: red/green focused review tests cover pending icons, ordered class legend, narrow class toggle, navigation, and unanalysed book icons; latest focused run: 27 passed, 0 failed. The former pending-icon and class-tooltip assertions were updated for criteria 5 and 6. No gate evidence yet. The screenshot still differs substantially from the canvas; all remaining acceptance criteria and visual/manual checks must be completed before handoff.
+
+- 2026-10-31 Driver retry: attempt 1 ended short of to-review (exit 0). Resume from this branch's commits; edits the stage left uncommitted are saved in run-log/recovery.txt.
