@@ -1,5 +1,5 @@
 # HIST-005: Delete a game, and the PracticeTarget header
-Stage: to-review
+Stage: to-implement
 Blocked by: HIST-004
 Review: agent
 Difficulty: normal
@@ -83,3 +83,17 @@ Acceptance: pending | Manually note a level's W/D/L, delete a game and confirm t
 Disclosure: pending | release | Manual deletion, statistics and rendered confirmation acceptance remain outstanding (verification above).
 
 Gate evidence: C:\Users\bruno\AppData\Local\Temp\p-chess-hist005-handoff.json
+
+Disclosure: pending | integration | The stage-3 review below requires red/green proof for the failed-delete repairs before this ticket can integrate.
+
+#### Resolution (2026-10-31)
+Verdict: Reopen — missing test-first proof for the criterion 6 failure repairs.
+
+- Standards: one P2 process finding; no other documented-standard violations or relevant baseline smells. All seven changed files and all nine implementation/handoff commits in `002566d25836a1ac0d9d50cfd810d427cf6343dd...9249929f1b8f8259fcf6db65eabbec237faadc5a` were reviewed. Changes remain within Primary files and test/production commits are separated.
+- ❌ Test-first proof for criterion 6: `core/history.gd:153` and `core/history.gd:162` contain the failure repairs introduced by `239c38e` (final file-removal rollback) and `1ce2381` (temporary stats save/replacement). Neither repair has a test that fails without it. `tests/test_history.gd:67` only deletes a nonexistent PGN and exits at the initial guard, so it exercises neither repair. This violates `ticket-flow/stage2.md`, "Every bug fix has a test that would fail without it"; stage 3 explicitly permits reopening for a broken test-first rule. The missing failure injections are also disclosed in the stage-2 handoff above.
+- Remaining work: in a test-only commit, provoke a failure during final file removal and failures saving/replacing `stats.cfg`; assert a reported failure, unchanged result/flag/practice counts in memory and after reload, and preserved PGN/snapshot/analysis contents. Prove the relevant checks red against the corresponding pre-fix code or a focused regressing mutation, then green against the retained implementation. Keep every fix and every test in separate commits. Update gate evidence after the tests change. Retain the existing implementation rather than rebuilding criteria already met.
+- Spec: no confirmed functional findings. Criteria 1–5 pass inspection: the target flows from Maia through Main/History to the optional PGN header; confirmation gates deletion and Cancel performs no mutation; the three saved-file paths match their producers and success refreshes the card list; PGN headers select the human's level/control/result/flag counters; only a nonempty PracticeTarget changes practice counts. Criterion 6's implementation also appears correct statically (zero floors and failure/rollback branches), but its two repairs lack the required red/green proof above. The pre-UI-018 identity rule using "You" is the written contract for this ticket.
+- Red/green history: separate test/production pairs are retained for the target header (`1d5cf08`/`b3f64e6`), deletion/counters (`68d733e`/`0d361c2`) and confirmation (`c5ee2fb`/`e9a41d8`). The two subsequent failure repairs have no corresponding regression proof; a green full gate does not supply it.
+- Coverage: examined all changed files, Main's save/history/review callers, Maia/Book target selection and reset, every finished_game caller, PGN parsing/legacy identity, control/result/time mapping, result/flag/practice persistence, snapshot/analysis naming, analysis cancellation when returning to history, confirmation/Cancel/error paths, zero floors, and file move/removal/stats-write rollback branches. Standards reviewer: `/root/standards_review`; Spec reviewer: `/root/spec_review`. Both independent reviews were read-only.
+- Gate evidence: reused the supplied receipt for `1ce2381ab3361b1156413e11da90764ee3d40791`; the SHA256 of `C:\Users\bruno\AppData\Local\Temp\p-chess-hist005-handoff.log` matches the receipt. The log has 364 PASS lines, 364 passed, 0 failed, no SKIP lines, and ExitCode: 0. Only this tracker ticket changed after the tested commit. No gate or focused test was rerun during review.
+- Limits: final removal and stats save/replacement failures remain untested; rendered confirmation/error layout, physical focus/input, and the manual statistics check remain pending. The existing Acceptance and release Disclosure stay pending. No merge, PR or push; the implementation is preserved on `HIST-005-delete-a-game` for stage 2.
