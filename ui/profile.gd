@@ -62,9 +62,10 @@ func refresh(history, analysis_dir := "") -> void:
 	var records: Array = history.games()
 	var first_date := ""
 	for record in records:
-		var date: String = record.game.headers.get("Date", "")
-		var fields := date.split(".")
+		var date: String = record.game.headers.get("Date", record.path.get_file().left(10))
+		var fields := date.replace("-", ".").split(".")
 		if fields.size() >= 2 and fields[0].is_valid_int() and fields[1].is_valid_int() and int(fields[1]) in range(1, 13):
+			date = "%s.%02d" % [fields[0], int(fields[1])]
 			if first_date.is_empty() or date < first_date:
 				first_date = date
 	%PlayingSince.visible = not first_date.is_empty()

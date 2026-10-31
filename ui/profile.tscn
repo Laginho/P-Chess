@@ -4,6 +4,13 @@
 [ext_resource type="Script" path="res://ui/accuracy_chart.gd" id="2"]
 [ext_resource type="Texture2D" path="res://ui/icons/back.svg" id="3"]
 
+[sub_resource type="StyleBoxFlat" id="AvatarStyle"]
+bg_color = Color(0.498039, 0.65098, 0.313725, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
 [node name="Profile" type="Control"]
 layout_mode = 3
 anchors_preset = 15
@@ -66,10 +73,11 @@ horizontal_scroll_mode = 0
 [node name="Body" type="HBoxContainer" parent="Margin/Content/Scroll"]
 layout_mode = 2
 size_flags_horizontal = 3
+size_flags_vertical = 3
 theme_override_constants/separation = 16
 
 [node name="Left" type="VBoxContainer" parent="Margin/Content/Scroll/Body"]
-custom_minimum_size = Vector2(300, 0)
+custom_minimum_size = Vector2(340, 0)
 layout_mode = 2
 theme_override_constants/separation = 16
 
@@ -92,13 +100,17 @@ theme_override_constants/separation = 14
 layout_mode = 2
 theme_override_constants/separation = 14
 
-[node name="Avatar" type="Label" parent="Margin/Content/Scroll/Body/Left/NameCard/Pad/Stack/Identity"]
-unique_name_in_owner = true
+[node name="AvatarPanel" type="PanelContainer" parent="Margin/Content/Scroll/Body/Left/NameCard/Pad/Stack/Identity"]
 custom_minimum_size = Vector2(56, 56)
+layout_mode = 2
+theme_override_styles/panel = SubResource("AvatarStyle")
+
+[node name="Avatar" type="Label" parent="Margin/Content/Scroll/Body/Left/NameCard/Pad/Stack/Identity/AvatarPanel"]
+unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"ExtraBoldText"
 theme_override_font_sizes/font_size = 26
-theme_override_colors/font_color = Color(0.498, 0.651, 0.314, 1)
+theme_override_colors/font_color = Color(0.078, 0.078, 0.071, 1)
 horizontal_alignment = 1
 vertical_alignment = 1
 
