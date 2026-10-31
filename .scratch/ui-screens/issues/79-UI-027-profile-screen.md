@@ -1,5 +1,5 @@
 # UI-027: Profile screen to the design
-Stage: blocked
+Stage: to-review
 Blocked by: UI-021
 Review: agent
 Difficulty: normal
@@ -38,3 +38,5 @@ Restyle the profile to `docs/design/v0.1.0/png/Profile.png`, with the layout Bru
 - 2026-10-31 Written from `.scratch/ui-redo/spec.md`. Bruno took the canvas layout and kept the spec's chart (all games, 0–100).
 
 - 2026-10-31 Review ended at blocked (exit 0); branch ui-027 holds the review; left for a human
+
+- 2026-10-31 Foreman: the escalated prerequisite is resolved by the owner. The shared font-axis fix was merged to main as PR #37 (CLEAN-012, f0789db; it supersedes UI-030), and the session took it in sync merge 9ad4daf (gate 436 passed, 0 failed). Restoring `to-review` per the re-review's own resume instructions: rebase `ui-027` onto the session, run the gate on the resulting production, recapture populated Profile at 1280x800 and 800x600 and verify the resolved weights.

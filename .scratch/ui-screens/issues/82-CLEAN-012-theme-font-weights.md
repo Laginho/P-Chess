@@ -1,5 +1,5 @@
 # CLEAN-012: Apply the shared theme's variable-font weights in Godot
-Stage: to-implement
+Stage: done
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -38,3 +38,5 @@ Make the shared Noto Sans variations render the weights already required by UI-0
 
 Acceptance: pending | The shared variable-font weights have not been corrected or accepted visually.
 Disclosure: deferred | release | Accepted for UI-028's session integration (proxy decision recorded in UI-028); v0.1.0 waits for this correction and its captures. Other lanes' screens inherit it on sync and are rechecked in release QA.
+
+- 2026-10-31 Foreman: superseded. The owner merged this fix to main as PR #37 (fix f0789db, merge 0635b3d), with its regression in `tests/test_ui_theme.gd`; the session took it in sync merge 9ad4daf (gate 436 passed, 0 failed). This lane's parallel attempt (stage 2, gpt-6.1-terra xhigh, to-review at 47d4afd) is preserved unmerged on branch `recovery/superseded/20261031/CLEAN-012` and was not reviewed.
