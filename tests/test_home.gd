@@ -179,3 +179,112 @@ func test_custom_catalog_mode_is_reused_after_restart():
 func _wait_start(main) -> void:
 	while main._starting:
 		await Engine.get_main_loop().process_frame
+
+
+func test_home_shows_quick_play_and_navigation_icons():
+	var home = load("res://ui/home.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(home)
+	home.configure(load("res://core/settings.gd").new("res://tests/fixtures/no_session_settings.cfg"))
+	for name in ["OneZero", "ThreeTwo", "FiveZero", "Custom", "History", "Profile", "Settings", "Quit"]:
+		var button = home.find_child(name, true, false)
+		assert_true(button is Button and button.icon != null, "%s has an icon" % name)
+	var level: OptionButton = home.find_child("Level", true, false)
+	assert_eq(level.get_item_text(level.selected), "Maia 1500")
+	home.free()
+
+
+func test_missing_engine_message_does_not_overlap_navigation_at_minimum_window():
+	var home = load("res://ui/home.tscn").instantiate()
+	home.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	home.size = Vector2(800, 600)
+	Engine.get_main_loop().root.add_child(home)
+	home.show_missing("Lc0 is missing (engine/lc0/lc0.exe). Run scripts/fetch-engine.ps1 to download it.")
+	await Engine.get_main_loop().process_frame
+	var message: Label = home.get_node("Center/Form/Missing")
+	var history: Button = home.get_node("Center/Form/History")
+	assert_true(message.get_global_rect().end.y <= history.get_global_rect().position.y, "engine guidance stays above navigation")
+	home.free()
+
+
+func test_profile_keeps_settings_available_after_opening_from_home():
+	var main = MainScene.instantiate()
+	var folder := "user://test_home_profile_%d" % Time.get_ticks_usec()
+	main.history = load("res://core/history.gd").new(folder)
+	main.uci.free()
+	main.uci = Session.HeldBridge.new()
+	main.maia = main.MaiaPlayer.new(main.uci)
+	main.preferences = main.Settings.new("res://tests/fixtures/no_session_settings.cfg")
+	Engine.get_main_loop().root.add_child(main)
+	await Engine.get_main_loop().process_frame
+	var home = main.get_node("Home")
+	home._show_profile()
+	assert_true(main.settings_screen.get_node("Open").visible, "Settings remains available in Profile")
+	main.free()
+	Session.HistoryStorage.clean(folder)
+
+
+func test_home_and_searching_boards_follow_theme_preferences():
+	var main = MainScene.instantiate()
+	var folder := "user://test_home_themes_%d" % Time.get_ticks_usec()
+	main.history = load("res://core/history.gd").new(folder)
+	main.uci.free()
+	main.uci = Session.HeldBridge.new()
+	main.maia = main.MaiaPlayer.new(main.uci)
+	main.preferences = main.Settings.new("res://tests/fixtures/no_session_settings.cfg")
+	Engine.get_main_loop().root.add_child(main)
+	var home_board = main.get_node("Home/Center/Board")
+	var search_board = main.get_node("Searching/Board")
+	search_board.board_theme = "stale"
+	search_board.piece_theme = "stale"
+	main.searching.present({"control": "3+2", "level": "maia-1500"})
+	assert_eq(search_board.board_theme, "brown", "Searching loads the saved board theme")
+	assert_eq(search_board.piece_theme, "cburnett", "Searching loads the saved piece theme")
+	home_board.board_theme = "stale"
+	home_board.piece_theme = "stale"
+	search_board.board_theme = "stale"
+	search_board.piece_theme = "stale"
+	main.preferences.changed.emit("board_theme", "brown")
+	main.preferences.changed.emit("piece_theme", "cburnett")
+	for board in [home_board, search_board]:
+		assert_eq(board.board_theme, "brown", "board follows theme changes")
+		assert_eq(board.piece_theme, "cburnett", "pieces follow theme changes")
+	main.free()
+	Session.HistoryStorage.clean(folder)
+
+
+func test_home_restores_quick_play_size_when_engine_warning_is_hidden():
+	var home = load("res://ui/home.tscn").instantiate()
+	home.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	home.size = Vector2(800, 600)
+	Engine.get_main_loop().root.add_child(home)
+	home.show_missing("Engine unavailable")
+	var quick: Button = home.get_node("Center/Form/Quick/OneZero")
+	var compact_height := quick.size.y
+	home.get_node("Center/Form/Missing").hide()
+	assert_true(quick.size.y > compact_height, "quick play grows after the warning is hidden")
+	home.free()
+
+
+func test_searching_keeps_long_player_name_inside_card_at_minimum_window():
+	var main = MainScene.instantiate()
+	var folder := "user://test_home_long_name_%d" % Time.get_ticks_usec()
+	main.history = load("res://core/history.gd").new(folder)
+	main.uci.free()
+	main.uci = Session.HeldBridge.new()
+	main.maia = main.MaiaPlayer.new(main.uci)
+	main.preferences = main.Settings.new(folder.path_join("settings.cfg"))
+	var name := "Alexandria Catherine Montgomery de Albuquerque"
+	main.preferences.set_value("player_name", name)
+	Engine.get_main_loop().root.add_child(main)
+	var screen: Control = main.searching
+	screen.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	screen.size = Vector2(800, 600)
+	screen.present({"control": "3+2", "level": "maia-1500"})
+	await Engine.get_main_loop().process_frame
+	var player: Label = screen.get_node("Player")
+	var card: Control = screen.get_node("Card")
+	assert_true(player.get_global_rect().end.x <= card.get_global_rect().end.x, "player name stays inside the card")
+	assert_eq(player.text_overrun_behavior, TextServer.OVERRUN_TRIM_ELLIPSIS, "long names are visibly truncated")
+	assert_eq(main.preferences.get_value("player_name"), name, "the full name remains saved")
+	main.free()
+	Session.HistoryStorage.clean(folder)

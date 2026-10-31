@@ -1,6 +1,14 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://ui/home.gd" id="1"]
+[ext_resource type="PackedScene" path="res://ui/board_view.tscn" id="2"]
+[ext_resource type="Texture2D" path="res://ui/icons/bullet.svg" id="3"]
+[ext_resource type="Texture2D" path="res://ui/icons/blitz.svg" id="4"]
+[ext_resource type="Texture2D" path="res://ui/icons/custom.svg" id="5"]
+[ext_resource type="Texture2D" path="res://ui/icons/history.svg" id="6"]
+[ext_resource type="Texture2D" path="res://ui/icons/profile.svg" id="7"]
+[ext_resource type="Texture2D" path="res://ui/icons/settings.svg" id="8"]
+[ext_resource type="Texture2D" path="res://ui/icons/quit.svg" id="9"]
 
 [node name="Home" type="Control"]
 layout_mode = 3
@@ -16,71 +24,105 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-color = Color(0, 0, 0, 0.8)
+mouse_filter = 2
+color = Color(0.121569, 0.117647, 0.109804, 1)
 
-[node name="Center" type="CenterContainer" parent="."]
+[node name="Center" type="Control" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+mouse_filter = 2
 
-[node name="Form" type="VBoxContainer" parent="Center"]
-custom_minimum_size = Vector2(320, 0)
-layout_mode = 2
-theme_override_constants/separation = 12
+[node name="Board" parent="Center" instance=ExtResource("2")]
+layout_mode = 0
+mouse_filter = 2
+
+[node name="Form" type="Control" parent="Center"]
+layout_mode = 0
+mouse_filter = 2
 
 [node name="Title" type="Label" parent="Center/Form"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 28
+theme_type_variation = &"ExtraBoldText"
+theme_override_font_sizes/font_size = 44
 text = "P-Chess"
 horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="QuickLabel" type="Label" parent="Center/Form"]
+theme_type_variation = &"SectionLabel"
+text = "QUICK PLAY"
+vertical_alignment = 1
 
 [node name="Level" type="OptionButton" parent="Center/Form"]
-layout_mode = 2
 
-[node name="Quick" type="HBoxContainer" parent="Center/Form"]
-layout_mode = 2
+[node name="Quick" type="Control" parent="Center/Form"]
+mouse_filter = 2
 
 [node name="OneZero" type="Button" parent="Center/Form/Quick"]
-layout_mode = 2
-size_flags_horizontal = 3
+theme_type_variation = &"PrimaryButton"
+theme_override_font_sizes/font_size = 34
+theme_override_constants/icon_max_width = 34
 text = "1+0"
+icon = ExtResource("3")
+expand_icon = true
 
 [node name="ThreeTwo" type="Button" parent="Center/Form/Quick"]
-layout_mode = 2
-size_flags_horizontal = 3
+theme_type_variation = &"PrimaryButton"
+theme_override_font_sizes/font_size = 34
+theme_override_constants/icon_max_width = 34
 text = "3+2"
+icon = ExtResource("4")
+expand_icon = true
 
 [node name="FiveZero" type="Button" parent="Center/Form/Quick"]
-layout_mode = 2
-size_flags_horizontal = 3
+theme_type_variation = &"PrimaryButton"
+theme_override_font_sizes/font_size = 34
+theme_override_constants/icon_max_width = 34
 text = "5+0"
+icon = ExtResource("4")
+expand_icon = true
 
 [node name="Custom" type="Button" parent="Center/Form"]
-layout_mode = 2
-text = "Custom game"
+theme_type_variation = &"RaisedButton"
+theme_override_font_sizes/font_size = 24
+theme_override_constants/icon_max_width = 30
+text = "Custom"
+icon = ExtResource("5")
+expand_icon = true
 
 [node name="History" type="Button" parent="Center/Form"]
-layout_mode = 2
+theme_type_variation = &"Button"
+theme_override_font_sizes/font_size = 15
+theme_override_constants/icon_max_width = 18
 text = "History"
+icon = ExtResource("6")
+expand_icon = true
 
 [node name="Profile" type="Button" parent="Center/Form"]
-layout_mode = 2
+theme_type_variation = &"Button"
+theme_override_font_sizes/font_size = 15
+theme_override_constants/icon_max_width = 18
 text = "Profile"
+icon = ExtResource("7")
+expand_icon = true
 
 [node name="Settings" type="Button" parent="Center/Form"]
-layout_mode = 2
+theme_type_variation = &"Button"
+theme_override_font_sizes/font_size = 15
+theme_override_constants/icon_max_width = 18
 text = "Settings"
+icon = ExtResource("8")
+expand_icon = true
 
 [node name="Quit" type="Button" parent="Center/Form"]
-layout_mode = 2
+theme_type_variation = &"Button"
+theme_override_font_sizes/font_size = 15
+theme_override_constants/icon_max_width = 18
 text = "Quit"
+icon = ExtResource("9")
+expand_icon = true
 
 [node name="Missing" type="Label" parent="Center/Form"]
 visible = false
-layout_mode = 2
 autowrap_mode = 3

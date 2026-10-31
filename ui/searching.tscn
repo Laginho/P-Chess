@@ -1,6 +1,16 @@
-[gd_scene load_steps=2 format=3]
+﻿[gd_scene format=3]
 
 [ext_resource type="Script" path="res://ui/searching.gd" id="1"]
+[ext_resource type="PackedScene" path="res://ui/board_view.tscn" id="2"]
+[ext_resource type="Texture2D" path="res://ui/icons/robot.svg" id="3"]
+[ext_resource type="Texture2D" path="res://ui/icons/blitz.svg" id="4"]
+
+[sub_resource type="StyleBoxFlat" id="AvatarStyle"]
+bg_color = Color(0.498, 0.651, 0.314, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
 
 [node name="Searching" type="Control"]
 visible = false
@@ -8,8 +18,6 @@ layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
 focus_mode = 2
 script = ExtResource("1")
 
@@ -18,29 +26,79 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-color = Color(0.12, 0.12, 0.12, 1)
+color = Color(0.121569, 0.117647, 0.109804, 1)
 
-[node name="Center" type="CenterContainer" parent="."]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
+[node name="Board" parent="." instance=ExtResource("2")]
+layout_mode = 0
+mouse_filter = 2
 
-[node name="Content" type="VBoxContainer" parent="Center"]
-layout_mode = 2
-theme_override_constants/separation = 20
+[node name="Card" type="PanelContainer" parent="."]
+theme_type_variation = &"CardPanel"
+mouse_filter = 2
+
+[node name="Spinner" type="Control" parent="."]
+mouse_filter = 2
+
+[node name="Robot" type="TextureRect" parent="."]
+texture = ExtResource("3")
+expand_mode = 1
+stretch_mode = 5
+mouse_filter = 2
+
+[node name="Avatar" type="Label" parent="."]
+theme_type_variation = &"ExtraBoldText"
+theme_override_colors/font_color = Color(0.078, 0.078, 0.071, 1)
+theme_override_styles/normal = SubResource("AvatarStyle")
+horizontal_alignment = 1
+vertical_alignment = 1
+mouse_filter = 2
+
+[node name="Opponent" type="Label" parent="."]
+theme_type_variation = &"SectionLabel"
+text = "Opponent"
+vertical_alignment = 1
+
+[node name="Player" type="Label" parent="."]
+theme_type_variation = &"SemiboldText"
+text = "You"
+vertical_alignment = 1
+clip_text = true
+text_overrun_behavior = 3
+
+[node name="Center" type="Control" parent="."]
+mouse_filter = 2
+
+[node name="Content" type="Control" parent="Center"]
+mouse_filter = 2
 
 [node name="Title" type="Label" parent="Center/Content"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 32
-text = "Searching for opponent"
+theme_type_variation = &"ExtraBoldText"
+theme_override_font_sizes/font_size = 24
+text = "Starting your game"
 horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="Match" type="Label" parent="Center/Content"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 24
-horizontal_alignment = 1
+visible = false
 
 [node name="Status" type="Label" parent="Center/Content"]
-layout_mode = 2
+theme_type_variation = &"MutedText"
+theme_override_font_sizes/font_size = 15
 horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ControlChip" type="Button" parent="Center/Content"]
+theme_type_variation = &"RaisedButton"
+focus_mode = 0
+mouse_filter = 2
+theme_override_constants/icon_max_width = 16
+icon = ExtResource("4")
+expand_icon = true
+
+[node name="LevelChip" type="Button" parent="Center/Content"]
+theme_type_variation = &"RaisedButton"
+focus_mode = 0
+mouse_filter = 2
+theme_override_constants/icon_max_width = 16
+icon = ExtResource("3")
+expand_icon = true
