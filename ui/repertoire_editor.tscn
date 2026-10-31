@@ -36,6 +36,12 @@ layout_mode = 2
 [node name="Status" type="Label" parent="Margin/Form"]
 layout_mode = 2
 
+[node name="Unsaved" type="Label" parent="Margin/Form"]
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.956863, 0.74902, 0.266667, 1)
+text = "Unsaved changes"
+
 [node name="Buttons" type="HBoxContainer" parent="Margin/Form"]
 layout_mode = 2
 

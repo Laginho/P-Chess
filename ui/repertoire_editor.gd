@@ -64,6 +64,7 @@ func _played(_san: String) -> void:
 
 
 func _refresh() -> void:
+	$Margin/Form/Unsaved.visible = edited != repertoire.tree
 	tree.clear()
 	var invisible := tree.create_item()
 	for key in edited:
@@ -119,5 +120,6 @@ func save() -> void:
 	var error: String = repertoire.save_edited(edited, saved_name)
 	status.text = error
 	if error.is_empty():
+		$Margin/Form/Unsaved.hide()
 		hide()
 		saved.emit(saved_name)
