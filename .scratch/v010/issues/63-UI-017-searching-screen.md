@@ -1,5 +1,5 @@
 # UI-017: The searching screen
-Stage: to-implement
+Stage: blocked
 Blocked by: HIST-006, UI-016
 Review: agent
 Difficulty: normal
@@ -37,3 +37,5 @@ Between the click and the game, a screen like chess.com's "searching for opponen
 ## Comments
 
 - 2026-10-30 Written from spec §15.8 and the design brief (screen 3).
+
+- 2026-10-31 Stage stopped (incomplete handoff): Stage left uncommitted work; saved for recovery. See C:\Users\bruno\Desktop\Pastinha\Programas\Projects\P-Chess\.artifacts-build\lanes\v010\.scratch\run-log\UI-017-implement-20261031-015246.txt.runtime.json and run-log/recovery.txt; inspect the saved work before retrying.
