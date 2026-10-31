@@ -1,6 +1,6 @@
-﻿extends Control
+extends Control
 
-# The settings screen (Â§10): one row per setting of `store` (core/settings.gd), set before this
+# The settings screen (§10): one row per setting of `store` (core/settings.gd), set before this
 # enters the tree. Each edit goes straight to the store, which saves it and announces it.
 # shortcut: the Open button sits in the window's top-right corner, clear of the top clock because
 # the side panel is 240 px wide and the clock text narrower; move it into the panel if they collide.
@@ -31,7 +31,7 @@ func _ready() -> void:
 	_spin("board_size", "Board size (px, 0 = fit)", 10)
 	_choice("sound_theme", "Sounds", _themes("sounds"))
 	_spin("volume", "Volume (%)", 1)
-	_spin("tau", "Threshold Ï„ (%)", 0.1, 100.0)
+	_spin("tau", "Threshold τ (%)", 0.1, 100.0)
 	_spin("temperature", "Temperature T", 0.1)
 	_choice("panic", "Panic intensity", Settings.CHOICES.panic)
 	_choice("book_intensity", "Book intensity", Settings.CHOICES.book_intensity)
@@ -100,4 +100,3 @@ func _row(label: String, control: Control) -> void:
 	_form.add_child(text)
 	control.size_flags_horizontal = SIZE_EXPAND_FILL
 	_form.add_child(control)
-

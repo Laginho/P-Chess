@@ -470,6 +470,7 @@ chess.com's CAPS2 is not published.
   - Games run one at a time, in the thread mode set in the settings (Background by default).
   - Clicking Review on a queued game, or Analyze inside the review of an unqueued one, jumps it ahead on Max; the batch then resumes where it stopped.
   - The queue pauses while a game is played and resumes after it, and also survives restarting the app.
+  - `core/analysis_queue.gd` persists the ordered PGN paths in `user://analysis_queue.cfg`; an interrupted game starts again from the beginning. The history shows queued and active progress, and the queue removes games whose PGN was deleted.
 
 ### 15.8 Home screen, profile and your name
 

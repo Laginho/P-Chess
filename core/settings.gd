@@ -1,6 +1,6 @@
-﻿extends RefCounted
+extends RefCounted
 
-# The player's settings (Â§10), in one ConfigFile section. A missing, corrupt or out-of-range value
+# The player's settings (§10), in one ConfigFile section. A missing, corrupt or out-of-range value
 # reads as its default, so a bad file never stops the app. Every accepted change is saved at once
 # and announced through `changed`, which is how it takes effect without a restart.
 
@@ -91,4 +91,3 @@ static func valid(key: String, value) -> bool:
 	if THEMES.has(key):
 		return ThemeLoader.new().list_themes(THEMES[key]).has(value)
 	return true
-

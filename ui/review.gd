@@ -20,6 +20,8 @@ const Badges = preload("res://bot/badges.gd")
 # System boundaries stay replaceable for headless tests.
 var analysis_bridge_factory: Callable = func(): return Uci.new("engine/stockfish/stockfish.exe", "Stockfish")
 var analyser_factory: Callable = func(bridge): return Analyser.new(bridge)
+var analysis_queue
+var _queue_path := ""
 var _analysis_bridge
 var _analyser
 var _waiting_engine := false
@@ -53,6 +55,9 @@ const CLASS_NAMES := ["Brilliant", "Great", "Best", "Excellent", "Good", "Book",
 
 
 func _ready() -> void:
+	if analysis_queue != null:
+		analysis_queue.position_ready.connect(_queue_position)
+		analysis_queue.changed.connect(_queue_changed)
 	_graph.ply_selected.connect(_show_ply)
 	$Margin/Content/ReviewBody/Side/AccuracyHelp.tooltip_text = "Accuracy uses the change in win probability for each move.\nThe game score averages a volatility-weighted mean and\nthe harmonic mean of those move scores."
 	$Margin/Content/ReviewBody/Side/ClassHelp.tooltip_text = _class_help()
@@ -122,6 +127,14 @@ func _wrap_help(text: String) -> String:
 
 func open_analysis(path: String, draw_at_end: bool) -> void:
 	show()
+	if analysis_queue != null:
+		var game_path := _queue_path if _from_history else "user://games".path_join(path.get_file().trim_suffix(".json"))
+		if FileAccess.file_exists(game_path):
+			_queue_path = game_path
+			_analysis_path = path
+			analysis_queue.prioritize(game_path)
+			_queue_changed()
+			return
 	if _analysis_bridge != null:
 		return
 	_analysis_path = path
@@ -360,6 +373,7 @@ func present(game, clocks: Array, settings: Dictionary, result_text: String,
 
 
 func present_history(path: String, analysis_path: String, draw_at_end: bool) -> void:
+	_queue_path = path
 	_from_history = true
 	_analysis_path = analysis_path
 	_history_draw = draw_at_end
@@ -374,6 +388,9 @@ func present_history(path: String, analysis_path: String, draw_at_end: bool) -> 
 			receive_position(i, positions[i])
 	else:
 		$Margin/Content/ReviewBody/Side/Analyze.show()
+		if analysis_queue != null and path in analysis_queue.pending():
+			$Margin/Content/ReviewBody/Side/Analyze.hide()
+			open_analysis(analysis_path, draw_at_end)
 
 
 static func _badge_text(mark: Dictionary) -> String:
@@ -407,3 +424,24 @@ static func lichess_url(game) -> String:
 		moves.append({"uci": move})
 	var text := Pgn.write({"headers": {}, "moves": moves, "result": game.result}).strip_edges()
 	return "https://lichess.org/analysis/pgn/" + text.uri_encode()
+
+func _queue_position(path: String, index: int, position: Dictionary) -> void:
+	if visible and path == _queue_path:
+		receive_position(index, position)
+
+
+func _queue_changed() -> void:
+	if not visible or analysis_queue == null or _queue_path.is_empty():
+		return
+	var active: bool = analysis_queue.current() == _queue_path
+	$Margin/Content/Progress.visible = active
+	if active:
+		$Margin/Content/Progress.value = analysis_queue.percent
+	elif not _queue_path in analysis_queue.pending():
+		var cached := Analyser.read_analysis(_analysis_path, "Stockfish 19", Tunables.ANALYSIS_NODES)
+		var positions = cached.get("data", {}).get("positions", [])
+		if positions is Array and positions.size() == _positions.size():
+			for i in positions.size():
+				receive_position(i, positions[i])
+	if not analysis_queue.error.is_empty():
+		_analysis_error(analysis_queue.error)

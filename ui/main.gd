@@ -14,6 +14,7 @@ const MaiaPlayer = preload("res://bot/maia_player.gd")
 const Settings = preload("res://core/settings.gd")
 const SettingsScreen = preload("res://ui/settings.tscn")
 const History = preload("res://core/history.gd")
+const AnalysisQueue = preload("res://core/analysis_queue.gd")
 const ReviewScreen = preload("res://ui/review.tscn")
 const HistoryScreen = preload("res://ui/history_screen.tscn")
 
@@ -35,6 +36,7 @@ var preferences := Settings.new()
 var settings_screen := SettingsScreen.instantiate()
 var review := ReviewScreen.instantiate()
 var history_screen := HistoryScreen.instantiate()
+var analysis_queue
 var review_analysis_path := ""
 var resign_key := ResignKey.new(Time.get_ticks_msec)
 # Only the board and the clocks show (§8.7).
@@ -151,6 +153,12 @@ func _ready() -> void:
 	$Layout.resized.connect(_fit_board)
 	$Layout/BoardView/ResizeGrip.size_requested.connect(_resize_board)
 	_fit_board()
+	if analysis_queue == null:
+		analysis_queue = AnalysisQueue.new()
+	analysis_queue.maximum = preferences.get_value("analysis_threads") == "Max"
+	add_child(analysis_queue)
+	review.analysis_queue = analysis_queue
+	history_screen.analysis_queue = analysis_queue
 	settings_screen.store = preferences
 	add_child(settings_screen)
 	add_child(review)
@@ -218,6 +226,7 @@ func _start(new_settings: Dictionary) -> void:
 	if _starting or not uci.error.is_empty():
 		return
 	_starting = true
+	analysis_queue.pause()
 	setup.hide()
 	setup.get_node("OpeningPicker").hide()
 	setup.get_node("RepertoireScreen/RepertoireImport").hide()
@@ -252,8 +261,10 @@ func _start(new_settings: Dictionary) -> void:
 	_starting = false
 	starting.hide()
 	if not uci.error.is_empty():
+		analysis_queue.resume()
 		return
 	if not error.is_empty():
+		analysis_queue.resume()
 		setup.show()
 		var status: Label = setup.get_node("Center/Form/Missing")
 		status.text = error
@@ -307,6 +318,7 @@ func _start(new_settings: Dictionary) -> void:
 
 
 func _show_setup() -> void:
+	analysis_queue.resume()
 	_reset_match()
 	draw_button.disabled = true
 	_draw_offered = false
@@ -366,6 +378,8 @@ func _on_engine_stopped() -> void:
 # One setting to whatever reads it; the next move, sound or game picks it up.
 func _apply(key: String, value) -> void:
 	match key:
+		"analysis_threads":
+			analysis_queue.maximum = value == "Max"
 		"premove_style":
 			board_view.premove_style = value
 		"click_click":
@@ -491,6 +505,7 @@ func _on_flagged(side: String) -> void:
 
 # Every way a game ends lands here, after the game has its result.
 func _show_result() -> void:
+	analysis_queue.resume()
 	draw_button.disabled = true
 	_draw_offered = false
 	resign_button.disabled = true
