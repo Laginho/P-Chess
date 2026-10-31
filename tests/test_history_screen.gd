@@ -111,6 +111,32 @@ func test_black_player_and_cached_analysis_appear_on_card():
 	Storage.clean(folder)
 
 
+func test_history_review_uses_saved_repertoire_snapshot():
+	var folder := "user://history_snapshot_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var main = MainScene.instantiate()
+	main.history = History.new(folder)
+	main.preferences = Settings.new(folder.path_join("settings.cfg"))
+	main.get_node("Setup").book.load_tsv("eco\tname\tpgn\nA00\tFixture\t1. h3\n")
+	main.uci.free()
+	main.uci = HeldEngine.new()
+	main.maia = main.MaiaPlayer.new(main.uci)
+	var repertoire = load("res://bot/repertoire.gd").new()
+	assert_eq(repertoire.parse("1. e4 e5 2. Nf3 *", "w"), "")
+	var game = Game.new()
+	game.play("d2d4")
+	game.resign("b")
+	main.history.save(game, [60000], {"colour": "w", "level": "maia-1500", "control": "1+0"}, "", "", repertoire.lines, "w")
+	Engine.get_main_loop().root.add_child(main)
+	main.get_node("Setup/Center/Form/History").pressed.emit()
+	var card = main.get_node("HistoryScreen/Margin/Content/Cards/List").get_child(0)
+	card.get_node("Details/HBoxContainer/Review").pressed.emit()
+	var exit_label = main.review.get_node("Margin/Content/ReviewBody/Side/RepertoireExit")
+	assert_true(exit_label.visible and exit_label.text.contains("expected: e4"), "markers come from the saved snapshot")
+	main.free()
+	Storage.clean(folder)
+
+
 func test_tabs_and_won_on_time_card():
 	var scene = load("res://ui/history_screen.tscn")
 	assert_true(scene != null, "history screen exists")
