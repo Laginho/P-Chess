@@ -388,9 +388,9 @@ func present_history(path: String, analysis_path: String, draw_at_end: bool) -> 
 			receive_position(i, positions[i])
 	else:
 		$Margin/Content/ReviewBody/Side/Analyze.show()
-		if analysis_queue != null and path in analysis_queue.pending():
-			$Margin/Content/ReviewBody/Side/Analyze.hide()
-			open_analysis(analysis_path, draw_at_end)
+	if analysis_queue != null and path in analysis_queue.pending():
+		$Margin/Content/ReviewBody/Side/Analyze.hide()
+		open_analysis(analysis_path, draw_at_end)
 
 
 static func _badge_text(mark: Dictionary) -> String:
