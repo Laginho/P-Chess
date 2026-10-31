@@ -1,5 +1,5 @@
 # REV-005: The new review screen: board, eval bar and classified moves
-Stage: to-implement
+Stage: blocked
 Blocked by: REV-002, REV-003
 Review: human
 Difficulty: normal
@@ -98,3 +98,5 @@ The review becomes a chess.com-style game review (§15.6). The post-game panel's
 
 - 2026-10-30 Foreman: the proxy's ticket drafts above are folded into Primary files, criterion 3 and the tests list; its §15.4 sentence for `docs/spec.md` is stage 2's to apply. Stage back to `to-implement`.
 - 2026-10-30 Foreman diagnosis of attempts 1-2 (23:09, 23:12): environment handling, not code or contract. `godot` is on PATH at `C:\Users\bruno\AppData\Local\Programs\Godot\godot.cmd` (console exe `Godot_v4.7-stable_win64_console.exe` beside it), but the Codex sandbox denies reading that folder, so a sandboxed `godot` says "not recognized" and `Get-ChildItem` on it says "Access is denied". The same denial applies to `.git` writes (`index.lock`). Rerun the denied `godot`, `git` and `gh` commands with escalation: the stage that asked (log `.scratch/run-log/REV-005-implement-20261030-230325.txt`) did exactly that and ran red 9/1, then green 10/0. Do not search for Godot with `-ErrorAction SilentlyContinue`: it hid the denial in both failed attempts. Resume from `recovery/asked/20261030-230636/REV-005` (`23d0143` test, `aeb5d63` board navigation); the proxy decision above stands.
+
+- 2026-10-30 Attempt 3 failed: exit 0; blocked after two attempts. Log tail: O **REV-005 está incompleto**, em `Stage: implementing`, na branch `REV-005-review-screen-core`. /  / Recuperei os commits preservados de navegação por setas, implementei a seleção de uma jogada na lista e adaptei o classificador para aguardar dados de análise parcial. Os testes focados passaram: **16 de classificação** e **11 da tela de revisão**. /  / Ainda faltam a integração do Stockfish e da análise incremental, a barra de avaliação, os ícones e a seta no tabuleiro, além da verificação de layout e do gate completo. Os commits estão preservados para continuar o trabalho.
