@@ -44,7 +44,7 @@ var _check_repertoire := false
 var _player_names := ["White", "Black"]
 var _from_history := false
 var _history_draw := false
-const CLASS_NAMES := ["Brilliant", "Great", "Best", "Excellent", "Good", "Book", "Repertoire", "Forced", "Inaccuracy", "Mistake", "Miss", "Blunder"]
+const CLASS_NAMES := ["Brilliant", "Great", "Best", "Excellent", "Good", "Book", "Repertoire", "Inaccuracy", "Mistake", "Miss", "Blunder", "Forced"]
 
 @onready var _eval_bar = $Margin/Content/ReviewBody/EvalBar
 @onready var _board_view = $Margin/Content/ReviewBody/BoardView
@@ -58,6 +58,33 @@ func _ready() -> void:
 	if analysis_queue != null:
 		analysis_queue.position_ready.connect(_queue_position)
 		analysis_queue.changed.connect(_queue_changed)
+	var table: GridContainer = $Margin/Content/ReviewBody/Side/Counts
+	for label in CLASS_NAMES:
+		var name_label := Label.new()
+		name_label.name = label + "Label"
+		name_label.text = label
+		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		name_label.add_theme_font_size_override("font_size", 11)
+		table.add_child(name_label)
+		var white := Label.new()
+		white.name = label + "White"
+		white.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		white.custom_minimum_size.x = 26
+		white.add_theme_font_size_override("font_size", 11)
+		table.add_child(white)
+		var icon := TextureRect.new()
+		icon.name = label + "Icon"
+		icon.texture = _class_icon(label)
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.custom_minimum_size = Vector2(16, 16)
+		table.add_child(icon)
+		var black := Label.new()
+		black.name = label + "Black"
+		black.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		black.custom_minimum_size.x = 26
+		black.add_theme_font_size_override("font_size", 11)
+		table.add_child(black)
 	_graph.ply_selected.connect(_show_ply)
 	_board_view.resized.connect(_update_player_labels)
 	$Margin/Content/ReviewBody/Side.resized.connect(_layout_review)
@@ -367,10 +394,12 @@ func _update_summary() -> void:
 	for i in _classes.size():
 		if _classes[i] != null:
 			counts[_classes[i].class][i % 2] += 1
-	var lines := PackedStringArray(["Class             White   Black"])
+	var table: GridContainer = $Margin/Content/ReviewBody/Side/Counts
 	for label in CLASS_NAMES:
-		lines.append("%s:  %d   %d" % [label, counts[label][0], counts[label][1]])
-	$Margin/Content/ReviewBody/Side/Counts.text = "\n".join(lines)
+		for side in 2:
+			var value: Label = table.get_node(label + ("White" if side == 0 else "Black"))
+			value.text = str(counts[label][side])
+			value.modulate = Color("8a857c") if counts[label][side] == 0 else Color("ece9e4")
 	var summary: Label = $Margin/Content/ReviewBody/Side/Summary
 	for position in _positions:
 		if not position.has("pv"):

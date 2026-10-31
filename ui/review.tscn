@@ -147,9 +147,11 @@ text = "Move classes  ?"
 flat = true
 alignment = 0
 
-[node name="Counts" type="Label" parent="Margin/Content/ReviewBody/Side"]
+[node name="Counts" type="GridContainer" parent="Margin/Content/ReviewBody/Side"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 11
+columns = 4
+theme_override_constants/v_separation = 0
+theme_override_constants/h_separation = 8
 
 [node name="EvalGraph" type="Control" parent="Margin/Content/ReviewBody/Side"]
 custom_minimum_size = Vector2(0, 60)
