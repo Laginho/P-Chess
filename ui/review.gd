@@ -141,12 +141,16 @@ func _cancel_analysis() -> void:
 		_analysis_bridge = null
 
 
-# Handle Space before the focused move list or a button consumes it as GUI input.
+# Handle review shortcuts before focused controls consume them as GUI input.
 func _input(event: InputEvent) -> void:
 	if visible and event is InputEventKey and event.is_pressed() and not event.is_echo() \
 			and event.keycode == KEY_SPACE:
 		get_viewport().set_input_as_handled()
 		rematch_requested.emit()
+	elif visible and event is InputEventKey and event.is_pressed() and not event.is_echo() and event.keycode == KEY_F:
+		get_viewport().set_input_as_handled()
+		_board_view.flipped = not _board_view.flipped
+		_update_eval_bar()
 	elif visible and event is InputEventKey and event.is_pressed() and not event.is_echo() and event.keycode in [KEY_LEFT, KEY_RIGHT]:
 		get_viewport().set_input_as_handled()
 		_show_ply(_ply + (-1 if event.keycode == KEY_LEFT else 1))
