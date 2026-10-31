@@ -40,6 +40,28 @@ func test_viewer_shows_black_line_and_steps_without_allowing_moves():
 	_clean(folder)
 
 
+func test_viewer_numbers_and_highlights_a_line_starting_with_black():
+	var setup = load("res://ui/setup.tscn").instantiate()
+	var folder := _folder()
+	setup.repertoire.storage_dir = folder
+	var pgn := "[SetUp \"1\"]\n[FEN \"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1\"]\n1... e5 2. e4 *"
+	assert_eq(setup.repertoire.import_pgn(pgn, "b", "Study"), "")
+	Engine.get_main_loop().root.add_child(setup)
+	var screen = setup.get_node("RepertoireScreen")
+	screen.present()
+	screen.get_node("Margin/Form/List").item_selected.emit(0)
+	var row = screen.find_child("LineRows", true, false).get_child(0)
+	assert_eq(row.find_child("Moves", true, false).text, "1...e5 2.e4")
+	assert_eq(row.accessibility_description, "1...e5 2.e4")
+	var navigation = screen.find_child("Navigation", true, false)
+	var moves = navigation.get_node("Moves")
+	assert_eq(moves.text, "1...e5 [bgcolor=#45423d]2.e4[/bgcolor]")
+	navigation.get_node("Previous").pressed.emit()
+	assert_eq(moves.text, "[bgcolor=#45423d]1...e5[/bgcolor] 2.e4")
+	setup.free()
+	_clean(folder)
+
+
 func test_repertoire_selection_shows_its_name_colour_and_line_count():
 	var setup = load("res://ui/setup.tscn").instantiate()
 	var folder := _folder()

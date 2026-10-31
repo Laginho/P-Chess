@@ -1,5 +1,5 @@
-# UI-028: Repertoires, opening picker and editor to the design
-Stage: to-implement
+﻿# UI-028: Repertoires, opening picker and editor to the design
+Stage: implementing
 Blocked by: UI-021
 Review: agent
 Difficulty: normal
@@ -97,3 +97,4 @@ Screenshot comparison: before is the archived session base `72ad4c4`; after is t
 Acceptance: pending | The two UI-028 regressions above and the shared font defect prevent implementation approval; the previously disclosed human visual and physical-input acceptance also remains.
 Disclosure: pending | integration | Correct the two UI-028 findings before integrating this ticket; preserve the branch's existing work and tests.
 Disclosure: pending | integration | CLEAN-012 tracks the shared font-weight defect required by this ticket's visual acceptance; no deferral has been accepted.
+
