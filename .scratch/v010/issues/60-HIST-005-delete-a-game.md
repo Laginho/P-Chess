@@ -1,5 +1,5 @@
 # HIST-005: Delete a game, and the PracticeTarget header
-Stage: implementing
+Stage: to-review
 Blocked by: HIST-004
 Review: agent
 Difficulty: normal
@@ -84,9 +84,9 @@ Acceptance: pending | Manually note a level's W/D/L, delete a game and confirm t
 
 Disclosure: pending | release | Manual deletion, statistics and rendered confirmation acceptance remain outstanding (verification above).
 
-Gate evidence: C:\Users\bruno\AppData\Local\Temp\p-chess-hist005-handoff.json
+Previous gate receipt: C:\Users\bruno\AppData\Local\Temp\p-chess-hist005-handoff.json
 
-Disclosure: pending | integration | The stage-3 review below requires red/green proof for the failed-delete repairs before this ticket can integrate.
+Disclosure: decision | none | The stage-3 regression-proof requirement is addressed by the tests and mutation checks below; independent review remains pending.
 
 #### Resolution (2026-10-31)
 Verdict: Reopen — missing test-first proof for the criterion 6 failure repairs.
@@ -99,3 +99,7 @@ Verdict: Reopen — missing test-first proof for the criterion 6 failure repairs
 - Coverage: examined all changed files, Main's save/history/review callers, Maia/Book target selection and reset, every finished_game caller, PGN parsing/legacy identity, control/result/time mapping, result/flag/practice persistence, snapshot/analysis naming, analysis cancellation when returning to history, confirmation/Cancel/error paths, zero floors, and file move/removal/stats-write rollback branches. Standards reviewer: `/root/standards_review`; Spec reviewer: `/root/spec_review`. Both independent reviews were read-only.
 - Gate evidence: reused the supplied receipt for `1ce2381ab3361b1156413e11da90764ee3d40791`; the SHA256 of `C:\Users\bruno\AppData\Local\Temp\p-chess-hist005-handoff.log` matches the receipt. The log has 364 PASS lines, 364 passed, 0 failed, no SKIP lines, and ExitCode: 0. Only this tracker ticket changed after the tested commit. No gate or focused test was rerun during review.
 - Limits: final removal and stats save/replacement failures remain untested; rendered confirmation/error layout, physical focus/input, and the manual statistics check remain pending. The existing Acceptance and release Disclosure stay pending. No merge, PR or push; the implementation is preserved on `HIST-005-delete-a-game` for stage 2.
+
+- 2026-10-31 Stage 2 resumed: added filesystem-injected final-removal and temporary-stats-save failure tests. Both assert the error, original file bytes and in-memory and reloaded result, flag and practice counts. Focused tests passed 20/20. Removing each corresponding rollback produced 19 passed, 1 failed in its respective focused run; the implementation was restored. The temporary-save failure covers the same rollback branch as replacement failure, per the recorded proxy decision. The read-only attribute worked on Windows; no production seam was added. Full gate: 366 passed, 0 failed, exit 0, tested commit 2a44682f7d7e3a80e65bae704ff9d6d98d8ddf03.
+
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\p-chess-hist005-regression.json
