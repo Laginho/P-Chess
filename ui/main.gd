@@ -33,6 +33,7 @@ var preferences := Settings.new()
 # Their screen, over everything else; hidden in focus mode.
 var settings_screen := SettingsScreen.instantiate()
 var review := ReviewScreen.instantiate()
+var review_analysis_path := ""
 var resign_key := ResignKey.new(Time.get_ticks_msec)
 # Only the board and the clocks show (§8.7).
 var focus := false
@@ -471,7 +472,9 @@ func _show_result() -> void:
 			_maia_score += 2
 		_update_score_text()
 		_history_saved = true
-		history.save(game, _move_clocks, settings, "", maia.target_id, _review_repertoire, _review_repertoire_colour)
+		var game_path: String = history.save(game, _move_clocks, settings, "", maia.target_id, _review_repertoire, _review_repertoire_colour)
+		var name := game_path.get_file() if not game_path.is_empty() else "unsaved-%d.pgn" % Time.get_ticks_usec()
+		review_analysis_path = "user://analysis".path_join(name + ".json")
 	if history.error:
 		result_label.text += "\nHistory: " + history.error
 	review.present(game, _move_clocks, settings, result_label.text,

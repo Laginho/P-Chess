@@ -88,7 +88,7 @@ func test_lichess_url_encodes_san_moves_and_mate():
 	assert_eq(Review.lichess_url(empty), "https://lichess.org/analysis/pgn/0-1")
 
 
-func test_checkmate_opens_review_with_result_reason_and_both_sides_times():
+func test_checkmate_opens_review_with_result_and_both_sides_moves():
 	var time := FakeTime.new()
 	var main = _session(time)
 	var review = main.get_node_or_null("Review")
@@ -113,14 +113,14 @@ func test_checkmate_opens_review_with_result_reason_and_both_sides_times():
 	assert_true(review.visible, "also opens in focus mode")
 	var result: String = review.get_node("Margin/Content/Result").text
 	assert_true(result.contains("0-1") and result.contains("checkmate") and result.contains("Black wins"))
-	var rows = review.get_node("Margin/Content/Moves").get_root().get_children()
+	var rows = review.get_node("Margin/Content/ReviewBody/Side/Moves").get_root().get_children()
 	assert_eq(rows.size(), 2)
 	if rows.size() == 2:
 		assert_eq(rows[0].get_text(0), "1.")
-		assert_eq(rows[0].get_text(1), "f3 (0.000 s)")
-		assert_eq(rows[0].get_text(2), "e5 (0.000 s)")
-		assert_eq(rows[1].get_text(1), "g4 (0.250 s)")
-		assert_eq(rows[1].get_text(2), "Qh4# (1.000 s)")
+		assert_eq(rows[0].get_text(1), "f3")
+		assert_eq(rows[0].get_text(2), "e5")
+		assert_eq(rows[1].get_text(1), "g4")
+		assert_eq(rows[1].get_text(2), "Qh4#")
 	main.free()
 
 
@@ -153,7 +153,7 @@ func test_review_opens_for_no_move_resignation_flag_and_claimed_draw():
 			assert_true(review.visible, ending)
 			assert_true(review.get_node("Margin/Content/Result").text.contains(ending))
 			if ending == "resignation":
-				assert_eq(review.get_node("Margin/Content/Moves").get_root().get_child_count(), 0)
+				assert_eq(review.get_node("Margin/Content/ReviewBody/Side/Moves").get_root().get_child_count(), 0)
 		main.free()
 
 
@@ -200,7 +200,7 @@ func test_space_with_review_focused_rematches_and_replaces_the_previous_game():
 	_key(main, KEY_ESCAPE)
 	main.board_view.get_node("GameOver/Panel/Content/Review").pressed.emit()
 	var review = main.get_node("Review")
-	review.get_node("Margin/Content/Moves").grab_focus()
+	review.get_node("Margin/Content/ReviewBody/Side/Moves").grab_focus()
 	var event := InputEventKey.new()
 	event.keycode = KEY_SPACE
 	event.pressed = true
@@ -214,10 +214,10 @@ func test_space_with_review_focused_rematches_and_replaces_the_previous_game():
 	_key(main, KEY_ESCAPE)
 	main.board_view.get_node("GameOver/Panel/Content/Review").pressed.emit()
 	assert_true(review.visible)
-	var rows = review.get_node("Margin/Content/Moves").get_root().get_children()
+	var rows = review.get_node("Margin/Content/ReviewBody/Side/Moves").get_root().get_children()
 	assert_eq(rows.size(), 1)
 	if rows.size() == 1:
-		assert_eq(rows[0].get_text(1), "d4 (0.000 s)", "no moves or times from the previous game")
+		assert_eq(rows[0].get_text(1), "d4", "no moves or times from the previous game")
 		assert_eq(rows[0].get_text(2), "")
 	var sent := {"pgn": ""}
 	review.copy_text = func(text: String): sent.pgn = text
@@ -261,5 +261,198 @@ func test_review_returns_to_setup_and_starts_a_fresh_game():
 	_key(main, KEY_ESCAPE)
 	main.board_view.get_node("GameOver/Panel/Content/Review").pressed.emit()
 	assert_true(review.visible)
-	assert_eq(review.get_node("Margin/Content/Moves").get_root().get_child_count(), 0)
+	assert_eq(review.get_node("Margin/Content/ReviewBody/Side/Moves").get_root().get_child_count(), 0)
 	main.free()
+
+func test_review_steps_through_game_with_arrow_keys():
+	var time := FakeTime.new()
+	var main = _session(time)
+	main.board_view.play("e2e4")
+	main._on_maia_move("e7e5")
+	_key(main, KEY_ESCAPE)
+	_key(main, KEY_ESCAPE)
+	main.board_view.get_node("GameOver/Panel/Content/Review").pressed.emit()
+	var review = main.get_node("Review")
+	var board = review.get_node_or_null("Margin/Content/ReviewBody/BoardView")
+	assert_true(board != null, "review has its own board")
+	if board != null:
+		var event := InputEventKey.new()
+		event.pressed = true
+		event.keycode = KEY_LEFT
+		review._input(event)
+		assert_eq(board.game.moves, PackedStringArray(["e2e4"]))
+		event.keycode = KEY_RIGHT
+		review._input(event)
+		assert_eq(board.game.moves, PackedStringArray(["e2e4", "e7e5"]))
+	main.free()
+
+func test_clicking_a_move_shows_its_position():
+	var time := FakeTime.new()
+	var main = _session(time)
+	main.board_view.play("e2e4")
+	main._on_maia_move("e7e5")
+	_key(main, KEY_ESCAPE)
+	_key(main, KEY_ESCAPE)
+	main.board_view.get_node("GameOver/Panel/Content/Review").pressed.emit()
+	var review = main.get_node("Review")
+	var list: Tree = review.get_node("Margin/Content/ReviewBody/Side/Moves")
+	var row: TreeItem = list.get_root().get_first_child()
+	row.select(1)
+	list.item_selected.emit()
+	var board = review.get_node("Margin/Content/ReviewBody/BoardView")
+	assert_eq(board.game.moves, PackedStringArray(["e2e4"]))
+	main.free()
+
+
+func test_eval_bar_tracks_current_position_and_board_orientation():
+	var main = _session(FakeTime.new())
+	main.board_view.play("e2e4")
+	_key(main, KEY_ESCAPE)
+	_key(main, KEY_ESCAPE)
+	main.board_view.get_node("GameOver/Panel/Content/Review").pressed.emit()
+	var review = main.review
+	var bar = review.get_node_or_null("Margin/Content/ReviewBody/EvalBar")
+	assert_true(bar != null, "evaluation bar sits beside board")
+	if bar != null:
+		review.receive_position(1, {"pv": [{"cp": -200, "moves": ["e7e5"]}]})
+		assert_true(bar.white_fraction > 0.5, "black-to-move negative score favours white")
+		assert_true(not bar.flipped)
+		review.get_node("Margin/Content/ReviewBody/BoardView").flipped = true
+		review.receive_position(1, {"pv": [{"cp": -200, "moves": ["e7e5"]}]})
+		assert_true(bar.flipped, "bar follows the board orientation")
+	main.free()
+
+
+func test_analysis_landing_shows_class_icon_and_best_move_on_board():
+	var main = _session(FakeTime.new())
+	main.board_view.play("e2e4")
+	_key(main, KEY_ESCAPE)
+	_key(main, KEY_ESCAPE)
+	main.board_view.get_node("GameOver/Panel/Content/Review").pressed.emit()
+	var review = main.review
+	var list: Tree = review.get_node("Margin/Content/ReviewBody/Side/Moves")
+	var row: TreeItem = list.get_root().get_first_child()
+	assert_true(row.get_icon(1) == null, "unanalysed move has no class")
+	review.receive_position(1, {"pv": [{"cp": -20, "moves": ["e7e5"]}], "best_move": "e7e5"})
+	assert_true(row.get_icon(1) == null, "both positions must land")
+	review.receive_position(0, {"pv": [{"cp": 20, "moves": ["e2e4"]}], "best_move": "e2e4"})
+	assert_true(row.get_icon(1) != null, "settled move has its class icon")
+	var board = review.get_node("Margin/Content/ReviewBody/BoardView")
+	assert_eq(board.review_square, "e4")
+	assert_eq(board.review_arrow, "e2e4")
+	assert_true(board.review_icon != null)
+	main.free()
+
+
+class FakeAnalysisBridge extends Node:
+	signal stopped
+	var engine_id := "Stockfish 19"
+	var error := ""
+	func start() -> bool:
+		return true
+
+
+class FakeReviewAnalyser extends Node:
+	signal position_ready(index: int, position: Dictionary)
+	signal progress(done: int, total: int)
+	signal finished(success: bool, error: String)
+	var called := false
+	var maximum := false
+	var fens := []
+	func analyse(positions: Array, _path: String, max_threads: bool, _draw: bool) -> bool:
+		called = true
+		maximum = max_threads
+		fens = positions
+		return true
+	func cancel() -> void:
+		pass
+
+
+func test_open_review_starts_max_analysis_and_tracks_progress():
+	var main = _session(FakeTime.new())
+	var fake = FakeReviewAnalyser.new()
+	main.review.analysis_bridge_factory = func(): return FakeAnalysisBridge.new()
+	main.review.analyser_factory = func(_bridge): return fake
+	main.board_view.play("e2e4")
+	_key(main, KEY_ESCAPE)
+	_key(main, KEY_ESCAPE)
+	main.board_view.get_node("GameOver/Panel/Content/Review").pressed.emit()
+	assert_true(fake.called and fake.maximum, "review requests Max analysis")
+	assert_eq(fake.fens.size(), 2)
+	var progress = main.review.get_node_or_null("Margin/Content/Progress")
+	assert_true(progress != null and progress.visible)
+	if progress != null:
+		fake.progress.emit(1, 2)
+		assert_eq(progress.value, 50.0)
+		fake.finished.emit(true, "")
+		assert_true(not progress.visible)
+	main.free()
+
+
+func test_review_places_move_list_beside_board():
+	var main = _session(FakeTime.new())
+	main.board_view.play("e2e4")
+	_key(main, KEY_ESCAPE)
+	_key(main, KEY_ESCAPE)
+	main.board_view.get_node("GameOver/Panel/Content/Review").pressed.emit()
+	var body = main.review.get_node("Margin/Content/ReviewBody")
+	assert_true(body.has_node("BoardView") and body.has_node("Side/Moves"), "board and list share the review body")
+	if body.has_node("Side/Moves"):
+		assert_eq(body.get_node("Side/Moves").columns, 3)
+	main.free()
+
+
+func test_review_reuses_current_analysis_and_reanalyses_stale_file():
+	for version in ["Stockfish 19", "Stockfish 18"]:
+		var main = _session(FakeTime.new())
+		var fake = FakeReviewAnalyser.new()
+		main.review.analysis_bridge_factory = func(): return FakeAnalysisBridge.new()
+		main.review.analyser_factory = func(_bridge): return fake
+		main.board_view.play("e2e4")
+		_key(main, KEY_ESCAPE)
+		_key(main, KEY_ESCAPE)
+		var path := "user://rev005-cache-%d.json" % Time.get_ticks_usec()
+		var file := FileAccess.open(path, FileAccess.WRITE)
+		file.store_string(JSON.stringify({"engine_version": version, "node_budget": 3000000, "positions": [
+			{"fen": Pgn.START, "pv": [{"cp": 20, "moves": ["e2e4"]}], "best_move": "e2e4"},
+			{"fen": main.board_view.game.board.to_fen(), "pv": [{"cp": -20, "moves": ["e7e5"]}], "best_move": "e7e5"}]}))
+		file.close()
+		main.review_analysis_path = path
+		main.board_view.get_node("GameOver/Panel/Content/Review").pressed.emit()
+		assert_eq(fake.called, version != "Stockfish 19", "only stale analysis is rerun")
+		if version == "Stockfish 19":
+			var list: Tree = main.review.get_node("Margin/Content/ReviewBody/Side/Moves")
+			assert_true(list.get_root().get_first_child().get_icon(1) != null, "cached class is shown")
+			var board = main.review.get_node("Margin/Content/ReviewBody/BoardView")
+			var bar = main.review.get_node("Margin/Content/ReviewBody/EvalBar")
+			list.grab_focus()
+			for flipped in [true, false]:
+				var event := InputEventKey.new()
+				event.keycode = KEY_F
+				event.pressed = true
+				Engine.get_main_loop().root.push_input(event)
+				assert_eq(board.flipped, flipped, "F flips the visible review board")
+				assert_eq(bar.flipped, flipped, "evaluation bar follows immediately")
+				assert_true(not main.board_view.flipped, "hidden game board is unchanged")
+			fake.free()
+		main.free()
+		DirAccess.remove_absolute(path)
+
+
+func test_review_fits_an_800_by_600_window():
+	var root = Engine.get_main_loop().root
+	var old_size: Vector2i = root.size
+	root.size = Vector2i(800, 600)
+	var main = _session(FakeTime.new())
+	main.board_view.play("e2e4")
+	_key(main, KEY_ESCAPE)
+	_key(main, KEY_ESCAPE)
+	main.board_view.get_node("GameOver/Panel/Content/Review").pressed.emit()
+	await Engine.get_main_loop().process_frame
+	await Engine.get_main_loop().process_frame
+	for path in ["Margin/Content/ReviewBody/BoardView", "Margin/Content/ReviewBody/Side/Moves", "Margin/Content/Actions/Setup"]:
+		var rect: Rect2 = main.review.get_node(path).get_global_rect()
+		assert_true(rect.position.x >= 0 and rect.position.y >= 0 and rect.end.x <= 800 and rect.end.y <= 600, path + " fits the window")
+		assert_true(rect.size.x > 0 and rect.size.y > 0, path + " is visible")
+	main.free()
+	root.size = old_size

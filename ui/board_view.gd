@@ -98,6 +98,9 @@ var _slide: Tween
 # From and to of the promotion waiting on the picker.
 var _promoting := ""
 # Square pairs, independent of board orientation/size. Equal endpoints represent a circle.
+var review_square := ""
+var review_arrow := ""
+var review_icon: Texture2D
 var drawings: Array[PackedStringArray] = []
 var _drawing_from := ""
 var _drawing_to := ""
@@ -157,6 +160,8 @@ func play(move: String, premove := false) -> bool:
 
 func _draw() -> void:
 	var side := _side()
+	if side < 40:
+		return
 	var cell := Vector2.ONE * side / 8
 	var last: String = game.moves[-1] if game and game.moves else ""
 	var checked := ""
@@ -199,6 +204,12 @@ func _draw() -> void:
 		_draw_piece(game.board.piece_at(_slide_to), _slide_pos - cell / 2, cell)
 	if _drag_from:
 		_draw_piece(_held_piece, _drag_pos - cell / 2, cell)
+	if review_arrow.length() >= 4:
+		_draw_annotation(review_arrow.substr(0, 2), review_arrow.substr(2, 2), cell.x)
+	if review_icon and review_square.length() == 2:
+		var icon_size := cell.x * 0.45
+		var at := _corner() + square_position(review_square, _side(), flipped) + Vector2(cell.x - icon_size, 0)
+		draw_texture_rect(review_icon, Rect2(at, Vector2.ONE * icon_size), false)
 	for drawing in drawings:
 		_draw_annotation(drawing[0], drawing[1], cell.x)
 	# Redrawing an existing one erases it on release, so don't stack a copy on it meanwhile.

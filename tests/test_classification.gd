@@ -250,3 +250,25 @@ func test_repertoire_uses_the_game_starting_fen():
 	var result: Array = classification.evaluate(PackedStringArray(["e7e5"]), data, [], repertoire, "b", true)
 	assert_eq(result[0].class, "Repertoire", "FEN-rooted repertoire matches the actual starting position")
 	assert_true(not result[0].left_repertoire)
+
+func test_partial_analysis_waits_for_positions_and_previous_miss():
+	var classification = load("res://core/classification.gd")
+	var board = Board.from_fen(START)
+	var first := {"fen": board.to_fen()}
+	board.make_move("e2e4")
+	var second := {"fen": board.to_fen(), "best_move": "d7d5", "pv": [
+			{"moves": ["d7d5"], "cp": 700}, {"moves": ["c7c5"], "cp": 0}]}
+	board.make_move("e7e5")
+	var last := {"fen": board.to_fen(), "pv": [{"moves": ["g1f3"], "cp": 300}]}
+	var data := {"positions": [first, second, last]}
+	var moves := PackedStringArray(["e2e4", "e7e5"])
+	var result: Array = classification.evaluate(moves, data, [], [], "w", false)
+	assert_eq(result, [null, null], "possible Miss waits for preceding classification")
+	first["best_move"] = "d2d4"
+	first["pv"] = [{"moves": ["d2d4"], "cp": 0}, {"moves": ["g1f3"], "cp": -10}]
+	result = classification.evaluate(moves, data, [], [], "w", false)
+	assert_eq(result[0].class, "Blunder")
+	assert_eq(result[1].class, "Miss")
+	last.erase("pv")
+	result = classification.evaluate(moves, data, [], [], "w", false)
+	assert_eq(result[1], null, "missing following position remains unsettled")
