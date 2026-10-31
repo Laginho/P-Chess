@@ -72,7 +72,7 @@ func test_profile_table_matches_stats_and_omits_empty_rows():
 		var label = profile.find_child(item[0], true, false)
 		assert_true(label != null, "Profile shows " + item[0])
 		if label != null:
-			assert_eq(label.text, item[1])
+			assert_eq(label.get_parsed_text() if label is RichTextLabel else label.text, item[1])
 	var table = profile.find_child("Results", true, false)
 	var cells := []
 	for cell in table.get_children():
