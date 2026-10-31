@@ -124,6 +124,26 @@ func test_editor_numbers_a_line_that_starts_with_black():
 	_clean(folder)
 
 
+func test_editor_delete_button_remains_available_to_keyboard_focus():
+	var repertoire = _repertoire()
+	var folder := _folder()
+	repertoire.storage_dir = folder
+	assert_eq(repertoire.import_pgn("1. e4 e5 *", "w", "Study"), "")
+	var editor = load("res://ui/repertoire_editor.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(editor)
+	editor.present(repertoire, "Study", 0)
+	var move := _find_move(editor.find_child("Tree", true, false), PackedStringArray(["e2e4"]))
+	var trash: Button = move.get_parent().get_child(1)
+	move.grab_focus()
+	await Engine.get_main_loop().process_frame
+	assert_true(trash.visible, "delete appears when a move has keyboard focus")
+	trash.grab_focus()
+	await Engine.get_main_loop().process_frame
+	assert_true(trash.visible and trash.has_focus(), "delete stays available while focused")
+	editor.free()
+	_clean(folder)
+
+
 func test_viewer_displays_opening_name_and_moves_on_separate_lines():
 	var setup = load("res://ui/setup.tscn").instantiate()
 	var folder := _folder()
