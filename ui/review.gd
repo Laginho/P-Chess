@@ -376,13 +376,20 @@ func _update_eval_bar() -> void:
 	_graph.queue_redraw()
 	_eval_bar.flipped = _board_view.flipped
 	_eval_bar.white_fraction = 0.5
+	_eval_bar.get_node("Score").text = ""
 	if _positions.is_empty() or not _positions[_ply].has("pv"):
 		return
 	var position: Dictionary = _positions[_ply]
 	var line: Dictionary = position.pv[0] if not position.pv.is_empty() else {"cp": position.get("terminal_score", 0)}
 	var cp: int = line.get("cp", 1000 if line.get("mate", 0) > 0 else -1000)
-	if Board.from_fen(position.fen).side_to_move == "b":
+	var black_to_move: bool = Board.from_fen(position.fen).side_to_move == "b"
+	if black_to_move:
 		cp = -cp
+	if line.has("mate"):
+		var mate: int = -line.mate if black_to_move else line.mate
+		_eval_bar.get_node("Score").text = ("+" if mate > 0 else "-") + "M%d" % absi(mate)
+	else:
+		_eval_bar.get_node("Score").text = ("+" if cp > 0 else "") + "%.1f" % (cp / 100.0)
 	_eval_bar.white_fraction = 1.0 / (1.0 + exp(-0.00368208 * clampi(cp, -1000, 1000)))
 
 
