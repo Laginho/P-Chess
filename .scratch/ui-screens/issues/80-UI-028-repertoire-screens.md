@@ -1,5 +1,5 @@
 # UI-028: Repertoires, opening picker and editor to the design
-Stage: implementing
+Stage: to-review
 Blocked by: UI-021
 Review: agent
 Difficulty: normal
@@ -53,3 +53,11 @@ Restyle the repertoire screens to `docs/design/v0.1.0/png/Repertoire.png`, `Open
 
 - 2026-10-31 Continued implementation: added the selected repertoire heading and side/count above its lines, moved the editor controls beside the board, and moved picker actions to a footer. The new heading test failed before its implementation and passed after it; editor and picker test paths were updated for the layout changes and failed against the prior node layout. Focused `test_repertoire.gd` and `test_catalog.gd`: 35 passed, 0 failed (log: C:/Users/bruno/AppData/Local/Temp/ui028-focused-final.log).
 - Work remains before handoff: the repertoire cards and lines still need the reference styling and line presentation; the editor needs the reference card and move-tree presentation; the picker needs its reference styling and clear checkbox states. Captures at C:/Users/bruno/AppData/Local/Temp/pchess-ui028-resume/ show the current layouts (the picker capture waits for the catalog via a temporary capture script). Verify all three at 1280x800 and 800x600, then perform the ticket's manual acceptance and the gate. No gate receipt has been created in this continuation.
+
+- 2026-10-31 Continuation completed: cards and selectable line rows, editor card with compact selectable branches and hover/keyboard delete, and styled opening picker including partial checkboxes. GUI interaction on Windows with isolated data at commit `048605a`: created a repertoire from the loaded catalog, opened it with the pencil, added and deleted a branch, saved a different branch and confirmed it after reopening. Input was injected through the computer-use tool; it was not a physical-input or human visual acceptance. The only later code change before the gate was header sizing in `bfb09c8`.
+- Captures of `bfb09c8`, at both 1280x800 and 800x600, are in `C:/Users/bruno/AppData/Local/Temp/pchess-ui028-handoff/`. The picker capture uses a temporary copy of the screenshot script that waits for catalog loading and selects a child to show the partial parent checkbox; its repertoire is shown behind the modal. The fixture uses different names and positions from the canvas. At 800x600 the controls and board remain visible. The picker retains its pre-existing search field, the editor retains a Start position control for returning to the root, and the edit button is a separately focusable button adjacent to the card; these are deliberate differences from the illustration to retain existing functionality and keyboard access.
+- Focused repertoire/catalog run: 49 passed, 0 failed before the header-only change. Full gate at `bfb09c8`: 431 reported passed, 0 failed, including 6 Lc0 SKIPs (425 executed); log `C:/Users/bruno/AppData/Local/Temp/ui028-gate-handoff.log`. Lc0 was not installed or downloaded.
+
+Acceptance: pending | Human visual and physical-input acceptance remains; the GUI flow above used injected input.
+Disclosure: pending | release | Human acceptance of the three screens and physical input remains before v0.1.0, as described in `.scratch/ui-redo/spec.md`.
+Gate evidence: C:/Users/bruno/AppData/Local/Temp/ui028-gate-handoff.json
