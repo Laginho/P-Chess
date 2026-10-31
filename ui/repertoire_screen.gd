@@ -226,10 +226,12 @@ func _show_position() -> void:
 
 func _move_text(line: Dictionary, highlight := false) -> String:
 	var board = Board.from_fen(line.positions[0] + " 0 1")
+	var start_black: bool = board.side_to_move == "b"
 	var moves := PackedStringArray()
 	for i in line.moves.size():
 		var san: String = board.san(line.moves[i])
-		var text := ("%d." % (i / 2 + 1) if i % 2 == 0 else "") + san
+		var ply: int = i + int(start_black)
+		var text := ("%d." % (ply / 2 + 1) if ply % 2 == 0 else "1..." if i == 0 else "") + san
 		if highlight and i == _ply - 1:
 			text = "[bgcolor=#45423d]" + text + "[/bgcolor]"
 		moves.append(text)
