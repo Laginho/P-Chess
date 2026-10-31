@@ -63,6 +63,10 @@ func test_profile_table_matches_stats_and_omits_empty_rows():
 		return
 	profile.present(Settings.new(folder.path_join("settings.cfg")))
 	profile.refresh(History.new(folder))
+	var games = profile.find_child("GamesValue", true, false)
+	assert_true(games != null, "Profile shows a games tile")
+	if games != null:
+		assert_eq(games.text, "10")
 	var table = profile.find_child("Results", true, false)
 	var cells := []
 	for cell in table.get_children():
