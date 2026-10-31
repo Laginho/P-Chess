@@ -17,20 +17,16 @@ var saved_name := ""
 var edited := {}
 var root_key := ""
 var path := PackedStringArray()
-var _hovered: TreeItem
+var _move_buttons: Array[Button] = []
 
 @onready var board = $Margin/Form/Content/Board
-@onready var tree: Tree = $Margin/Form/Content/Card/Panel/Tree
+@onready var tree: ScrollContainer = $Margin/Form/Content/Card/Panel/Tree
+@onready var rows: VBoxContainer = $Margin/Form/Content/Card/Panel/Tree/Rows
 @onready var status: Label = $Margin/Form/Content/Card/Panel/Status
 
 
 func _ready() -> void:
 	board.move_played.connect(_played)
-	tree.item_selected.connect(_selected)
-	tree.item_mouse_selected.connect(_mouse_selected)
-	tree.gui_input.connect(_tree_input)
-	tree.mouse_exited.connect(_clear_hover)
-	tree.button_clicked.connect(func(item, _column, _id, _button): _delete_item(item))
 	$Margin/Form/Content/Card/Panel/Buttons/Save.pressed.connect(save)
 	$Margin/Form/Content/Card/Panel/Buttons/Cancel.pressed.connect(hide)
 
@@ -74,76 +70,84 @@ func _played(_san: String) -> void:
 
 func _refresh() -> void:
 	$Margin/Form/Content/Card/Panel/HeadingRow/Unsaved.visible = edited != repertoire.tree
-	_hovered = null
-	tree.clear()
-	var invisible := tree.create_item()
+	_move_buttons.clear()
+	for row in rows.get_children():
+		row.free()
 	for key in edited:
-		var item := tree.create_item(invisible)
-		item.set_text(0, "Start position")
-		item.set_metadata(0, {"root": key, "path": PackedStringArray()})
-		_populate(item, edited[key], key, PackedStringArray())
-		if key == root_key and path.is_empty():
-			item.select(0)
+		var root_button := Button.new()
+		root_button.text = "Start position"
+		root_button.flat = true
+		root_button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		root_button.pressed.connect(func(): _select_move(key, PackedStringArray()))
+		rows.add_child(root_button)
+		_populate(edited[key], key, PackedStringArray(), 0)
 	_show_position()
 
 
-func _populate(parent: TreeItem, node: Dictionary, key: String, prefix: PackedStringArray) -> void:
+func _populate(node: Dictionary, key: String, prefix: PackedStringArray, depth: int) -> void:
 	for move in node.children:
 		var moves := prefix.duplicate()
-		moves.append(move)
-		var item := tree.create_item(parent)
-		var board_at_parent = Board.from_fen(node.position + " 0 1")
-		item.set_text(0, board_at_parent.san(move))
-		item.set_metadata(0, {"root": key, "path": moves})
-		if key == root_key and moves == path:
-			item.select(0)
-		var next: Dictionary = node.children[move]
-		_populate(item if next.children.size() > 1 else parent, next, key, moves)
+		var margin := MarginContainer.new()
+		margin.add_theme_constant_override("margin_left", depth * 20)
+		rows.add_child(margin)
+		var line := HFlowContainer.new()
+		line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		margin.add_child(line)
+		var current: Dictionary = node
+		var next_move: String = move
+		while true:
+			var at = Board.from_fen(current.position + " 0 1")
+			moves.append(next_move)
+			_add_move(line, key, moves.duplicate(), at.san(next_move))
+			current = current.children[next_move]
+			if current.children.size() != 1:
+				break
+			next_move = current.children.keys()[0]
+		_populate(current, key, moves, depth + 1)
 
 
-func _selected() -> void:
-	var item := tree.get_selected()
-	if item == null:
-		return
-	var data: Dictionary = item.get_metadata(0)
-	root_key = data.root
-	path = data.path.duplicate()
+func _add_move(line: HFlowContainer, key: String, moves: PackedStringArray, san: String) -> void:
+	var group := HBoxContainer.new()
+	line.add_child(group)
+	var button := Button.new()
+	button.text = san
+	button.toggle_mode = true
+	button.button_pressed = key == root_key and moves == path
+	button.set_meta("move_path", moves)
+	button.set_meta("move_root", key)
+	button.pressed.connect(func(): _select_move(key, moves))
+	button.gui_input.connect(func(event):
+		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.pressed:
+			_delete_path(key, moves)
+	)
+	group.add_child(button)
+	button.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
+	button.add_theme_stylebox_override("pressed", button.get_theme_stylebox("normal", "PrimaryButton"))
+	button.add_theme_color_override("font_pressed_color", Color("141412"))
+	_move_buttons.append(button)
+	var trash := Button.new()
+	trash.icon = TRASH
+	trash.tooltip_text = "Delete branch"
+	trash.hide()
+	trash.pressed.connect(func(): _delete_path(key, moves))
+	group.add_child(trash)
+	group.mouse_entered.connect(trash.show)
+	group.mouse_exited.connect(trash.hide)
+	button.focus_entered.connect(trash.show)
+	button.focus_exited.connect(trash.hide)
+
+
+func _select_move(key: String, moves: PackedStringArray) -> void:
+	root_key = key
+	path = moves.duplicate()
+	for button in _move_buttons:
+		button.button_pressed = button.get_meta("move_root") == key and button.get_meta("move_path") == moves
 	_show_position()
 
 
-func _mouse_selected(position: Vector2, button: int) -> void:
-	if button != MOUSE_BUTTON_RIGHT:
-		return
-	var item := tree.get_item_at_position(position)
-	_delete_item(item)
-
-
-func _tree_input(event: InputEvent) -> void:
-	if not event is InputEventMouseMotion:
-		return
-	var item := tree.get_item_at_position(event.position)
-	if item == _hovered:
-		return
-	_clear_hover()
-	if item != null and not item.get_metadata(0).path.is_empty():
-		_hovered = item
-		item.add_button(0, TRASH, 0, false, "Delete branch")
-
-
-func _clear_hover() -> void:
-	if _hovered != null and is_instance_valid(_hovered):
-		_hovered.erase_button(0, 0)
-	_hovered = null
-
-
-func _delete_item(item: TreeItem) -> void:
-	if item == null:
-		return
-	var data: Dictionary = item.get_metadata(0)
-	if data.path.is_empty():
-		return
-	root_key = data.root
-	path = data.path.duplicate()
+func _delete_path(key: String, moves: PackedStringArray) -> void:
+	root_key = key
+	path = moves.duplicate()
 	var move: String = path[path.size() - 1]
 	path.remove_at(path.size() - 1)
 	_node().children.erase(move)

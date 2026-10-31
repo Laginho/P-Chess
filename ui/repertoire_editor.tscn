@@ -1,19 +1,10 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://ui/repertoire_editor.gd" id="1"]
 [ext_resource type="PackedScene" path="res://ui/board_view.tscn" id="2"]
 
 [sub_resource type="StyleBoxFlat" id="Ground"]
 bg_color = Color(0.121569, 0.117647, 0.109804, 1)
-
-[sub_resource type="StyleBoxEmpty" id="TreePanel"]
-
-[sub_resource type="StyleBoxFlat" id="TreeSelected"]
-bg_color = Color(0.498039, 0.65098, 0.313725, 1)
-corner_radius_top_left = 4
-corner_radius_top_right = 4
-corner_radius_bottom_right = 4
-corner_radius_bottom_left = 4
 
 [node name="RepertoireEditor" type="PopupPanel"]
 title = "Edit repertoire"
@@ -75,18 +66,14 @@ theme_type_variation = &"MutedText"
 theme_override_font_sizes/font_size = 13
 text = "Play moves to add them. Right-click a move to delete it."
 
-[node name="Tree" type="Tree" parent="Margin/Form/Content/Card/Panel"]
+[node name="Tree" type="ScrollContainer" parent="Margin/Form/Content/Card/Panel"]
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_colors/font_selected_color = Color(0.0784314, 0.0784314, 0.0705882, 1)
-theme_override_colors/guide_color = Color(0.270588, 0.258824, 0.239216, 1)
-theme_override_constants/draw_guides = 1
-theme_override_constants/draw_relationship_lines = 1
-theme_override_styles/panel = SubResource("TreePanel")
-theme_override_styles/selected = SubResource("TreeSelected")
-theme_override_styles/selected_focus = SubResource("TreeSelected")
-hide_root = true
-allow_rmb_select = true
+horizontal_scroll_mode = 0
+
+[node name="Rows" type="VBoxContainer" parent="Margin/Form/Content/Card/Panel/Tree"]
+layout_mode = 2
+size_flags_horizontal = 3
 
 [node name="Status" type="Label" parent="Margin/Form/Content/Card/Panel"]
 layout_mode = 2
