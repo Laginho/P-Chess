@@ -21,6 +21,7 @@ func test_viewer_shows_black_line_and_steps_without_allowing_moves():
 	if lines != null and board != null:
 		assert_true(board.flipped, "Black is at the bottom")
 		assert_eq(lines.item_count, 1)
+		assert_true(lines.get_item_text(0).begins_with("Line 1\n"), "an unnamed line has a readable fallback")
 		assert_true(lines.is_selected(0), "the displayed line is selected")
 		lines.item_selected.emit(0)
 		assert_eq(board.game.board.position_key(), "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq -")
