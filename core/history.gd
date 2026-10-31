@@ -103,6 +103,20 @@ func read_repertoire(path: String) -> Dictionary:
 	return data
 
 
+func games() -> Array:
+	var folder := _root.path_join("games")
+	var result := []
+	for file in DirAccess.get_files_at(folder):
+		if not file.ends_with(".pgn"):
+			continue
+		var path := folder.path_join(file)
+		var parsed := Pgn.parse(FileAccess.get_file_as_string(path))
+		if parsed.error.is_empty() and parsed.games.size() == 1:
+			result.append({"path": path, "game": parsed.games[0], "modified": FileAccess.get_modified_time(path)})
+	result.sort_custom(func(a, b): return a.modified > b.modified if a.modified != b.modified else a.path > b.path)
+	return result
+
+
 func thumbnail(moves: PackedStringArray) -> Dictionary:
 	var endings := {}
 	if book != null:
