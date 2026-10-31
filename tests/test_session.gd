@@ -383,12 +383,11 @@ func test_resign_button_shares_the_two_second_window_with_escape():
 			button.pressed.emit()
 		main._process(0)
 		assert_true(not main.board_view.game.is_over(), "first action arms")
-		assert_true(main.resign_hint.visible, "hint visible")
-		assert_eq(main.resign_hint.text, "Click again to resign")
+		assert_eq(button.text, "Click again to resign", "button shows confirmation")
 		time.now = 2100 if sequence == "expired_click" else 1900
 		if sequence == "expired_click":
 			main._process(0)
-			assert_true(not main.resign_hint.visible, "expired hint is hidden")
+			assert_eq(button.text, "Resign", "expired confirmation is hidden")
 		if sequence == "click_escape":
 			_key(main, KEY_ESCAPE)
 		else:
@@ -960,4 +959,15 @@ func test_searching_engine_stop_during_catalog_closes_without_a_game():
 func test_game_has_no_settings_button():
 	var main = await _session(ManualWaits.new())
 	assert_true(not main.settings_screen.get_node("Open").visible, "game has no Settings button")
+	main.free()
+
+
+func test_game_panel_identifies_players_and_actions():
+	var main = await _session(ManualWaits.new())
+	var side = main.get_node("Layout/Side")
+	assert_eq(side.get_child(0), main.black_clock.get_parent(), "Maia is at the top")
+	assert_eq(main.black_clock.get_parent().get_node("Name").text, "Maia")
+	assert_eq(main.white_clock.get_parent().get_node("Name").text, "You")
+	assert_eq(main.draw_button.text, "?  Offer draw")
+	assert_eq(main.resign_button.text, "Resign")
 	main.free()
