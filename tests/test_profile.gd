@@ -51,6 +51,7 @@ func test_profile_table_matches_stats_and_omits_empty_rows():
 	DirAccess.make_dir_recursive_absolute(folder)
 	var stats := ConfigFile.new()
 	stats.set_value("maia-1500", "3+2", {"wins": 4, "draws": 2, "losses": 3, "flag_wins": 1, "flag_losses": 2})
+	stats.set_value("maia-1500", "5+0", {"wins": 1, "draws": 0, "losses": 1, "flag_wins": 1, "flag_losses": 1})
 	stats.set_value("maia-1100", "1+0", {"wins": 0, "draws": 1, "losses": 0, "flag_wins": 0, "flag_losses": 0})
 	stats.set_value("maia-1900", "5+0", {"wins": 0, "draws": 0, "losses": 0, "flag_wins": 0, "flag_losses": 0})
 	stats.save(folder.path_join("stats.cfg"))
@@ -66,19 +67,24 @@ func test_profile_table_matches_stats_and_omits_empty_rows():
 	var games = profile.find_child("GamesValue", true, false)
 	assert_true(games != null, "Profile shows a games tile")
 	if games != null:
-		assert_eq(games.text, "10")
+		assert_eq(games.text, "12")
+	for item in [["WdlValue", "5 / 3 / 4"], ["FlagValue", "2 / 3"], ["AccuracyValue", "–"]]:
+		var label = profile.find_child(item[0], true, false)
+		assert_true(label != null, "Profile shows " + item[0])
+		if label != null:
+			assert_eq(label.text, item[1])
 	var table = profile.find_child("Results", true, false)
 	var cells := []
 	for cell in table.get_children():
 		cells.append(cell.text)
-	assert_eq(cells, ["Level", "Time", "W", "D", "L", "Flag wins", "Flag losses",
-			"Maia 1100", "1+0", "0", "1", "0", "0", "0",
-			"Maia 1500", "3+2", "4", "2", "3", "1", "2"])
+	assert_eq(cells, ["Level", "1+0 · W D L", "3+2 · W D L", "5+0 · W D L", "Flag wins", "Flag losses",
+			"Maia 1100", "0  1  0", "–", "–", "0", "0",
+			"Maia 1500", "–", "4  2  3", "1  0  1", "2", "3"])
 	assert_true(not profile.find_child("NoResults", true, false).visible)
 	stats.clear()
 	stats.save(folder.path_join("stats.cfg"))
 	profile.refresh(History.new(folder))
-	assert_eq(table.get_child_count(), 7, "refresh clears previous rows")
+	assert_eq(table.get_child_count(), 6, "refresh clears previous rows")
 	assert_true(profile.find_child("NoResults", true, false).visible, "empty stats have a readable state")
 	profile.free()
 	_clean(folder)
@@ -112,6 +118,14 @@ func test_accuracy_chart_uses_dated_analysis_and_human_colour():
 		_clean(folder)
 		return
 	profile.refresh(History.new(folder), analysis_dir)
+	var since = profile.find_child("PlayingSince", true, false)
+	assert_true(since != null, "Profile shows the first saved game date")
+	if since != null:
+		assert_eq(since.text, "Playing since Sep 2026")
+	var average = profile.find_child("AccuracyValue", true, false)
+	assert_true(average != null, "Profile shows average accuracy")
+	if average != null:
+		assert_eq(average.text, "70.3")
 	assert_eq(chart.series.size(), 3, "only analysed games where the human moved")
 	assert_eq(chart.series[0].date, "2026.10.01")
 	assert_eq(chart.series[1].date, "2026.10.02")
