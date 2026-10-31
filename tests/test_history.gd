@@ -10,6 +10,158 @@ const HistoryStorage = preload("res://tests/history_storage.gd")
 const SETTINGS := {"colour": "w", "level": "maia-1500", "control": "3+2", "opening": "Free"}
 
 
+# Hold the external UCI reply while the real analyser, queue and screen run.
+class HeldAnalysisBridge extends RefCounted:
+	var engine_id := "Stockfish 19"
+	var callback := Callable()
+	var stops := 0
+	func new_game() -> void:
+		pass
+	func request_search(_commands: PackedStringArray, next: Callable) -> void:
+		callback = next
+	func stop_search() -> void:
+		stops += 1
+	func answer() -> void:
+		callback.call("info depth 12 multipv 1 score cp 32 pv e2e4")
+		callback.call("bestmove e2e4")
+
+
+class HeldAnalysis extends RefCounted:
+	signal progress(done: int, total: int)
+	signal finished(success: bool, error: String)
+	var bridge := HeldAnalysisBridge.new()
+	var analyser = preload("res://engine/analyser.gd").new(bridge)
+	func _init() -> void:
+		analyser.progress.connect(func(done, total): progress.emit(done, total))
+		analyser.finished.connect(func(success, error): finished.emit(success, error))
+	func start(path: String, maximum: bool) -> bool:
+		var parsed := Pgn.parse(FileAccess.get_file_as_string(path))
+		return analyser.analyse(analyser.positions_from_game(parsed.games[0]),
+				"user://analysis".path_join(path.get_file() + ".json"), maximum)
+	func cancel() -> void:
+		analyser.cancel()
+
+
+func test_confirm_delete_cancels_active_analysis_before_its_final_reply():
+	var fixture := _queued_history()
+	var path: String = fixture.paths[0]
+	fixture.cards[path].get_child(1).button_pressed = true
+	fixture.cards[path].get_node("Details/HBoxContainer/Delete").pressed.emit()
+	fixture.screen.get_node("DeleteConfirmation").confirmed.emit()
+	assert_true(not FileAccess.file_exists(path))
+	assert_eq(fixture.screen.get_node("Margin/Content/Cards/List").get_child_count(), 0)
+	_assert_pending_history(fixture, [])
+	assert_eq(fixture.runner.bridge.stops, 1, "stop the search before its held reply arrives")
+	fixture.runner.bridge.answer()
+	assert_eq(fixture.queue.current(), "")
+	var output := "user://analysis".path_join(path.get_file() + ".json")
+	assert_true(not FileAccess.file_exists(output), "the final reply cannot recreate deleted analysis")
+	fixture.queue._process(1.1)
+	assert_true(not FileAccess.file_exists(output), "no orphan survives the missing-file scan")
+	fixture.screen.get_node("Margin/Content/BatchActions").get_child(0).pressed.emit()
+	_assert_pending_history(fixture, [])
+	_clean_queued_history(fixture)
+
+
+func test_confirm_delete_removes_waiting_game_without_cancelling_active_analysis():
+	var fixture := _queued_history(2)
+	var active: String = fixture.paths[0]
+	var waiting: String = fixture.paths[1]
+	fixture.cards[waiting].get_node("Details/HBoxContainer/Delete").pressed.emit()
+	fixture.screen.get_node("DeleteConfirmation").confirmed.emit()
+	assert_true(not FileAccess.file_exists(waiting) and FileAccess.file_exists(active))
+	_assert_pending_history(fixture, [active])
+	assert_eq(fixture.queue.current(), active)
+	assert_eq(fixture.runner.bridge.stops, 0)
+	fixture.runner.bridge.answer()
+	assert_eq(fixture.queue.current(), "", "the deleted waiting game never starts")
+	_assert_pending_history(fixture, [])
+	assert_eq(fixture.runner.analyser.read_analysis(
+			"user://analysis".path_join(active.get_file() + ".json"), "Stockfish 19", 3000000).state, "analysed")
+	fixture.queue._process(1.1)
+	assert_true(not FileAccess.file_exists("user://analysis".path_join(waiting.get_file() + ".json")))
+	_clean_queued_history(fixture)
+
+
+func test_cancel_and_failed_delete_preserve_active_analysis_and_stats():
+	var fixture := _queued_history()
+	var path: String = fixture.paths[0]
+	var counts: Dictionary = fixture.history.stats("maia-1500", "3+2")
+	var button = fixture.cards[path].get_node("Details/HBoxContainer/Delete")
+	var dialog = fixture.screen.get_node("DeleteConfirmation")
+	button.pressed.emit()
+	dialog.canceled.emit()
+	assert_true(FileAccess.file_exists(path))
+	_assert_pending_history(fixture, [path])
+	assert_eq(fixture.queue.current(), path)
+	assert_eq(fixture.runner.bridge.stops, 0)
+	assert_eq(History.new(fixture.folder).stats("maia-1500", "3+2"), counts)
+	var temporary: String = fixture.folder.path_join("stats.cfg.deleting")
+	assert_eq(DirAccess.make_dir_absolute(temporary), OK)
+	button.pressed.emit()
+	dialog.confirmed.emit()
+	assert_true(FileAccess.file_exists(path))
+	assert_true(not fixture.history.error.is_empty())
+	assert_true(fixture.screen.get_node("DeleteError").visible)
+	assert_eq(fixture.screen.get_node("DeleteError").dialog_text, fixture.history.error)
+	assert_eq(fixture.screen.get_node("Margin/Content/Cards/List").get_child_count(), 1)
+	_assert_pending_history(fixture, [path])
+	assert_eq(fixture.queue.current(), path)
+	assert_eq(fixture.runner.bridge.stops, 0, "a failed deletion must leave analysis running")
+	for store in [fixture.history, History.new(fixture.folder)]:
+		assert_eq(store.stats("maia-1500", "3+2"), counts)
+	fixture.runner.bridge.answer()
+	_assert_pending_history(fixture, [])
+	assert_eq(fixture.runner.analyser.read_analysis(
+			"user://analysis".path_join(path.get_file() + ".json"), "Stockfish 19", 3000000).state, "analysed")
+	_clean_queued_history(fixture)
+
+
+func _queued_history(count := 1) -> Dictionary:
+	var folder := _folder()
+	var history = History.new(folder)
+	var runner := HeldAnalysis.new()
+	var queue = load("res://core/analysis_queue.gd").new(runner, folder.path_join("queue.cfg"))
+	var paths := []
+	for i in count:
+		var game = Game.new()
+		game.resign("w")
+		var path: String = history.save(game, [], SETTINGS)
+		assert_true(not path.is_empty())
+		paths.append(path)
+		queue.enqueue(path)
+	var screen = load("res://ui/history_screen.tscn").instantiate()
+	screen.analysis_queue = queue
+	Engine.get_main_loop().root.add_child(screen)
+	screen.present(history, load("res://core/settings.gd").new(folder.path_join("settings.cfg")))
+	var cards := {}
+	var records: Array = history.games()
+	for i in records.size():
+		cards[records[i].path] = screen.get_node("Margin/Content/Cards/List").get_child(i)
+	assert_eq(queue.current(), paths[0])
+	assert_eq(queue.pending(), paths)
+	return {"folder": folder, "history": history, "runner": runner, "queue": queue,
+			"paths": paths, "screen": screen, "cards": cards}
+
+
+func _assert_pending_history(fixture: Dictionary, expected: Array) -> void:
+	assert_eq(fixture.queue.pending(), expected)
+	var reloaded = load("res://core/analysis_queue.gd").new(null, fixture.folder.path_join("queue.cfg"))
+	assert_eq(reloaded.pending(), expected, "persist the queue immediately")
+	reloaded.free()
+
+
+func _clean_queued_history(fixture: Dictionary) -> void:
+	fixture.screen.free()
+	fixture.queue.free()
+	fixture.runner.analyser.free()
+	for path: String in fixture.paths:
+		var output := "user://analysis".path_join(path.get_file() + ".json")
+		if FileAccess.file_exists(output):
+			DirAccess.remove_absolute(output)
+	HistoryStorage.clean(fixture.folder)
+
+
 func test_history_delete_requires_confirmation():
 	var folder := _folder()
 	var history = History.new(folder)
