@@ -1,4 +1,4 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3]
 
 [ext_resource type="Script" path="res://ui/name_dialog.gd" id="1"]
 
@@ -8,16 +8,32 @@ unresizable = true
 exclusive = true
 dialog_hide_on_ok = false
 dialog_close_on_escape = false
+size = Vector2i(420, 280)
 script = ExtResource("1")
 
 [node name="Content" type="VBoxContainer" parent="."]
+theme_override_constants/separation = 12
 
 [node name="Question" type="Label" parent="Content"]
 layout_mode = 2
+theme_type_variation = &"ExtraBoldText"
+theme_override_font_sizes/font_size = 22
 text = "What should I call you?"
 
+[node name="Description" type="Label" parent="Content"]
+layout_mode = 2
+theme_type_variation = &"MutedText"
+theme_override_font_sizes/font_size = 14
+text = "Your name appears in game history and in exported PGNs."
+
+
+[node name="NameLabel" type="Label" parent="Content"]
+layout_mode = 2
+theme_type_variation = &"SectionLabel"
+text = "Name"
+
 [node name="Name" type="LineEdit" parent="Content"]
-custom_minimum_size = Vector2(340, 40)
+custom_minimum_size = Vector2(340, 44)
 layout_mode = 2
 text = "You"
 context_menu_enabled = false
