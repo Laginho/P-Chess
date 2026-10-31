@@ -129,7 +129,10 @@ func open_analysis(path: String, draw_at_end: bool) -> void:
 	show()
 	if analysis_queue != null:
 		var game_path := _queue_path if _from_history else "user://games".path_join(path.get_file().trim_suffix(".json"))
-		if FileAccess.file_exists(game_path):
+		var cached := Analyser.read_analysis(path, "Stockfish 19", Tunables.ANALYSIS_NODES)
+		var positions = cached.get("data", {}).get("positions", [])
+		var current_cache: bool = cached.state == "analysed" and positions is Array and positions.size() == _positions.size()
+		if FileAccess.file_exists(game_path) and (_from_history or game_path in analysis_queue.pending() or not current_cache):
 			_queue_path = game_path
 			_analysis_path = path
 			analysis_queue.prioritize(game_path)
