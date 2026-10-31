@@ -7,6 +7,7 @@ signal setup_requested
 const Clock = preload("res://core/clock.gd")
 const Pgn = preload("res://core/pgn.gd")
 const Board = preload("res://core/board.gd")
+const Game = preload("res://core/game.gd")
 const Badges = preload("res://bot/badges.gd")
 
 # System boundaries stay replaceable for headless tests.
@@ -14,6 +15,10 @@ var copy_text: Callable = DisplayServer.clipboard_set
 var open_browser: Callable = OS.shell_open
 var _pgn := ""
 var _url := ""
+var _game_moves := PackedStringArray()
+var _ply := 0
+
+@onready var _board_view = $Margin/Content/ReviewBody/BoardView
 
 @onready var _result: Label = $Margin/Content/Result
 @onready var _moves: Tree = $Margin/Content/Moves
@@ -39,10 +44,25 @@ func _input(event: InputEvent) -> void:
 			and event.keycode == KEY_SPACE:
 		get_viewport().set_input_as_handled()
 		rematch_requested.emit()
+	elif visible and event is InputEventKey and event.is_pressed() and not event.is_echo() and event.keycode in [KEY_LEFT, KEY_RIGHT]:
+		get_viewport().set_input_as_handled()
+		_show_ply(_ply + (-1 if event.keycode == KEY_LEFT else 1))
+
+
+func _show_ply(ply: int) -> void:
+	_ply = clampi(ply, 0, _game_moves.size())
+	var position = Game.new()
+	for i in _ply:
+		position.play(_game_moves[i])
+	_board_view.game = position
+	_board_view.queue_redraw()
 
 
 func present(game, clocks: Array, settings: Dictionary, result_text: String,
 		catalog: Array = [], repertoire: Array = [], check_repertoire := false) -> void:
+	_game_moves = game.moves.duplicate()
+	_board_view.flipped = settings.colour == "b"
+	_show_ply(_game_moves.size())
 	_result.text = result_text
 	_moves.clear()
 	var root := _moves.create_item()

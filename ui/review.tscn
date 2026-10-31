@@ -1,6 +1,7 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://ui/review.gd" id="1"]
+[ext_resource type="PackedScene" path="res://ui/board_view.tscn" id="2"]
 
 [node name="Review" type="Control"]
 visible = false
@@ -46,6 +47,16 @@ text = "Game review"
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
 autowrap_mode = 3
+
+[node name="ReviewBody" type="HBoxContainer" parent="Margin/Content"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="BoardView" parent="Margin/Content/ReviewBody" instance=ExtResource("2")]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 2
 
 [node name="Moves" type="Tree" parent="Margin/Content"]
 layout_mode = 2
