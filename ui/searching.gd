@@ -70,10 +70,8 @@ func _layout_searching() -> void:
 	$Center/Content/Status.position = Vector2(0, middle + 37)
 	$Center/Content/Status.size = Vector2(card.size.x, 26)
 	# Chips as wide as their labels, centred as a pair 10 px apart.
-	var control_chip = $Center/Content/ControlChip
-	var level_chip = $Center/Content/LevelChip
-	var control_width := minf(control_chip.get_combined_minimum_size().x + control_chip.icon_width(), (card.size.x - 40) / 2)
-	var level_width := minf(level_chip.get_combined_minimum_size().x + level_chip.icon_width(), (card.size.x - 40) / 2)
+	var control_width := minf($Center/Content/ControlChip.get_combined_minimum_size().x, (card.size.x - 40) / 2)
+	var level_width := minf($Center/Content/LevelChip.get_combined_minimum_size().x, (card.size.x - 40) / 2)
 	var left := (card.size.x - control_width - level_width - 10) / 2
 	$Center/Content/ControlChip.position = Vector2(left, middle + 82)
 	$Center/Content/ControlChip.size = Vector2(control_width, 36)
