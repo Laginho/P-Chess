@@ -845,3 +845,20 @@ func test_repertoire_exit_is_a_move_list_row():
 			found = true
 	assert_true(found, "the exit and expected move appear inside the move list")
 	main.free()
+
+
+func test_legend_keyboard_does_not_activate_review_shortcuts():
+	var main = await _session(FakeTime.new())
+	var review = main.get_node("Review")
+	review.present(Game.new(), [180000, 180000], SETTINGS, "")
+	var triggered := [false]
+	review.rematch_requested.connect(func(): triggered[0] = true)
+	review.get_node("Margin/Content/ReviewBody/Side/ClassHelp").pressed.emit()
+	await Engine.get_main_loop().process_frame
+	var event := InputEventKey.new()
+	event.keycode = KEY_SPACE
+	event.pressed = true
+	Engine.get_main_loop().root.push_input(event)
+	await Engine.get_main_loop().process_frame
+	assert_true(not triggered[0], "Space in the legend must not start a rematch")
+	main.free()
