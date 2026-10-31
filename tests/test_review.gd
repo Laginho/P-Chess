@@ -47,7 +47,7 @@ func test_graph_click_navigates_and_tracks_orientation():
 		click.button_index = MOUSE_BUTTON_LEFT
 		click.pressed = true
 		click.position = Vector2(100, 50)
-		graph.gui_input.emit(click)
+		graph._gui_input(click)
 		assert_eq(review.get_node("Margin/Content/ReviewBody/BoardView").game.moves.size(), 1)
 		assert_eq(graph.current_ply, 1)
 		var flip := InputEventKey.new()
