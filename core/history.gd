@@ -150,7 +150,7 @@ func delete(path: String) -> bool:
 			return false
 		moved.append(source)
 	for item in moved:
-		if DirAccess.remove_absolute(item + ".deleting") != OK:
+		if _remove(item + ".deleting") != OK:
 			_restore_deleted_files(moved, contents)
 			error = "Could not delete game files."
 			return false
@@ -176,6 +176,11 @@ func delete(path: String) -> bool:
 static func human_colour(headers: Dictionary) -> String:
 	var colour: String = headers.get("HumanColor", "")
 	return colour if colour in ["w", "b"] else ("w" if headers.get("White", "") == "You" else "b")
+
+
+# Test seam: Linux unlinks read-only files, so no portable file state fails this removal after its rename.
+func _remove(path: String) -> Error:
+	return DirAccess.remove_absolute(path)
 
 
 func _restore_deleted_files(paths: Array, contents: Dictionary) -> void:

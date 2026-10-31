@@ -128,7 +128,8 @@ func _wrap_help(text: String) -> String:
 func open_analysis(path: String, draw_at_end: bool) -> void:
 	show()
 	if analysis_queue != null:
-		var game_path := _queue_path if _from_history else "user://games".path_join(path.get_file().trim_suffix(".json"))
+		# The analysis folder sits beside the games folder: <root>/analysis/x.pgn.json -> <root>/games/x.pgn.
+		var game_path := _queue_path if _from_history else path.get_base_dir().get_base_dir().path_join("games").path_join(path.get_file().trim_suffix(".json"))
 		var cached := Analyser.read_analysis(path, "Stockfish 19", Tunables.ANALYSIS_NODES)
 		var positions = cached.get("data", {}).get("positions", [])
 		var current_cache: bool = cached.state == "analysed" and positions is Array and positions.size() == _positions.size()

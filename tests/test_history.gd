@@ -335,7 +335,7 @@ func test_delete_restores_files_and_counts_when_stats_save_fails():
 
 func _check_delete_rollback(failure: String) -> void:
 	var folder := _folder()
-	var history = History.new(folder)
+	var history = FailingAnalysisRemoval.new(folder) if failure == "removal" else History.new(folder)
 	var game = Game.new()
 	game.flag("b")
 	var path: String = history.save(game, [], SETTINGS, "", "line-1")
@@ -351,9 +351,7 @@ func _check_delete_rollback(failure: String) -> void:
 	for item in paths:
 		contents[item] = FileAccess.get_file_as_bytes(item)
 	var temp := folder.path_join("stats.cfg.deleting")
-	if failure == "removal":
-		assert_eq(FileAccess.set_read_only_attribute(analysis, true), OK)
-	else:
+	if failure == "stats":
 		assert_eq(DirAccess.make_dir_absolute(temp), OK)
 	assert_true(not history.delete(path), "delete must report the injected failure")
 	assert_true(not history.error.is_empty())
@@ -365,10 +363,7 @@ func _check_delete_rollback(failure: String) -> void:
 		assert_true(FileAccess.file_exists(item), "original file restored: " + item)
 		assert_eq(FileAccess.get_file_as_bytes(item), contents[item])
 		assert_true(not FileAccess.file_exists(item + ".deleting"))
-	for item in [analysis, analysis + ".deleting"]:
-		if FileAccess.file_exists(item):
-			FileAccess.set_read_only_attribute(item, false)
-			DirAccess.remove_absolute(item)
+	DirAccess.remove_absolute(analysis)
 	if DirAccess.dir_exists_absolute(temp):
 		DirAccess.remove_absolute(temp)
 	assert_true(not FileAccess.file_exists(temp))
@@ -407,6 +402,12 @@ func test_reason_prefers_header_and_infers_legacy_ending():
 	assert_eq(history.reason({"headers": {}, "moves": [], "result": "1/2-1/2"}), "")
 	for case in [["7k/5Q2/6K1/8/8/8/8/8 b - - 0 1", "stalemate"], ["7k/8/8/8/8/8/8/K7 w - - 0 1", "insufficient material"], ["7k/8/8/8/8/8/R7/K7 w - - 100 1", "50-move"]]:
 		assert_eq(history.reason({"headers": {"FEN": case[0]}, "moves": [], "result": "1/2-1/2"}), case[1])
+
+
+# Fails only the analysis file's final removal, after every rename has worked.
+class FailingAnalysisRemoval extends "res://core/history.gd":
+	func _remove(path: String) -> Error:
+		return ERR_FILE_CANT_WRITE if path.begins_with("user://analysis") else super(path)
 
 
 class FakeTime:

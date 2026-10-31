@@ -240,11 +240,12 @@ func test_review_prioritizes_a_queued_game_even_with_cached_analysis():
 	Storage.clean(folder)
 
 func test_post_game_review_reuses_current_cache_with_a_saved_game():
-	var name := "hist006-cache-%d.pgn" % Time.get_ticks_usec()
-	var game_path := "user://games".path_join(name)
-	var analysis_path := "user://analysis".path_join(name + ".json")
-	DirAccess.make_dir_recursive_absolute("user://games")
-	DirAccess.make_dir_recursive_absolute("user://analysis")
+	var folder := "user://hist006_cache_%d" % Time.get_ticks_usec()
+	var name := "cache.pgn"
+	var game_path := folder.path_join("games").path_join(name)
+	var analysis_path := folder.path_join("analysis").path_join(name + ".json")
+	DirAccess.make_dir_recursive_absolute(game_path.get_base_dir())
+	DirAccess.make_dir_recursive_absolute(analysis_path.get_base_dir())
 	var game = Game.new()
 	game.play("e2e4")
 	game.play("e7e5")
@@ -257,7 +258,7 @@ func test_post_game_review_reuses_current_cache_with_a_saved_game():
 	file.store_string(JSON.stringify(fixture))
 	file.close()
 	var runner := FakeQueueAnalyser.new()
-	var queue = load("res://core/analysis_queue.gd").new(runner, "user://" + name + ".cfg")
+	var queue = load("res://core/analysis_queue.gd").new(runner, folder.path_join("queue.cfg"))
 	var review = load("res://ui/review.tscn").instantiate()
 	review.analysis_queue = queue
 	review.analysis_bridge_factory = func(): return FakeAnalysisBridge.new()
@@ -268,9 +269,9 @@ func test_post_game_review_reuses_current_cache_with_a_saved_game():
 	assert_true(review._positions[0].has("pv"), "cached positions are displayed")
 	review.free()
 	queue.free()
-	DirAccess.remove_absolute(game_path)
 	DirAccess.remove_absolute(analysis_path)
-	DirAccess.remove_absolute("user://" + name + ".cfg")
+	DirAccess.remove_absolute(analysis_path.get_base_dir())
+	Storage.clean(folder)
 
 func test_batch_status_advances_and_appears_after_restoring_queue():
 	var folder := "user://history_batch_%d" % Time.get_ticks_usec()
