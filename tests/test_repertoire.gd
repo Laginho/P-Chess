@@ -543,6 +543,32 @@ func test_editor_saves_a_branch_and_deletes_a_subtree():
 	editor.free()
 	_clean(folder)
 
+func test_each_repertoire_card_opens_its_own_editor():
+	var setup = load("res://ui/setup.tscn").instantiate()
+	var folder := _folder()
+	setup.repertoire.storage_dir = folder
+	assert_eq(setup.repertoire.import_pgn("1. e4 e5 *", "w", "Alpha"), "")
+	assert_eq(setup.repertoire.import_pgn("1. d4 d5 *", "b", "Beta"), "")
+	Engine.get_main_loop().root.add_child(setup)
+	var screen = setup.get_node("RepertoireScreen")
+	screen.present()
+	var cards = screen.find_child("Cards", true, false)
+	assert_true(cards != null, "repertoire cards exist")
+	if cards != null:
+		assert_eq(cards.get_child_count(), 2)
+		for i in range(cards.get_child_count()):
+			var edit = cards.get_child(i).find_child("Edit", true, false)
+			assert_true(edit != null, "each card has an edit button")
+			if edit != null:
+				edit.pressed.emit()
+				var editor = screen.get_node("RepertoireEditor")
+				assert_true(editor.visible)
+				assert_eq(editor.saved_name, ["Alpha", "Beta"][i])
+				editor.hide()
+	setup.free()
+	_clean(folder)
+
+
 func test_editor_button_tracks_repertoire_selection():
 	var setup = load("res://ui/setup.tscn").instantiate()
 	var folder := _folder()
