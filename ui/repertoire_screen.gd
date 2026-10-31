@@ -77,9 +77,13 @@ func _refresh() -> void:
 		select.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		select.pressed.connect(func(): _select_repertoire(index))
 		card.add_child(select)
+		var selected_style: StyleBoxFlat = select.get_theme_stylebox("pressed").duplicate()
+		selected_style.border_color = Color("7fa650")
+		select.add_theme_stylebox_override("pressed", selected_style)
+		select.add_theme_stylebox_override("hover_pressed", selected_style)
 		var edit := Button.new()
 		edit.name = "Edit"
-		edit.text = "✎"
+		edit.icon = preload("res://ui/icons/pencil.svg")
 		edit.tooltip_text = "Edit " + name
 		edit.pressed.connect(func():
 			_select_repertoire(index)
