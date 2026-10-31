@@ -8,6 +8,15 @@ const Game = preload("res://core/game.gd")
 const FIXTURES := "res://tests/fixtures/pgn/"
 
 
+func test_finished_game_records_only_a_selected_practice_target():
+	var game = Game.new()
+	game.resign("w")
+	var settings := {"colour": "w", "level": "maia-1500", "control": "3+2"}
+	var targeted: Dictionary = Pgn.finished_game(game, [], settings, "", "line-1")
+	assert_eq(Pgn.parse(Pgn.write(targeted)).games[0].headers.PracticeTarget, "line-1")
+	assert_true(not Pgn.finished_game(game, [], settings).headers.has("PracticeTarget"))
+
+
 func _read(file: String) -> Dictionary:
 	return Pgn.parse(FileAccess.get_file_as_string(FIXTURES + file))
 
