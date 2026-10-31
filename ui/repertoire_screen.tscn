@@ -1,10 +1,13 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://ui/repertoire_screen.gd" id="1"]
 [ext_resource type="PackedScene" path="res://ui/opening_picker.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://ui/board_view.tscn" id="3"]
 [ext_resource type="PackedScene" path="res://ui/repertoire_editor.tscn" id="4"]
 [ext_resource type="PackedScene" path="res://ui/repertoire_import.tscn" id="5"]
+[ext_resource type="Texture2D" path="res://ui/icons/back.svg" id="6"]
+[ext_resource type="Texture2D" path="res://ui/icons/import.svg" id="7"]
+[ext_resource type="Texture2D" path="res://ui/icons/book.svg" id="8"]
 
 [sub_resource type="StyleBoxFlat" id="LinesPanel"]
 content_margin_left = 8.0
@@ -50,12 +53,13 @@ layout_mode = 2
 
 [node name="Back" type="Button" parent="Margin/Form/Buttons"]
 layout_mode = 2
-text = "‹"
+icon = ExtResource("6")
 tooltip_text = "Back"
 
 [node name="Title" type="Label" parent="Margin/Form/Buttons"]
 layout_mode = 2
 size_flags_horizontal = 3
+theme_type_variation = &"ExtraBoldText"
 theme_override_font_sizes/font_size = 24
 text = "Repertoires"
 
@@ -67,11 +71,13 @@ disabled = true
 
 [node name="Import" type="Button" parent="Margin/Form/Buttons"]
 layout_mode = 2
+icon = ExtResource("7")
 text = "Import PGN"
 
 [node name="FromOpenings" type="Button" parent="Margin/Form/Buttons"]
 layout_mode = 2
 theme_type_variation = &"PrimaryButton"
+icon = ExtResource("8")
 text = "From openings"
 
 [node name="Viewer" type="HBoxContainer" parent="Margin/Form"]
