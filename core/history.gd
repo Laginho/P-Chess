@@ -119,8 +119,11 @@ func games() -> Array:
 
 func thumbnail(moves: PackedStringArray) -> Dictionary:
 	var endings := {}
+	var positions := {}
 	if book != null:
 		for entry in book.entries:
+			for key in entry.positions:
+				positions[key] = true
 			endings[entry.positions[-1]] = entry.name
 	var game = Game.new()
 	var match_ply := 0
@@ -129,10 +132,11 @@ func thumbnail(moves: PackedStringArray) -> Dictionary:
 		if not game.play(moves[i]):
 			break
 		var key: String = game.board.position_key()
-		if endings.has(key):
+		if positions.has(key):
 			match_ply = i + 1
+		if endings.has(key):
 			opening = endings[key]
-	return {"ply": match_ply if not opening.is_empty() else mini(10, moves.size()), "opening": opening}
+	return {"ply": match_ply if match_ply > 0 else mini(10, moves.size()), "opening": opening}
 
 
 func reason(game: Dictionary) -> String:
