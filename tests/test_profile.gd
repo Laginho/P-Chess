@@ -64,6 +64,8 @@ func test_profile_table_matches_stats_and_omits_empty_rows():
 		return
 	profile.present(Settings.new(folder.path_join("settings.cfg")))
 	profile.refresh(History.new(folder))
+	var since = profile.find_child("PlayingSince", true, false)
+	assert_true(since != null and not since.visible, "no games omits Playing since")
 	var games = profile.find_child("GamesValue", true, false)
 	assert_true(games != null, "Profile shows a games tile")
 	if games != null:
@@ -101,6 +103,7 @@ func test_accuracy_chart_uses_dated_analysis_and_human_colour():
 	_write_game(folder, "unanalysed", "2026.09.01", "w", "1. e4", analysis_dir, [])
 	_write_game(folder, "no-human-move", "2026.09.02", "b", "1. e4", analysis_dir, [0, 0])
 	_write_game(folder, "zero-moves", "2026.09.03", "w", "", analysis_dir, [0])
+	_write(folder.path_join("games/2025-08-01T10-00-00_1.pgn"), '[White "You"]\n[Black "Maia 1500"]\n[Result "0-1"]\n\n1. e4 0-1\n')
 	_write_game(folder, "stale", "2026.09.04", "w", "1. e4", analysis_dir, [0, 0])
 	var stale_path := analysis_dir.path_join("stale.pgn.json")
 	var stale: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(stale_path))
@@ -121,7 +124,7 @@ func test_accuracy_chart_uses_dated_analysis_and_human_colour():
 	var since = profile.find_child("PlayingSince", true, false)
 	assert_true(since != null, "Profile shows the first saved game date")
 	if since != null:
-		assert_eq(since.text, "Playing since Sep 2026")
+		assert_eq(since.text, "Playing since Aug 2025")
 	var average = profile.find_child("AccuracyValue", true, false)
 	assert_true(average != null, "Profile shows average accuracy")
 	if average != null:
