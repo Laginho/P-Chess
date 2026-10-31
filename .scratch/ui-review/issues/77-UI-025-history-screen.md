@@ -138,3 +138,8 @@ After rebase onto the unchanged lane base, the bound gate ran once on final code
 
 Acceptance: pending | Bruno's v0.1.0 QA before tagging. Required ticket-level mouse deletion, graphical states/minimum-size checks and two-game Stockfish completion passed; full keyboard/screen-reader acceptance and Lc0 gameplay were not established by these probes.
 Disclosure: pending | release | [.scratch/ui-redo/spec.md](../../ui-redo/spec.md): Bruno's v0.1.0 QA remains required before tagging. Prior integration disclosures are resolved by the evidence above.
+
+- 2026-10-31 Foreman feature check on the integrated session 1b4af20 (includes CLEAN-012 font weights): `scripts/screens.gd` History at 1280x800 and 800x600, exit 0, captures `C:/Users/bruno/AppData/Local/Temp/pchess-ui-review-acceptance-1b4af20/History-1280x800/History.png` and `C:/Users/bruno/AppData/Local/Temp/pchess-ui-review-acceptance-1b4af20/History-800x600/History.png`. Weights now render (title, Analyze selected bold); nothing clipped at 800x600. Against `docs/design/v0.1.0/png/History.png`, the tab labels, card player names, outcome text and Analyze all button still render regular where the canvas is bold, and the tabs are separate buttons rather than one segmented pill. The tool's fixture holds one unanalysed game, so the other card states rely on the stage-3 captures above. Unexamined: live gameplay and keyboard/screen reader.
+
+Acceptance: pending | Bruno's v0.1.0 QA; weight/segmented-tab differences above to judge against the canvas.
+Disclosure: pending | release | [History.png](../../../docs/design/v0.1.0/png/History.png): tab, name, outcome and secondary-button weights still regular after CLEAN-012; Bruno decides whether QA accepts them or a follow-up ticket is needed.
