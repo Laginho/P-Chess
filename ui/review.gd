@@ -85,6 +85,7 @@ func _ready() -> void:
 		black.custom_minimum_size.x = 26
 		black.add_theme_font_size_override("font_size", 11)
 		table.add_child(black)
+	$Margin/Content/Progress.visibility_changed.connect(func(): $Margin/Content/ProgressText.visible = $Margin/Content/Progress.visible)
 	_graph.ply_selected.connect(_show_ply)
 	_board_view.resized.connect(_update_player_labels)
 	$Margin/Content/ReviewBody/Side.resized.connect(_layout_review)
@@ -179,7 +180,10 @@ func _layout_review() -> void:
 	result.size = Vector2(side.size.x - 8, 28)
 	var progress: Control = $Margin/Content/Progress
 	progress.position = at + Vector2(4, 43)
-	progress.size = Vector2(side.size.x - 8, 16)
+	progress.size = Vector2(maxf(side.size.x - 100, 0), 16)
+	var progress_text: Control = $Margin/Content/ProgressText
+	progress_text.position = at + Vector2(side.size.x - 94, 41)
+	progress_text.size = Vector2(90, 20)
 	var error: Control = $Margin/Content/AnalysisError
 	error.position = at + Vector2(4, 43)
 	error.size = Vector2(side.size.x - 8, 20)
@@ -381,6 +385,11 @@ func receive_position(index: int, position: Dictionary) -> void:
 	if index < 0 or index >= _positions.size():
 		return
 	_positions[index].merge(position, true)
+	var settled := 0
+	for i in range(1, _positions.size()):
+		if _positions[i - 1].has("pv") and _positions[i].has("pv"):
+			settled += 1
+	$Margin/Content/ProgressText.text = "%d of %d moves" % [settled, _game_moves.size()]
 	_refresh_classes()
 	_update_summary()
 	_update_board_annotations()
@@ -488,6 +497,7 @@ func present(game, clocks: Array, settings: Dictionary, result_text: String,
 	$Margin/Content/ReviewBody/Side/Analyze.hide()
 	$Margin/Content/AnalysisError.hide()
 	_game_moves = game.moves.duplicate()
+	$Margin/Content/ProgressText.text = "0 of %d moves" % _game_moves.size()
 	_classes = []
 	_move_rows = []
 	_catalog = catalog

@@ -58,6 +58,12 @@ autowrap_mode = 3
 visible = false
 layout_mode = 2
 
+[node name="ProgressText" type="Label" parent="Margin/Content"]
+visible = false
+layout_mode = 0
+theme_override_font_sizes/font_size = 11
+horizontal_alignment = 2
+
 [node name="AnalysisError" type="Label" parent="Margin/Content"]
 visible = false
 layout_mode = 2
