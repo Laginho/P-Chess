@@ -1,5 +1,5 @@
 # UI-026: Review screen to the design
-Stage: implementing
+Stage: to-implement
 Blocked by: UI-021
 Review: human
 Difficulty: hard
@@ -42,3 +42,7 @@ Restyle the review to chess.com's layout as drawn in `docs/design/v0.1.0/png/Rev
 - 2026-10-31 Driver retry: attempt 1 ended short of to-review (exit 0). Resume from this branch's commits; edits the stage left uncommitted are saved in run-log/recovery.txt.
 
 - 2026-10-31 Resumed implementation: unanalysed History now shows an explanation and hides the empty analysis summary; the eval bar displays the current white-perspective score. Test-only commits `1fad1cc` and `9d1d484` failed before production commits `8c9aa39` and `95d45b6`; the focused review suite then reported 29 passed, 0 failed (`C:/Users/bruno/AppData/Local/Temp/pchess-ui026-score-green.log`). The graphical capture `C:/Users/bruno/AppData/Local/Temp/pchess-ui026-09dc2ae2-fa5e-4fb3-bdb4-0f815ba0170f/Review.png` still differs substantially from the reference. Board player labels, side-card layout and data, class-table presentation, graph dots, move selection/repertoire row, analysing progress, compact layout and visual acceptance remain to be completed. No full gate or product acceptance has been run for these commits.
+
+- Proxy decided (opus-5.5 xhigh): (a), resume once on the same lineup - both attempts were green, cheap ($0.77, 10.5 of 240 min) and stopped on their own with no error; the ticket is clear, so splitting it would only work around how the model behaved, and a lineup change isn't mine to make. (receipt C:\Users\bruno\AppData\Local\Temp\sweatshop-proxy\20261031-182950-UI-026-4b70fe.json)
+
+- 2026-10-31 Resume: continue from `UI-026-review-screen` at efc1d4b; its commits are the work so far. The recovery ref `refs/sweatshop-recovery/aa946201260b4eccbb7d7b7834b86b5d` is cleanup only (an untracked copy of `tests/test_review.gd`), ignore it. Put scratch copies and captures under `%TEMP%`, never inside the repo, so no untracked file is left. The stage has 240 min: do not end the turn at `implementing` with partial work. Either finish criteria 1-8 (what remains is the list in the efc1d4b comment), record the visual comparison against `docs/design/v0.1.0/png/Review*.png` and one gate log with its exit code, then hand off at `to-review`; or end `blocked` on a specific question.
