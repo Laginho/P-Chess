@@ -178,3 +178,10 @@ func test_history_tab_defaults_and_accepts_only_supported_tabs():
 		assert_true(settings.set_value("history_tab", tab))
 		assert_eq(Settings.new(PATH).get_value("history_tab"), tab)
 	assert_true(not settings.set_value("history_tab", "other"))
+
+func test_analysis_threads_defaults_and_choices():
+	var settings = Settings.new(_fresh())
+	assert_eq(settings.get_value("analysis_threads"), "Background")
+	assert_true(settings.set_value("analysis_threads", "Max"))
+	assert_eq(Settings.new(PATH).get_value("analysis_threads"), "Max")
+	assert_true(not settings.set_value("analysis_threads", "other"))

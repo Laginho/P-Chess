@@ -11,12 +11,34 @@ const Tunables = preload("res://core/tunables.gd")
 const TABS := ["All", "1+0", "3+2", "5+0"]
 const CONTROLS := {"60+0": "1+0", "180+2": "3+2", "300+0": "5+0"}
 
+var analysis_queue
+var _selected := {}
 var history
 var preferences
 var copy_text: Callable = DisplayServer.clipboard_set
 
 
 func _ready() -> void:
+	var actions := HBoxContainer.new()
+	actions.name = "BatchActions"
+	$Margin/Content.add_child(actions)
+	$Margin/Content.move_child(actions, 2)
+	var selected := Button.new()
+	selected.text = "Analyze selected"
+	selected.pressed.connect(func():
+		for path in _selected:
+			if _selected[path] and analysis_queue != null:
+				analysis_queue.enqueue(path))
+	actions.add_child(selected)
+	var all := Button.new()
+	all.text = "Analyze all"
+	all.pressed.connect(_analyze_all)
+	actions.add_child(all)
+	var status := Label.new()
+	status.name = "Status"
+	actions.add_child(status)
+	if analysis_queue != null:
+		analysis_queue.changed.connect(_queue_changed)
 	for tab in TABS:
 		$Margin/Content/Tabs.add_tab(tab)
 	$Margin/Content/Tabs.tab_changed.connect(func(_index): _refresh())
@@ -27,8 +49,11 @@ func present(store, settings) -> void:
 	history = store
 	preferences = settings
 	$Margin/Content/Tabs.current_tab = TABS.find(settings.get_value("history_tab"))
-	_refresh()
 	show()
+	if analysis_queue != null:
+		_queue_changed()
+	else:
+		_refresh()
 
 
 func _refresh() -> void:
@@ -65,6 +90,10 @@ func _add_card(list: Node, record: Dictionary) -> void:
 	for i in thumbnail.ply:
 		board.game.play(moves[i])
 	card.add_child(board)
+	var select := CheckBox.new()
+	select.button_pressed = _selected.get(record.path, false)
+	select.toggled.connect(func(on): _selected[record.path] = on)
+	card.add_child(select)
 	var details := VBoxContainer.new()
 	details.name = "Details"
 	details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -86,6 +115,12 @@ func _add_card(list: Node, record: Dictionary) -> void:
 	review.text = "Review"
 	review.pressed.connect(func(): review_requested.emit(record.path, game))
 	actions.add_child(review)
+	if analysis_queue != null:
+		var analyze := Button.new()
+		analyze.text = "Re-analyze" if _analysis_text(record.path) == "Stale" else "Analyze"
+		analyze.disabled = record.path in analysis_queue.pending()
+		analyze.pressed.connect(func(): analysis_queue.enqueue(record.path))
+		actions.add_child(analyze)
 	var copy := Button.new()
 	copy.text = "⧉"
 	copy.tooltip_text = "Copy PGN"
@@ -104,6 +139,8 @@ func _result_text(game: Dictionary, colour: String) -> String:
 
 
 func _analysis_text(path: String) -> String:
+	if analysis_queue != null and path in analysis_queue.pending():
+		return "Analysing %d%%" % analysis_queue.percent if analysis_queue.current() == path else "Queued"
 	var analysis_path := "user://analysis".path_join(path.get_file() + ".json")
 	var analysis := Analyser.read_analysis(analysis_path, "Stockfish 19", Tunables.ANALYSIS_NODES)
 	if analysis.state != "analysed":
@@ -116,3 +153,20 @@ func _analysis_text(path: String) -> String:
 
 func _accuracy(value) -> String:
 	return "–" if value == null else "%.1f%%" % value
+
+func _analyze_all() -> void:
+	if history == null or analysis_queue == null:
+		return
+	var tab: String = TABS[$Margin/Content/Tabs.current_tab]
+	for record in history.games():
+		var control: String = CONTROLS.get(record.game.headers.get("TimeControl", ""), "")
+		if (tab == "All" or tab == control) and _analysis_text(record.path) in ["Not Analysed", "Stale"]:
+			analysis_queue.enqueue(record.path)
+
+
+func _queue_changed() -> void:
+	var count: int = analysis_queue.pending().size()
+	var status: Label = $Margin/Content/BatchActions/Status
+	status.text = ("Analysing %d of %d · %s" % [analysis_queue.batch_done + 1, analysis_queue.batch_total, preferences.get_value("analysis_threads")]) if count and preferences != null else ""
+	if visible:
+		_refresh()

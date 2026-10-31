@@ -38,6 +38,7 @@ func _ready() -> void:
 	_check("auto_claim", "Auto-claim threefold")
 	_check("check_repertoire", "Check my moves against my repertoire")
 	_choice("history_tab", "History default tab", Settings.CHOICES.history_tab)
+	_choice("analysis_threads", "Batch analysis threads", Settings.CHOICES.analysis_threads)
 	store.changed.connect(_follow)
 
 

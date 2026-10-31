@@ -34,6 +34,18 @@ class FakeAnalyser extends Node:
 		pass
 
 
+class FakeQueueAnalyser extends RefCounted:
+	signal progress(done: int, total: int)
+	signal finished(success: bool, error: String)
+	var called := false
+	var maximum := false
+	func start(_path: String, max_threads: bool) -> bool:
+		called = true
+		maximum = max_threads
+		return true
+	func cancel() -> void:
+		finished.emit(false, "cancelled")
+
 func test_open_review_from_history_and_return_with_escape():
 	var folder := "user://history_review_%d" % Time.get_ticks_usec()
 	DirAccess.make_dir_recursive_absolute(folder)
@@ -48,9 +60,8 @@ func test_open_review_from_history_and_return_with_escape():
 	game.play("e2e4")
 	game.resign("b")
 	main.history.save(game, [60000], {"colour": "w", "level": "maia-1500", "control": "1+0"})
-	var fake := FakeAnalyser.new()
-	main.review.analysis_bridge_factory = func(): return FakeAnalysisBridge.new()
-	main.review.analyser_factory = func(_bridge): return fake
+	var fake := FakeQueueAnalyser.new()
+	main.analysis_queue = load("res://core/analysis_queue.gd").new(fake, folder.path_join("queue.cfg"))
 	Engine.get_main_loop().root.add_child(main)
 	var history_button = main.get_node_or_null("Setup/Center/Form/History")
 	assert_true(history_button != null, "setup opens history")
@@ -192,4 +203,100 @@ func test_tabs_and_won_on_time_card():
 	tabs.current_tab = 2
 	assert_eq(cards.get_child_count(), 0, "3+2 filters out 1+0")
 	screen.free()
+	Storage.clean(folder)
+
+
+func test_review_prioritizes_a_queued_game_even_with_cached_analysis():
+	var folder := "user://history_queued_cached_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var main = MainScene.instantiate()
+	main.history = History.new(folder)
+	main.preferences = Settings.new(folder.path_join("settings.cfg"))
+	main.uci.free()
+	main.uci = HeldEngine.new()
+	main.maia = main.MaiaPlayer.new(main.uci)
+	var game = Game.new()
+	game.play("e2e4")
+	game.play("e7e5")
+	game.resign("w")
+	var path: String = main.history.save(game, [60000, 60000], {"colour": "w", "level": "maia-1500", "control": "1+0"})
+	var analysis_path := "user://analysis".path_join(path.get_file() + ".json")
+	DirAccess.make_dir_recursive_absolute("user://analysis")
+	var fixture: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/analysis/rev003-opening.json"))
+	fixture.engine_version = "Stockfish 19"
+	var file := FileAccess.open(analysis_path, FileAccess.WRITE)
+	file.store_string(JSON.stringify(fixture))
+	file.close()
+	var fake := FakeQueueAnalyser.new()
+	main.analysis_queue = load("res://core/analysis_queue.gd").new(fake, folder.path_join("queue.cfg"))
+	Engine.get_main_loop().root.add_child(main)
+	main.analysis_queue.enqueue(path)
+	assert_true(not fake.maximum, "batch begins in Background")
+	main._show_history()
+	main._review_history_game(path, main.history.games()[0].game)
+	assert_true(fake.maximum, "Review promotes even a previously analysed queued game to Max")
+	main.free()
+	DirAccess.remove_absolute(analysis_path)
+	Storage.clean(folder)
+
+func test_post_game_review_reuses_current_cache_with_a_saved_game():
+	var name := "hist006-cache-%d.pgn" % Time.get_ticks_usec()
+	var game_path := "user://games".path_join(name)
+	var analysis_path := "user://analysis".path_join(name + ".json")
+	DirAccess.make_dir_recursive_absolute("user://games")
+	DirAccess.make_dir_recursive_absolute("user://analysis")
+	var game = Game.new()
+	game.play("e2e4")
+	game.play("e7e5")
+	var file := FileAccess.open(game_path, FileAccess.WRITE)
+	file.store_string("[Event \"test\"]\n\n1. e4 e5 *")
+	file.close()
+	var fixture: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/analysis/rev003-opening.json"))
+	fixture.engine_version = "Stockfish 19"
+	file = FileAccess.open(analysis_path, FileAccess.WRITE)
+	file.store_string(JSON.stringify(fixture))
+	file.close()
+	var runner := FakeQueueAnalyser.new()
+	var queue = load("res://core/analysis_queue.gd").new(runner, "user://" + name + ".cfg")
+	var review = load("res://ui/review.tscn").instantiate()
+	review.analysis_queue = queue
+	review.analysis_bridge_factory = func(): return FakeAnalysisBridge.new()
+	Engine.get_main_loop().root.add_child(review)
+	review.present(game, [60000, 60000], {"colour": "w", "level": "maia-1500", "control": "1+0"}, "")
+	review.open_analysis(analysis_path, false)
+	assert_true(not runner.called, "current cache does not start a new analysis")
+	assert_true(review._positions[0].has("pv"), "cached positions are displayed")
+	review.free()
+	queue.free()
+	DirAccess.remove_absolute(game_path)
+	DirAccess.remove_absolute(analysis_path)
+	DirAccess.remove_absolute("user://" + name + ".cfg")
+
+func test_batch_status_advances_and_appears_after_restoring_queue():
+	var folder := "user://history_batch_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var runner := FakeQueueAnalyser.new()
+	var queue = load("res://core/analysis_queue.gd").new(runner, folder.path_join("queue.cfg"))
+	queue.enqueue("first.pgn")
+	queue.enqueue("second.pgn")
+	queue.enqueue("third.pgn")
+	var screen = load("res://ui/history_screen.tscn").instantiate()
+	screen.analysis_queue = queue
+	Engine.get_main_loop().root.add_child(screen)
+	screen.present(History.new(folder), Settings.new(folder.path_join("settings.cfg")))
+	var status: Label = screen.get_node("Margin/Content/BatchActions/Status")
+	assert_eq(status.text, "Analysing 1 of 3 · Background", "presenting an existing queue shows its status")
+	runner.finished.emit(true, "")
+	assert_eq(status.text, "Analysing 2 of 3 · Background", "status advances after a game finishes")
+	screen.free()
+	queue.free()
+	var restored = load("res://core/analysis_queue.gd").new(FakeQueueAnalyser.new(), folder.path_join("queue.cfg"))
+	screen = load("res://ui/history_screen.tscn").instantiate()
+	screen.analysis_queue = restored
+	Engine.get_main_loop().root.add_child(screen)
+	screen.present(History.new(folder), Settings.new(folder.path_join("settings.cfg")))
+	status = screen.get_node("Margin/Content/BatchActions/Status")
+	assert_eq(status.text, "Analysing 2 of 3 · Background", "restored batch retains its progress")
+	screen.free()
+	restored.free()
 	Storage.clean(folder)
