@@ -1,5 +1,5 @@
 # UI-021: Shared theme, Noto Sans, icons and the screenshot tool
-Stage: implementing
+Stage: to-review
 Blocked by: none
 Review: human
 Difficulty: hard
@@ -42,3 +42,10 @@ The foundation every other ticket of this feature stands on (`.scratch/ui-redo/s
 ## Comments
 
 - 2026-10-31 Written from `.scratch/ui-redo/spec.md` (Foundation). Every other ticket in this feature waits on this one.
+- 2026-10-31 Stage 2: the theme/font and canvas class-colour tests failed before the implementation and passed afterwards. Graphical captures of the 22 canvas boards and the four auxiliary screens at 1280×800 are in `C:/Users/bruno/AppData/Local/Temp/pchess-ui021-verify-20261031160945/`; Settings and Setup were also inspected at 800×600 in `C:/Users/bruno/AppData/Local/Temp/pchess-ui021-small-7ab26ca2-374b-4d6e-aaa7-301a6781b712/`. These show the current application where the corresponding redesign has not landed. The final screenshot-tool change additionally captures resign and declined-draw states under `C:/Users/bruno/AppData/Local/Temp/pchess-ui021-states-1496b759-b277-44ea-bd0d-6c8e9e7a1ae5/`.
+- Gate on `d19cf70`: 410 reported passed, including six Lc0-dependent SKIPs (404 executed), zero failed. `C:/Users/bruno/AppData/Local/Temp/pchess-ui021-gate-d19cf70.log`.
+
+Acceptance: pending | Bruno's v0.1.0 QA, as recorded in `.scratch/ui-redo/spec.md`.
+Disclosure: pending | release | `.scratch/ui-redo/spec.md` requires Bruno's QA before the v0.1.0 tag.
+
+Gate evidence: C:/Users/bruno/AppData/Local/Temp/pchess-ui021-gate-d19cf70.json
