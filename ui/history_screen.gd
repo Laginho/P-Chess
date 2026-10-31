@@ -138,6 +138,26 @@ func _add_card(list: Node, record: Dictionary) -> void:
 	var opponent: String = headers.get("Black" if colour == "w" else "White", "?")
 	text.text = "%s%s  ·  %s (%s) x %s (%s)\n%s (%s)  ·  %d moves\n%s" % [opening, date, human, "White" if colour == "w" else "Black", opponent, "Black" if colour == "w" else "White", _result_text(game, colour), game.result, (moves.size() + 1) / 2, _analysis_text(record.path)]
 	details.add_child(text)
+	var cached := _cached_accuracy(record.path, moves.size() + 1)
+	if not cached.is_empty():
+		var boxes := HBoxContainer.new()
+		for side in ["white", "black"]:
+			var box := Label.new()
+			box.name = "WhiteAccuracy" if side == "white" else "BlackAccuracy"
+			box.text = _accuracy(cached[side])
+			box.tooltip_text = side.capitalize() + " accuracy"
+			box.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			box.custom_minimum_size = Vector2(80, 32)
+			boxes.add_child(box)
+		details.add_child(boxes)
+		if _analysis_text(record.path) == "Stale":
+			boxes.modulate.a = 0.5
+	if _analysis_text(record.path) == "Stale":
+		var reason := Label.new()
+		reason.name = "StaleReason"
+		reason.text = "Stale: engine settings changed"
+		reason.add_theme_color_override("font_color", Color("f4bf44"))
+		details.add_child(reason)
 	if analysis_queue != null and analysis_queue.current() == record.path:
 		var progress := ProgressBar.new()
 		progress.name = "AnalysisProgress"
@@ -243,6 +263,34 @@ func _analysis_text(path: String) -> String:
 		return "Stale"
 	var accuracy := Accuracy.evaluate(analysis.data)
 	return "White: %s  Black: %s" % [_accuracy(accuracy.white), _accuracy(accuracy.black)]
+
+
+func _cached_accuracy(path: String, count: int) -> Dictionary:
+	var analysis_path: String = history.analysis_folder().path_join(path.get_file() + ".json")
+	var data = JSON.parse_string(FileAccess.get_file_as_string(analysis_path)) if FileAccess.file_exists(analysis_path) else null
+	if not data is Dictionary:
+		return {}
+	var positions = data.get("positions")
+	if not positions is Array or positions.size() != count or positions.is_empty():
+		return {}
+	for position in positions:
+		if not position is Dictionary or not position.get("pv") is Array:
+			return {}
+		var score = position.get("terminal_score")
+		if not position.pv.is_empty():
+			var line = position.pv[0]
+			if not line is Dictionary:
+				return {}
+			score = line.get("cp", line.get("mate"))
+		if not (score is int or score is float) or not is_finite(float(score)):
+			return {}
+	var fen = positions[0].get("fen")
+	if not fen is String:
+		return {}
+	var fields: PackedStringArray = fen.split(" ")
+	if fields.size() < 2 or fields[1] not in ["w", "b"]:
+		return {}
+	return Accuracy.evaluate(data)
 
 
 func _accuracy(value) -> String:
