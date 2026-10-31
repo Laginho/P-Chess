@@ -28,6 +28,7 @@ const DEFAULTS := {
 	"auto_claim": true,
 	"check_repertoire": false,
 	"board_size": 0, # 0 follows the window; positive values are pixels.
+	"history_tab": "All",
 }
 # Inclusive bounds of the numeric settings.
 const RANGES := {"animation_ms": [0, 1000], "volume": [0, 100], "tau": [0.0, 0.2], "temperature": [0.1, 3.0], "board_size": [0, 2147483647]}
@@ -36,6 +37,7 @@ const CHOICES := {
 	"panic": ["off", "low", "medium", "high"],
 	"book_intensity": ["weak", "medium", "strong"],
 	"auto_queen": ["off", "on", "only on premoves"],
+	"history_tab": ["All", "1+0", "3+2", "5+0"],
 }
 # Theme settings and the folder kind each names.
 const THEMES := {"board_theme": "boards", "piece_theme": "pieces", "sound_theme": "sounds"}
