@@ -58,6 +58,8 @@ func test_summary_waits_for_analysis_and_shows_accuracy_and_counts():
 		review.receive_position(0, {"pv": [{"cp": 0, "moves": ["e2e4"]}], "best_move": "e2e4"})
 		assert_true(summary.visible)
 		assert_true(summary.text.contains("100.0%"), "white accuracy")
+		var white_card = summary.get_node_or_null("AccuracyCards/WhiteScore/Value")
+		assert_true(white_card != null and white_card.text == "100.0%", "white accuracy appears in its card")
 		assert_true(summary.text.contains("–"), "black has no moves")
 	var counts = review.get_node_or_null("Margin/Content/ReviewBody/Side/Counts")
 	assert_true(counts != null, "class table exists")
