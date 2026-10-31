@@ -1,5 +1,5 @@
 # HIST-005: Delete a game, and the PracticeTarget header
-Stage: implementing
+Stage: to-review
 Blocked by: HIST-004
 Review: agent
 Difficulty: normal
@@ -102,7 +102,7 @@ Verdict: Reopen — missing test-first proof for the criterion 6 failure repairs
 
 - 2026-10-31 Stage 2 resumed: added filesystem-injected final-removal and temporary-stats-save failure tests. Both assert the error, original file bytes and in-memory and reloaded result, flag and practice counts. Focused tests passed 20/20. Removing each corresponding rollback produced 19 passed, 1 failed in its respective focused run; the implementation was restored. The temporary-save failure covers the same rollback branch as replacement failure, per the recorded proxy decision. The read-only attribute worked on Windows; no production seam was added. Full gate: 366 passed, 0 failed, exit 0, tested commit 2a44682f7d7e3a80e65bae704ff9d6d98d8ddf03.
 
-Gate evidence: C:\Users\bruno\AppData\Local\Temp\p-chess-hist005-review-20261031.json
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\p-chess-hist005-queue-handoff-20261031.json
 
 #### Stage 3 re-review (2026-10-31)
 Verdict: Reopen — criterion 3 fails when an active queued analysis finishes after deletion.
@@ -117,6 +117,16 @@ Verdict: Reopen — criterion 3 fails when an active queued analysis finishes af
 - Rebase and gate: rebased the retained ticket branch onto session `sweatshop/v010/2026-10-30-2302` at `8780914`; only tracker Stage/comment conflicts required resolution, and both sides' history was preserved. Session code had changed since the prior 366/0 gate, so the bound gate ran once in the foreground on `fa890e32f820562fcdd321c84b7c7a98996b87f1`. Result: 379 PASS lines, 379 passed, 0 failed, 0 SKIP lines, no script errors, exit 0. The receipt above records that exact commit; the log's SHA256 matches. Existing anchor/theme/malformed-time-model warnings are present. Only this tracker ticket changes after the tested commit. The green suite does not cover the confirmed integration failure.
 - Limits and disposition: rendered confirmation/error layout, physical focus/input, real Stockfish and the manual W/D/L acceptance remain pending. `Stage: to-implement` is committed on `HIST-005-delete-a-game`; no merge, ledger entry, PR or push. This is the second review reopen, for a new integration regression; the first review's rollback-proof finding is closed.
 
-Disclosure: pending | integration | [Stage 3 re-review](#stage-3-re-review-2026-10-31): criterion 3's active-analysis deletion race must be fixed and verified before integration.
+Disclosure: decision | none | [Stage 2 queued-deletion repair](#stage-2-queued-deletion-repair-2026-10-31): criterion 3's active-analysis deletion race is repaired with red/green regression proof and a green full gate; implementation awaits stage 3 review. Manual release acceptance remains pending above.
 
 - 2026-10-31 Stage 2 resumed after the foreman's diagnosis. Rebased the retained ticket branch onto session `476aee7`; only tracker Stage/comment conflicts needed resolution, preserving both histories. New test-only commit `7d37fae` reproduced the orphaned JSON and the waiting entry remaining queued. That run also exposed two harness errors: the held-UCI adapter read an already deleted PGN, and direct confirmation signals left the modal open when the error dialog appeared. A separate test-only correction adds the same input guards as StockfishRunner and presses the dialogs' actual OK/Cancel buttons; the red run is repeated before changing production.
+
+#### Stage 2 queued-deletion repair (2026-10-31)
+
+- Retained all previous implementation and rollback proof. Only the second reopen's integration defect required a production change. The callers of `History.delete` and `_confirm_delete`, queue removal/cancellation, final analyser response, queue persistence and batch selection were traced before adding tests. The existing no-queue confirmation test also preserves the standalone-screen path.
+- Test-only commits `7d37fae` and `e0634fc` add three tests through the real History screen, History, analysis queue and Analyser, with only the external UCI response held by the harness. They cover confirmed deletion of the sole active game, a waiting entry while another game runs, and Cancel plus a filesystem-provoked stats-save failure. Assertions cover immediate persisted queue removal, cancellation, absence of recreated analysis before and after the missing-file scan, unchanged analysis and stats on Cancel/failure, and batch selection not re-enqueuing the deleted PGN.
+- Clean red proof on `e0634fc`, before the production correction: **21 passed, 2 failed**, exit 1, no script errors. The active-game test observes no stop, retained queue entries and recreated JSON; the waiting-game test observes the deleted entry still queued. Cancel and failed-delete preservation pass. Log: `C:\Users\bruno\AppData\Local\Temp\p-chess-hist005-red-clean-20261031.log`. The earlier harness errors and their separate test-only correction are documented above.
+- Production-only commit `e2e9f86` adds three lines to `ui/history_screen.gd`: after successful deletion, erase the selected path and call the existing `analysis_queue.remove` when a queue exists, before refreshing cards. Failed deletion and Cancel keep their behavior. No new production seam or contract change was needed; the recorded `Proxy decided (opus-5.5 xhigh): No new production seam.` decision remains followed, and the earlier rollback-proof finding remains resolved.
+- Green proof on `e2e9f86`: **23 passed, 0 failed**, exit 0, no script errors, in `C:\Users\bruno\AppData\Local\Temp\p-chess-hist005-green-20261031.log`.
+- Full bound gate ran once in the foreground on `e2e9f86e191ece807e1b714ef5b41da1d7f093e2`: **389 passed, 0 failed**, exit 0, 389 PASS lines, no SKIP lines or script errors. The receipt above identifies that commit and its log; SHA256 matches. Anchor/layout, invalid-theme and malformed-time-model warnings remain in the suite log. Only this tracker ticket changes after the tested commit.
+- Handoff: `Stage: to-review` on `HIST-005-delete-a-game`. The new integration repair awaits independent stage 3 review. Rendered confirmation/error layout, physical focus/input, real Stockfish and manual W/D/L acceptance remain pending as recorded above. No PR, merge or ledger closure at stage 2.
