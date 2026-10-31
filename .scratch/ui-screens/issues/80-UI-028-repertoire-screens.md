@@ -1,5 +1,5 @@
 # UI-028: Repertoires, opening picker and editor to the design
-Stage: implementing
+Stage: to-implement
 Blocked by: UI-021
 Review: agent
 Difficulty: normal
@@ -48,3 +48,5 @@ Restyle the repertoire screens to `docs/design/v0.1.0/png/Repertoire.png`, `Open
 - 2026-10-31 Foreman: the handoff at b0bd516 was parked as "code changed after gate" because the driver reads the first `Gate evidence:` line, the attempt-3 receipt (bfb09c8). The current receipt `ui028-reopen-gate.json` is valid: Code 42fa431 equals production at b0bd516 (only this ticket differs), log SHA-256 matches, ExitCode 0, 433 passed / 0 failed. The stale line is relabelled `Superseded gate evidence:`; Stage restored to `to-review`.
 - Proxy decided (opus-5.5 xhigh): Add the seam: an optional `"source"` key in the existing version-1 file, persisted for new saves and carried through edits. A legacy file without the key shows only "N lines", with no origin suffix. — This keeps every existing file loadable. OPEN-005 and OPEN-007 set the precedent of adding `bot/repertoire.gd` to Primary files when the UI needs it. (receipt C:\Users\bruno\AppData\Local\Temp\sweatshop-proxy\20261031-180734-UI-028-dca09e.json)
 - 2026-10-31 Work in progress: focused tests cover the edit buttons, unsaved marker, source persistence, viewer navigation, editor deletion and minimum sizes. Captures at `C:/Users/bruno/AppData/Local/Temp/pchess-ui028-capture2/` and `C:/Users/bruno/AppData/Local/Temp/pchess-ui028-small/` still differ substantially from the references, notably the lines column and editor; the picker capture was taken while its catalog was loading. Complete and visually verify all three screens before handoff. Gate and manual acceptance have not been run.
+
+- 2026-10-31 Driver retry: attempt 1 ended short of to-review (exit 0). Resume from this branch's commits; edits the stage left uncommitted are saved in run-log/recovery.txt.
