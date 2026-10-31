@@ -1,5 +1,5 @@
 # REV-005: The new review screen: board, eval bar and classified moves
-Stage: to-review
+Stage: to-implement
 Blocked by: REV-002, REV-003
 Review: human
 Difficulty: hard
@@ -111,3 +111,31 @@ The review becomes a chess.com-style game review (§15.6). The post-game panel's
 - Acceptance: pending | Manually finish a game with Stockfish installed, open Review, watch incremental icons and progress, navigate with keyboard and mouse, inspect the actual rendered 800x600 layout, check flipped orientation and long-game responsiveness. Stockfish was absent in this worktree; headless geometry and the fake analyser do not establish those checks.
 - Disclosure: pending | release | Manual acceptance above, including visual layout, real Stockfish integration and long-game stutter check.
 Gate evidence: C:\Users\bruno\AppData\Local\Temp\rev005-gate-05860d8.json
+
+#### Resolution (2026-10-30)
+Verdict: Reopen — criterion 2: the review board cannot be flipped with the existing F hotkey, and its eval bar does not update immediately when its orientation changes.
+
+Reviewed `d5d14ebaaf77acb20fc91b2fcc378a4d7425900f...095ee9857f1629aab8ab995a4f1ea9ad10a81030` against all eight criteria. All 24 changed files were covered, including the ticket, spec, tests, scenes and 12 SVGs. The Standards and Spec axes were independently reviewed by parallel agents; no production changes were authored in stage 3.
+
+- Standards: no documented-standard violations or actionable complexity findings. Primary-file boundaries and separate test/production commits were checked.
+- Spec: **P2**, `ui/review.gd:145-152`, with `ui/main.gd:181-182,379-380` and `ui/review.gd:207-208`. Spec §9.2 defines `F` as "Flip the board"; criterion 2 requires the eval bar to follow the board's orientation. With Review open after `e4 e5` and resignation, sending F through `Viewport.push_input` flips the hidden gameplay board, while the visible review board and eval bar stay unflipped. Directly changing the review board's orientation also leaves the bar unchanged until a move is selected or another analysis position arrives. The current orientation test sends another position after changing `flipped`, so it misses the immediate-update failure.
+- Repair inside the existing Primary files: route F to the visible review board, consume the event, and refresh the eval bar in the same action. Add a red regression test using viewport input, including move-list focus and an already completed/cached analysis, so the check needs neither navigation nor a new analysis result to observe both orientations change.
+
+Criterion verdicts:
+
+1. ✅ Board navigation and move selection implemented; viewport Left and both move cells were also probed.
+2. ❌ PV1 evaluation and initial colour orientation work; the flip path and immediate bar update fail as above.
+3. ✅ Incremental classes, unsettled Miss dependency and the repertoire-exit details are implemented.
+4. ✅ Destination-square class icon and the preceding position's best-move arrow are implemented.
+5. ✅ Twelve own SVGs exist, including blue Repertoire; rendered appearance remains manual acceptance.
+6. ✅ Max analysis, progress and current-cache reuse are implemented; live Stockfish acceptance remains pending.
+7. ✅ PGN/Lichess exports, rematch/Space and New game are retained.
+8. ✅ Headless geometry fits 800×600; rendered usability remains pending as already disclosed.
+
+Coverage includes post-game entry, rematch/setup and analysis cancellation, BoardView input/drawing, UCI startup/queue/stop, analyser/cache, partial classification/Badges and History/Book callers; REV-006 summary/graph and HIST-004 history entry remain outside this ticket. No rendered GUI, physical-input, live Stockfish or long-game responsiveness acceptance was performed. The planned Forced/Book/Repertoire/Best tests with an unanalysed predecessor are absent; static inspection finds the priority exceptions present, so this is a coverage limitation rather than a second confirmed behavior defect.
+
+Verification: the gate receipt above was validated against HEAD, including log hash, exit marker and unchanged tested code. Its existing log prints **346 passed, 0 failed; ExitCode: 0**. The gate was reused, not rerun. The focused observational probe used Godot 4.7 and fake engine/clock fixtures, with real viewport dispatch: `AFTER_F game_flipped=true review_flipped=false eval_flipped=false`; after a direct board flip, `review_flipped=true eval_flipped=false`. Script and log: `C:\Users\bruno\AppData\Local\Temp\rev005-stage3-input-probe.gd` and `C:\Users\bruno\AppData\Local\Temp\rev005-stage3-input-probe.log` (probe exit 0 means it completed; the orientation mismatch is the finding). Durable reproduction and expected behavior are recorded above.
+
+Acceptance: pending | Existing manual checks above plus the criterion-2 correction and its viewport regression test.
+Disclosure: pending | integration | Criterion 2 must be repaired before integrating REV-005; stage returned to to-implement on its existing branch.
+Disclosure: pending | release | Existing real Stockfish, rendered 800×600, orientation and long-game responsiveness acceptance remains open.
