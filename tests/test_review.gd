@@ -727,8 +727,8 @@ func test_review_player_labels_follow_board_orientation():
 	settings["player_name"] = "Bruno"
 	review.present(Game.new(), [180000, 180000], settings, "")
 	var body = review.get_node("Margin/Content/ReviewBody")
-	var top = body.get_node_or_null("TopPlayer")
-	var bottom = body.get_node_or_null("BottomPlayer")
+	var top = body.find_child("TopPlayer", true, false)
+	var bottom = body.find_child("BottomPlayer", true, false)
 	assert_true(top != null and bottom != null, "both players are labelled by the board")
 	if top != null and bottom != null:
 		assert_true(top.text.contains("Maia 1500") and bottom.text.contains("Bruno"))
