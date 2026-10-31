@@ -6,6 +6,24 @@ const E4_KEY := "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq -"
 const E5_KEY := "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq -"
 
 
+func test_picker_keeps_field_labels_visible_after_typing_in_both_modes():
+	var picker = load("res://ui/opening_picker.tscn").instantiate()
+	picker.book = _sample()
+	Engine.get_main_loop().root.add_child(picker)
+	picker.get_node("Margin/Form/SaveRow/Name").text = "Selection"
+	picker.get_node("Margin/Form/Search").text = "Sicilian"
+	var labels = picker.get_node("Margin/Form/FieldLabels")
+	var search_label = picker.get_node_or_null("Margin/Form/SearchLabel")
+	assert_true(labels.visible and labels.get_node("Name").visible, "selection name label is visible")
+	assert_eq(labels.get_node("Name").text, "Name")
+	assert_true(not labels.get_node("Colour").visible, "colour label is hidden in selection mode")
+	assert_true(search_label != null and search_label.visible and search_label.text == "Search", "search label is visible")
+	picker.present_repertoire(load("res://bot/repertoire.gd").new())
+	assert_true(labels.visible and labels.get_node("Name").visible and labels.get_node("Colour").visible, "repertoire name and colour labels are visible")
+	assert_true(search_label != null and search_label.visible, "search label remains visible in repertoire mode")
+	picker.free()
+
+
 func test_repertoire_picker_identifies_name_and_colour_fields():
 	var picker = load("res://ui/opening_picker.tscn").instantiate()
 	picker.book = _sample()

@@ -25,6 +25,10 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 24
 text = "Import your repertoire"
 
+[node name="PathLabel" type="Label" parent="Margin/Form"]
+layout_mode = 2
+text = "PGN file"
+
 [node name="FileRow" type="HBoxContainer" parent="Margin/Form"]
 layout_mode = 2
 
@@ -37,6 +41,10 @@ tooltip_text = "PGN with chapters and variations"
 [node name="Browse" type="Button" parent="Margin/Form/FileRow"]
 layout_mode = 2
 text = "Browse…"
+
+[node name="NameLabel" type="Label" parent="Margin/Form"]
+layout_mode = 2
+text = "Repertoire name"
 
 [node name="Name" type="LineEdit" parent="Margin/Form"]
 layout_mode = 2
