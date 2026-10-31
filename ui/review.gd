@@ -292,6 +292,7 @@ func open_analysis(path: String, draw_at_end: bool) -> void:
 	$Margin/Content/ReviewBody/Side/UnanalysedNotice.hide()
 	$Margin/Content/ReviewBody/Side/Analyze.hide()
 	_resize_classes()
+	_update_summary()
 	var cached := Analyser.read_analysis(path, "Stockfish 19", Tunables.ANALYSIS_NODES)
 	var positions = cached.get("data", {}).get("positions", [])
 	var current_cache: bool = cached.state == "analysed" and positions is Array and positions.size() == _positions.size()
@@ -466,11 +467,12 @@ func _update_summary() -> void:
 			value.text = str(counts[label][side])
 			value.modulate = Color("8a857c") if counts[label][side] == 0 else Color("ece9e4")
 	var summary: Label = $Margin/Content/ReviewBody/Side/Summary
+	var analysed := []
 	for position in _positions:
 		if not position.has("pv"):
-			summary.hide()
-			return
-	var accuracy: Dictionary = Accuracy.evaluate({"positions": _positions})
+			break
+		analysed.append(position)
+	var accuracy: Dictionary = Accuracy.evaluate({"positions": analysed})
 	var white := "–" if accuracy.white == null else "%.1f%%" % accuracy.white
 	var black := "–" if accuracy.black == null else "%.1f%%" % accuracy.black
 	summary.text = "White: %s  %s\nBlack: %s  %s" % [_player_names[0], white, _player_names[1], black]
@@ -633,6 +635,7 @@ func present_history(path: String, analysis_path: String, draw_at_end: bool) -> 
 	else:
 		$Margin/Content/ReviewBody/Side/Analyze.show()
 		$Margin/Content/ReviewBody/Side/UnanalysedNotice.show()
+		$Margin/Content/ReviewBody/Side/Summary.hide()
 		_resize_classes()
 	if analysis_queue != null and path in analysis_queue.pending():
 		$Margin/Content/ReviewBody/Side/Analyze.hide()
