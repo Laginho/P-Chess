@@ -74,6 +74,26 @@ func test_review_tooltips_explain_accuracy_and_class_thresholds():
 	main.free()
 
 
+func test_fixture_updates_counts_before_final_accuracy():
+	var main = _session(FakeTime.new())
+	var review = main.get_node("Review")
+	var game = Game.new()
+	game.play("e2e4")
+	game.play("e7e5")
+	review.present(game, [180000, 180000], SETTINGS, "")
+	var fixture: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/analysis/rev003-opening.json"))
+	var side = review.get_node("Margin/Content/ReviewBody/Side")
+	review.receive_position(2, fixture.positions[2])
+	review.receive_position(1, fixture.positions[1])
+	assert_true(not side.get_node("Summary").visible)
+	assert_true(side.get_node("Counts").text.contains("Best:  0   1"), "black's final class appears while analysis runs")
+	review.receive_position(0, fixture.positions[0])
+	assert_true(side.get_node("Summary").visible)
+	assert_true(side.get_node("Summary").text.contains("100.0%"))
+	assert_true(side.get_node("Counts").text.contains("Best:  1   1"))
+	main.free()
+
+
 class FakeTime:
 	var now := 0
 
