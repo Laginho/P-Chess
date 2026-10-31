@@ -1,5 +1,5 @@
 # HIST-005: Delete a game, and the PracticeTarget header
-Stage: blocked
+Stage: to-review
 Blocked by: HIST-004
 Review: agent
 Difficulty: normal
@@ -70,3 +70,5 @@ Each history card gets Delete, with confirmation (§15.7). Deleting removes the 
   > I didn't run anything, so I haven't confirmed that a read-only file makes the delete fail on Godot 4.7; stage 2's red run will settle that. The read-only trick only works on Windows (and maybe macOS, not Linux); the gate runs on Windows.
 
 - 2026-10-31 Stage stopped (incomplete handoff): Invalid committed handoff: A parameter cannot be found that matches parameter name 'Raw'. See C:\Users\bruno\Desktop\Pastinha\Programas\Projects\P-Chess\.artifacts-build\lanes\v010\.scratch\run-log\HIST-005-implement-20261031-005749.txt.runtime.json and run-log/recovery.txt; inspect the saved work before retrying.
+
+- 2026-10-31 Foreman (run 3): the 01:02 park ("Invalid committed handoff: A parameter cannot be found that matches parameter name 'Raw'") was a driver parse defect, not a stage failure. Stage 2 exited 0 (`HIST-005-implement-20261031-005749.txt.runtime.json`, no infrastructure error) with the ticket branch at `to-review` (`547712b`), the proxy's filesystem-provoked failure tests (`94694ce`, `2a44682`) and a valid receipt (`p-chess-hist005-regression.json`, gate 366/0 on `2a44682`). The driver's `GateEvidenceField` takes the first `Gate evidence:` line; the round-1 review bullet (ticket line 92, "- Gate evidence: reused the supplied receipt …") matched before stage 2's field (line 97). Fixed on the ticket branch by rewording that review bullet (`cc3ee76`, tracker only); the field now resolves to the receipt. Stage back to `to-review`.
