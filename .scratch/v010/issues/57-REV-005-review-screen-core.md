@@ -1,8 +1,8 @@
 # REV-005: The new review screen: board, eval bar and classified moves
-Stage: blocked
+Stage: to-implement
 Blocked by: REV-002, REV-003
 Review: human
-Difficulty: normal
+Difficulty: hard
 
 - Primary files:
   - ui/review.gd
@@ -102,3 +102,5 @@ The review becomes a chess.com-style game review (§15.6). The post-game panel's
 - 2026-10-30 Attempt 3 failed: exit 0; blocked after two attempts. Log tail: O **REV-005 está incompleto**, em `Stage: implementing`, na branch `REV-005-review-screen-core`. /  / Recuperei os commits preservados de navegação por setas, implementei a seleção de uma jogada na lista e adaptei o classificador para aguardar dados de análise parcial. Os testes focados passaram: **16 de classificação** e **11 da tela de revisão**. /  / Ainda faltam a integração do Stockfish e da análise incremental, a barra de avaliação, os ícones e a seta no tabuleiro, além da verificação de layout e do gate completo. Os commits estão preservados para continuar o trabalho.
 
 - 2026-10-30 Foreman diagnosis of attempt 3 (23:18, log `.scratch/run-log/REV-005-implement-20261030-231824.txt`): the environment fix worked (it escalated, Godot ran: classifier 16/0, review 11/0). It then ended its own turn after 4 minutes with the ticket unfinished, saying the Stockfish/incremental-analysis wiring, eval bar, icons, arrow, 800×600 check and gate were still to do; no error, no timeout (60 min limit), no question. Its six commits are kept under `refs/sweatshop-recovery/3837807dd4254836b0e8553235ab993b` (`f5e9337`): `872df68`/`7119eac` partial-analysis classifier, `a41ac26`/`1e93aaa` arrow navigation, `4138759`/`f5e9337` clicking a move. Cause: terra high stopping early on a ticket this size, not a code, contract or environment defect. Left `blocked` for Bruno: the foreman's one restart is spent. Next action when relaunched: resume from `f5e9337`; consider `Difficulty: hard` (terra xhigh) or splitting the remaining criteria (2, 4, 5, 6 wiring) into their own ticket.
+
+- 2026-10-31 Foreman, run 3 (parent session decided; Bruno authorized it for tonight): `Difficulty: hard`, so stage 2 runs on terra xhigh. **Start from the earlier work, do not redo it**: `git checkout -b REV-005-review-screen-core f5e9337` (kept under `refs/sweatshop-recovery/3837807dd4254836b0e8553235ab993b`), then merge the session branch into it. Keep its six commits and their tests (`872df68`/`7119eac` partial-analysis classifier, `a41ac26`/`1e93aaa` arrow navigation, `4138759`/`f5e9337` clicking a move). Then finish **every** acceptance criterion still open (2, 4, 5, 6: Stockfish/incremental analysis wiring, eval bar, class icons, best-move arrow), the §15.4 sentence in `docs/spec.md`, the 800×600 check and the full gate, each with its red/green pair, **before ending the turn**. A progress report is not a handoff: the turn ends only at `to-review` with gate evidence, or at a real question. Godot is at `C:\Users\bruno\AppData\Local\Programs\Godot\godot.cmd` (AGENTS.md bindings); when the sandbox denies it, or `.git`, or `gh`, rerun with escalation.
