@@ -40,3 +40,6 @@ Acceptance: pending | The shared variable-font weights have not been corrected o
 Disclosure: deferred | release | Accepted for UI-028's session integration (proxy decision recorded in UI-028); v0.1.0 waits for this correction and its captures. Other lanes' screens inherit it on sync and are rechecked in release QA.
 
 - 2026-10-31 Foreman: superseded. The owner merged this fix to main as PR #37 (fix f0789db, merge 0635b3d), with its regression in `tests/test_ui_theme.gd`; the session took it in sync merge 9ad4daf (gate 436 passed, 0 failed). This lane's parallel attempt (stage 2, gpt-6.1-terra xhigh, to-review at 47d4afd) is preserved unmerged on branch `recovery/superseded/20261031/CLEAN-012` and was not reviewed.
+
+Acceptance: pending | The weights render after sync 9ad4daf (UI-027 and UI-029 final reviews; foreman captures in C:\Users\bruno\AppData\Local\Temp\pchess-ui-screens-shots\after). Bruno\'s v0.1.0 QA remains.
+Disclosure: decision | none | Superseded by the owner's PR #37 (fix f0789db, merge 0635b3d), synced into this session at 9ad4daf with sync gate 436 passed / 0 failed. This lane's parallel attempt was never reviewed and is preserved unmerged on `recovery/superseded/20261031/CLEAN-012`.
