@@ -207,3 +207,15 @@
 | 2026-10-31 04:38 | CLEAN-011 | review | gpt-6.1-sol xhigh | 1 | merged | sweatshop/side/2026-10-31-0418 | 5m | 3.2M in (92% cached), 21k out | $1.003 | 1.052 |
 | 2026-10-31 16:20 | UI-021 | implement | gpt-6.1-terra xhigh | 1 | to-review | sweatshop/ui-base/2026-10-31-1604 | 15m | 17.5M in (99% cached), 34k out | $1.183 | 1.304 |
 | 2026-10-31 16:28 | UI-021 | review | gpt-6.1-sol xhigh | 1 | merged | sweatshop/ui-base/2026-10-31-1604 | 8m | 6.0M in (96% cached), 22k out | $1.294 | 1.307 |
+| 2026-10-31 18:01 | UI-022 | implement | gpt-6.1-terra xhigh | 1 | to-review | sweatshop/ui-game/2026-10-31-1734 | 27m | 28.4M in (99% cached), 50k out | $1.805 | 1.304 |
+| 2026-10-31 18:08 | UI-022 | review | gpt-6.1-sol xhigh | 1 | reopened | sweatshop/ui-game/2026-10-31-1734 | 6m | 4.7M in (95% cached), 23k out | $1.097 | 1.317 |
+| 2026-10-31 18:13 | UI-022 | implement | gpt-6.1-terra xhigh | 1 | to-review | sweatshop/ui-game/2026-10-31-1734 | 5m | 3.7M in (98% cached), 7k out | $0.299 | 1.286 |
+| 2026-10-31 18:19 | UI-022 | review | gpt-6.1-sol xhigh | 1 | merged | sweatshop/ui-game/2026-10-31-1734 | 5m | 2.1M in (94% cached), 14k out | $0.580 | 1.291 |
+| 2026-10-31 18:40 | UI-023 | implement | gpt-6.1-terra xhigh | 1 | to-review | sweatshop/ui-game/2026-10-31-1734 | 21m | 19.2M in (99% cached), 43k out | $1.296 | 1.021 |
+| 2026-10-31 18:45 | UI-023 | review | gpt-6.1-sol xhigh | 1 | reopened | sweatshop/ui-game/2026-10-31-1734 | 5m | 4.0M in (95% cached), 20k out | $0.978 | 1.559 |
+| 2026-10-31 18:51 | UI-023 | implement | gpt-6.1-terra xhigh | 1 | to-review | sweatshop/ui-game/2026-10-31-1734 | 6m | 4.4M in (98% cached), 9k out | $0.333 | 1.283 |
+| 2026-10-31 18:54 | UI-023 | review | gpt-6.1-sol xhigh | 1 | merged | sweatshop/ui-game/2026-10-31-1734 | 3m | 1.5M in (93% cached), 10k out | $0.459 | 1.319 |
+| 2026-10-31 19:05 | UI-024 | implement | gpt-6.1-terra xhigh | 1 | to-review | sweatshop/ui-game/2026-10-31-1734 | 11m | 8.5M in (99% cached), 24k out | $0.621 | 1.280 |
+| 2026-10-31 19:12 | UI-024 | review | gpt-6.1-sol xhigh | 1 | reopened | sweatshop/ui-game/2026-10-31-1734 | 6m | 3.3M in (95% cached), 20k out | $0.840 | 1.265 |
+| 2026-10-31 19:16 | UI-024 | implement | gpt-6.1-terra xhigh | 1 | to-review | sweatshop/ui-game/2026-10-31-1734 | 5m | 2.3M in (98% cached), 5k out | $0.189 | 1.817 |
+| 2026-10-31 19:19 | UI-024 | review | gpt-6.1-sol xhigh | 1 | merged | sweatshop/ui-game/2026-10-31-1734 | 3m | 1.8M in (93% cached), 12k out | $0.537 | 1.278 |

@@ -130,3 +130,5 @@ Acceptance: pending | Human visual comparison after CLEAN-012, and first-launch/
 Disclosure: decision | none | [Workflow decision](#resolution-2026-10-31-long-name-re-review) - the proxy-approved session merge preserves the integration hold on the session PR; it does not waive the font repair or change the numbered criteria.
 Disclosure: pending | integration | [CLEAN-012](../../ui-base/issues/74-CLEAN-012-font-variation-axes.md) must be completed and reviewed before this session PR lands on `main`, and before UI-022's visual acceptance. UI-022's criterion-4 long-name finding is resolved by this approval and session merge.
 Disclosure: pending | release | Perform first-launch and a real quick-play with Lc0 installed. Physical input, audio and Bruno's final release QA were not performed in this re-review.
+- 2026-10-31 Foreman acceptance check on session be29801: headless gate 416 executed, 0 failed, 7 skipped. Before/after/reference captures copied out of %TEMP% to `.artifacts-build/ui-game-screens/UI-022/` in the main checkout (ignored).
+Acceptance: pending | Bruno's visual comparison after CLEAN-012, first launch and a real quick-play with Lc0.
