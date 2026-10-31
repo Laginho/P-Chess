@@ -62,6 +62,9 @@ func _refresh() -> void:
 	if history == null:
 		return
 	var list = $Margin/Content/Cards/List
+	# Queue progress rebuilds the cards; keep keyboard focus on the same control of the same game.
+	var focus := get_viewport().gui_get_focus_owner()
+	var focus_path := list.get_path_to(focus) if focus != null and list.is_ancestor_of(focus) else NodePath()
 	for child in list.get_children():
 		list.remove_child(child)
 		child.queue_free()
@@ -72,6 +75,8 @@ func _refresh() -> void:
 		if selected != "All" and selected != control:
 			continue
 		_add_card(list, record)
+	if not focus_path.is_empty() and list.has_node(focus_path):
+		list.get_node(focus_path).grab_focus()
 
 
 func _add_card(list: Node, record: Dictionary) -> void:
@@ -83,6 +88,7 @@ func _add_card(list: Node, record: Dictionary) -> void:
 		moves.append(move.uci)
 	var thumbnail: Dictionary = history.thumbnail(moves)
 	var card := HBoxContainer.new()
+	card.name = record.path.get_file().validate_node_name()
 	list.add_child(card)
 	var board = BoardView.instantiate()
 	board.custom_minimum_size = Vector2(140, 140)
@@ -93,6 +99,7 @@ func _add_card(list: Node, record: Dictionary) -> void:
 		board.game.play(moves[i])
 	card.add_child(board)
 	var select := CheckBox.new()
+	select.name = "Select"
 	select.button_pressed = _selected.get(record.path, false)
 	select.toggled.connect(func(on): _selected[record.path] = on)
 	card.add_child(select)
@@ -121,11 +128,13 @@ func _add_card(list: Node, record: Dictionary) -> void:
 	actions.add_child(review)
 	if analysis_queue != null:
 		var analyze := Button.new()
+		analyze.name = "Analyze"
 		analyze.text = "Re-analyze" if _analysis_text(record.path) == "Stale" else "Analyze"
 		analyze.disabled = record.path in analysis_queue.pending()
 		analyze.pressed.connect(func(): analysis_queue.enqueue(record.path))
 		actions.add_child(analyze)
 	var copy := Button.new()
+	copy.name = "Copy"
 	copy.text = "⧉"
 	copy.tooltip_text = "Copy PGN"
 	copy.custom_minimum_size = Vector2(44, 44)
@@ -184,11 +193,16 @@ func _analyze_all() -> void:
 		var control: String = CONTROLS.get(record.game.headers.get("TimeControl", ""), "")
 		if (tab == "All" or tab == control) and _analysis_text(record.path) in ["Not Analysed", "Stale"]:
 			analysis_queue.enqueue(record.path)
+	# Also the retry after a failed analysis, which stays queued.
+	analysis_queue.resume()
 
 
 func _queue_changed() -> void:
 	var count: int = analysis_queue.pending().size()
 	var status: Label = $Margin/Content/BatchActions/Status
 	status.text = ("Analysing %d of %d · %s" % [analysis_queue.batch_done + 1, analysis_queue.batch_total, preferences.get_value("analysis_threads")]) if count and preferences != null else ""
+	# A failed game stays queued and holds the batch, so say why and how to retry.
+	if count and not analysis_queue.error.is_empty() and analysis_queue.current().is_empty():
+		status.text = "Analysis failed: %s · Analyze all to retry" % analysis_queue.error
 	if visible:
 		_refresh()

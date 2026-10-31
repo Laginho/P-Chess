@@ -127,12 +127,12 @@ func _wrap_help(text: String) -> String:
 
 func open_analysis(path: String, draw_at_end: bool) -> void:
 	show()
+	var cached := Analyser.read_analysis(path, "Stockfish 19", Tunables.ANALYSIS_NODES)
+	var positions = cached.get("data", {}).get("positions", [])
+	var current_cache: bool = cached.state == "analysed" and positions is Array and positions.size() == _positions.size()
 	if analysis_queue != null:
 		# The analysis folder sits beside the games folder: <root>/analysis/x.pgn.json -> <root>/games/x.pgn.
 		var game_path := _queue_path if _from_history else path.get_base_dir().get_base_dir().path_join("games").path_join(path.get_file().trim_suffix(".json"))
-		var cached := Analyser.read_analysis(path, "Stockfish 19", Tunables.ANALYSIS_NODES)
-		var positions = cached.get("data", {}).get("positions", [])
-		var current_cache: bool = cached.state == "analysed" and positions is Array and positions.size() == _positions.size()
 		if FileAccess.file_exists(game_path) and (_from_history or game_path in analysis_queue.pending() or not current_cache):
 			_queue_path = game_path
 			_analysis_path = path
@@ -143,6 +143,11 @@ func open_analysis(path: String, draw_at_end: bool) -> void:
 		return
 	_analysis_path = path
 	_draw_at_end = draw_at_end
+	# A current cache needs no engine, so a missing or broken Stockfish cannot hide it.
+	if current_cache:
+		for i in positions.size():
+			receive_position(i, positions[i])
+		return
 	$Margin/Content/Progress.value = 0
 	$Margin/Content/Progress.show()
 	_analysis_bridge = analysis_bridge_factory.call()

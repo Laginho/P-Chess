@@ -6,6 +6,8 @@ const Session = preload("res://tests/test_session.gd")
 
 func test_launch_opens_home():
 	var main = MainScene.instantiate()
+	var folder := "user://test_home_%d" % Time.get_ticks_usec()
+	main.history = load("res://core/history.gd").new(folder)
 	main.uci.free()
 	main.uci = Session.HeldBridge.new()
 	main.maia = main.MaiaPlayer.new(main.uci)
@@ -15,13 +17,16 @@ func test_launch_opens_home():
 	assert_true(home != null and home.visible, "Home is visible on launch")
 	assert_true(not main.setup.visible, "Custom game is initially hidden")
 	main.free()
+	Session.HistoryStorage.clean(folder)
 
 
 func test_quick_play_uses_defaults():
-	var path := "user://test_home_settings.cfg"
-	DirAccess.remove_absolute(path)
+	var folder := "user://test_home_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var path := folder.path_join("settings.cfg")
 
 	var main = MainScene.instantiate()
+	main.history = load("res://core/history.gd").new(folder)
 	main.get_node("Setup").book.load_tsv("eco\tname\tpgn\nA00\tFixture\t1. h3\n")
 	main.uci.free()
 	main.uci = Session.HeldBridge.new()
@@ -39,7 +44,7 @@ func test_quick_play_uses_defaults():
 		assert_eq(main.settings.get("opening"), "Free")
 		assert_eq(main.settings.get("control"), "3+2")
 	main.free()
-	DirAccess.remove_absolute(path)
+	Session.HistoryStorage.clean(folder)
 
 
 func test_custom_choices_survive_restart_and_new_game_returns_home():
@@ -93,6 +98,8 @@ func test_custom_choices_survive_restart_and_new_game_returns_home():
 
 func test_missing_engine_disables_quick_play():
 	var main = MainScene.instantiate()
+	var folder := "user://test_home_%d" % Time.get_ticks_usec()
+	main.history = load("res://core/history.gd").new(folder)
 	main.uci.free()
 	main.uci = Session.HeldBridge.new()
 	main.maia = main.MaiaPlayer.new(main.uci)
@@ -106,10 +113,13 @@ func test_missing_engine_disables_quick_play():
 	for button in home.get_node("Center/Form/Quick").get_children():
 		assert_true(button.disabled, "quick play is disabled")
 	main.free()
+	Session.HistoryStorage.clean(folder)
 
 
 func test_home_settings_remain_available_after_focus_mode():
 	var main = MainScene.instantiate()
+	var folder := "user://test_home_%d" % Time.get_ticks_usec()
+	main.history = load("res://core/history.gd").new(folder)
 	main.uci.free()
 	main.uci = Session.HeldBridge.new()
 	main.maia = main.MaiaPlayer.new(main.uci)
@@ -121,6 +131,7 @@ func test_home_settings_remain_available_after_focus_mode():
 	assert_true(main.settings_screen.is_visible_in_tree(), "Settings is accessible from Home")
 	assert_true(main.settings_screen.get_node("Panel").visible)
 	main.free()
+	Session.HistoryStorage.clean(folder)
 
 
 func test_custom_catalog_mode_is_reused_after_restart():

@@ -437,8 +437,9 @@ class FakeAnalysisBridge extends Node:
 	signal stopped
 	var engine_id := "Stockfish 19"
 	var error := ""
+	var starts := true
 	func start() -> bool:
-		return true
+		return starts
 
 
 class FakeReviewAnalyser extends Node:
@@ -495,7 +496,11 @@ func test_review_reuses_current_analysis_and_reanalyses_stale_file():
 	for version in ["Stockfish 19", "Stockfish 18"]:
 		var main = await _session(FakeTime.new())
 		var fake = FakeReviewAnalyser.new()
-		main.review.analysis_bridge_factory = func(): return FakeAnalysisBridge.new()
+		# A current cache must show even when the engine cannot start.
+		main.review.analysis_bridge_factory = func():
+			var bridge := FakeAnalysisBridge.new()
+			bridge.starts = version != "Stockfish 19"
+			return bridge
 		main.review.analyser_factory = func(_bridge): return fake
 		main.board_view.play("e2e4")
 		_key(main, KEY_ESCAPE)

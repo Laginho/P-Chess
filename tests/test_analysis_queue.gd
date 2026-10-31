@@ -15,7 +15,7 @@ func test_queue_runs_one_at_a_time_and_persists():
 	assert_true(script != null, "analysis queue exists")
 	if script == null:
 		return
-	var file := "user://test_analysis_queue.cfg"
+	var file := "user://test_analysis_queue_%d.cfg" % Time.get_ticks_usec()
 	DirAccess.remove_absolute(file)
 	var runner := FakeAnalyser.new()
 	var queue = script.new(runner, file)
@@ -32,7 +32,7 @@ func test_queue_runs_one_at_a_time_and_persists():
 
 func test_priority_pause_resume_and_removal():
 	var script = load("res://core/analysis_queue.gd")
-	var file := "user://test_analysis_queue_priority.cfg"
+	var file := "user://test_analysis_queue_priority_%d.cfg" % Time.get_ticks_usec()
 	DirAccess.remove_absolute(file)
 	var runner := FakeAnalyser.new()
 	var queue = script.new(runner, file)
@@ -57,7 +57,7 @@ class DelayedAnalyser extends FakeAnalyser:
 
 func test_delayed_cancel_never_overlaps_and_batch_uses_max_setting():
 	var script = load("res://core/analysis_queue.gd")
-	var file := "user://test_analysis_queue_delayed.cfg"
+	var file := "user://test_analysis_queue_delayed_%d.cfg" % Time.get_ticks_usec()
 	DirAccess.remove_absolute(file)
 	var runner := DelayedAnalyser.new()
 	var queue = script.new(runner, file)
