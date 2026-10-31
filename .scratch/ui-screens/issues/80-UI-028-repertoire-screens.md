@@ -60,7 +60,7 @@ Restyle the repertoire screens to `docs/design/v0.1.0/png/Repertoire.png`, `Open
 
 Acceptance: pending | Human visual and physical-input acceptance remains; the GUI flow above used injected input.
 Disclosure: pending | release | Human acceptance of the three screens and physical input remains before v0.1.0, as described in `.scratch/ui-redo/spec.md`.
-Gate evidence: C:/Users/bruno/AppData/Local/Temp/ui028-gate-handoff.json
+Superseded gate evidence: C:/Users/bruno/AppData/Local/Temp/ui028-gate-handoff.json
 
 #### Resolution (2026-10-31)
 Verdict: Reopen — criteria 1 and 4 fail for Black-start lines and long repertoire names; criterion 3 also fails for the editor's long heading.
