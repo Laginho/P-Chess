@@ -689,6 +689,14 @@ func present_history(path: String, analysis_path: String, draw_at_end: bool) -> 
 	_analysis_path = analysis_path
 	_history_draw = draw_at_end
 	_pgn = FileAccess.get_file_as_string(path)
+	var saved := Pgn.parse(_pgn)
+	if saved.error.is_empty() and saved.games.size() == 1:
+		var time_control: String = saved.games[0].headers.get("TimeControl", "")
+		for control in Clock.CONTROLS:
+			var values: Array = Clock.CONTROLS[control]
+			if time_control == "%d+%d" % [values[0] / 1000, values[1] / 1000]:
+				_result.text = control + _result.text.substr(_result.text.find(" ·"))
+				break
 	$Margin/Content/Actions/Rematch.hide()
 	$Margin/Content/Actions/Setup.hide()
 	$Margin/Content/Actions/BackHistory.show()
