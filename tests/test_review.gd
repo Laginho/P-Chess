@@ -53,7 +53,7 @@ func test_summary_waits_for_analysis_and_shows_accuracy_and_counts():
 	var summary = review.get_node_or_null("Margin/Content/ReviewBody/Side/Summary")
 	assert_true(summary != null, "summary exists")
 	if summary != null:
-		assert_true(summary.visible and summary.text.contains("\u2013"), "accuracy starts with placeholders")
+		assert_true(not summary.visible, "accuracy waits for complete analysis")
 		review.receive_position(1, {"pv": [{"cp": 0, "moves": ["e7e5"]}]})
 		review.receive_position(0, {"pv": [{"cp": 0, "moves": ["e2e4"]}], "best_move": "e2e4"})
 		assert_true(summary.visible)
@@ -123,7 +123,7 @@ func test_fixture_updates_counts_before_final_accuracy():
 	var side = review.get_node("Margin/Content/ReviewBody/Side")
 	review.receive_position(2, fixture.positions[2])
 	review.receive_position(1, fixture.positions[1])
-	assert_true(side.get_node("Summary").visible and side.get_node("Summary").text.contains("\u2013"), "accuracy is pending until its positions arrive")
+	assert_true(not side.get_node("Summary").visible, "accuracy waits for complete analysis")
 	assert_eq(side.get_node("Counts/BestWhite").text, "0")
 	assert_eq(side.get_node("Counts/BestBlack").text, "1", "black's final class appears while analysis runs")
 	review.receive_position(0, fixture.positions[0])
@@ -809,7 +809,7 @@ func test_analysis_progress_counts_settled_moves():
 	review.receive_position(0, fixture.positions[0])
 	review.receive_position(1, fixture.positions[1])
 	var summary = review.get_node("Margin/Content/ReviewBody/Side/Summary")
-	assert_true(summary.visible and summary.text.contains("100.0%"), "accuracy fills in during analysis")
+	assert_true(not summary.visible, "partial analysis must not be presented as final accuracy")
 	var progress = review.get_node_or_null("Margin/Content/ProgressText")
 	assert_true(progress != null, "analysis progress includes a move count")
 	if progress != null:
