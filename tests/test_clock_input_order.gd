@@ -198,7 +198,7 @@ func _maia_reply_scheduled(time: FakeTime, waits: HeldWaits):
 func test_a_mating_reply_arriving_at_zero_loses_on_time_before_the_move_is_played():
 	var time := FakeTime.new()
 	var waits := HeldWaits.new()
-	var main = _maia_reply_scheduled(time, waits)
+	var main = await _maia_reply_scheduled(time, waits)
 	var board = main.board_view
 	var before: String = main.move_list.get_parsed_text()
 	var snapshots: Array = main._move_clocks.duplicate()
@@ -226,7 +226,7 @@ func test_a_mating_reply_arriving_at_zero_loses_on_time_before_the_move_is_playe
 func test_a_mating_reply_with_one_millisecond_left_still_plays_once():
 	var time := FakeTime.new()
 	var waits := HeldWaits.new()
-	var main = _maia_reply_scheduled(time, waits)
+	var main = await _maia_reply_scheduled(time, waits)
 	var played := []
 	main.board_view.move_played.connect(func(san): played.append(san))
 	time.now = 181999
@@ -243,7 +243,7 @@ func test_a_mating_reply_with_one_millisecond_left_still_plays_once():
 func test_a_reply_after_a_processed_flag_is_ignored_without_a_repeated_result():
 	var time := FakeTime.new()
 	var waits := HeldWaits.new()
-	var main = _maia_reply_scheduled(time, waits)
+	var main = await _maia_reply_scheduled(time, waits)
 	time.now = 182000
 	main._process(0)
 	assert_eq([main.board_view.game.result, main.board_view.game.reason], ["0-1", "time"])
@@ -255,4 +255,3 @@ func test_a_reply_after_a_processed_flag_is_ignored_without_a_repeated_result():
 	assert_eq([main.board_view.game.result, main.board_view.game.reason], ["0-1", "time"])
 	assert_eq(main.sound_player.events, ["game_end"], "no repeated result")
 	main.free()
-

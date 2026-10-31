@@ -556,4 +556,3 @@ func test_premove_targets_include_geometry_on_the_board():
 	_mouse(board, false, "e5")
 	assert_eq(board.premoves.moves, PackedStringArray(["f3e5"]))
 	board.free()
-
