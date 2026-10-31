@@ -883,3 +883,23 @@ func test_compact_analysis_progress_does_not_cover_game_result():
 	assert_true(result.global_position.y + result.size.y <= progress.global_position.y, "progress starts below the result")
 	main.free()
 	root.size = old_size
+
+func test_history_review_uses_saved_time_control_and_legacy_fallback():
+	var main = await _session(FakeTime.new())
+	var game = Game.new()
+	game.play("e2e4")
+	game.resign("b")
+	var saved = Pgn.finished_game(game, [180000], SETTINGS)
+	var path: String = main.history.folder.path_join("ui026-control.pgn")
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	file.store_string(Pgn.write(saved))
+	file.close()
+	main._review_history_game(path, Pgn.parse(FileAccess.get_file_as_string(path)).games[0])
+	assert_true(main.review.get_node("Margin/Content/Result").text.begins_with("3+2 ·"), "saved 180+2 displays as 3+2")
+	saved.headers.erase("TimeControl")
+	file = FileAccess.open(path, FileAccess.WRITE)
+	file.store_string(Pgn.write(saved))
+	file.close()
+	main._review_history_game(path, Pgn.parse(FileAccess.get_file_as_string(path)).games[0])
+	assert_true(main.review.get_node("Margin/Content/Result").text.begins_with("1+0 ·"), "legacy game keeps its fallback")
+	main.free()
