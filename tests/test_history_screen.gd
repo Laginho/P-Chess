@@ -82,6 +82,35 @@ func test_open_review_from_history_and_return_with_escape():
 	Storage.clean(folder)
 
 
+func test_black_player_and_cached_analysis_appear_on_card():
+	var folder := "user://history_card_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var history = History.new(folder)
+	var game = Game.new()
+	game.play("e2e4")
+	game.play("e7e5")
+	game.resign("w")
+	var path: String = history.save(game, [60000, 60000], {"colour": "b", "level": "maia-1500", "control": "1+0"})
+	var analysis_path := "user://analysis".path_join(path.get_file() + ".json")
+	DirAccess.make_dir_recursive_absolute("user://analysis")
+	var fixture: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/analysis/rev003-opening.json"))
+	fixture.engine_version = "Stockfish 19"
+	var file := FileAccess.open(analysis_path, FileAccess.WRITE)
+	file.store_string(JSON.stringify(fixture))
+	file.close()
+	var screen = load("res://ui/history_screen.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(screen)
+	screen.present(history, Settings.new(folder.path_join("settings.cfg")))
+	var card = screen.get_node("Margin/Content/Cards/List").get_child(0)
+	var text: String = card.get_node("Details/Text").text
+	assert_true(text.contains("You (Black) x Maia 1500 (White)"), "human name comes first with both colours")
+	assert_true(text.contains("1-0") or text.contains("0-1"), "the PGN result is visible")
+	assert_true(text.contains("White: 100.0%") and text.contains("Black: 100.0%"), "both cached accuracies are visible")
+	screen.free()
+	DirAccess.remove_absolute(analysis_path)
+	Storage.clean(folder)
+
+
 func test_tabs_and_won_on_time_card():
 	var scene = load("res://ui/history_screen.tscn")
 	assert_true(scene != null, "history screen exists")
