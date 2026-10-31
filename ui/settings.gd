@@ -34,7 +34,27 @@ func _ready() -> void:
 	_choice("book_intensity", "Book intensity", Settings.CHOICES.book_intensity)
 	_check("auto_claim", "Auto-claim threefold")
 	_check("check_repertoire", "Check my moves against my repertoire")
+	var first: Control = _form.get_child(1)
+	var close: Control = $Panel/Center/Box/Close
+	first.focus_previous = first.get_path_to(close)
+	close.focus_next = close.get_path_to(first)
+	_panel.visibility_changed.connect(_focus_panel)
 	store.changed.connect(_follow)
+
+
+func _focus_panel() -> void:
+	if _panel.visible:
+		_form.get_child(1).grab_focus()
+	else:
+		var focused := get_viewport().gui_get_focus_owner()
+		if focused:
+			focused.release_focus()
+
+
+func _input(event: InputEvent) -> void:
+	if _panel.visible and event is InputEventKey and event.is_pressed() and not event.is_echo() and event.ctrl_pressed and event.keycode == KEY_COMMA:
+		_panel.hide()
+		get_viewport().set_input_as_handled()
 
 
 # While open, the screen keeps keys from the game: Esc closes it instead of resigning.

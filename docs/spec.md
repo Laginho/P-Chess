@@ -231,6 +231,7 @@ All attributions go in `docs/THIRD_PARTY.md`.
 | `F` | Flip the board |
 | `Esc` | Resign (press twice) |
 | `F11` | Focus mode |
+| `Ctrl+,` | Settings (open/close) |
 
 ### 9.3 Review
 
