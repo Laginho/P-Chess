@@ -73,3 +73,5 @@ Coverage included Settings' dynamically built controls, popup inheritance, promo
 Correction proof: test-only `7771db8` failed on the old copy glyph (one expected failure); production-only `9fb8c24` passed it. Author: `/root`. Independent reviewer: `/root/spec`; examined `f02e82a..9fb8c24`, verdict Approve, no remaining findings. Red/green logs and the six fresh PNGs are under `C:/Users/bruno/AppData/Local/Temp/pchess-ui021-review-0aac0dbe-e1b3-4e44-a592-2d5a237d588e/` (`trash-red.log`, `trash-green.log`, `<screen>-<width>/<screen>.png`).
 
 Integrated without squashing into `sweatshop/ui-base/2026-10-31-1604` as `845b1b3`. The session driver owns pushing and the session PR; `Review: human` and Bruno's release QA remain recorded for that handoff.
+
+- 2026-10-31 UI-022's stage-3 review confirmed that the string `wght` keys do not apply any rendered font weight in Godot 4.7. The earlier criterion-2 approval checked the resource rather than TextServer's effective axes and missed this defect. Repair is scheduled in open [CLEAN-012](74-CLEAN-012-font-variation-axes.md); the closed comment is history, and the follow-up owns the integration condition.
