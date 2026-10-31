@@ -51,6 +51,8 @@ const CLASS_NAMES := ["Brilliant", "Great", "Best", "Excellent", "Good", "Book",
 
 func _ready() -> void:
 	_graph.ply_selected.connect(_show_ply)
+	$Margin/Content/ReviewBody/Side/AccuracyHelp.tooltip_text = "Accuracy uses the change in win probability for each move. The game score averages a volatility-weighted mean and the harmonic mean of those move scores."
+	$Margin/Content/ReviewBody/Side/ClassHelp.tooltip_text = _class_help()
 	visibility_changed.connect(func():
 		if not visible:
 			_cancel_analysis())
@@ -70,6 +72,22 @@ func _ready() -> void:
 	$Margin/Content/Actions/Lichess.pressed.connect(func(): open_browser.call(_url))
 	$Margin/Content/Actions/Rematch.pressed.connect(func(): rematch_requested.emit())
 	$Margin/Content/Actions/Setup.pressed.connect(func(): setup_requested.emit())
+
+
+func _class_help() -> String:
+	return ("One final class per move. Forced: only legal move. Repertoire: your line; Book: catalog opening. "
+			+ "Best: engine's first choice; Brilliant: best move sacrifices material; Great: only good move (second choice loses at least %s).\n"
+			+ "By expected-points loss: Excellent ≤ %s, Good ≤ %s, Inaccuracy ≤ %s, Mistake ≤ %s, Blunder above %s. "
+			+ "Miss replaces a mistake or blunder after the opponent's mistake or blunder when expected points fall from at least %s to at most %s with loss at least %s.\n"
+			+ "A blunder is Good when still ahead by %s cp or already behind by %s cp. Mate rules: slower winning mate up to %s moves is Excellent, otherwise Good; lost mate grades Excellent/Good/Inaccuracy/Mistake at %s/%s/%s/%s cp. Allowing mate in ≤ %s is Blunder, ≤ %s Mistake, otherwise Inaccuracy. "
+			+ "Great and Brilliant require at least %s expected points afterwards and a second line below %s cp; checks, promotions, free captures and recaptures are excluded.") % [
+			Tunables.CLASSIFICATION_GREAT_LOSS, Tunables.CLASSIFICATION_EXCELLENT_LOSS, Tunables.CLASSIFICATION_GOOD_LOSS,
+			Tunables.CLASSIFICATION_INACCURACY_LOSS, Tunables.CLASSIFICATION_MISTAKE_LOSS, Tunables.CLASSIFICATION_MISTAKE_LOSS,
+			Tunables.CLASSIFICATION_MISS_BEFORE_EP, Tunables.CLASSIFICATION_MISS_AFTER_EP, Tunables.CLASSIFICATION_MISS_LOSS,
+			Tunables.CLASSIFICATION_LENIENT_CP, Tunables.CLASSIFICATION_LENIENT_CP, Tunables.CLASSIFICATION_MATE_SLOWER,
+			Tunables.CLASSIFICATION_MATE_EXCELLENT_CP, Tunables.CLASSIFICATION_MATE_GOOD_CP, Tunables.CLASSIFICATION_MATE_INACCURACY_CP,
+			Tunables.CLASSIFICATION_MATE_MISTAKE_CP, Tunables.CLASSIFICATION_MATE_BLUNDER_MOVES, Tunables.CLASSIFICATION_MATE_MISTAKE_MOVES,
+			Tunables.CLASSIFICATION_MIN_EP, Tunables.CLASSIFICATION_GREAT_PV2_CP]
 
 
 func open_analysis(path: String, draw_at_end: bool) -> void:
