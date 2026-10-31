@@ -114,7 +114,9 @@ func _ready() -> void:
 		black.custom_minimum_size.x = 26
 		black.add_theme_font_size_override("font_size", 11)
 		table.add_child(black)
-	$Margin/Content/Progress.visibility_changed.connect(func(): $Margin/Content/ProgressText.visible = $Margin/Content/Progress.visible)
+	$Margin/Content/Progress.visibility_changed.connect(func():
+		$Margin/Content/ProgressText.visible = $Margin/Content/Progress.visible
+		_layout_review())
 	_graph.ply_selected.connect(_show_ply)
 	_board_view.resized.connect(_update_player_labels)
 	$Margin/Content/ReviewBody/Side.resized.connect(_layout_review)
@@ -249,10 +251,12 @@ func _layout_review() -> void:
 	result.position = at + Vector2(4, 18)
 	result.size = Vector2(side.size.x - 8, 28)
 	var progress: Control = $Margin/Content/Progress
-	progress.position = at + Vector2(4, 43)
+	var progress_y := 58.0 if size.x <= 800 else 43.0
+	$Margin/Content/ReviewBody/Side/HeaderSpace.custom_minimum_size.y = 85 if size.x <= 800 and progress.visible else 64
+	progress.position = at + Vector2(4, progress_y)
 	progress.size = Vector2(maxf(side.size.x - 100, 0), 16)
 	var progress_text: Control = $Margin/Content/ProgressText
-	progress_text.position = at + Vector2(side.size.x - 94, 41)
+	progress_text.position = at + Vector2(side.size.x - 94, progress_y - 2)
 	progress_text.size = Vector2(90, 20)
 	var error: Control = $Margin/Content/AnalysisError
 	error.position = at + Vector2(4, 43)
