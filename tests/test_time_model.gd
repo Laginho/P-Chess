@@ -13,7 +13,7 @@ const Game = preload("res://core/game.gd")
 const ONE_MOVE := "k7/8/8/8/8/8/1r6/K7 w - - 0 1"
 # Clock bins [0, 0.15), [0.15, 0.5), [0.5, ...); top-p bins [0, 0.3), [0.3, 0.6), [0.6, 1].
 const SMALL := "res://tests/fixtures/time_model_small.json"
-const MALFORMED := "user://time_model_malformed.json"
+var MALFORMED := "user://time_model_malformed_%d_%d.json" % [OS.get_process_id(), Time.get_ticks_usec()]
 const OVERFLOW := "1e999"
 
 
