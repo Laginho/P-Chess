@@ -16,7 +16,7 @@ func test_viewer_shows_black_line_and_steps_without_allowing_moves():
 	var list: ItemList = screen.get_node("Margin/Form/List")
 	list.item_selected.emit(0)
 	var lines: ItemList = screen.get_node_or_null("Margin/Form/Viewer/Lines")
-	var board = screen.get_node_or_null("Margin/Form/Viewer/Board")
+	var board = screen.find_child("Board", true, false)
 	assert_true(lines != null and board != null, "viewer provides lines and a board")
 	if lines != null and board != null:
 		assert_true(board.flipped, "Black is at the bottom")
@@ -65,6 +65,14 @@ func test_editor_places_its_controls_in_a_card():
 	if card != null:
 		assert_true(card.is_ancestor_of(editor.find_child("Tree", true, false)))
 	editor.free()
+
+
+func test_repertoire_navigation_is_below_its_board():
+	var screen = load("res://ui/repertoire_screen.tscn").instantiate()
+	var board = screen.find_child("Board", true, false)
+	var navigation = screen.find_child("Navigation", true, false)
+	assert_true(board != null and navigation != null and board.get_parent() == navigation.get_parent(), "navigation shares the board column")
+	screen.free()
 
 
 func _find_move(item: TreeItem, moves: PackedStringArray) -> TreeItem:
