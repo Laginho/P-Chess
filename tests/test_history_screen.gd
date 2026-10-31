@@ -102,8 +102,8 @@ func test_black_player_and_cached_analysis_appear_on_card():
 	game.play("e7e5")
 	game.resign("w")
 	var path: String = history.save(game, [60000, 60000], {"colour": "b", "level": "maia-1500", "control": "1+0"})
-	var analysis_path := "user://analysis".path_join(path.get_file() + ".json")
-	DirAccess.make_dir_recursive_absolute("user://analysis")
+	var analysis_path := folder.path_join("analysis").path_join(path.get_file() + ".json")
+	DirAccess.make_dir_recursive_absolute(folder.path_join("analysis"))
 	var fixture: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/analysis/rev003-opening.json"))
 	fixture.engine_version = "Stockfish 19"
 	var file := FileAccess.open(analysis_path, FileAccess.WRITE)
@@ -119,6 +119,7 @@ func test_black_player_and_cached_analysis_appear_on_card():
 	assert_true(text.contains("White: 100.0%") and text.contains("Black: 100.0%"), "both cached accuracies are visible")
 	screen.free()
 	DirAccess.remove_absolute(analysis_path)
+	DirAccess.remove_absolute(folder.path_join("analysis"))
 	Storage.clean(folder)
 
 
@@ -220,8 +221,8 @@ func test_review_prioritizes_a_queued_game_even_with_cached_analysis():
 	game.play("e7e5")
 	game.resign("w")
 	var path: String = main.history.save(game, [60000, 60000], {"colour": "w", "level": "maia-1500", "control": "1+0"})
-	var analysis_path := "user://analysis".path_join(path.get_file() + ".json")
-	DirAccess.make_dir_recursive_absolute("user://analysis")
+	var analysis_path := folder.path_join("analysis").path_join(path.get_file() + ".json")
+	DirAccess.make_dir_recursive_absolute(folder.path_join("analysis"))
 	var fixture: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/analysis/rev003-opening.json"))
 	fixture.engine_version = "Stockfish 19"
 	var file := FileAccess.open(analysis_path, FileAccess.WRITE)
@@ -237,6 +238,7 @@ func test_review_prioritizes_a_queued_game_even_with_cached_analysis():
 	assert_true(fake.maximum, "Review promotes even a previously analysed queued game to Max")
 	main.free()
 	DirAccess.remove_absolute(analysis_path)
+	DirAccess.remove_absolute(folder.path_join("analysis"))
 	Storage.clean(folder)
 
 func test_post_game_review_reuses_current_cache_with_a_saved_game():

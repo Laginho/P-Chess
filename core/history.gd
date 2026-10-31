@@ -128,7 +128,7 @@ func delete(path: String) -> bool:
 		counts[flag] = maxi(0, counts[flag] - 1)
 	var target: String = headers.get("PracticeTarget", "")
 	var practiced: int = practice_counts().get(target, 0)
-	var paths := [path, path.trim_suffix(".pgn") + ".repertoire.json", "user://analysis".path_join(path.get_file() + ".json")]
+	var paths := [path, path.trim_suffix(".pgn") + ".repertoire.json", _root.path_join("analysis").path_join(path.get_file() + ".json")]
 	var moved := []
 	var contents := {}
 	for source in paths:

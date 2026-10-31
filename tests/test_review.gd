@@ -460,6 +460,7 @@ class FakeReviewAnalyser extends Node:
 
 func test_open_review_starts_max_analysis_and_tracks_progress():
 	var main = await _session(FakeTime.new())
+	main.review.analysis_queue = null # Exercise the direct analyser without the history queue.
 	var fake = FakeReviewAnalyser.new()
 	main.review.analysis_bridge_factory = func(): return FakeAnalysisBridge.new()
 	main.review.analyser_factory = func(_bridge): return fake

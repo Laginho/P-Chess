@@ -134,7 +134,7 @@ class HeldAnalysis extends RefCounted:
 		if not parsed.error.is_empty() or parsed.games.size() != 1:
 			return false
 		return analyser.analyse(analyser.positions_from_game(parsed.games[0]),
-				"user://analysis".path_join(path.get_file() + ".json"), maximum)
+				path.get_base_dir().get_base_dir().path_join("analysis").path_join(path.get_file() + ".json"), maximum)
 	func cancel() -> void:
 		analyser.cancel()
 
@@ -151,7 +151,7 @@ func test_confirm_delete_cancels_active_analysis_before_its_final_reply():
 	assert_eq(fixture.runner.bridge.stops, 1, "stop the search before its held reply arrives")
 	fixture.runner.bridge.answer()
 	assert_eq(fixture.queue.current(), "")
-	var output := "user://analysis".path_join(path.get_file() + ".json")
+	var output := path.get_base_dir().get_base_dir().path_join("analysis").path_join(path.get_file() + ".json")
 	assert_true(not FileAccess.file_exists(output), "the final reply cannot recreate deleted analysis")
 	fixture.queue._process(1.1)
 	assert_true(not FileAccess.file_exists(output), "no orphan survives the missing-file scan")
@@ -174,9 +174,9 @@ func test_confirm_delete_removes_waiting_game_without_cancelling_active_analysis
 	assert_eq(fixture.queue.current(), "", "the deleted waiting game never starts")
 	_assert_pending_history(fixture, [])
 	assert_eq(fixture.runner.analyser.read_analysis(
-			"user://analysis".path_join(active.get_file() + ".json"), "Stockfish 19", 3000000).state, "analysed")
+			fixture.folder.path_join("analysis").path_join(active.get_file() + ".json"), "Stockfish 19", 3000000).state, "analysed")
 	fixture.queue._process(1.1)
-	assert_true(not FileAccess.file_exists("user://analysis".path_join(waiting.get_file() + ".json")))
+	assert_true(not FileAccess.file_exists(fixture.folder.path_join("analysis").path_join(waiting.get_file() + ".json")))
 	_clean_queued_history(fixture)
 
 
@@ -210,7 +210,7 @@ func test_cancel_and_failed_delete_preserve_active_analysis_and_stats():
 	fixture.runner.bridge.answer()
 	_assert_pending_history(fixture, [])
 	assert_eq(fixture.runner.analyser.read_analysis(
-			"user://analysis".path_join(path.get_file() + ".json"), "Stockfish 19", 3000000).state, "analysed")
+			path.get_base_dir().get_base_dir().path_join("analysis").path_join(path.get_file() + ".json"), "Stockfish 19", 3000000).state, "analysed")
 	_clean_queued_history(fixture)
 
 
@@ -253,9 +253,10 @@ func _clean_queued_history(fixture: Dictionary) -> void:
 	fixture.queue.free()
 	fixture.runner.analyser.free()
 	for path: String in fixture.paths:
-		var output := "user://analysis".path_join(path.get_file() + ".json")
+		var output := path.get_base_dir().get_base_dir().path_join("analysis").path_join(path.get_file() + ".json")
 		if FileAccess.file_exists(output):
 			DirAccess.remove_absolute(output)
+	DirAccess.remove_absolute(fixture.folder.path_join("analysis"))
 	HistoryStorage.clean(fixture.folder)
 
 
@@ -294,8 +295,8 @@ func test_delete_removes_files_and_reverses_targeted_flag_win():
 	var file := FileAccess.open(snapshot, FileAccess.WRITE)
 	file.store_string("{}")
 	file.close()
-	DirAccess.make_dir_recursive_absolute("user://analysis")
-	var analysis := "user://analysis".path_join(path.get_file() + ".json")
+	DirAccess.make_dir_recursive_absolute(folder.path_join("analysis"))
+	var analysis := path.get_base_dir().get_base_dir().path_join("analysis").path_join(path.get_file() + ".json")
 	file = FileAccess.open(analysis, FileAccess.WRITE)
 	file.store_string("{}")
 	file.close()
@@ -303,6 +304,7 @@ func test_delete_removes_files_and_reverses_targeted_flag_win():
 	assert_true(not FileAccess.file_exists(path) and not FileAccess.file_exists(snapshot) and not FileAccess.file_exists(analysis))
 	assert_eq(History.new(folder).stats("maia-1500", "3+2"), {"wins": 0, "draws": 0, "losses": 0, "flag_wins": 0, "flag_losses": 0})
 	assert_eq(History.new(folder).practice_counts().get("line-1"), 0)
+	DirAccess.remove_absolute(folder.path_join("analysis"))
 	HistoryStorage.clean(folder)
 
 
@@ -340,8 +342,8 @@ func _check_delete_rollback(failure: String) -> void:
 	game.flag("b")
 	var path: String = history.save(game, [], SETTINGS, "", "line-1")
 	var snapshot := path.trim_suffix(".pgn") + ".repertoire.json"
-	DirAccess.make_dir_recursive_absolute("user://analysis")
-	var analysis := "user://analysis".path_join(path.get_file() + ".json")
+	DirAccess.make_dir_recursive_absolute(folder.path_join("analysis"))
+	var analysis := path.get_base_dir().get_base_dir().path_join("analysis").path_join(path.get_file() + ".json")
 	for item in [snapshot, analysis]:
 		var file := FileAccess.open(item, FileAccess.WRITE)
 		file.store_string("original " + item.get_file())
@@ -367,6 +369,7 @@ func _check_delete_rollback(failure: String) -> void:
 	if DirAccess.dir_exists_absolute(temp):
 		DirAccess.remove_absolute(temp)
 	assert_true(not FileAccess.file_exists(temp))
+	DirAccess.remove_absolute(folder.path_join("analysis"))
 	HistoryStorage.clean(folder)
 
 
@@ -407,7 +410,7 @@ func test_reason_prefers_header_and_infers_legacy_ending():
 # Fails only the analysis file's final removal, after every rename has worked.
 class FailingAnalysisRemoval extends "res://core/history.gd":
 	func _remove(path: String) -> Error:
-		return ERR_FILE_CANT_WRITE if path.begins_with("user://analysis") else super(path)
+		return ERR_FILE_CANT_WRITE if path.begins_with(_root.path_join("analysis")) else super(path)
 
 
 class FakeTime:
