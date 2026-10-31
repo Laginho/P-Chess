@@ -57,6 +57,13 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
+func _popup_input(event: InputEvent, popup: PopupMenu) -> void:
+	if event is InputEventKey and event.is_pressed() and not event.is_echo() and event.ctrl_pressed and event.keycode == KEY_COMMA:
+		popup.hide()
+		_panel.hide()
+		popup.set_input_as_handled()
+
+
 # While open, the screen keeps keys from the game: Esc closes it instead of resigning.
 func _unhandled_key_input(event: InputEvent) -> void:
 	if not _panel.visible:
@@ -100,6 +107,7 @@ func _choice(key: String, label: String, items: Array) -> void:
 		button.add_item(item)
 	button.selected = items.find(current)
 	button.item_selected.connect(func(index: int) -> void: store.set_value(key, button.get_item_text(index)))
+	button.get_popup().window_input.connect(_popup_input.bind(button.get_popup()))
 	_row(label, button)
 
 
