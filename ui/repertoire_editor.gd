@@ -96,6 +96,7 @@ func _populate(node: Dictionary, key: String, prefix: PackedStringArray, depth: 
 		margin.add_child(line)
 		var current: Dictionary = node
 		var next_move: String = move
+		var first_in_row := true
 		while true:
 			var at = Board.from_fen(current.position + " 0 1")
 			moves.append(next_move)
@@ -103,9 +104,10 @@ func _populate(node: Dictionary, key: String, prefix: PackedStringArray, depth: 
 			var ply := moves.size() - 1 + (1 if key.split(" ")[1] == "b" else 0)
 			if at.side_to_move == "w":
 				san = "%d.%s" % [ply / 2 + 1, san]
-			elif moves.size() == 1:
-				san = "1..." + san
+			elif first_in_row:
+				san = "%d...%s" % [ply / 2 + 1, san]
 			_add_move(line, key, moves.duplicate(), san)
+			first_in_row = false
 			current = current.children[next_move]
 			if current.children.size() != 1:
 				break
