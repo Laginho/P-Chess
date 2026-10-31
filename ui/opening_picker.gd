@@ -64,7 +64,10 @@ func _choose_colour(index: int) -> void:
 
 func present(selection := "") -> void:
 	_requested_selection = selection
-	popup_centered(Vector2i(680, 540))
+	var target_size := Vector2i(640, mini(700, get_tree().root.size.y - 40)) if repertoire != null else Vector2i(680, 540)
+	popup_centered(target_size)
+	if get_tree().root.gui_embed_subwindows:
+		size = target_size
 	if not _loaded:
 		_status.text = "Loading opening catalog…"
 		_search.editable = false
