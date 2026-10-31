@@ -36,14 +36,18 @@ theme_override_constants/margin_top = 12
 theme_override_constants/margin_right = 20
 theme_override_constants/margin_bottom = 12
 
-[node name="Content" type="VBoxContainer" parent="Margin"]
+[node name="Content" type="Control" parent="Margin"]
 layout_mode = 2
-theme_override_constants/separation = 8
+
+[node name="Card" type="Panel" parent="Margin/Content"]
+layout_mode = 0
+theme_type_variation = &"CardPanel"
+mouse_filter = 2
 
 [node name="Title" type="Label" parent="Margin/Content"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
-text = "Game review"
+text = "Game Review"
 
 [node name="Result" type="Label" parent="Margin/Content"]
 layout_mode = 2
@@ -60,8 +64,16 @@ layout_mode = 2
 autowrap_mode = 3
 
 [node name="ReviewBody" type="HBoxContainer" parent="Margin/Content"]
-layout_mode = 2
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 24.0
+offset_bottom = -24.0
+grow_horizontal = 2
+grow_vertical = 2
 size_flags_vertical = 3
+theme_override_constants/separation = 12
 
 [node name="EvalBar" type="Control" parent="Margin/Content/ReviewBody"]
 custom_minimum_size = Vector2(28, 0)
@@ -98,11 +110,23 @@ theme_type_variation = &"BoldText"
 theme_override_font_sizes/font_size = 14
 mouse_filter = 2
 
+[node name="TopDot" type="Panel" parent="Margin/Content/ReviewBody/BoardView"]
+layout_mode = 0
+mouse_filter = 2
+
+[node name="BottomDot" type="Panel" parent="Margin/Content/ReviewBody/BoardView"]
+layout_mode = 0
+mouse_filter = 2
+
 [node name="Side" type="VBoxContainer" parent="Margin/Content/ReviewBody"]
 custom_minimum_size = Vector2(220, 0)
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_stretch_ratio = 0.6
+
+[node name="HeaderSpace" type="Control" parent="Margin/Content/ReviewBody/Side"]
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
 
 [node name="AccuracyHelp" type="Button" parent="Margin/Content/ReviewBody/Side"]
 layout_mode = 2
@@ -181,7 +205,11 @@ layout_mode = 2
 text = "▶|"
 tooltip_text = "Last move"
 
-[node name="Actions" type="HBoxContainer" parent="Margin/Content"]
+[node name="FooterSpace" type="Control" parent="Margin/Content/ReviewBody/Side"]
+custom_minimum_size = Vector2(0, 74)
+layout_mode = 2
+
+[node name="Actions" type="HFlowContainer" parent="Margin/Content"]
 layout_mode = 2
 theme_override_constants/separation = 12
 
@@ -203,4 +231,5 @@ text = "Rematch (Space)"
 [node name="Setup" type="Button" parent="Margin/Content/Actions"]
 layout_mode = 2
 size_flags_horizontal = 3
+theme_type_variation = &"PrimaryButton"
 text = "New game"

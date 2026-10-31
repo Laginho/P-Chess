@@ -60,6 +60,9 @@ func _ready() -> void:
 		analysis_queue.changed.connect(_queue_changed)
 	_graph.ply_selected.connect(_show_ply)
 	_board_view.resized.connect(_update_player_labels)
+	$Margin/Content/ReviewBody/Side.resized.connect(_layout_review)
+	resized.connect(_layout_review)
+	_layout_review.call_deferred()
 	$Margin/Content/ReviewBody/Side/AccuracyHelp.tooltip_text = "Accuracy uses the change in win probability for each move.\nThe game score averages a volatility-weighted mean and\nthe harmonic mean of those move scores."
 	# Tooltips need a mouse; Enter on the focused "?" shows the same text in a dialog.
 	var help_dialog := AcceptDialog.new()
@@ -132,6 +135,30 @@ func _ready() -> void:
 	$Margin/Content/ReviewBody/Side.add_child(analyze)
 	$Margin/Content/ReviewBody/Side.move_child(analyze, $Margin/Content/ReviewBody/Side/Moves.get_index())
 	analyze.hide()
+
+
+func _layout_review() -> void:
+	var content: Control = $Margin/Content
+	var side: Control = $Margin/Content/ReviewBody/Side
+	var at := side.global_position - content.global_position
+	var card: Control = $Margin/Content/Card
+	card.position = at - Vector2(10, 24)
+	card.size = side.size + Vector2(20, 48)
+	var title: Control = $Margin/Content/Title
+	title.position = at + Vector2(4, -12)
+	title.size = Vector2(side.size.x - 8, 28)
+	var result: Control = $Margin/Content/Result
+	result.position = at + Vector2(4, 18)
+	result.size = Vector2(side.size.x - 8, 28)
+	var progress: Control = $Margin/Content/Progress
+	progress.position = at + Vector2(4, 43)
+	progress.size = Vector2(side.size.x - 8, 16)
+	var error: Control = $Margin/Content/AnalysisError
+	error.position = at + Vector2(4, 43)
+	error.size = Vector2(side.size.x - 8, 20)
+	var actions: Control = $Margin/Content/Actions
+	actions.position = at + Vector2(4, side.size.y - 70)
+	actions.size = Vector2(side.size.x - 8, 70)
 
 
 func _resize_classes() -> void:
@@ -292,10 +319,20 @@ func _update_player_labels() -> void:
 	var corner: Vector2 = (_board_view.size - Vector2.ONE * side) / 2.0
 	var top: Label = _board_view.get_node("TopPlayer")
 	var bottom: Label = _board_view.get_node("BottomPlayer")
-	top.text = ("? " if _board_view.flipped else "? ") + _player_names[0 if _board_view.flipped else 1]
-	bottom.text = ("? " if _board_view.flipped else "? ") + _player_names[1 if _board_view.flipped else 0]
-	top.position = corner + Vector2(0, -24)
-	bottom.position = corner + Vector2(0, side + 2)
+	top.text = _player_names[0 if _board_view.flipped else 1]
+	bottom.text = _player_names[1 if _board_view.flipped else 0]
+	top.position = corner + Vector2(18, -24)
+	bottom.position = corner + Vector2(18, side + 2)
+	for entry in [["TopDot", top.position, _board_view.flipped], ["BottomDot", bottom.position, not _board_view.flipped]]:
+		var dot: Panel = _board_view.get_node(entry[0])
+		dot.position = entry[1] + Vector2(-18, 5)
+		dot.size = Vector2(12, 12)
+		var style := StyleBoxFlat.new()
+		style.bg_color = Color("ece9e4") if entry[2] else Color("1f1e1c")
+		style.border_color = Color("8a857c")
+		style.set_border_width_all(1)
+		style.set_corner_radius_all(6)
+		dot.add_theme_stylebox_override("panel", style)
 
 
 func _show_ply(ply: int) -> void:
