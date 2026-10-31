@@ -10,6 +10,31 @@ const HistoryStorage = preload("res://tests/history_storage.gd")
 const SETTINGS := {"colour": "w", "level": "maia-1500", "control": "3+2", "opening": "Free"}
 
 
+func test_history_delete_requires_confirmation():
+	var folder := _folder()
+	var history = History.new(folder)
+	var game = Game.new()
+	game.resign("w")
+	var path: String = history.save(game, [], SETTINGS)
+	var screen = load("res://ui/history_screen.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(screen)
+	screen.present(history, load("res://core/settings.gd").new(folder.path_join("settings.cfg")))
+	var list = screen.get_node("Margin/Content/Cards/List")
+	var button = list.get_child(0).get_node_or_null("Details/HBoxContainer/Delete")
+	assert_true(button != null)
+	if button != null:
+		button.pressed.emit()
+		var dialog = screen.get_node("DeleteConfirmation")
+		assert_true(dialog.visible and FileAccess.file_exists(path))
+		dialog.canceled.emit()
+		assert_true(FileAccess.file_exists(path) and list.get_child_count() == 1)
+		button.pressed.emit()
+		dialog.confirmed.emit()
+		assert_true(not FileAccess.file_exists(path) and list.get_child_count() == 0)
+	screen.free()
+	HistoryStorage.clean(folder)
+
+
 func test_delete_removes_files_and_reverses_targeted_flag_win():
 	var folder := _folder()
 	var history = History.new(folder)
