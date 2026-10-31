@@ -137,10 +137,9 @@ func _ready() -> void:
 			help_dialog.title = help.text.trim_suffix("?").strip_edges()
 			help_dialog.dialog_text = help.tooltip_text
 			help_dialog.popup_centered())
-	var legend := AcceptDialog.new()
+	var legend := PopupPanel.new()
 	legend.name = "ClassLegend"
-	legend.title = "Move classes, best to worst"
-	legend.dialog_text = ("Brilliant — The best move, and it sacrifices a piece.\n"
+	var legend_text := ("Brilliant — The best move, and it sacrifices a piece.\n"
 			+ "Great — The only good move here, or one that turns the game around.\n"
 			+ "Best — The engine's top choice.\n"
 			+ "Excellent — Almost as good as the best move (under 2%).\n"
@@ -153,13 +152,29 @@ func _ready() -> void:
 			+ "Blunder — A serious error that costs over 20%.\n"
 			+ "Forced — The only legal move.")
 	add_child(legend)
-	legend.get_label().hide()
+	var content := VBoxContainer.new()
+	content.name = "Content"
+	legend.add_child(content)
+	var header := HBoxContainer.new()
+	header.name = "Header"
+	content.add_child(header)
+	var heading := Label.new()
+	heading.text = "Move classes, best to worst"
+	heading.theme_type_variation = "BoldText"
+	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_child(heading)
+	var close := Button.new()
+	close.name = "Close"
+	close.text = "×"
+	close.tooltip_text = "Close"
+	close.pressed.connect(legend.hide)
+	header.add_child(close)
 	var rows := VBoxContainer.new()
 	rows.name = "LegendRows"
 	rows.custom_minimum_size.x = 420
 	rows.add_theme_constant_override("separation", 2)
-	legend.add_child(rows)
-	for line in legend.dialog_text.split("\n"):
+	content.add_child(rows)
+	for line in legend_text.split("\n"):
 		var row := HBoxContainer.new()
 		var icon := TextureRect.new()
 		icon.texture = _class_icon(line.get_slice(" \u2014 ", 0))
@@ -182,11 +197,17 @@ func _ready() -> void:
 		text.add_child(description)
 		row.add_child(text)
 		rows.add_child(row)
-	$Margin/Content/ReviewBody/Side/ClassHelp.pressed.connect(func():
-		legend.popup_centered(Vector2i(480, 540))
-		await get_tree().process_frame
-		legend.size = Vector2i(480, 540)
-		legend.move_to_center())
+	var class_help: Button = $Margin/Content/ReviewBody/Side/ClassHelp
+	class_help.pressed.connect(func():
+		var popup_size := Vector2i(480, 540)
+		var bounds := Vector2i(get_viewport_rect().size)
+		var anchor := Vector2i(class_help.global_position)
+		var origin := Vector2i(clampi(anchor.x - popup_size.x - 8, 0, maxi(0, bounds.x - popup_size.x)),
+				clampi(anchor.y - 60, 0, maxi(0, bounds.y - popup_size.y)))
+		if not get_window().gui_embed_subwindows:
+			origin += get_window().position
+		legend.popup(Rect2i(origin, popup_size))
+		close.grab_focus())
 	var toggle: Button = $Margin/Content/ReviewBody/Side/ClassToggle
 	toggle.pressed.connect(func():
 		var side: Control = $Margin/Content/ReviewBody/Side
