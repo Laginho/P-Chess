@@ -576,3 +576,47 @@ func test_match_score_respects_focus_mode():
 	_key(main, KEY_F11)
 	assert_true(white.visible and black.visible, "leaving focus restores new rematch boxes")
 	main.free()
+
+func _push_key(viewport: Viewport, code: Key, ctrl := false, shift := false) -> void:
+	for down in [true, false]:
+		var event := InputEventKey.new()
+		event.keycode = code
+		event.pressed = down
+		event.ctrl_pressed = ctrl
+		event.shift_pressed = shift
+		viewport.push_input(event, true)
+
+
+func test_keyboard_settings_focus_and_post_game_input():
+	var main = _session(ManualWaits.new())
+	await Engine.get_main_loop().process_frame
+	await Engine.get_main_loop().process_frame
+	var viewport = main.get_viewport()
+	var screen = main.settings_screen
+	var panel = screen.get_node("Panel")
+	var form = screen.get_node("Panel/Center/Box/Form")
+	var first = form.get_child(1)
+	var close = screen.get_node("Panel/Center/Box/Close")
+	_push_key(viewport, KEY_COMMA, true)
+	assert_true(panel.visible, "Ctrl+, opens Settings")
+	assert_eq(viewport.gui_get_focus_owner(), first, "first row receives focus")
+	_push_key(viewport, KEY_TAB, false, true)
+	assert_eq(viewport.gui_get_focus_owner(), close, "Shift+Tab wraps to Close")
+	_push_key(viewport, KEY_TAB)
+	assert_eq(viewport.gui_get_focus_owner(), first, "Tab wraps to first row")
+	_push_key(viewport, KEY_COMMA, true)
+	assert_true(not panel.visible, "Ctrl+, closes Settings")
+	assert_eq(viewport.gui_get_focus_owner(), null, "closing releases focus")
+	_key(main, KEY_ESCAPE)
+	_key(main, KEY_ESCAPE)
+	var game = main.board_view.game
+	var game_over = main.board_view.get_node("GameOver")
+	_push_key(viewport, KEY_COMMA, true)
+	_push_key(viewport, KEY_SPACE)
+	assert_eq(main.board_view.game, game, "Space does not rematch behind Settings")
+	_push_key(viewport, KEY_ESCAPE)
+	assert_true(not panel.visible and game_over.visible, "Esc closes Settings, not game over")
+	assert_eq(viewport.gui_get_focus_owner(), null, "Esc releases focus")
+	_push_key(viewport, KEY_SPACE)
+	assert_true(main.board_view.game != game, "Space rematches after closing")
+	main.free()
