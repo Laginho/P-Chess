@@ -34,54 +34,58 @@ layout_mode = 2
 size_flags_horizontal = 3
 size_flags_stretch_ratio = 1.65
 
-[node name="Panel" type="VBoxContainer" parent="Margin/Form/Content"]
+[node name="Card" type="PanelContainer" parent="Margin/Form/Content"]
 custom_minimum_size = Vector2(270, 0)
 layout_mode = 2
 size_flags_horizontal = 3
+theme_type_variation = &"CardPanel"
+
+[node name="Panel" type="VBoxContainer" parent="Margin/Form/Content/Card"]
+layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="HeadingRow" type="HBoxContainer" parent="Margin/Form/Content/Panel"]
+[node name="HeadingRow" type="HBoxContainer" parent="Margin/Form/Content/Card/Panel"]
 layout_mode = 2
 
-[node name="Heading" type="Label" parent="Margin/Form/Content/Panel/HeadingRow"]
+[node name="Heading" type="Label" parent="Margin/Form/Content/Card/Panel/HeadingRow"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_type_variation = &"ExtraBoldText"
 theme_override_font_sizes/font_size = 18
 
-[node name="Unsaved" type="Label" parent="Margin/Form/Content/Panel/HeadingRow"]
+[node name="Unsaved" type="Label" parent="Margin/Form/Content/Card/Panel/HeadingRow"]
 visible = false
 layout_mode = 2
 theme_override_colors/font_color = Color(0.956863, 0.74902, 0.266667, 1)
 theme_override_font_sizes/font_size = 12
 text = "Unsaved changes"
 
-[node name="Hint" type="Label" parent="Margin/Form/Content/Panel"]
+[node name="Hint" type="Label" parent="Margin/Form/Content/Card/Panel"]
 layout_mode = 2
 theme_type_variation = &"MutedText"
 theme_override_font_sizes/font_size = 13
 text = "Play moves to add them. Right-click a move to delete it."
 
-[node name="Tree" type="Tree" parent="Margin/Form/Content/Panel"]
+[node name="Tree" type="Tree" parent="Margin/Form/Content/Card/Panel"]
 layout_mode = 2
 size_flags_vertical = 3
 hide_root = true
 allow_rmb_select = true
 
-[node name="Status" type="Label" parent="Margin/Form/Content/Panel"]
+[node name="Status" type="Label" parent="Margin/Form/Content/Card/Panel"]
 layout_mode = 2
 
-[node name="Buttons" type="HBoxContainer" parent="Margin/Form/Content/Panel"]
+[node name="Buttons" type="HBoxContainer" parent="Margin/Form/Content/Card/Panel"]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="Cancel" type="Button" parent="Margin/Form/Content/Panel/Buttons"]
+[node name="Cancel" type="Button" parent="Margin/Form/Content/Card/Panel/Buttons"]
 custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Cancel"
 
-[node name="Save" type="Button" parent="Margin/Form/Content/Panel/Buttons"]
+[node name="Save" type="Button" parent="Margin/Form/Content/Card/Panel/Buttons"]
 custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
 size_flags_horizontal = 3

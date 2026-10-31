@@ -1,4 +1,4 @@
-﻿extends PopupPanel
+extends PopupPanel
 
 signal saved(name: String)
 
@@ -20,8 +20,8 @@ var path := PackedStringArray()
 var _hovered: TreeItem
 
 @onready var board = $Margin/Form/Content/Board
-@onready var tree: Tree = $Margin/Form/Content/Panel/Tree
-@onready var status: Label = $Margin/Form/Content/Panel/Status
+@onready var tree: Tree = $Margin/Form/Content/Card/Panel/Tree
+@onready var status: Label = $Margin/Form/Content/Card/Panel/Status
 
 
 func _ready() -> void:
@@ -31,8 +31,8 @@ func _ready() -> void:
 	tree.gui_input.connect(_tree_input)
 	tree.mouse_exited.connect(_clear_hover)
 	tree.button_clicked.connect(func(item, _column, _id, _button): _delete_item(item))
-	$Margin/Form/Content/Panel/Buttons/Save.pressed.connect(save)
-	$Margin/Form/Content/Panel/Buttons/Cancel.pressed.connect(hide)
+	$Margin/Form/Content/Card/Panel/Buttons/Save.pressed.connect(save)
+	$Margin/Form/Content/Card/Panel/Buttons/Cancel.pressed.connect(hide)
 
 
 func present(source, name: String, line: int = -1) -> void:
@@ -42,7 +42,7 @@ func present(source, name: String, line: int = -1) -> void:
 	root_key = source.lines[line].positions[0] if line >= 0 else edited.keys()[0]
 	path = source.lines[line].moves.duplicate() if line >= 0 else PackedStringArray()
 	board.flipped = source.colour == "b"
-	$Margin/Form/Content/Panel/HeadingRow/Heading.text = ("● " if source.colour == "w" else "○ ") + name
+	$Margin/Form/Content/Card/Panel/HeadingRow/Heading.text = ("● " if source.colour == "w" else "○ ") + name
 	status.text = ""
 	_refresh()
 	popup_centered(get_tree().root.size - Vector2i(64, 64))
@@ -71,7 +71,7 @@ func _played(_san: String) -> void:
 
 
 func _refresh() -> void:
-	$Margin/Form/Content/Panel/HeadingRow/Unsaved.visible = edited != repertoire.tree
+	$Margin/Form/Content/Card/Panel/HeadingRow/Unsaved.visible = edited != repertoire.tree
 	_hovered = null
 	tree.clear()
 	var invisible := tree.create_item()
@@ -151,6 +151,6 @@ func save() -> void:
 	var error: String = repertoire.save_edited(edited, saved_name)
 	status.text = error
 	if error.is_empty():
-		$Margin/Form/Content/Panel/HeadingRow/Unsaved.hide()
+		$Margin/Form/Content/Card/Panel/HeadingRow/Unsaved.hide()
 		hide()
 		saved.emit(saved_name)
