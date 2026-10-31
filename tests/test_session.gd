@@ -975,3 +975,12 @@ func test_game_panel_identifies_players_and_actions():
 	assert_eq(main.draw_button.text, String.chr(189) + "  Offer draw")
 	assert_eq(main.resign_button.text, "Resign")
 	main.free()
+
+
+func test_flip_keeps_player_details_hidden_in_focus_mode():
+	var main = await _session(ManualWaits.new())
+	main._set_focus(true)
+	main._set_flipped(not main.board_view.flipped)
+	for row in [main.white_clock.get_parent(), main.black_clock.get_parent()]:
+		assert_true(not row.get_node("Avatar").visible and not row.get_node("Initial").visible, "focus keeps avatars hidden after flip")
+	main.free()
