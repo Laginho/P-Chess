@@ -1,6 +1,6 @@
 extends Control
 
-# A game against Maia (BOT-004): the setup screen, the board, the clocks (CLOCK-001), the move list
+# A game against Maia (BOT-004): Home, Custom game, the board, the clocks (CLOCK-001), the move list
 # and the post-game review (HIST-002), then the hotkeys (UI-004, §9.2): Space rematch,
 # Esc Esc resign, F11 focus.
 # The settings screen (UI-005, §10) sits on top, and each setting applies the moment it changes.
@@ -204,7 +204,7 @@ func _input(_event: InputEvent) -> void:
 func _unhandled_key_input(event: InputEvent) -> void:
 	if not event.is_pressed() or event.is_echo() or clock == null:
 		return
-	# No clock means no game has started: the setup screen is up.
+	# Home and Custom game have no clock; game hotkeys apply only after a game starts.
 	var in_game: bool = clock != null and not board_view.game.is_over()
 	match event.keycode:
 		KEY_F:

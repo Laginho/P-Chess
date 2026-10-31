@@ -1,6 +1,6 @@
 extends RefCounted
 
-# The player's settings (§10), in one ConfigFile section. A missing, corrupt or out-of-range value
+# The player's settings (§10), in the settings section beside the last game's choices. A bad preference
 # reads as its default, so a bad file never stops the app. Every accepted change is saved at once
 # and announced through `changed`, which is how it takes effect without a restart.
 
