@@ -184,5 +184,12 @@ static func _edit_chapters(node: Dictionary, board, moves: Array, chapters: Arra
 static func _edit_comments(comments: Array) -> Array:
 	var result := []
 	for comment in comments:
-		result.append("{" + comment + "}")
+		if "}" not in comment:
+			result.append("{" + comment + "}")
+			continue
+		# A brace comment cannot hold "}", so write ";" comments, one per line; the parser rejoins them with spaces.
+		for line in comment.split("
+"):
+			result.append("; " + line + "
+")
 	return result

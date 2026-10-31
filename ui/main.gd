@@ -176,7 +176,7 @@ func _start(new_settings: Dictionary) -> void:
 	_starting = true
 	setup.hide()
 	setup.get_node("OpeningPicker").hide()
-	setup.get_node("RepertoireImport").hide()
+	setup.get_node("RepertoireScreen/RepertoireImport").hide()
 	review.hide()
 	board_view.mouse_filter = MOUSE_FILTER_IGNORE
 	starting.show()

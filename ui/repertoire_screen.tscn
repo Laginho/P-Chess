@@ -1,9 +1,10 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://ui/repertoire_screen.gd" id="1"]
 [ext_resource type="PackedScene" path="res://ui/opening_picker.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://ui/board_view.tscn" id="3"]
 [ext_resource type="PackedScene" path="res://ui/repertoire_editor.tscn" id="4"]
+[ext_resource type="PackedScene" path="res://ui/repertoire_import.tscn" id="5"]
 
 [node name="RepertoireScreen" type="PopupPanel"]
 title = "Repertoires"
@@ -55,11 +56,11 @@ disabled = true
 
 [node name="Import" type="Button" parent="Margin/Form"]
 layout_mode = 2
-text = "Import PGN?"
+text = "Import PGN…"
 
 [node name="FromOpenings" type="Button" parent="Margin/Form"]
 layout_mode = 2
-text = "From openings?"
+text = "From openings…"
 
 [node name="Back" type="Button" parent="Margin/Form"]
 layout_mode = 2
@@ -68,3 +69,5 @@ text = "Back"
 [node name="OpeningPicker" parent="." instance=ExtResource("2")]
 
 [node name="RepertoireEditor" parent="." instance=ExtResource("4")]
+
+[node name="RepertoireImport" parent="." instance=ExtResource("5")]

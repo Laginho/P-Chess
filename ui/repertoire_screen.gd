@@ -4,7 +4,6 @@ signal saved(name: String)
 
 const Game = preload("res://core/game.gd")
 var repertoire
-var importer
 var _lines := []
 var _line := -1
 var _ply := 0
@@ -13,6 +12,8 @@ var _selection := ""
 @onready var _list: ItemList = $Margin/Form/List
 @onready var _picker = $OpeningPicker
 @onready var _editor = $RepertoireEditor
+# Child of this popup, so closing it hands focus back here instead of closing the screen too.
+@onready var importer = $RepertoireImport
 @onready var _line_list: ItemList = $Margin/Form/Viewer/Lines
 @onready var _board = $Margin/Form/Viewer/Board
 @onready var _status: Label = $Margin/Form/Status

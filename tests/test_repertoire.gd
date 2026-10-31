@@ -211,7 +211,7 @@ func test_real_import_and_setup_controls_adopt_saved_colour_and_reject_invalid_f
 	var screen = setup.get_node("RepertoireScreen")
 	assert_true(screen.visible, "repertoire screen opens")
 	screen.get_node("Margin/Form/Import").pressed.emit()
-	var importer = setup.get_node("RepertoireImport")
+	var importer = screen.get_node("RepertoireImport")
 	assert_true(importer.visible)
 	importer.get_node("Margin/Form/Name").text = "My study"
 	importer.get_node("Margin/Form/Colour").select(1)
@@ -566,6 +566,58 @@ func test_editor_preserves_variation_opening_comment_on_save():
 	assert_eq(e4.comments, [])
 	assert_eq(e4.children.c7c5.comments_before, ["Sicilian"])
 	_clean(folder)
+
+func test_editor_save_keeps_comments_holding_a_closing_brace():
+	var repertoire = _repertoire()
+	var folder := _folder()
+	repertoire.storage_dir = folder
+	assert_eq(repertoire.import_pgn("1. e4 ; Compare } and { here
+e5 ; Mark }
+2. Nf3 *", "w", "Study"), "")
+	assert_eq(repertoire.save_edited(repertoire.tree.duplicate(true), "Study"), "")
+	assert_eq(repertoire.load_saved("Study"), "")
+	var e4: Dictionary = repertoire.tree.values()[0].children.e2e4
+	assert_eq(e4.comments, ["Compare } and { here"])
+	assert_eq(e4.children.e7e5.comments, ["Mark }"])
+	assert_eq(" ".join(repertoire.lines[0].moves), "e2e4 e7e5 g1f3")
+	_clean(folder)
+
+func test_cancelling_the_importer_returns_to_the_repertoire_screen():
+	var root: Window = Engine.get_main_loop().root
+	var old_embed := root.gui_embed_subwindows
+	var old_size := root.size
+	root.gui_embed_subwindows = true
+	root.size = Vector2i(1280, 800)
+	var setup = load("res://ui/setup.tscn").instantiate()
+	setup.repertoire.storage_dir = _folder()
+	root.add_child(setup)
+	var screen = setup.get_node("RepertoireScreen")
+	var importer = screen.get_node("RepertoireImport")
+	screen.present()
+	await Engine.get_main_loop().process_frame
+	screen.get_node("Margin/Form/Import").pressed.emit()
+	await Engine.get_main_loop().process_frame
+	assert_true(importer.visible, "importer opens")
+	importer.get_node("Margin/Form/Done").grab_focus()
+	_key(KEY_SPACE)
+	await Engine.get_main_loop().process_frame
+	await Engine.get_main_loop().process_frame
+	assert_true(not importer.visible and screen.visible, "closing the importer keeps Repertoires open")
+	screen.hide()
+	await Engine.get_main_loop().process_frame
+	setup.free()
+	await Engine.get_main_loop().process_frame
+	root.gui_embed_subwindows = old_embed
+	root.size = old_size
+
+func _key(code: Key) -> void:
+	var event := InputEventKey.new()
+	event.keycode = code
+	event.pressed = true
+	Input.parse_input_event(event)
+	event = event.duplicate()
+	event.pressed = false
+	Input.parse_input_event(event)
 
 func _editor_mouse(window: Window, point: Vector2, button: int, pressed: bool) -> void:
 	var motion := InputEventMouseMotion.new()
