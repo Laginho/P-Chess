@@ -66,13 +66,14 @@ func _refresh() -> void:
 		var error: String = saved.load_saved(name)
 		var detail := ""
 		if error.is_empty():
-			detail = "%d lines" % saved.lines.size()
+			detail = "%d %s" % [saved.lines.size(), "line" if saved.lines.size() == 1 else "lines"]
 			if saved.source == "openings":
 				detail += " · from openings"
 			elif saved.source == "pgn":
 				detail += " · imported PGN"
-		select.text = ("● " if saved.colour == "w" else "○ ") + name + "\n" + detail
-		select.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		select.accessibility_name = name
+		select.accessibility_description = detail
+		select.custom_minimum_size.y = 64
 		select.toggle_mode = true
 		select.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		select.pressed.connect(func(): _select_repertoire(index))
@@ -81,6 +82,37 @@ func _refresh() -> void:
 		selected_style.border_color = Color("7fa650")
 		select.add_theme_stylebox_override("pressed", selected_style)
 		select.add_theme_stylebox_override("hover_pressed", selected_style)
+		var content := HBoxContainer.new()
+		select.add_child(content)
+		content.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		content.offset_left = 12
+		content.offset_right = -8
+		content.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var dot := Label.new()
+		dot.text = "●" if saved.colour == "w" else "○"
+		dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		dot.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		content.add_child(dot)
+		var labels := VBoxContainer.new()
+		labels.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		labels.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		labels.alignment = BoxContainer.ALIGNMENT_CENTER
+		content.add_child(labels)
+		var title := Label.new()
+		title.name = "CardTitle"
+		title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		title.theme_type_variation = "BoldText"
+		title.text = name
+		title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		labels.add_child(title)
+		var subtitle := Label.new()
+		subtitle.name = "CardDetail"
+		subtitle.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		subtitle.theme_type_variation = "MutedText"
+		subtitle.add_theme_font_size_override("font_size", 12)
+		subtitle.text = detail
+		subtitle.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		labels.add_child(subtitle)
 		var edit := Button.new()
 		edit.name = "Edit"
 		edit.icon = preload("res://ui/icons/pencil.svg")
