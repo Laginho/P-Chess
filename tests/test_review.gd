@@ -106,6 +106,9 @@ func test_review_help_explains_accuracy_and_class_thresholds():
 		class_help.pressed.emit()
 		var legend = review.get_node_or_null("ClassLegend")
 		assert_true(legend != null and legend.dialog_text.contains("2%") and legend.dialog_text.contains("20%"), "legend gives class thresholds")
+		if legend != null:
+			var rows = legend.get_node_or_null("LegendRows")
+			assert_true(rows != null and rows.get_child_count() == 12, "legend has an icon and description for each class")
 	main.free()
 
 
