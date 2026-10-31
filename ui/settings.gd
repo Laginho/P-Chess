@@ -24,6 +24,7 @@ func _ready() -> void:
 	_spin("animation_ms", "Animation length (ms)", 10)
 	_choice("board_theme", "Board", _themes("boards"))
 	_choice("piece_theme", "Pieces", _themes("pieces"))
+	_spin("board_size", "Board size (px, 0 = fit)", 10)
 	_choice("sound_theme", "Sounds", _themes("sounds"))
 	_spin("volume", "Volume (%)", 1)
 	_spin("tau", "Threshold τ (%)", 0.1, 100.0)
@@ -58,6 +59,10 @@ func _spin(key: String, label: String, step: float, scale := 1.0) -> void:
 	spin.step = step
 	spin.value = store.get_value(key) * scale
 	spin.value_changed.connect(func(value: float) -> void: store.set_value(key, value / scale))
+	# The board grip also writes board_size, so the row follows the store.
+	store.changed.connect(func(changed: String, value) -> void:
+		if changed == key:
+			spin.set_value_no_signal(value * scale))
 	_row(label, spin)
 
 

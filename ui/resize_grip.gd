@@ -20,6 +20,8 @@ func _place() -> void:
 
 func _draw() -> void:
 	for offset in [4, 9, 14]:
+		# The dark edge keeps the white strokes visible on light squares.
+		draw_line(Vector2(size.x - offset, size.y - 2), Vector2(size.x - 2, size.y - offset), Color(0, 0, 0, 0.6), 4.0)
 		draw_line(Vector2(size.x - offset, size.y - 2), Vector2(size.x - 2, size.y - offset), Color.WHITE, 2.0)
 
 

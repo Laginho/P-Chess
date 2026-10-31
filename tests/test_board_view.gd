@@ -52,6 +52,29 @@ func test_grip_drag_saves_size_and_double_click_restores_fit():
 	DirAccess.remove_absolute(path)
 
 
+# Keyboard users set the size through Settings; the row follows the grip.
+func test_settings_row_sets_board_size_and_follows_the_grip():
+	var main = preload("res://ui/main.tscn").instantiate()
+	var path := "user://test_ui015_row.cfg"
+	DirAccess.remove_absolute(path)
+	main.preferences = preload("res://core/settings.gd").new(path)
+	Engine.get_main_loop().root.add_child(main)
+	var form = main.settings_screen.get_node("Panel/Center/Box/Form")
+	var spin: SpinBox
+	for i in form.get_child_count():
+		if form.get_child(i) is Label and form.get_child(i).text == "Board size (px, 0 = fit)":
+			spin = form.get_child(i + 1)
+	assert_true(spin != null, "Settings has a board size row")
+	if spin != null:
+		assert_true(spin.get_line_edit().focus_mode != Control.FOCUS_NONE, "the row takes keyboard focus")
+		spin.value = 400
+		assert_eq(main.preferences.get_value("board_size"), 400)
+		main._resize_board(0)
+		assert_eq(spin.value, 0.0, "the row follows a grip reset")
+	main.free()
+	DirAccess.remove_absolute(path)
+
+
 func test_point_to_square_with_white_at_the_bottom():
 	assert_eq(BoardView.square_at(Vector2(0, 0), 800, false), "a8")
 	assert_eq(BoardView.square_at(Vector2(799, 799), 800, false), "h1")
