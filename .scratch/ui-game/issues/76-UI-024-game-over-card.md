@@ -1,5 +1,5 @@
 # UI-024: Game-over card to the design
-Stage: to-review
+Stage: to-implement
 Blocked by: UI-021, UI-023
 Review: agent
 Difficulty: normal
@@ -42,3 +42,48 @@ Restyle the game-over panel to `docs/design/v0.1.0/png/GameOver.png`, `GameOverS
 - Disclosure: pending | release | Manual win/loss/draw, real clipboard and close acceptance remains outstanding; see the ticket verification above.
 - Gate: `godot --headless -s tests/run.gd`: 422 reported passed, 0 failed; 7 reported passes were skipped (six Lc0-dependent tests and one graphical pixel test), so 415 executed. The first run failed only on the old review text expectations; these were updated before the successful run.
 Gate evidence: C:/Users/bruno/AppData/Local/Temp/pchess-ui024-final-gate.json
+
+#### Resolution (2026-10-31, stage-3 review)
+Verdict: Reopen — criterion 5: accepted long player names are silently clipped.
+
+##### Standards
+
+Zero findings. Independent reviewer `/root/standards` examined all five files in `1a9c2d43b1bc5ff063b2d60d58019c9e092ff23d...5eecbb6abd115a3ae9f31bdea5cce7ee4bd02aff`: this ticket, `tests/test_review.gd`, `tests/test_session.gd`, `ui/game_over.gd` and `ui/game_over.tscn`. OCR delegation excluded all five as `unsupported_ext`; each was reviewed directly, for coverage 5/5 (100%), zero skipped. No documented-standard violations or actionable baseline smells were found.
+
+All eight commits separate tests, production and tracker metadata. Test-only `1814769`, `341a11c` and `b4fc591` precede production-only `f1870b6`; test-only `64e7012` precedes the wording correction in `9cd93b2`. The extra `tests/test_review.gd` changes update only assertions on behavior criterion 1 replaces, as explicitly allowed by `ticket-flow/stage2.md`. Production remains within Primary files. No production repair was authored during review.
+
+##### Spec
+
+- ✅ Criterion 1: the card is centered over the dimmed final board with human-relative result, reason, result tint/icon, both avatars, the correct winner's gold ring and numeric match score. The real-scene graphical probe checked all six human-color/result combinations. Existing tests cover match-score accumulation, halves and rematch color swaps. Shared typography remains subject to the already open CLEAN-012 integration condition below.
+- ✅ Criterion 2: Review retains the star/green style and opens the existing analysis route; New game returns Home; Rematch preserves the match and swaps colors. The labels follow Bruno's recorded override.
+- ✅ Criterion 3: the top-left Copy PGN reuses Review's prepared PGN, and the top-right Close hides the card. A graphical probe activated Copy PGN with focused Space, read the actual Windows clipboard and restored its prior content; a viewport mouse press/release closed the card. The clipboard comparison normalizes Windows CRLF; the initial strict comparison was a probe error, not a product defect.
+- ✅ Criterion 4: loss/draw tints, flag/half icon and the winner/no-winner ring variants are present. The documented outlined flag, shared robot and absent shadow remain visual departures using the existing assets/native card styling; they do not add a separate behavioral finding. The reference sample names, scores and end reasons are illustrative.
+- ❌ Criterion 5, **P2**, `ui/game_over.tscn:178-188` (especially `clip_text = true` at line 187): save the valid name `Alexandria Catherine Montgomery de Albuquerque`, finish a game and view its card at 800x600. The text measures 337 px, but HumanName is 112 px wide at `(110,329)` with centered alignment, no ellipsis (`text_overrun_behavior = 0`) and no tooltip. Both ends are silently cut, leaving only a middle fragment of the player's identity. This fails shared acceptance 2, "nothing clipped or overlapping", and was independently confirmed by `/root/spec` after the graphical evidence. Keep the bounded label, show ellipsis, preserve the full stored name, and add a red-first regression at the existing `tests/test_session.gd` card seam. A tooltip containing the full name is a suggested small improvement, not a new numbered requirement. Evidence: `C:/Users/bruno/AppData/Local/Temp/pchess-ui024-stage3-1793484465401/long-name-800.png`, `probe.gd` and `probe3.log` in that directory.
+
+Standards: 0 findings. Spec: 1 P2 in criterion 5. All other examined implementation paths retain approval; stage 2 resumes only the ❌ item on this branch.
+
+##### Coverage and verification
+
+Reviewed the complete diff and both card creation sites, `main._show_result()` and `scripts/screens.gd`; checkmate, resignation, time and draw result routes; Review's PGN preparation/export and analysis opening; half-point score formatting; rematch/Home/reset; card lifetime/disposal; and Settings/input arbitration. Every real result creates a fresh card, so conditional icon/ring setup cannot inherit an earlier card's result. No identified caller or failure route was left unexamined. Physical keyboard/mouse use, a played Lc0 game, audio and Bruno's final visual acceptance remain unexecuted.
+
+`Assert-GateEvidence` passed against reviewed HEAD: correct command, exit 0, unchanged log SHA-256 and identical non-tracker code since tested `9cd93b2fa4030676483b6354c2cb057312a38956`. The log has 422 reported passes, 0 failures, 7 skips (six Lc0-dependent tests and one graphical pixel check): 415 executed. Code did not change during review, so the gate was reused rather than rerun. The focused graphical probe exited 0: actual clipboard Copy with Space, mouse Close and all six color/result icon/ring cases passed; it also recorded the long-name defect above. Synthetic viewport input and real clipboard access do not constitute physical-input or end-to-end gameplay acceptance.
+
+##### Before / reference / after screenshots
+
+The following stage-3 captures use the screenshot tool at 1280x800 and 800x600. Before is detached session base `1a9c2d43`; After is reviewed HEAD `5eecbb6`. Before and After folders are `C:/Users/bruno/AppData/Local/Temp/pchess-ui024-stage3-1793484465401/before/` and `C:/Users/bruno/AppData/Local/Temp/pchess-ui024-stage3-1793484465401/after/`. Each filename below exists in both folders.
+
+| Board/state | Reference | Before and After filenames (1280x800 / 800x600) |
+|---|---|---|
+| GameOver | [reference](../../../docs/design/v0.1.0/png/GameOver.png) | `GameOver--1280.png` / `GameOver--800.png` |
+| GameOverCard | [reference](../../../docs/design/v0.1.0/png/GameOverCard.png) | `GameOverCard--1280.png` / `GameOverCard--800.png` |
+| GameOverStates, loss | [reference](../../../docs/design/v0.1.0/png/GameOverStates.png) | `GameOverStates-loss-1280.png` / `GameOverStates-loss-800.png` |
+| GameOverStates, draw | [reference](../../../docs/design/v0.1.0/png/GameOverStates.png) | `GameOverStates-draw-1280.png` / `GameOverStates-draw-800.png` |
+
+The component fixtures capture the full game screen: compare their card region to the component reference. As disclosed by stage 2, these fixtures build a card directly, leaving a synthetic 0-0 score, resignation reason and surrounding panel; they are layout evidence, not completed-match evidence. The separate long-name screenshot uses the real session/result path. Data and logs were isolated from the player's files, and the temporary before worktree was removed after capture.
+
+Acceptance: pending | Repair criterion 5, complete CLEAN-012, then perform final visual and real win/loss/draw play acceptance.
+Disclosure: pending | integration | This open UI-024 ticket schedules the P2 long-name repair before integration; no accepted deferral is recorded.
+Disclosure: pending | integration | [CLEAN-012](../../ui-base/issues/74-CLEAN-012-font-variation-axes.md) still requires corrected shared font weights before the session PR lands on main and before final visual acceptance; this review does not waive that existing condition.
+Disclosure: pending | release | Real win/loss/draw gameplay, physical input, Lc0, audio and final human visual QA remain. The focused real-clipboard/viewport-Close checks above supplement the previous evidence.
+
+No merge, push or ledger entry. UI-024 returns to `to-implement` on its retained branch.
