@@ -124,6 +124,40 @@ func test_accuracy_chart_uses_dated_analysis_and_human_colour():
 	_clean(folder)
 
 
+func test_profile_skips_incomplete_or_corrupt_analysis_and_handles_one_point():
+	var folder := "user://test_profile_single_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder.path_join("games"))
+	var analysis_dir := folder.path_join("analysis")
+	DirAccess.make_dir_recursive_absolute(analysis_dir)
+	_write_game(folder, "legacy", "2026.10.01", "w", "1. e4", analysis_dir, [0, 0])
+	_write(folder.path_join("games/legacy.pgn"), '[White "You"]\n[Black "Maia 1500"]\n[Date "2026.10.01"]\n[Result "0-1"]\n\n1. e4 0-1\n')
+	for stem in ["partial", "corrupt", "missing-fields"]:
+		_write_game(folder, stem, "2026.10.02", "w", "1. e4", analysis_dir, [0])
+	_write(analysis_dir.path_join("corrupt.pgn.json"), '{"engine_version":"Stockfish 19","node_budget":3000000,"positions":[null,null]}')
+	_write(analysis_dir.path_join("missing-fields.pgn.json"), '{"engine_version":"Stockfish 19","node_budget":3000000,"positions":[{},{}]}')
+	var profile = load("res://ui/profile.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(profile)
+	profile.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	profile.size = Vector2(800, 600)
+	profile.present(Settings.new(folder.path_join("settings.cfg")))
+	profile.refresh(History.new(folder), analysis_dir)
+	var chart = profile.find_child("AccuracyChart", true, false)
+	assert_eq(chart.series.size(), 1, "legacy human identity, incomplete and corrupt analysis")
+	assert_eq(chart.series[0].accuracy, 100.0)
+	assert_true(chart.tooltip_text.contains("2026.10.01: 100.0%"))
+	await Engine.get_main_loop().process_frame
+	await Engine.get_main_loop().process_frame
+	var table = profile.find_child("Results", true, false)
+	var scroll = profile.find_child("Scroll", true, false)
+	var back = profile.find_child("Back", true, false)
+	assert_true(table.size.x <= scroll.size.x, "table fits the minimum window width")
+	assert_true(back.get_rect().end.y <= 600 and back.get_rect().position.y >= scroll.get_rect().end.y,
+			"Back stays below the scroll area inside the minimum window")
+	assert_true(chart.size.x > 70 and chart.size.y >= 200, "single-point plot has drawing space")
+	profile.free()
+	_clean(folder)
+
+
 func _write_game(folder: String, stem: String, date: String, human: String, moves: String,
 		analysis_dir: String, scores: Array) -> void:
 	_write(folder.path_join("games/" + stem + ".pgn"),
