@@ -77,7 +77,7 @@ an isolated data root or with headless rendering.
 | Border | `#45423d` |
 | Text | `#ece9e4` |
 | Muted text | `#a8a49c` |
-| Placeholder | `#6b675f` |
+| Placeholder | `#8a857c` (the canvas used `#6b675f`; lightened to 4.5:1 on the ground for WCAG 1.4.3) |
 | Accent (green) | `#7fa650`, text on it `#141412` |
 | Gold | `#f4bf44` |
 | Red | `#c93230` |

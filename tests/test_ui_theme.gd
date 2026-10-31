@@ -39,3 +39,17 @@ func test_primary_button_focus_ring_contrasts_with_its_fill():
 	if focus and normal:
 		assert_eq(focus.border_color, theme.get_color("font_color", "PrimaryButton"), "focus ring uses the text-on-accent colour")
 		assert_true(focus.border_color != normal.bg_color, "focus ring is visible on the green fill")
+
+
+# WCAG 1.4.3: placeholder text reads at 4.5:1 or more on the ground colour.
+func test_placeholder_text_meets_contrast_on_the_ground():
+	var theme: Theme = load("res://ui/theme/p_chess.tres")
+	var lum := func(c: Color) -> float:
+		var l := 0.0
+		for i in [[c.r, 0.2126], [c.g, 0.7152], [c.b, 0.0722]]:
+			var v: float = i[0]
+			l += i[1] * (v / 12.92 if v <= 0.04045 else pow((v + 0.055) / 1.055, 2.4))
+		return l
+	var fg: float = lum.call(theme.get_color("font_placeholder_color", "LineEdit"))
+	var bg: float = lum.call(Color("#1f1e1c"))
+	assert_true((fg + 0.05) / (bg + 0.05) >= 4.5, "LineEdit placeholder contrast on #1f1e1c")
