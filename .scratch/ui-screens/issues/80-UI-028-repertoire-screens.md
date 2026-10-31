@@ -1,5 +1,5 @@
 # UI-028: Repertoires, opening picker and editor to the design
-Stage: to-review
+Stage: implementing
 Blocked by: UI-021
 Review: agent
 Difficulty: normal

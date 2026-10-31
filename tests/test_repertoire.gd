@@ -429,6 +429,28 @@ func test_catalog_selection_saves_repertoire_and_book_uses_it():
 	assert_true(book.weights(board, 0).e2e4 > 1.0, "My repertoire follows the selected lines")
 	_clean(folder)
 
+func test_editor_shows_unsaved_changes_only_after_a_change():
+	var repertoire = _repertoire()
+	var folder := _folder()
+	repertoire.storage_dir = folder
+	assert_eq(repertoire.import_pgn("1. e4 e5 *", "w", "Study"), "")
+	var editor = load("res://ui/repertoire_editor.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(editor)
+	editor.present(repertoire, "Study", 0)
+	var marker = editor.find_child("Unsaved", true, false)
+	assert_true(marker != null, "editor has an unsaved changes marker")
+	if marker != null:
+		assert_true(not marker.visible, "opening a repertoire is clean")
+	assert_true(editor.board.play("g1f3"))
+	if marker != null:
+		assert_true(marker.visible, "a new move marks the repertoire dirty")
+	editor.save()
+	if marker != null:
+		assert_true(not marker.visible, "saving clears the marker")
+	editor.free()
+	_clean(folder)
+
+
 func test_editor_extends_a_selected_line_and_saves_it():
 	var path := "res://ui/repertoire_editor.tscn"
 	assert_true(ResourceLoader.exists(path), "editor scene exists")
