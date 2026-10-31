@@ -10,7 +10,7 @@ func present(session, finished_game) -> void:
 	var draw: bool = game.result == "1/2-1/2"
 	var won: bool = not draw and ((game.result == "1-0") == (main.human == "w"))
 	$Panel/Content/Headline.text = "Draw" if draw else ("You won!" if won else "You lost")
-	$Panel/Content/Reason.text = "by " + game.reason
+	$Panel/Content/Reason.text = "on time" if game.reason == "time" else "by " + game.reason
 	$Panel/Content/Score.text = "%s – %s" % [main._format_score(main._human_score), main._format_score(main._maia_score)]
 	var player_name: String = main.preferences.get_value("player_name")
 	$Panel/Content/HumanName.text = player_name
