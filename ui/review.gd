@@ -58,6 +58,34 @@ func _ready() -> void:
 	if analysis_queue != null:
 		analysis_queue.position_ready.connect(_queue_position)
 		analysis_queue.changed.connect(_queue_changed)
+	var summary: Label = $Margin/Content/ReviewBody/Side/Summary
+	summary.custom_minimum_size.y = 44
+	summary.add_theme_color_override("font_color", Color.TRANSPARENT)
+	var cards := HBoxContainer.new()
+	cards.name = "AccuracyCards"
+	cards.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	summary.add_child(cards)
+	for side in ["White", "Black"]:
+		if side == "Black":
+			var spacer := Control.new()
+			spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			cards.add_child(spacer)
+		var card := PanelContainer.new()
+		card.name = side + "Score"
+		var style := StyleBoxFlat.new()
+		style.bg_color = Color("ece9e4") if side == "White" else Color("141412")
+		style.set_corner_radius_all(5)
+		style.set_content_margin_all(8)
+		card.add_theme_stylebox_override("panel", style)
+		var value := Label.new()
+		value.name = "Value"
+		value.add_theme_color_override("font_color", Color("141412") if side == "White" else Color("ece9e4"))
+		card.add_child(value)
+		cards.add_child(card)
+		var name_label := Label.new()
+		name_label.name = side + "Name"
+		name_label.add_theme_font_size_override("font_size", 11)
+		cards.add_child(name_label)
 	var table: GridContainer = $Margin/Content/ReviewBody/Side/Counts
 	for label in CLASS_NAMES:
 		var name_label := Label.new()
@@ -418,6 +446,10 @@ func _update_summary() -> void:
 	var white := "–" if accuracy.white == null else "%.1f%%" % accuracy.white
 	var black := "–" if accuracy.black == null else "%.1f%%" % accuracy.black
 	summary.text = "White: %s  %s\nBlack: %s  %s" % [_player_names[0], white, _player_names[1], black]
+	for side in ["White", "Black"]:
+		var index := 0 if side == "White" else 1
+		summary.get_node("AccuracyCards/" + side + "Score/Value").text = white if index == 0 else black
+		summary.get_node("AccuracyCards/" + side + "Name").text = _player_names[index]
 	summary.show()
 
 
