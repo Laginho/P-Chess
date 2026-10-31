@@ -25,7 +25,7 @@ class HeldEngine extends "res://engine/uci.gd":
 		return true
 
 	func set_level(_net_path: String) -> void:
-		pass
+		level_ready.emit()
 
 	func request_policy(_start: String, moves: PackedStringArray) -> void:
 		requests.append(moves.duplicate())
@@ -46,7 +46,7 @@ func _session(time: FakeTime, colour := "w", control := "1+0", preferences = nul
 	Engine.get_main_loop().root.add_child(main)
 	main.board_view.slide_seconds = 0
 	main.sound_player.select_theme("__ui007_silent__")
-	main._start({"colour": colour, "level": "maia-1700", "control": control, "opening": "Free"})
+	await main._start({"colour": colour, "level": "maia-1700", "control": control, "opening": "Free"})
 	main.clock = Clock.new(control, time.ms)
 	main.clock.flagged.connect(main._on_flagged)
 	main.maia.clock = main.clock
@@ -72,7 +72,7 @@ func _drag(board, from: String, to: String, alt := false) -> void:
 
 func test_main_queues_human_moves_and_executes_one_per_maia_reply():
 	var time := FakeTime.new()
-	var main = _session(time)
+	var main = await _session(time)
 	var board = main.board_view
 	var sounds := []
 	board.sound_requested.connect(func(event): sounds.append(event))
@@ -105,7 +105,7 @@ func test_main_queues_human_moves_and_executes_one_per_maia_reply():
 
 
 func test_right_click_cancels_the_queue_and_right_drag_still_draws():
-	var main = _session(FakeTime.new())
+	var main = await _session(FakeTime.new())
 	var board = main.board_view
 	board.play("e2e4")
 	_drag(board, "g1", "f3")
@@ -126,7 +126,7 @@ func test_right_click_cancels_the_queue_and_right_drag_still_draws():
 
 
 func test_black_premoves_include_first_move_cost_and_later_increment():
-	var main = _session(FakeTime.new(), "b", "3+2")
+	var main = await _session(FakeTime.new(), "b", "3+2")
 	var board = main.board_view
 	assert_true(board.flipped)
 	board.click_click = true
@@ -145,7 +145,7 @@ func test_black_premoves_include_first_move_cost_and_later_increment():
 
 func test_a_premove_that_flags_is_not_played_and_discards_the_whole_queue():
 	var time := FakeTime.new()
-	var main = _session(time)
+	var main = await _session(time)
 	var board = main.board_view
 	var sounds := []
 	board.sound_requested.connect(func(event): sounds.append(event))
@@ -165,7 +165,7 @@ func test_a_premove_that_flags_is_not_played_and_discards_the_whole_queue():
 
 
 func test_maia_checkmate_clears_premoves_and_rematch_keeps_no_ghosts():
-	var main = _session(FakeTime.new())
+	var main = await _session(FakeTime.new())
 	var board = main.board_view
 	_drag(board, "f2", "f3")
 	main._on_maia_move("e7e5")
@@ -174,7 +174,7 @@ func test_maia_checkmate_clears_premoves_and_rematch_keeps_no_ghosts():
 	main._on_maia_move("d8h4")
 	assert_eq([board.game.result, board.game.reason], ["0-1", "checkmate"])
 	assert_eq(board.premoves.moves, PackedStringArray())
-	main._start(main.rematch(main.settings))
+	await main._start(main.rematch(main.settings))
 	_drag(board, "g8", "f6")
 	assert_eq(board.premoves.moves, PackedStringArray(["g8f6"]))
 	board.game = Game.new()
@@ -185,7 +185,7 @@ func test_maia_checkmate_clears_premoves_and_rematch_keeps_no_ghosts():
 func test_a_hold_survives_maias_reply_and_drops_as_a_normally_timed_move():
 	for selected in [false, true]:
 		var time := FakeTime.new()
-		var main = _session(time)
+		var main = await _session(time)
 		var board = main.board_view
 		board.click_click = selected
 		board.play("e2e4")
@@ -205,7 +205,7 @@ func test_a_hold_survives_maias_reply_and_drops_as_a_normally_timed_move():
 
 func test_a_reply_and_due_premove_preserve_an_unfinished_drag():
 	for selected in [false, true]:
-		var main = _session(FakeTime.new())
+		var main = await _session(FakeTime.new())
 		var board = main.board_view
 		board.click_click = selected
 		board.play("e2e4")
@@ -227,7 +227,7 @@ func test_a_reply_and_due_premove_preserve_an_unfinished_drag():
 
 func test_a_due_premove_moving_the_held_live_piece_ends_the_hold():
 	for selected in [false, true]:
-		var main = _session(FakeTime.new())
+		var main = await _session(FakeTime.new())
 		var board = main.board_view
 		board.premove_style = "Lichess"
 		board.click_click = selected
@@ -249,7 +249,7 @@ func test_a_due_premove_moving_the_held_live_piece_ends_the_hold():
 
 
 func test_an_invalid_remaining_ghost_cancels_the_hold_without_a_stale_drop():
-	var main = _session(FakeTime.new())
+	var main = await _session(FakeTime.new())
 	var board = main.board_view
 	board.game = Game.new("8/8/8/8/2k5/8/R7/K7 b - - 0 1")
 	_drag(board, "a2", "a3")
@@ -334,7 +334,7 @@ func test_premove_setting_persists_and_screen_changes_apply_immediately():
 		assert_true(settings.set_value("premove_style", style))
 		assert_eq(Settings.new(SETTINGS_PATH).get_value("premove_style"), style)
 	assert_true(not settings.set_value("premove_style", "checkers"))
-	var main = _session(FakeTime.new(), "w", "1+0", settings)
+	var main = await _session(FakeTime.new(), "w", "1+0", settings)
 	var board = main.board_view
 	assert_eq(board.premoves.style, "Lichess", "stored choice applies on startup")
 	board.play("e2e4")
@@ -556,3 +556,4 @@ func test_premove_targets_include_geometry_on_the_board():
 	_mouse(board, false, "e5")
 	assert_eq(board.premoves.moves, PackedStringArray(["f3e5"]))
 	board.free()
+

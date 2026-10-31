@@ -147,12 +147,13 @@ func test_a_rematch_drops_the_piece_held_when_the_game_ended():
 	board.free()
 
 
-func _session(waits, start_game := true):
+func _session(waits, start_game := true, queue = null):
 	var main = MainScene.instantiate()
 	main.get_node("Setup").book.load_tsv("eco\tname\tpgn\nA00\tFixture\t1. h3\n")
 	var folder := "user://test_session_history_%d" % Time.get_ticks_usec()
 	main.history = load("res://core/history.gd").new(folder)
 	main.tree_exiting.connect(func(): HistoryStorage.clean(folder))
+	main.analysis_queue = queue
 	main.uci.free()
 	main.uci = HeldBridge.new()
 	main.maia = Main.MaiaPlayer.new(main.uci, waits.start)
@@ -162,7 +163,7 @@ func _session(waits, start_game := true):
 	main.board_view.slide_seconds = 0
 	main.sound_player.select_theme("__ui004_silent__")
 	if start_game:
-		main._start(SETTINGS.duplicate())
+		await main._start(SETTINGS.duplicate())
 	return main
 
 
@@ -175,7 +176,7 @@ func _key(main, code: Key) -> void:
 
 func test_game_over_panel_actions():
 	for action in ["Review", "Rematch", "NewGame", "Close", "Escape"]:
-		var main = _session(ManualWaits.new())
+		var main = await _session(ManualWaits.new())
 		_key(main, KEY_ESCAPE)
 		_key(main, KEY_ESCAPE)
 		assert_true(not main.review.visible, "review waits for a request")
@@ -191,6 +192,7 @@ func test_game_over_panel_actions():
 				panel._input(event)
 			else:
 				panel.get_node("Panel/Content/" + action).pressed.emit()
+				await _wait_start(main)
 			match action:
 				"Review":
 					assert_true(main.review.visible, "Review opens the review")
@@ -212,6 +214,7 @@ func _resign_and_rematch(main) -> void:
 	_key(main, KEY_ESCAPE)
 	_key(main, KEY_ESCAPE)
 	_key(main, KEY_SPACE)
+	await _wait_start(main)
 
 
 func _finish(waits, index: int) -> void:
@@ -222,11 +225,11 @@ func _finish(waits, index: int) -> void:
 
 func test_a_new_reply_plays_before_an_old_games_wait_finishes():
 	var waits := ManualWaits.new()
-	var main = _session(waits)
+	var main = await _session(waits)
 	assert_true(main.board_view.play("e2e4"))
 	main.uci.policy_ready.emit({"e2e4": 1.0})
 	main.uci.policy_ready.emit({"e7e5": 1.0})
-	_resign_and_rematch(main)
+	await _resign_and_rematch(main)
 	assert_eq(main.human, "b", "Space swaps the colour actually played")
 	main.uci.policy_ready.emit({"e2e4": 1.0})
 	assert_eq(waits.pending.size(), 2, "both policies have entered their waits")
@@ -241,9 +244,9 @@ func test_a_new_reply_plays_before_an_old_games_wait_finishes():
 
 func test_an_old_policy_after_rematch_is_dropped_before_a_wait_is_scheduled():
 	var waits := ManualWaits.new()
-	var main = _session(waits)
+	var main = await _session(waits)
 	assert_true(main.board_view.play("e2e4"))
-	_resign_and_rematch(main)
+	await _resign_and_rematch(main)
 	assert_eq(main.uci.requests, [[Game.START, PackedStringArray()], [Game.START, PackedStringArray(["e2e4"])],
 			[Game.START, PackedStringArray()]], "the old and current policies are queued FIFO")
 	main.uci.policy_ready.emit({"e2e4": 1.0})
@@ -278,12 +281,13 @@ func _flag_and_rematch(main) -> void:
 	main.clock.flagged.emit(main.human)
 	assert_true(main.board_view.game.is_over(), "the flag ended the game")
 	_key(main, KEY_SPACE)
+	await _wait_start(main)
 	assert_eq(main.human, "b", "Space started the rematch")
 
 
 func test_a_main_rematch_after_a_flag_closes_the_open_promotion_picker():
 	var waits := ManualWaits.new()
-	var main = _session(waits)
+	var main = await _session(waits)
 	await _laid_out(main)
 	var replies := ["b7b5", "a7a6", "c8b7", "b8c6"]
 	for i in replies.size():
@@ -296,7 +300,7 @@ func test_a_main_rematch_after_a_flag_closes_the_open_promotion_picker():
 	var picker = main.board_view._picker
 	assert_true(picker.visible, "the picker is open")
 	assert_eq(picker.get_child_count(), 4, "with its four buttons")
-	_flag_and_rematch(main)
+	await _flag_and_rematch(main)
 	assert_true(not picker.visible, "no picker over the new game")
 	assert_eq(main.board_view._promoting, "", "no promotion pending")
 	await Engine.get_main_loop().process_frame
@@ -306,11 +310,11 @@ func test_a_main_rematch_after_a_flag_closes_the_open_promotion_picker():
 
 func test_a_main_rematch_after_a_flag_drops_the_held_piece():
 	var waits := ManualWaits.new()
-	var main = _session(waits)
+	var main = await _session(waits)
 	await _laid_out(main)
 	_mouse_on(main, true, "e2")
 	assert_eq(main.board_view._drag_from, "e2", "e2 is held")
-	_flag_and_rematch(main)
+	await _flag_and_rematch(main)
 	assert_eq(main.board_view._drag_from, "", "nothing held in the new game")
 	assert_eq(main.board_view._held_moves, PackedStringArray(), "no targets from the old game")
 	main.uci.policy_ready.emit({"e2e4": 1.0})
@@ -323,12 +327,12 @@ func test_a_main_rematch_after_a_flag_drops_the_held_piece():
 
 func test_a_main_rematch_kills_the_old_snap_back():
 	var waits := ManualWaits.new()
-	var main = _session(waits)
+	var main = await _session(waits)
 	await _laid_out(main)
 	_mouse_on(main, true, "e2")
 	_mouse_on(main, false, "e5")
 	assert_true(main.board_view._snapping, "e2 is snapping back")
-	_flag_and_rematch(main)
+	await _flag_and_rematch(main)
 	main.uci.policy_ready.emit({"e2e4": 1.0})
 	_finish(waits, 0)
 	_mouse_on(main, true, "e7")
@@ -340,13 +344,13 @@ func test_a_main_rematch_kills_the_old_snap_back():
 
 func test_two_rematches_drop_a_stale_white_move_legal_in_the_current_game():
 	var waits := ManualWaits.new()
-	var main = _session(waits)
+	var main = await _session(waits)
 	assert_true(main.board_view.play("a2a3"))
 	main.uci.policy_ready.emit({"a2a3": 1.0})
 	main.uci.policy_ready.emit({"a7a6": 1.0})
-	_resign_and_rematch(main)
+	await _resign_and_rematch(main)
 	main.uci.policy_ready.emit({"d2d4": 1.0})
-	_resign_and_rematch(main)
+	await _resign_and_rematch(main)
 	assert_eq(main.human, "w", "two rematches restore the original colours")
 	assert_eq(main.settings, SETTINGS, "the other settings survive both rematches")
 	assert_eq(waits.pending.size(), 2, "no new Maia request on the human's first turn")
@@ -363,7 +367,7 @@ func test_two_rematches_drop_a_stale_white_move_legal_in_the_current_game():
 
 func test_resign_button_shares_the_two_second_window_with_escape():
 	for sequence in ["click_click", "click_escape", "escape_click", "expired_click"]:
-		var main = _session(ManualWaits.new())
+		var main = await _session(ManualWaits.new())
 		var button = main.get_node_or_null("Layout/Side/Actions/ResignButton")
 		assert_true(button != null, "resign button exists")
 		if button == null:
@@ -396,20 +400,20 @@ func test_resign_button_shares_the_two_second_window_with_escape():
 
 
 func test_resign_button_disabled_in_setup_and_after_engine_stops():
-	var main = _session(ManualWaits.new())
+	var main = await _session(ManualWaits.new())
 	var button = main.get_node_or_null("Layout/Side/Actions/ResignButton")
 	assert_true(button != null, "resign button exists")
 	if button:
 		main._show_setup()
 		assert_true(button.disabled, "disabled in setup")
-		main._start(SETTINGS.duplicate())
+		await main._start(SETTINGS.duplicate())
 		main._on_engine_stopped()
 		assert_true(button.disabled, "disabled after engine stops")
 	main.free()
 
 
 func test_settings_blocks_focused_resign_button_from_space():
-	var main = _session(ManualWaits.new())
+	var main = await _session(ManualWaits.new())
 	await Engine.get_main_loop().process_frame
 	await Engine.get_main_loop().process_frame
 	var viewport = main.get_viewport()
@@ -433,7 +437,7 @@ func test_settings_blocks_focused_resign_button_from_space():
 
 func test_draw_offer_accepted_on_reply_without_playing_it():
 	var waits := ManualWaits.new()
-	var main = _session(waits)
+	var main = await _session(waits)
 	var button = main.get_node_or_null("Layout/Side/Actions/DrawButton")
 	assert_true(button != null, "draw offer button exists")
 	if button == null:
@@ -472,7 +476,7 @@ func test_draw_offer_accepted_on_reply_without_playing_it():
 
 func test_declined_offer_reenables_only_after_ten_human_moves():
 	var waits := ManualWaits.new()
-	var main = _session(waits)
+	var main = await _session(waits)
 	var button = main.get_node("Layout/Side/Actions/DrawButton")
 	button.pressed.emit()
 	assert_true(button.disabled, "offer immediately disables button")
@@ -498,7 +502,7 @@ func test_declined_offer_reenables_only_after_ten_human_moves():
 
 
 func test_draw_offer_does_not_pass_through_settings_and_resets_on_rematch():
-	var main = _session(ManualWaits.new())
+	var main = await _session(ManualWaits.new())
 	var button = main.get_node("Layout/Side/Actions/DrawButton")
 	main.settings_screen.get_node("Panel").show()
 	button.pressed.emit()
@@ -506,7 +510,7 @@ func test_draw_offer_does_not_pass_through_settings_and_resets_on_rematch():
 	main.settings_screen.get_node("Panel").hide()
 	button.pressed.emit()
 	assert_true(button.disabled)
-	_resign_and_rematch(main)
+	await _resign_and_rematch(main)
 	assert_true(not button.disabled, "new game resets cooldown")
 	main._set_focus(true)
 	assert_true(not button.is_visible_in_tree(), "focus mode hides actions")
@@ -515,7 +519,7 @@ func test_draw_offer_does_not_pass_through_settings_and_resets_on_rematch():
 	main.free()
 
 func test_match_score_follows_players_and_resets():
-	var main = _session(ManualWaits.new())
+	var main = await _session(ManualWaits.new())
 	var white = main.get_node_or_null("Layout/Side/WhiteClockRow/Score")
 	var black = main.get_node_or_null("Layout/Side/BlackClockRow/Score")
 	assert_true(white != null and black != null, "score boxes exist")
@@ -530,6 +534,7 @@ func test_match_score_follows_players_and_resets():
 	if score:
 		assert_eq(score.text, "You 1 – 0 Maia 1700")
 	_key(main, KEY_SPACE)
+	await _wait_start(main)
 	assert_true(white.visible and black.visible, "rematch shows boxes")
 	assert_eq(black.text, "1", "human score follows black")
 	assert_eq(white.text, "0", "Maia follows white")
@@ -543,22 +548,23 @@ func test_match_score_follows_players_and_resets():
 	assert_eq(black.text, "1½", "human score remains after closing panel")
 	assert_eq(white.text, "½", "Maia score remains after closing panel")
 	main.board_view.get_node("GameOver/Panel/Content/Rematch").pressed.emit()
+	await _wait_start(main)
 	assert_eq(white.text, "1½")
 	assert_eq(black.text, "½")
 	main._show_setup()
-	main._start(SETTINGS.duplicate())
+	await main._start(SETTINGS.duplicate())
 	assert_true(not white.visible and not black.visible, "New game resets score")
 	main.board_view.game.resign("b")
 	main._show_result()
 	var changed = Main.rematch(main.settings)
 	changed.level = "maia-1500"
-	main._start(changed)
+	await main._start(changed)
 	assert_true(not white.visible and not black.visible, "changed level resets score")
 	main.free()
 
 
 func test_match_score_respects_focus_mode():
-	var main = _session(ManualWaits.new())
+	var main = await _session(ManualWaits.new())
 	var white = main.white_score
 	var black = main.black_score
 	_key(main, KEY_F11)
@@ -567,6 +573,7 @@ func test_match_score_respects_focus_mode():
 	main.board_view.game.resign("b")
 	main._show_result()
 	_key(main, KEY_SPACE)
+	await _wait_start(main)
 	_key(main, KEY_F11)
 	assert_true(not white.visible and not black.visible, "focus hides rematch boxes")
 	_key(main, KEY_F11)
@@ -575,14 +582,16 @@ func test_match_score_respects_focus_mode():
 	main._show_result()
 	_key(main, KEY_F11)
 	_key(main, KEY_SPACE)
+	await _wait_start(main)
 	assert_true(not white.visible and not black.visible, "rematch started in focus hides boxes")
 	_key(main, KEY_F11)
 	assert_true(white.visible and black.visible, "leaving focus restores new rematch boxes")
 	main.free()
 
 
+
 func test_searching_waits_for_the_net_before_starting_the_clock():
-	var main = _session(ManualWaits.new(), false)
+	var main = await _session(ManualWaits.new(), false)
 	main.uci.hold_level = true
 	main._start(SETTINGS.duplicate())
 	var screen = main.get_node_or_null("Searching")
@@ -602,4 +611,144 @@ func test_searching_waits_for_the_net_before_starting_the_clock():
 		await Engine.get_main_loop().process_frame
 	assert_true(not screen.visible, "readiness closes the screen")
 	assert_true(main.clock != null, "only now does the clock exist")
+	main.free()
+
+
+# Starts now cross a real asynchronous searching screen.
+func _wait_start(main) -> void:
+	while main._starting:
+		await Engine.get_main_loop().process_frame
+
+
+func test_searching_fast_quick_custom_and_rematch_last_half_a_second():
+	var main = await _session(ManualWaits.new(), false)
+	for route in ["quick", "custom", "rematch"]:
+		if route == "custom":
+			main._show_setup()
+		elif route == "rematch":
+			main.board_view.game.resign(main.human)
+			main._show_result()
+		var old_game = main.board_view.game
+		var old_clock = main.clock
+		var started_at := Time.get_ticks_msec()
+		match route:
+			"quick": main.get_node("Home/Center/Form/Quick/ThreeTwo").pressed.emit()
+			"custom": main.setup.started.emit(SETTINGS.duplicate())
+			"rematch": main.review.rematch_requested.emit()
+		assert_true(main.searching.visible, route + " shows searching")
+		assert_eq(main.searching.get_node("Center/Content/Status").text, "Preparing game\u2026")
+		assert_eq(main.searching.get_node("Center/Content/Match").text,
+				"3+2  \u00b7  Maia " + ("1500" if route == "quick" else "1700"))
+		await Engine.get_main_loop().create_timer(0.1).timeout
+		assert_true(main.searching.visible, "fast work still waits for the minimum")
+		assert_true(main.board_view.game == old_game, "no new game while searching")
+		assert_true(main.clock == old_clock, "no new clock while searching")
+		await _wait_start(main)
+		assert_true(Time.get_ticks_msec() - started_at >= 500, "minimum is 0.5 seconds")
+		assert_true(not main.searching.visible)
+		assert_true(main.board_view.game != old_game and main.clock != null)
+	main.free()
+
+
+class SearchAnalysis extends RefCounted:
+	signal finished(success: bool, error: String)
+	signal progress(done: int, total: int)
+	var cancelling := false
+
+	func start(_path: String, _maximum: bool) -> bool:
+		return true
+
+	func cancel() -> void:
+		cancelling = true
+
+
+func _queued_search_session():
+	var runner := SearchAnalysis.new()
+	var queue_file := "user://test_searching_queue_%d.cfg" % Time.get_ticks_usec()
+	var queue = Main.AnalysisQueue.new(runner, queue_file)
+	var main = await _session(ManualWaits.new(), false, queue)
+	main.tree_exiting.connect(func(): DirAccess.remove_absolute(queue_file))
+	DirAccess.make_dir_recursive_absolute(main.history._root)
+	var path: String = main.history._root.path_join("queued.pgn")
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	file.store_string("1. e4 *")
+	file.close()
+	queue.enqueue(path)
+	return {"main": main, "runner": runner, "path": path}
+
+
+func test_searching_pauses_analysis_before_loading_the_net():
+	var fixture = await _queued_search_session()
+	var main = fixture.main
+	main.uci.hold_level = true
+	main._start(SETTINGS.duplicate())
+	assert_eq(main.searching.get_node("Center/Content/Status").text, "Pausing analysis\u2026")
+	while not fixture.runner.cancelling:
+		await Engine.get_main_loop().process_frame
+	assert_eq(main.clock, null)
+	assert_eq(main.searching.get_node("Center/Content/Status").text, "Pausing analysis\u2026")
+	fixture.runner.finished.emit(false, "cancelled")
+	await Engine.get_main_loop().process_frame
+	await Engine.get_main_loop().process_frame
+	assert_eq(main.searching.get_node("Center/Content/Status").text, "Loading Maia 1700\u2026")
+	main.uci.level_ready.emit()
+	await _wait_start(main)
+	assert_eq(main.analysis_queue.current(), "", "queue stays paused during play")
+	main._show_home()
+	assert_eq(main.analysis_queue.current(), fixture.path, "queue resumes on Home")
+	main.free()
+
+
+func test_searching_engine_stop_during_net_or_minimum_returns_home():
+	for hold in [true, false]:
+		var main = await _session(ManualWaits.new(), false)
+		main.uci.hold_level = hold
+		main._start(SETTINGS.duplicate())
+		main.uci.error = "Maia stopped during start"
+		main.uci.stopped.emit()
+		await _wait_start(main)
+		assert_true(not main.searching.visible, "failure closes searching")
+		assert_eq(main.clock, null)
+		assert_eq(main.uci.requests.size(), 0)
+		assert_true(main.get_node("Home").visible)
+		assert_eq(main.get_node("Home/Center/Form/Missing").text, "Maia stopped during start")
+		main.uci.level_ready.emit()
+		assert_eq(main.clock, null, "late readyok cannot start a failed game")
+		main.free()
+
+
+func test_searching_invalid_selection_and_repertoire_close_with_error():
+	for mode in ["Catalog", "My repertoire"]:
+		var main = await _session(ManualWaits.new(), false)
+		main.setup.book.selection_dir = main.history._root.path_join("openings")
+		main.setup.repertoire.storage_dir = main.history._root.path_join("repertoires")
+		var choice := SETTINGS.duplicate()
+		choice.opening = mode
+		choice.selection = "missing"
+		choice.repertoire = "missing" if mode == "My repertoire" else ""
+		await main._start(choice)
+		assert_true(not main.searching.visible)
+		assert_true(main.setup.visible)
+		assert_true(main.setup.get_node("Center/Form/Missing").visible)
+		assert_true(not main.setup.get_node("Center/Form/Missing").text.is_empty())
+		assert_eq(main.clock, null)
+		assert_eq(main.uci.requests.size(), 0)
+		await main._start(SETTINGS.duplicate())
+		assert_true(main.clock != null, "valid retry succeeds")
+		main.free()
+
+
+func test_searching_engine_stop_before_analysis_pause_keeps_queue_resumed():
+	var fixture = await _queued_search_session()
+	var main = fixture.main
+	main._start(SETTINGS.duplicate())
+	main.uci.error = "Maia stopped while pausing"
+	main.uci.stopped.emit()
+	await Engine.get_main_loop().process_frame
+	# Finish any cancellation that raced with the engine failure.
+	fixture.runner.finished.emit(false, "cancelled")
+	await _wait_start(main)
+	assert_true(not main.searching.visible)
+	assert_true(main.get_node("Home").visible)
+	assert_eq(main.analysis_queue.current(), fixture.path, "Home keeps analysis running after failure")
 	main.free()

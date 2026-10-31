@@ -58,7 +58,7 @@ class HeldEngine extends "res://engine/uci.gd":
 
 
 	func set_level(_net_path: String) -> void:
-		pass
+		level_ready.emit()
 
 
 	func request_policy(_fen: String, _moves: PackedStringArray) -> void:
@@ -93,7 +93,7 @@ func _session(folder: String, time: FakeTime, settings := SETTINGS):
 	Engine.get_main_loop().root.add_child(main)
 	main.board_view.slide_seconds = 0
 	main.sound_player.select_theme("__history_silent__")
-	main._start(settings.duplicate())
+	await main._start(settings.duplicate())
 	main.clock = Clock.new(settings.control, time.ms)
 	main.clock.flagged.connect(main._on_flagged)
 	main.maia.clock = main.clock
@@ -183,7 +183,7 @@ func test_main_recovers_corrupt_stats_once_and_reports_them_in_the_review():
 			HistoryStorage.clean(folder)
 			continue
 		var time := FakeTime.new()
-		var main = _session(folder, time)
+		var main = await _session(folder, time)
 		_key(main, KEY_ESCAPE)
 		_key(main, KEY_ESCAPE)
 		main._show_result()
@@ -261,7 +261,7 @@ func test_stats_survive_reload_and_separate_level_control_and_human_colour():
 func test_main_saves_mate_once_with_final_increment_and_resets_history_on_rematch():
 	var folder := _folder()
 	var time := FakeTime.new()
-	var main = _session(folder, time)
+	var main = await _session(folder, time)
 	assert_true(main.board_view.play("f2f3"))
 	main._on_maia_move("e7e5")
 	time.now = 250
@@ -276,6 +276,7 @@ func test_main_saves_mate_once_with_final_increment_and_resets_history_on_rematc
 		assert_eq(games[0].moves.map(func(move): return move.clock_ms), [180000, 180000, 181750, 181000])
 	assert_eq(History.new(folder).stats("maia-1500", "3+2").losses, 1)
 	_key(main, KEY_SPACE)
+	await _wait_start(main)
 	main._on_maia_move("e2e4")
 	_key(main, KEY_ESCAPE)
 	_key(main, KEY_ESCAPE)
@@ -312,7 +313,7 @@ func test_headers_use_actual_level_colour_control_and_only_a_known_opening():
 func test_main_saves_a_clock_flag_once_and_keeps_move_time_snapshots():
 	var folder := _folder()
 	var time := FakeTime.new()
-	var main = _session(folder, time)
+	var main = await _session(folder, time)
 	assert_true(main.board_view.play("e2e4"))
 	main._on_maia_move("e7e5")
 	time.now = 180000
@@ -333,7 +334,7 @@ func test_main_saves_a_clock_flag_once_and_keeps_move_time_snapshots():
 func test_main_saves_a_claimed_draw_once():
 	var folder := _folder()
 	var time := FakeTime.new()
-	var main = _session(folder, time)
+	var main = await _session(folder, time)
 	main.board_view.game.auto_claim = false
 	for move in ["g1f3", "g8f6", "f3g1", "f6g8", "g1f3", "g8f6", "f3g1", "f6g8"]:
 		assert_true(main.board_view.play(move))
@@ -355,7 +356,7 @@ func test_main_records_first_and_later_premoves_after_exactly_one_charge():
 	var time := FakeTime.new()
 	var settings := SETTINGS.duplicate()
 	settings.colour = "b"
-	var main = _session(folder, time, settings)
+	var main = await _session(folder, time, settings)
 	var board = main.board_view
 	assert_true(board.premoves.enqueue(board.game.board, "g8f6"))
 	assert_true(board.premoves.enqueue(board.game.board, "f6g4"))
@@ -376,7 +377,7 @@ func test_main_waits_for_the_last_snapshot_when_move_accounting_emits_a_flag():
 	for final_move in ["g1f3", "d8h4"]:
 		var folder := _folder()
 		var time := FakeTime.new()
-		var main = _session(folder, time)
+		var main = await _session(folder, time)
 		if final_move == "g1f3":
 			main.board_view.play("e2e4")
 			main._on_maia_move("e7e5")
@@ -402,7 +403,7 @@ func test_main_reports_failed_game_and_stats_writes_in_the_result_ui():
 	for blocked in ["games", "stats.cfg"]:
 		var folder := _folder()
 		var time := FakeTime.new()
-		var main = _session(folder, time)
+		var main = await _session(folder, time)
 		DirAccess.make_dir_recursive_absolute(folder)
 		if blocked == "games":
 			var file := FileAccess.open(folder.path_join(blocked), FileAccess.WRITE)
@@ -418,3 +419,9 @@ func test_main_reports_failed_game_and_stats_writes_in_the_result_ui():
 		main.free()
 		DirAccess.remove_absolute(folder.path_join(blocked))
 		HistoryStorage.clean(folder)
+
+
+# Starts now cross a real asynchronous searching screen.
+func _wait_start(main) -> void:
+	while main._starting:
+		await Engine.get_main_loop().process_frame

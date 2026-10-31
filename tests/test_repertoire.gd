@@ -260,7 +260,7 @@ class HeldEngine extends "res://engine/uci.gd":
 
 
 	func set_level(_path: String) -> void:
-		pass
+		level_ready.emit()
 
 
 	func request_policy(_fen: String, moves: PackedStringArray) -> void:
@@ -322,19 +322,19 @@ func test_main_uses_repertoire_for_maia_catalog_for_history_and_preserves_rematc
 	var game_files := DirAccess.get_files_at(folder.path_join("games"))
 	var parsed = load("res://core/pgn.gd").parse(FileAccess.get_file_as_string(folder.path_join("games").path_join(game_files[0])))
 	assert_eq(parsed.games[0].headers.Opening, "King Pawn")
-	main._start(main.rematch(main.settings))
+	await main._start(main.rematch(main.settings))
 	assert_eq(main.human, "b", "existing rematch swaps human side")
 	assert_true(main.maia.target_id != first_target, "least-practiced remaining path")
 	assert_eq(main.maia.book.entries[0].colour, "w", "Maia is now White")
 	assert_eq(main.maia.book.weights(main.board_view.game.board, 0).e2e4, 20.0)
 	assert_eq(main.uci.requests[-1], PackedStringArray(), "Maia requests White's first move")
 	assert_eq(setup.repertoire.colour, "w", "imported colour unchanged by rematch")
-	main._start({"colour": "w", "level": "maia-1500", "control": "3+2", "opening": "Catalog", "selection": "Catalog"})
+	await main._start({"colour": "w", "level": "maia-1500", "control": "3+2", "opening": "Catalog", "selection": "Catalog"})
 	assert_true(main.maia.book == setup.book)
 	assert_true(main.maia.target_id.begins_with("A00:"))
 	assert_eq(main.maia.book.weights(main.board_view.game.board, 0).d2d4, 20.0)
 	assert_eq(main.maia.book.weights(main.board_view.game.board, 0).e2e4, 1.0)
-	main._start({"colour": "w", "level": "maia-1500", "control": "3+2", "opening": "Free"})
+	await main._start({"colour": "w", "level": "maia-1500", "control": "3+2", "opening": "Free"})
 	assert_eq(main.maia.target_id, "")
 	main.free()
 	_clean(folder)
@@ -356,12 +356,14 @@ func test_failed_repertoire_load_does_not_start_clock_or_policy_and_can_retry():
 	file.store_string("{invalid")
 	file.close()
 	main.setup.started.emit(settings)
+	await _wait_start(main)
 	assert_eq(main.clock, null, "no game starts after invalid saved repertoire")
 	assert_eq(main.uci.requests.size(), 0)
 	assert_true(main.setup.visible)
 	assert_true("JSON" in main.setup.get_node("Center/Form/Missing").text)
 	assert_eq(main.setup.repertoire.import_pgn(FileAccess.get_file_as_string(STUDY), "w", "Study"), "")
 	main.setup.started.emit(settings)
+	await _wait_start(main)
 	assert_true(main.clock != null, "successful retry starts a fresh game")
 	assert_true(main.maia.target_id.begins_with("repertoire:"))
 	main.free()
@@ -660,3 +662,9 @@ func test_editor_right_click_refreshes_tree_and_board():
 	root.gui_embed_subwindows = old_embed
 	root.size = old_size
 	_clean(folder)
+
+
+# Starts now cross a real asynchronous searching screen.
+func _wait_start(main) -> void:
+	while main._starting:
+		await Engine.get_main_loop().process_frame
