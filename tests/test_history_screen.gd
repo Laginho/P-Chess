@@ -137,6 +137,33 @@ func test_history_review_uses_saved_repertoire_snapshot():
 	Storage.clean(folder)
 
 
+func test_catalog_finishing_refreshes_visible_thumbnails():
+	var folder := "user://history_catalog_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var main = MainScene.instantiate()
+	main.history = History.new(folder)
+	main.preferences = Settings.new(folder.path_join("settings.cfg"))
+	var book = main.get_node("Setup").book
+	book.load_tsv("eco\tname\tpgn\nA00\tFixture\t1. h3\n")
+	main.uci.free()
+	main.uci = HeldEngine.new()
+	main.maia = main.MaiaPlayer.new(main.uci)
+	var game = Game.new()
+	for move in ["e2e4", "e7e5", "g1f3", "b8c6"]:
+		game.play(move)
+	game.resign("w")
+	main.history.save(game, [60000, 60000, 60000, 60000], {"colour": "w", "level": "maia-1500", "control": "1+0"})
+	Engine.get_main_loop().root.add_child(main)
+	main.get_node("Setup/Center/Form/History").pressed.emit()
+	var list = main.get_node("HistoryScreen/Margin/Content/Cards/List")
+	assert_eq(list.get_child(0).get_child(0).game.moves.size(), 4)
+	book.load_tsv("eco\tname\tpgn\nC20\tKing's Pawn\t1. e4 e5\n")
+	main.get_node("Setup/OpeningPicker").catalog_ready.emit("")
+	assert_eq(list.get_child(0).get_child(0).game.moves.size(), 2, "catalog completion refreshes the thumbnail")
+	main.free()
+	Storage.clean(folder)
+
+
 func test_tabs_and_won_on_time_card():
 	var scene = load("res://ui/history_screen.tscn")
 	assert_true(scene != null, "history screen exists")
