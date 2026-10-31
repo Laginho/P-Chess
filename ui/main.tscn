@@ -6,6 +6,7 @@
 [ext_resource type="PackedScene" path="res://ui/setup.tscn" id="4"]
 [ext_resource type="PackedScene" path="res://ui/clock.tscn" id="5"]
 [ext_resource type="Script" path="res://ui/resize_grip.gd" id="6"]
+[ext_resource type="PackedScene" path="res://ui/home.tscn" id="7"]
 
 [sub_resource type="StyleBoxFlat" id="ScoreBox"]
 bg_color = Color(0.2, 0.2, 0.2, 1)
@@ -150,4 +151,8 @@ size_flags_vertical = 4
 theme_override_styles/normal = SubResource("ScoreBox")
 
 [node name="Setup" parent="." instance=ExtResource("4")]
+visible = false
+layout_mode = 1
+
+[node name="Home" parent="." instance=ExtResource("7")]
 layout_mode = 1

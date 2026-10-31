@@ -121,7 +121,7 @@ func _session(time: FakeTime):
 	main.uci.free()
 	main.uci = HeldEngine.new()
 	main.maia = main.MaiaPlayer.new(main.uci)
-	main.preferences = main.Settings.new("res://tests/fixtures/no_review_settings.cfg")
+	main.preferences = main.Settings.new(folder.path_join("settings.cfg"))
 	Engine.get_main_loop().root.add_child(main)
 	main.board_view.slide_seconds = 0
 	main.sound_player.select_theme("__review_silent__")
@@ -331,11 +331,11 @@ func test_review_returns_to_setup_and_starts_a_fresh_game():
 		main.free()
 		return
 	back.pressed.emit()
-	assert_true(main.setup.visible)
+	assert_true(main.get_node("Home").visible)
 	assert_true(not review.visible)
 	assert_true(main.clock == null, "setup has no active game")
 	_key(main, KEY_SPACE)
-	assert_true(main.setup.visible, "Space on setup does not silently start a rematch")
+	assert_true(main.get_node("Home").visible, "Space on Home does not silently start a rematch")
 	var next := SETTINGS.duplicate()
 	next.control = "1+0"
 	main.setup.started.emit(next)

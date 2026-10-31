@@ -1,6 +1,6 @@
 extends Control
 
-# A game against Maia (BOT-004): the setup screen, the board, the clocks (CLOCK-001), the move list
+# A game against Maia (BOT-004): Home, Custom game, the board, the clocks (CLOCK-001), the move list
 # and the post-game review (HIST-002), then the hotkeys (UI-004, §9.2): Space rematch,
 # Esc Esc resign, F11 focus.
 # The settings screen (UI-005, §10) sits on top, and each setting applies the moment it changes.
@@ -143,7 +143,16 @@ func _ready() -> void:
 	resign_button.pressed.connect(_resign)
 	draw_button.pressed.connect(_offer_draw)
 	draw_notice_timer.timeout.connect(draw_notice.hide)
-	setup.started.connect(_start)
+	setup.started.connect(func(choice):
+		var saved: Dictionary = choice.duplicate()
+		saved.colour_choice = ["w", "b", "random"][setup.get_node("Center/Form/Colour").selected]
+		_start(saved))
+	$Home.configure(preferences)
+	$Home.started.connect(_start)
+	$Home.custom_requested.connect(_show_setup)
+	$Home.history_requested.connect(_show_history)
+	$Home.settings_requested.connect(func(): settings_screen.get_node("Panel").show())
+	setup.get_node("Center/Form/Back").pressed.connect(_show_home)
 	setup.get_node("OpeningPicker").catalog_ready.connect(func(_error):
 		if history_screen.visible:
 			history.book = setup.book
@@ -163,19 +172,20 @@ func _ready() -> void:
 	add_child(settings_screen)
 	add_child(review)
 	add_child(history_screen)
-	setup.get_node("Center/Form/History").pressed.connect(_show_history)
-	history_screen.back_requested.connect(_show_setup)
+	history_screen.back_requested.connect(_show_home)
 	history_screen.review_requested.connect(_review_history_game)
 	review.back_history_requested.connect(_show_history)
 	review.rematch_requested.connect(func(): _start(rematch(settings)))
-	review.setup_requested.connect(_show_setup)
+	review.setup_requested.connect(_show_home)
 	preferences.changed.connect(_apply)
 	for key in Settings.DEFAULTS:
 		_apply(key, preferences.get_value(key))
 	if not uci.start():
 		setup.show_missing(uci.error)
+		$Home.show_missing(uci.error)
 	elif not FileAccess.file_exists(MaiaPlayer.net_path(setup.LEVELS[0])):
 		setup.show_missing("The Maia nets are missing from engine/weights. Run scripts/fetch-engine.ps1 to download them.")
+		$Home.show_missing("The Maia nets are missing from engine/weights.")
 
 
 func _process(_delta: float) -> void:
@@ -192,9 +202,9 @@ func _input(_event: InputEvent) -> void:
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
-	if not event.is_pressed() or event.is_echo():
+	if not event.is_pressed() or event.is_echo() or clock == null:
 		return
-	# No clock means no game has started: the setup screen is up.
+	# Home and Custom game have no clock; game hotkeys apply only after a game starts.
 	var in_game: bool = clock != null and not board_view.game.is_over()
 	match event.keycode:
 		KEY_F:
@@ -226,6 +236,7 @@ func _start(new_settings: Dictionary) -> void:
 	if _starting or not uci.error.is_empty():
 		return
 	_starting = true
+	$Home.hide()
 	analysis_queue.pause()
 	setup.hide()
 	setup.get_node("OpeningPicker").hide()
@@ -271,6 +282,10 @@ func _start(new_settings: Dictionary) -> void:
 		status.show()
 		return
 	setup.get_node("Center/Form/Missing").hide()
+	if new_settings.has("colour_choice"):
+		preferences.save_last_game(new_settings)
+		new_settings = new_settings.duplicate()
+		new_settings.erase("colour_choice")
 	_move_clocks.clear()
 	_history_saved = false
 	if settings.is_empty() or new_settings != rematch(settings) or not board_view.game.is_over():
@@ -318,6 +333,7 @@ func _start(new_settings: Dictionary) -> void:
 
 
 func _show_setup() -> void:
+	$Home.hide()
 	analysis_queue.resume()
 	_reset_match()
 	draw_button.disabled = true
@@ -334,9 +350,18 @@ func _show_setup() -> void:
 	setup.show()
 
 
+func _show_home() -> void:
+	_show_setup()
+	_set_focus(false)
+	setup.hide()
+	$Home.sync_level()
+	$Home.show()
+
+
 func _show_history() -> void:
 	review.hide()
 	setup.hide()
+	$Home.hide()
 	history.book = setup.book if setup.get_node("OpeningPicker")._worker == null else null
 	history_screen.present(history, preferences)
 
@@ -371,8 +396,9 @@ func _on_engine_stopped() -> void:
 	board_view.mouse_filter = MOUSE_FILTER_IGNORE
 	claim_draw.disabled = true
 	resign_key = ResignKey.new(Time.get_ticks_msec)
-	_show_setup()
+	_show_home()
 	setup.show_missing(uci.error)
+	$Home.show_missing(uci.error)
 
 
 # One setting to whatever reads it; the next move, sound or game picks it up.

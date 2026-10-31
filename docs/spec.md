@@ -219,7 +219,7 @@ All attributions go in `docs/THIRD_PARTY.md`.
 
 ### 9.1 Setup and rematch
 
-- The setup screen picks your colour (white / black / random), the time control, the Maia level and the opening mode with its selection.
+- Home offers quick play, Custom game, History, Settings and Quit. Quick play uses the last level, colour choice and opening mode; initially Maia 1500, random and Free. Custom game picks colour, time control, level and opening mode with its selection, and saves those choices for quick play.
 - `Space` starts a rematch with the same settings and the colours swapped.
 - Match score: consecutive rematches form a match. The game-over panel (§9.3) shows the running score between the two players (for example "2 – 1"), and from the first rematch onwards the game side panel shows each player's score in a small box beside their clock. A win counts 1 and a draw ½ to each side. The score resets on New game, on any settings change, when the engine stops, or when you return to Home. It is not saved across launches.
 

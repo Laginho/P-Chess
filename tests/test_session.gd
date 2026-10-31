@@ -194,7 +194,7 @@ func test_game_over_panel_actions():
 				"Rematch":
 					assert_eq(main.human, "b", "Rematch swaps colours")
 				"NewGame":
-					assert_true(main.setup.visible, "New game opens setup")
+					assert_true(main.get_node("Home").visible, "New game opens Home")
 				_:
 					assert_true(not panel.visible, "the final board remains visible")
 					var review_button = main.get_node_or_null("Layout/Side/ReviewButton")

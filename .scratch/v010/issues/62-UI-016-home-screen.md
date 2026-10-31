@@ -1,5 +1,5 @@
 # UI-016: The home screen
-Stage: to-implement
+Stage: reviewing
 Blocked by: HIST-004
 Review: agent
 Difficulty: normal
@@ -44,3 +44,15 @@ The app opens on a home screen (§15.8): three quick-play buttons, a level selec
 ## Comments
 
 - 2026-10-30 Written from spec §15.8 and the design brief (screen 1). Decided while slicing: New game returns to Home, since setup is now one of Home's options.
+
+- 2026-10-31 Stage 2: implemented Home, quick play and persistent custom choices; wired History, Settings, Quit, Custom game, New game and engine errors. The initial Home, default quick play, custom return and focus-mode tests were red before their respective changes. The catalog reuse test was also checked against a mutation forcing Free (failed as intended). Updated replaced navigation assertions in `test_session.gd`, `test_review.gd` and `test_history_screen.gd`; the latter follows the History button moved from Setup to Home. The first full gate found a corrupt-settings regression (370 passed, 1 failed); the existing corrupt-file test passed after the fix. The final gate on `2e9e8fa` passed 373 tests, 0 failed, exit 0; log: `C:\Users\bruno\AppData\Local\Temp\p-chess-ui016-gate.log`.
+
+- During test development a fixture wrote eight simulated games and wins to the default local history. The eight matching PGNs and corresponding statistics were restored after backup to `C:\Users\bruno\AppData\Local\Temp\p-chess-ui016-history-backup`; the test now uses isolated history storage.
+
+- 2026-10-31 Stage 3: Standards and Spec reviews found no implementation defects in criteria 1-7. Corrected only stale comments describing the launch screen, game hotkeys and settings storage. The History test navigation replacement is permitted by the test-only Primary-file exception in `ticket-flow/stage2.md`.
+
+Acceptance: pending | Launch, quick-play 3+2, resign, choose New game, restart and verify the last level; inspect Home and keyboard navigation at the minimum window size. Headless tests do not establish manual UI or real-engine acceptance.
+
+Disclosure: pending | release | Manual Home layout, keyboard navigation and real-engine quick-play acceptance remain outstanding (verification above).
+
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\p-chess-ui016-gate.json

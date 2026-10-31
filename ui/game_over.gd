@@ -56,4 +56,4 @@ func _rematch() -> void:
 func _new_game() -> void:
 	hide()
 	review_button.hide()
-	main._show_setup()
+	main._show_home()
