@@ -309,6 +309,7 @@ func _session(folder: String, book, start_worker := Callable()):
 	var main = MainScene.instantiate()
 	main.history = History.new(folder)
 	main.preferences = Settings.new(folder.path_join("settings.cfg"))
+	main.preferences.set_value("player_name", "You")
 	book.selection_dir = folder.path_join("openings")
 	main.get_node("Setup").book = book
 	if start_worker.is_valid():

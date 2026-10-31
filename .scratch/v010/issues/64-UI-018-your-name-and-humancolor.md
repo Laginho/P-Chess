@@ -17,6 +17,9 @@ Difficulty: normal
   - tests/test_history.gd
   - tests/test_review.gd (test-only: exact-header assertions)
   - tests/test_settings.gd
+  - tests/test_book.gd (test-only: returning-player fixture for opening-picker interaction)
+  - tests/test_clock_input_order.gd (test-only: returning-player fixture for real input)
+  - tests/test_session.gd (test-only: returning-player fixture for real input)
   - docs/spec.md (§9.4, §15.8)
 
 #### What to build
@@ -45,3 +48,4 @@ The player has a name (§15.8). It is asked once, written into new games, and sh
 ## Comments
 
 - 2026-10-30 Written from spec §15.8 and the design brief (screen 2).
+- 2026-10-31 Stage 2: the first full gate (`%TEMP%/UI-018-gate.log`, exit 1; 385 passed, 10 failed) exposed pre-onboarding fixtures in `test_book`, `test_clock_input_order`, `test_review` and `test_session`. Their existing interaction scenarios now seed an isolated confirmed "You" name before Main enters the tree; assertions on retained behaviour are unchanged. The explicit settings-dialog test still covers the first launch. The exact-header tests in `test_pgn`, `test_history` and `test_review` were updated only to add `HumanColor`.

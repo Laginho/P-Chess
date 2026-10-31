@@ -122,6 +122,8 @@ func _session(time: FakeTime):
 	main.uci = HeldEngine.new()
 	main.maia = main.MaiaPlayer.new(main.uci)
 	main.preferences = main.Settings.new(folder.path_join("settings.cfg"))
+	DirAccess.make_dir_recursive_absolute(folder)
+	main.preferences.set_value("player_name", "You")
 	Engine.get_main_loop().root.add_child(main)
 	main.board_view.slide_seconds = 0
 	main.sound_player.select_theme("__review_silent__")
