@@ -52,6 +52,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_type_variation = &"ExtraBoldText"
 theme_override_font_sizes/font_size = 18
+text_overrun_behavior = 3
 
 [node name="Unsaved" type="Label" parent="Margin/Form/Content/Card/Panel/HeadingRow"]
 visible = false

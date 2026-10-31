@@ -47,6 +47,7 @@ func _refresh() -> void:
 		card.free()
 	_clear_lines()
 	$Margin/Form/Viewer/Lines/LineContent/LineHeading.text = ""
+	$Margin/Form/Viewer/Lines/LineContent/LineHeading.tooltip_text = ""
 	$Margin/Form/Viewer/Lines/LineContent/LineDetail.text = ""
 	_lines.clear()
 	_selection = ""
@@ -134,6 +135,7 @@ func _select_repertoire(index: int) -> void:
 	var error: String = repertoire.load_saved(_selection)
 	_clear_lines()
 	$Margin/Form/Viewer/Lines/LineContent/LineHeading.text = ""
+	$Margin/Form/Viewer/Lines/LineContent/LineHeading.tooltip_text = ""
 	$Margin/Form/Viewer/Lines/LineContent/LineDetail.text = ""
 	_lines.clear()
 	_line = -1
@@ -145,6 +147,7 @@ func _select_repertoire(index: int) -> void:
 	$Margin/Form/Buttons/Edit.disabled = false
 	_lines = repertoire.lines.duplicate(true)
 	$Margin/Form/Viewer/Lines/LineContent/LineHeading.text = _selection
+	$Margin/Form/Viewer/Lines/LineContent/LineHeading.tooltip_text = _selection
 	$Margin/Form/Viewer/Lines/LineContent/LineDetail.text = "As %s · %d %s" % ["White" if repertoire.colour == "w" else "Black", _lines.size(), "line" if _lines.size() == 1 else "lines"]
 	_board.flipped = repertoire.colour == "b"
 	_show_names()

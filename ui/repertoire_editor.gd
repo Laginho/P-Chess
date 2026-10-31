@@ -39,6 +39,7 @@ func present(source, name: String, line: int = -1) -> void:
 	path = source.lines[line].moves.duplicate() if line >= 0 else PackedStringArray()
 	board.flipped = source.colour == "b"
 	$Margin/Form/Content/Card/Panel/HeadingRow/Heading.text = ("● " if source.colour == "w" else "○ ") + name
+	$Margin/Form/Content/Card/Panel/HeadingRow/Heading.tooltip_text = name
 	status.text = ""
 	_refresh()
 	popup_centered(get_tree().root.size - Vector2i(64, 64))
