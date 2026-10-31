@@ -144,6 +144,25 @@ func test_editor_delete_button_remains_available_to_keyboard_focus():
 	_clean(folder)
 
 
+func test_selected_editor_move_keeps_enough_width_for_its_text():
+	var repertoire = _repertoire()
+	var folder := _folder()
+	repertoire.storage_dir = folder
+	assert_eq(repertoire.import_pgn("1. e4 e5 *", "w", "Study"), "")
+	var editor = load("res://ui/repertoire_editor.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(editor)
+	editor.present(repertoire, "Study", 0)
+	var move := _find_move(editor.find_child("Tree", true, false), PackedStringArray(["e2e4"]))
+	move.pressed.emit()
+	await Engine.get_main_loop().process_frame
+	await Engine.get_main_loop().process_frame
+	var text_width := move.get_theme_font("font").get_string_size(move.text, HORIZONTAL_ALIGNMENT_LEFT, -1, move.get_theme_font_size("font_size")).x
+	var needed := text_width + move.get_theme_stylebox("pressed").get_minimum_size().x
+	assert_true(move.size.x >= needed, "selected move text fits")
+	editor.free()
+	_clean(folder)
+
+
 func test_viewer_displays_opening_name_and_moves_on_separate_lines():
 	var setup = load("res://ui/setup.tscn").instantiate()
 	var folder := _folder()
