@@ -107,6 +107,23 @@ func test_editor_keeps_a_linear_line_at_one_indentation():
 	_clean(folder)
 
 
+func test_editor_numbers_a_line_that_starts_with_black():
+	var repertoire = _repertoire()
+	var folder := _folder()
+	repertoire.storage_dir = folder
+	var pgn := "[SetUp \"1\"]\n[FEN \"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1\"]\n1... e5 2. e4 *"
+	assert_eq(repertoire.import_pgn(pgn, "b", "Study"), "")
+	var editor = load("res://ui/repertoire_editor.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(editor)
+	editor.present(repertoire, "Study", 0)
+	var first := _find_move(editor.find_child("Tree", true, false), PackedStringArray(["e7e5"]))
+	assert_true(first != null)
+	if first != null:
+		assert_eq(first.text, "1...e5")
+	editor.free()
+	_clean(folder)
+
+
 func test_viewer_displays_opening_name_and_moves_on_separate_lines():
 	var setup = load("res://ui/setup.tscn").instantiate()
 	var folder := _folder()
