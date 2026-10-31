@@ -43,6 +43,8 @@ func capture() -> void:
   push_error("Captures need a graphical display, not --headless.")
   quit(1)
   return
+ # The real pointer would leave hover states and tooltips in the capture.
+ root.gui_disable_input = true
  root.gui_embed_subwindows = true
  root.size = Vector2i(width, height)
  var settings = load("res://core/settings.gd").new()
