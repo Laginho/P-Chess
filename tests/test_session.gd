@@ -589,6 +589,20 @@ func _push_key(viewport: Viewport, code: Key, ctrl := false, shift := false) -> 
 		viewport.push_input(event, true)
 
 
+func test_escape_closes_settings_from_spinbox():
+	var main = _session(ManualWaits.new())
+	await Engine.get_main_loop().process_frame
+	await Engine.get_main_loop().process_frame
+	var viewport = main.get_viewport()
+	_push_key(viewport, KEY_COMMA, true)
+	for i in 4:
+		_push_key(viewport, KEY_TAB)
+	_push_key(viewport, KEY_ESCAPE)
+	assert_true(not main.settings_screen.get_node("Panel").visible, "Esc closes Settings while editing a SpinBox")
+	assert_true(viewport.gui_get_focus_owner() == null, "closing releases focus")
+	main.free()
+
+
 func test_keyboard_settings_focus_and_post_game_input():
 	var main = _session(ManualWaits.new())
 	await Engine.get_main_loop().process_frame

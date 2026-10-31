@@ -1,5 +1,5 @@
 # UI-020: Keyboard access to the Settings screen
-Stage: to-implement
+Stage: implementing
 Status: needs-triage
 Blocked by: none
 Review: agent
