@@ -421,7 +421,7 @@ func _review_history_game(path: String, saved: Dictionary) -> void:
 	review.present(game, clocks, review_settings, history_screen._result_text(saved, colour),
 			setup.book.entries, snapshot.lines, not snapshot.lines.is_empty())
 	history_screen.hide()
-	var analysis_path := history._root.path_join("analysis").path_join(path.get_file() + ".json")
+	var analysis_path: String = history._root.path_join("analysis").path_join(path.get_file() + ".json")
 	review.present_history(path, analysis_path, saved.result == "1/2-1/2")
 
 
