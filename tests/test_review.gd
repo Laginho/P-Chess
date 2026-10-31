@@ -1,4 +1,4 @@
-extends "res://tests/run.gd".Test
+﻿extends "res://tests/run.gd".Test
 
 const Review = preload("res://ui/review.gd")
 const Game = preload("res://core/game.gd")
@@ -890,7 +890,7 @@ func test_history_review_uses_saved_time_control_and_legacy_fallback():
 	game.play("e2e4")
 	game.resign("b")
 	var saved = Pgn.finished_game(game, [180000], SETTINGS)
-	var path: String = main.history.folder.path_join("ui026-control.pgn")
+	var path: String = main.history.save(game, [180000], SETTINGS)
 	var file := FileAccess.open(path, FileAccess.WRITE)
 	file.store_string(Pgn.write(saved))
 	file.close()
