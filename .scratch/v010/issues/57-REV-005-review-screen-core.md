@@ -1,5 +1,5 @@
 # REV-005: The new review screen: board, eval bar and classified moves
-Stage: to-implement
+Stage: blocked
 Blocked by: REV-002, REV-003
 Review: human
 Difficulty: normal
@@ -44,3 +44,5 @@ The review becomes a chess.com-style game review (§15.6). The post-game panel's
 ## Comments
 
 - 2026-10-30 Written from spec §15.6 and the design brief (`docs/design-brief-v0.1.0.md`, screen 6). The time-spent column of the old review is not in §15.6 and goes.
+
+- 2026-10-30 Attempt 1 stopped to ask (its commits are on branch `recovery/asked/20261030-230636/REV-005`): **REV-005 está bloqueado** na branch `REV-005-review-screen-core`. O tabuleiro de revisão e a navegação pelas setas foram iniciados: o teste focado falhou antes da mudança e passou depois, com 10 testes aprovados. Os demais critérios e o gate completo ainda estão pendentes. /  / A análise chega em ordem inversa, mas a classificação `Miss` depende da classe da jogada anterior; a interface atual do classificador exige todas as posições. O proxy previsto pelo fluxo estava inacessível. A [skill ticket-flow](C:/Users/bruno/.agents/skills/ticket-flow/SKILL.md) determina nesse caso: “set `Stage: blocked` with the question under `## Comments`, commit, stop.” Registrei o bloqueio e preservei os commits. /  / Você aprova ampliar o escopo para adaptar `core/classification.gd` e seus testes à análise parcial, exibindo cada ícone somente quando houver dados suficientes para garantir sua classe? /  /
