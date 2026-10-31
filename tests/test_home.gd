@@ -204,3 +204,20 @@ func test_missing_engine_message_does_not_overlap_navigation_at_minimum_window()
 	var history: Button = home.get_node("Center/Form/History")
 	assert_true(message.get_global_rect().end.y <= history.get_global_rect().position.y, "engine guidance stays above navigation")
 	home.free()
+
+
+func test_profile_keeps_settings_available_after_opening_from_home():
+	var main = MainScene.instantiate()
+	var folder := "user://test_home_profile_%d" % Time.get_ticks_usec()
+	main.history = load("res://core/history.gd").new(folder)
+	main.uci.free()
+	main.uci = Session.HeldBridge.new()
+	main.maia = main.MaiaPlayer.new(main.uci)
+	main.preferences = main.Settings.new("res://tests/fixtures/no_session_settings.cfg")
+	Engine.get_main_loop().root.add_child(main)
+	await Engine.get_main_loop().process_frame
+	var home = main.get_node("Home")
+	home._show_profile()
+	assert_true(main.settings_screen.get_node("Open").visible, "Settings remains available in Profile")
+	main.free()
+	Session.HistoryStorage.clean(folder)
