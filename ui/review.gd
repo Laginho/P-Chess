@@ -547,7 +547,8 @@ func present(game, clocks: Array, settings: Dictionary, result_text: String,
 	_board_view.flipped = settings.colour == "b"
 	_update_player_labels()
 	_show_ply(_game_moves.size())
-	_result.text = result_text
+	var moves: int = (game.moves.size() + 1) / 2
+	_result.text = "%s ? %s ? %d %s" % [settings.get("control", ""), result_text, moves, "move" if moves == 1 else "moves"]
 	_moves.clear()
 	var root := _moves.create_item()
 	var board = Board.from_fen(Pgn.START)
