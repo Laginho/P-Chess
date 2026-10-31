@@ -1,5 +1,5 @@
 # UI-026: Review screen to the design
-Stage: blocked
+Stage: to-implement
 Blocked by: UI-021
 Review: human
 Difficulty: hard
@@ -46,3 +46,5 @@ Restyle the review to chess.com's layout as drawn in `docs/design/v0.1.0/png/Rev
 - 2026-10-31 Resume: continue from `UI-026-review-screen` at efc1d4b; its commits are the work so far. The recovery ref `refs/sweatshop-recovery/aa946201260b4eccbb7d7b7834b86b5d` is cleanup only (an untracked copy of `tests/test_review.gd`), ignore it. Put scratch copies and captures under `%TEMP%`, never inside the repo, so no untracked file is left. The stage has 240 min: do not end the turn at `implementing` with partial work. Either finish criteria 1-8 (what remains is the list in the efc1d4b comment), record the visual comparison against `docs/design/v0.1.0/png/Review*.png` and one gate log with its exit code, then hand off at `to-review`; or end `blocked` on a specific question.
 
 - 2026-10-31 Second reopen: foreman diagnosis required before retrying. Classify new defect, earlier review miss, contract gap, or review-induced churn; record cause and next action, then return to-implement only when ready.
+
+- 2026-10-31 Reopen diagnosis: new implementation defect, an incomplete repair of round-1 F3. Round 1 asked to keep the selected move visible on "navigation/graph jumps and initial presentation"; cd4891b added one `_moves.ensure_cursor_is_visible.call_deferred()` when a move is selected, and the regression (5a11b2c/03c45f2) opens a long game with no analysis. Opening a long History game with a complete cache replays the analysis (`present_history`, ui/review.gd:729-733); that shows the summary and shrinks the Tree after the single deferred scroll has run, so the cursor ends at y=782 in a 224 px Tree (re-review `cached_probe.gd`, `F3_CACHE_REGRESSION=FAIL`). This is not a review miss (round 1 named initial presentation), not a contract gap, and not churn (the advice was right; the execution covered one path). Next action, stage 2 on the existing `UI-026-review-screen` branch: first a red regression that opens an 80-ply finished game with a complete current analysis cache through `main._review_history_game` and asserts the selected item's rect lies inside the Tree after layout settles (reuse the re-review's `cached_probe.gd` setup); then keep the cursor visible after layout changes, e.g. re-run `ensure_cursor_is_visible` when the Tree resizes, not only on selection; verify after the final layout at 1280x800 and 800x600. F1, F2 and F4 are resolved; leave them alone.
