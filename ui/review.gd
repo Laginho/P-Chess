@@ -228,8 +228,39 @@ func _ready() -> void:
 	back.pressed.connect(func(): back_history_requested.emit())
 	$Margin/Content/Actions.add_child(back)
 	back.hide()
+	var notice: Label = $Margin/Content/ReviewBody/Side/UnanalysedNotice
+	notice.custom_minimum_size.y = 150
+	notice.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	var notice_bg := Panel.new()
+	notice_bg.show_behind_parent = true
+	notice_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	notice.add_child(notice_bg)
+	notice_bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	notice_bg.offset_bottom = 46
+	var notice_style := StyleBoxFlat.new()
+	notice_style.bg_color = Color("1f1e1c")
+	notice_style.border_color = Color("45423d")
+	notice_style.set_border_width_all(1)
+	notice_style.set_corner_radius_all(8)
+	notice_bg.add_theme_stylebox_override("panel", notice_style)
+	var description := Label.new()
+	description.name = "AnalysisDescription"
+	description.text = "Stockfish classifies every move and scores both sides' accuracy."
+	description.theme_type_variation = "MutedText"
+	description.add_theme_font_size_override("font_size", 11)
+	description.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	description.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	notice.add_child(description)
+	description.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+	description.offset_left = 8
+	description.offset_right = -8
+	description.offset_top = -40
+	description.offset_bottom = -4
 	var analyze := Button.new()
 	analyze.name = "Analyze"
+	analyze.custom_minimum_size = Vector2(125, 40)
+	analyze.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	analyze.text = "Analyze"
 	analyze.theme_type_variation = "PrimaryButton"
 	analyze.pressed.connect(func():
