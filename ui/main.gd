@@ -144,6 +144,7 @@ func _ready() -> void:
 	draw_button.pressed.connect(_offer_draw)
 	draw_notice_timer.timeout.connect(draw_notice.hide)
 	setup.started.connect(_start)
+	$Home.started.connect(_start)
 	setup.get_node("OpeningPicker").catalog_ready.connect(func(_error):
 		if history_screen.visible:
 			history.book = setup.book
@@ -226,6 +227,7 @@ func _start(new_settings: Dictionary) -> void:
 	if _starting or not uci.error.is_empty():
 		return
 	_starting = true
+	$Home.hide()
 	analysis_queue.pause()
 	setup.hide()
 	setup.get_node("OpeningPicker").hide()
