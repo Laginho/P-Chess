@@ -1,5 +1,5 @@
 # REV-005: The new review screen: board, eval bar and classified moves
-Stage: to-implement
+Stage: blocked
 Blocked by: REV-002, REV-003
 Review: human
 Difficulty: normal
@@ -90,3 +90,5 @@ The review becomes a chess.com-style game review (§15.6). The post-game panel's
   > I didn't run the gate or the tests; this decision comes from reading the ticket, spec §15.3–15.6, `core/classification.gd` and `engine/analyser.gd`. Running `evaluate` again on every landing does O(n²) `legal_moves` work, which could cause a visible stutter on long games; check for it during the manual verification.
 
 - 2026-10-30 Attempt 1 failed: exit 0. Log tail: **REV-005 está incompleto**, em `Stage: implementing`, na branch `REV-005-review-screen-core`. /  / Recuperei os dois commits da tentativa anterior, que cobrem a navegação do tabuleiro, e preservei a decisão do proxy sobre classificação parcial. Não consegui continuar o ciclo de testes: `godot` não está disponível no PATH e não encontrei o executável nas buscas locais. Por isso, o novo teste vermelho e o gate não foram executados. /  / É necessário disponibilizar o Godot compatível com o projeto nesta sessão para continuar a implementação. /  /
+
+- 2026-10-30 Attempt 2 failed: exit 0; blocked after two attempts. Log tail: O **REV-005 continua incompleto**, em `Stage: to-implement`. A branch da sessão preserva a implementação inicial da navegação do tabuleiro e a decisão do proxy sobre classificação parcial. /  / Não encontrei `godot` no PATH nem nos locais consultados. Sem ele, não consigo executar os testes vermelho/verde e o gate exigidos pelo fluxo. Também não fiz alterações nesta tentativa; a configuração atual permite leitura, mas não gravação dos metadados Git necessários aos commits do fluxo. /  / Para continuar, preciso que o executável do Godot compatível esteja disponível e que esta sessão possa criar os commits.
