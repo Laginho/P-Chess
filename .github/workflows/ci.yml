@@ -22,6 +22,10 @@ jobs:
           unzip -q "$RUNNER_TEMP/godot.zip" -d "$RUNNER_TEMP/godot"
           sudo install -m 755 "$RUNNER_TEMP/godot/Godot_v4.7.2-stable_linux.x86_64" /usr/local/bin/godot
 
+      # A fresh checkout has no .godot/imported, and the theme's font is an imported resource.
+      - name: Import assets
+        run: godot --headless --import
+
       - name: Run tests
         run: godot --headless -s tests/run.gd
 
