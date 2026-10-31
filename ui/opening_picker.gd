@@ -29,6 +29,8 @@ func _ready() -> void:
 	_save.pressed.connect(_save_selection)
 	_load.pressed.connect(_load_selection)
 	$Margin/Form/Done.pressed.connect(hide)
+	$Margin/Form/SaveRow/White.pressed.connect(func(): _choose_colour(0))
+	$Margin/Form/SaveRow/Black.pressed.connect(func(): _choose_colour(1))
 	_loaded = not book.entries.is_empty()
 	_refresh_names()
 	if _loaded:
@@ -37,12 +39,22 @@ func _ready() -> void:
 
 func present_repertoire(target) -> void:
 	repertoire = target
-	$Margin/Form/Title.text = "From openings"
+	$Margin/Form/Title.text = "New repertoire from openings"
 	$Margin/Form/LoadRow.hide()
-	$Margin/Form/SaveRow/Colour.show()
+	$Margin/Form/SaveRow/Colour.hide()
+	$Margin/Form/SaveRow/White.show()
+	$Margin/Form/SaveRow/Black.show()
+	$Margin/Form.move_child($Margin/Form/SaveRow, 1)
+	$Margin/Form/Done.text = "Cancel"
 	_name.placeholder_text = "Repertoire name"
-	_save.text = "Save repertoire"
+	_save.text = "Create repertoire"
 	present()
+
+
+func _choose_colour(index: int) -> void:
+	$Margin/Form/SaveRow/Colour.select(index)
+	$Margin/Form/SaveRow/White.button_pressed = index == 0
+	$Margin/Form/SaveRow/Black.button_pressed = index == 1
 
 
 func present(selection := "") -> void:
@@ -138,7 +150,7 @@ func _refresh_checks() -> void:
 		_items[path].set_indeterminate(0, false)
 		_items[path].set_checked(0, state == 1)
 		_items[path].set_indeterminate(0, state == 2)
-	_status.text = "%d of %d lines selected" % [book.selected_ids().size(), book.entries.size()]
+	_status.text = ("%d openings selected" % book.selected_ids().size()) if repertoire != null else ("%d of %d lines selected" % [book.selected_ids().size(), book.entries.size()])
 	if not book.errors.is_empty():
 		_status.text += "; %d catalog errors (see tooltip)" % book.errors.size()
 	_status.tooltip_text = "\n".join(book.errors)

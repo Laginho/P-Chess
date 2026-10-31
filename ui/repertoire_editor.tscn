@@ -19,6 +19,15 @@ theme_override_constants/margin_bottom = 16
 [node name="Form" type="VBoxContainer" parent="Margin"]
 layout_mode = 2
 
+[node name="Heading" type="Label" parent="Margin/Form"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+
+[node name="Hint" type="Label" parent="Margin/Form"]
+layout_mode = 2
+theme_type_variation = &"MutedLabel"
+text = "Play moves to add them. Right-click a move to delete it."
+
 [node name="Content" type="HBoxContainer" parent="Margin/Form"]
 layout_mode = 2
 size_flags_vertical = 3
@@ -47,6 +56,7 @@ layout_mode = 2
 
 [node name="Save" type="Button" parent="Margin/Form/Buttons"]
 layout_mode = 2
+theme_type_variation = &"PrimaryButton"
 text = "Save"
 
 [node name="Cancel" type="Button" parent="Margin/Form/Buttons"]

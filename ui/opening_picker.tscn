@@ -61,8 +61,22 @@ size_flags_horizontal = 3
 placeholder_text = "Selection name"
 max_length = 100
 
+[node name="White" type="Button" parent="Margin/Form/SaveRow"]
+visible = false
+layout_mode = 2
+toggle_mode = true
+button_pressed = true
+text = "● White"
+
+[node name="Black" type="Button" parent="Margin/Form/SaveRow"]
+visible = false
+layout_mode = 2
+toggle_mode = true
+text = "○ Black"
+
 [node name="Save" type="Button" parent="Margin/Form/SaveRow"]
 layout_mode = 2
+theme_type_variation = &"PrimaryButton"
 text = "Save selection"
 
 [node name="LoadRow" type="HBoxContainer" parent="Margin/Form"]
