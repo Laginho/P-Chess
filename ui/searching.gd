@@ -13,10 +13,11 @@ func _ready() -> void:
 
 func present(settings: Dictionary) -> void:
 	$Center/Content/Match.text = "%s  ·  Maia %s" % [settings.control, settings.level.trim_prefix("maia-")]
-	$Center/Content/ControlChip.text = settings.control
+	$Center/Content/ControlChip.text = settings.control + (" Bullet" if settings.control == "1+0" else " Blitz")
 	$Center/Content/LevelChip.text = "Maia " + settings.level.trim_prefix("maia-")
 	var preferences = get_parent().get("preferences")
 	$Player.text = preferences.get_value("player_name") if preferences else settings.get("player_name", "You")
+	$Avatar.text = $Player.text.left(1).to_upper()
 	show()
 
 
@@ -41,10 +42,14 @@ func _layout_searching() -> void:
 	card.size = Vector2(size.x - card.position.x - margin, side)
 	$Spinner.position = card.position + Vector2(card.size.x / 2 - 48, card.size.y / 2 - 128)
 	$Spinner.size = Vector2(96, 96)
-	$Opponent.position = card.position + Vector2(16, 0)
-	$Opponent.size = Vector2(card.size.x - 32, 64)
-	$Player.position = card.position + Vector2(16, card.size.y - 64)
-	$Player.size = Vector2(card.size.x - 32, 64)
+	$Robot.position = card.position + Vector2(22, 20)
+	$Robot.size = Vector2(24, 24)
+	$Avatar.position = card.position + Vector2(16, card.size.y - 50)
+	$Avatar.size = Vector2(36, 36)
+	$Opponent.position = card.position + Vector2(64, 0)
+	$Opponent.size = Vector2(card.size.x - 80, 64)
+	$Player.position = card.position + Vector2(64, card.size.y - 64)
+	$Player.size = Vector2(card.size.x - 80, 64)
 	$Center.position = card.position
 	$Center.size = card.size
 	var content: Control = $Center/Content
@@ -66,4 +71,4 @@ func _sync_settings_button() -> void:
 	var open = get_parent().get_node_or_null("Settings/Open")
 	if open:
 		var home = get_parent().get_node_or_null("Home")
-		open.visible = not visible and (home == null or not home.visible)
+		open.visible = not visible and (home == null or not home.visible or not home.get_node("Center").visible)

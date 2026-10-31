@@ -13,6 +13,7 @@ var store
 func _ready() -> void:
 	$Center/Board.game = preload("res://core/game.gd").new()
 	visibility_changed.connect(_sync_settings_button)
+	$Center.visibility_changed.connect(_sync_settings_button)
 	call_deferred("_sync_settings_button")
 	resized.connect(_layout_home)
 	_layout_home()
@@ -116,4 +117,4 @@ func _sync_settings_button() -> void:
 	var open = get_parent().get_node_or_null("Settings/Open")
 	if open:
 		var searching = get_parent().get_node_or_null("Searching")
-		open.visible = not visible and (searching == null or not searching.visible)
+		open.visible = (not visible or not $Center.visible) and (searching == null or not searching.visible)
