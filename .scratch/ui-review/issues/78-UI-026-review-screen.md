@@ -1,5 +1,5 @@
 # UI-026: Review screen to the design
-Stage: implementing
+Stage: to-review
 Blocked by: UI-021
 Review: human
 Difficulty: hard
@@ -54,10 +54,10 @@ Restyle the review to chess.com's layout as drawn in `docs/design/v0.1.0/png/Rev
 - The ticket branch diverges from `sweatshop/ui-review/2026-10-31-1734` only in the lane's subsequent attempt/recovery metadata. Stage 3 must reconcile those tracker comments when rebasing onto the current lane, preserving the proxy receipt and this handoff; the gate receipt applies to the production tree at `566792a`.
 
 Acceptance: pending | Exercise a finished game with live analysis, open an unanalysed History game, resize to 800x600, and operate the legend with mouse and keyboard; Bruno's v0.1.0 QA remains required by `.scratch/ui-redo/spec.md`.
-Disclosure: pending | integration | The latest stage-3 re-review below confirms F1, F2 and F4 resolved; F3 still hides the current move when opening cached analysis and must be repaired before integration. Original visual differences remain recorded above.
+Disclosure: pending | integration | F1, F2 and F4 were resolved in re-review; the subsequent F3 repair requires independent review before integration. Original visual differences remain recorded above.
 Disclosure: pending | release | `.scratch/ui-redo/spec.md` requires Bruno's v0.1.0 QA before the release tag.
 
-Gate evidence: C:/Users/bruno/AppData/Local/Temp/pchess-ui026-reopen-final-gate.json
+Gate evidence: C:/Users/bruno/AppData/Local/Temp/pchess-ui026-cache-gate.json
 
 #### Resolution (2026-10-31)
 Verdict: Reopen — criteria 2, 3, 5, 6 and 8 are partial: incorrect History time control, overlapping post-game progress, offscreen current move, and a centred legend instead of the required popover.
@@ -178,9 +178,12 @@ Verdict: Reopen — F3 remains partial: the current move is outside the visible 
 - Existing proxy decision reviewed: `Proxy decided (opus-5.5 xhigh): (a), resume once on the same lineup`, receipt `C:/Users/bruno/AppData/Local/Temp/sweatshop-proxy/20261031-182950-UI-026-4b70fe.json`. Its complete original text remains above; it authorizes the retry and does not waive F3 or the visual/product contract.
 - Only ticket metadata changes in this reopen; the gate receipt remains valid. No rebase, merge, push or ledger entry was performed. The lane `sweatshop/ui-review/2026-10-31-1734` remains at `e67e0a9`; its recovery comments still need reconciliation when an approved branch is rebased for integration. No live Stockfish/Lc0 game, physical keyboard/mouse gameplay, audio, screen reader, clean-machine release test or Bruno QA was performed.
 
-Acceptance: pending | F3 remains open; the cached-History reproduction and six current screenshots are linked above. Live analysis and Bruno's v0.1.0 QA remain pending.
+Acceptance: pending | F3 repair requires independent review. Live analysis and Bruno's v0.1.0 QA remain pending.
 Disclosure: decision | none | Existing proxy retry decision and receipt preserved; no contract waiver.
-Disclosure: pending | integration | Repair F3 on UI-026 and independently review the complete cached-analysis entry before lane integration; the second reopen requires the driver's foreman diagnosis before retrying.
+Disclosure: pending | integration | Independently review the F3 repair and complete cached-analysis entry before lane integration; reconcile lane metadata.
 Disclosure: pending | release | Bruno's v0.1.0 QA remains required by `.scratch/ui-redo/spec.md`.
 
 - 2026-10-31 Reopen diagnosis: new implementation defect, an incomplete repair of round-1 F3. Round 1 asked to keep the selected move visible on "navigation/graph jumps and initial presentation"; cd4891b added one `_moves.ensure_cursor_is_visible.call_deferred()` when a move is selected, and the regression (5a11b2c/03c45f2) opens a long game with no analysis. Opening a long History game with a complete cache replays the analysis (`present_history`, ui/review.gd:729-733); that shows the summary and shrinks the Tree after the single deferred scroll has run, so the cursor ends at y=782 in a 224 px Tree (re-review `cached_probe.gd`, `F3_CACHE_REGRESSION=FAIL`). This is not a review miss (round 1 named initial presentation), not a contract gap, and not churn (the advice was right; the execution covered one path). Next action, stage 2 on the existing `UI-026-review-screen` branch: first a red regression that opens an 80-ply finished game with a complete current analysis cache through `main._review_history_game` and asserts the selected item's rect lies inside the Tree after layout settles (reuse the re-review's `cached_probe.gd` setup); then keep the cursor visible after layout changes, e.g. re-run `ensure_cursor_is_visible` when the Tree resizes, not only on selection; verify after the final layout at 1280x800 and 800x600. F1, F2 and F4 are resolved; leave them alone.
+
+- 2026-10-31 F3 repair: test-only commit `d503fe2` opens an 80-ply finished History game with complete current cached analysis. The graphical red run (`C:/Users/bruno/AppData/Local/Temp/ui026-cached-red.log`) failed the final-row visibility check at both 1280x800 and 800x600 after ten frames. Production commit `5c0c1b0` scrolls the selected item into view on Tree resize; the same graphical test passed at both sizes (`C:/Users/bruno/AppData/Local/Temp/ui026-cached-green.log`). Selection/navigation already scroll via `_show_ply`; the resize handler also covers cache-driven layout changes.
+- Gate on `5c0c1b05e2f46f7f3a3c7ac1ab5197cfbea8082f`: 441 printed passed, 0 failed, exit 0; six Lc0 tests skipped (435 executed). Log `C:/Users/bruno/AppData/Local/Temp/pchess-ui026-cache-gate.log`; receipt above. Independent stage-3 review remains required; no physical input, live engine game or Bruno QA was performed in this repair.
