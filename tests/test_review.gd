@@ -817,3 +817,21 @@ func test_review_result_header_includes_time_control_and_move_count():
 	var result: Label = review.get_node("Margin/Content/Result")
 	assert_true(result.text.contains("3+2") and result.text.contains("resignation") and result.text.contains("1 move"))
 	main.free()
+
+
+func test_repertoire_exit_is_a_move_list_row():
+	var main = await _session(FakeTime.new())
+	var repertoire = preload("res://bot/repertoire.gd").new()
+	assert_eq(repertoire.parse("1. e4 e5 2. Nf3 Nc6 *", "w"), "")
+	var game = Game.new()
+	for move in ["e2e4", "e7e5", "d2d4"]:
+		game.play(move)
+	var review = main.get_node("Review")
+	review.present(game, [180000, 180000], SETTINGS, "", [], repertoire.lines, true)
+	var rows = review.get_node("Margin/Content/ReviewBody/Side/Moves").get_root().get_children()
+	var found := false
+	for row in rows:
+		if row.get_text(1).contains("Left repertoire") and row.get_text(1).contains("Nf3"):
+			found = true
+	assert_true(found, "the exit and expected move appear inside the move list")
+	main.free()
