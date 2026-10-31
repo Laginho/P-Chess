@@ -25,7 +25,9 @@ func present(settings) -> void:
 	$Margin/Content/NameRow/PlayerName.grab_focus()
 
 
-func refresh(history, analysis_dir := "user://analysis") -> void:
+func refresh(history, analysis_dir := "") -> void:
+	if analysis_dir.is_empty():
+		analysis_dir = history.analysis_folder()
 	var table: GridContainer = $Margin/Content/Scroll/Body/Results
 	for child in table.get_children():
 		table.remove_child(child)

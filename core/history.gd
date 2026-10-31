@@ -17,6 +17,11 @@ func _init(root := "user://") -> void:
 	_load_error = _results.load(_root.path_join("stats.cfg"))
 
 
+# Cached Stockfish analysis lives beside the games: user://analysis for the default root.
+func analysis_folder() -> String:
+	return _root.path_join("analysis")
+
+
 # clocks contains the moving side's remaining milliseconds after each played move.
 # Returns the PGN path, or "" with a reportable error. An explicit Opening overrides recognition.
 # Main supplies the selected target only once, with its completed-game save.
@@ -128,7 +133,7 @@ func delete(path: String) -> bool:
 		counts[flag] = maxi(0, counts[flag] - 1)
 	var target: String = headers.get("PracticeTarget", "")
 	var practiced: int = practice_counts().get(target, 0)
-	var paths := [path, path.trim_suffix(".pgn") + ".repertoire.json", "user://analysis".path_join(path.get_file() + ".json")]
+	var paths := [path, path.trim_suffix(".pgn") + ".repertoire.json", analysis_folder().path_join(path.get_file() + ".json")]
 	var moved := []
 	var contents := {}
 	for source in paths:
