@@ -81,6 +81,9 @@ func _ready() -> void:
 		cards.add_child(card)
 		var name_label := Label.new()
 		name_label.name = side + "Name"
+		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		if side == "Black":
+			name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		name_label.add_theme_font_size_override("font_size", 11)
 		cards.add_child(name_label)
 	cards.move_child(cards.get_node("BlackName"), 2)
@@ -584,6 +587,7 @@ func present(game, clocks: Array, settings: Dictionary, result_text: String,
 		if i % 2 == 0:
 			row = _moves.create_item(root)
 			row.set_text(0, "%d." % (i / 2 + 1))
+		row.set_icon_max_width(i % 2 + 1, 18)
 		row.set_text(i % 2 + 1, board.san(game.moves[i]) + (" (left)" if badges[i].left_repertoire else ""))
 		row.set_metadata(i % 2 + 1, i + 1)
 		if badges[i].repertoire or badges[i].book:
@@ -596,6 +600,7 @@ func present(game, clocks: Array, settings: Dictionary, result_text: String,
 			var exit_row := _moves.create_item(root)
 			exit_row.set_text(1, text)
 			exit_row.set_icon(1, _class_icon("Repertoire"))
+			exit_row.set_icon_max_width(1, 16)
 			exit_row.set_custom_color(1, Color("4ca9f0"))
 			exit_row.set_custom_bg_color(1, Color("17314a"))
 			for column in 3:

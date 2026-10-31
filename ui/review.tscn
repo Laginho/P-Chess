@@ -22,7 +22,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.08, 0.09, 0.11, 1)
+color = Color(0.1216, 0.1176, 0.1098, 1)
 
 [node name="Margin" type="MarginContainer" parent="."]
 layout_mode = 1
@@ -46,12 +46,14 @@ mouse_filter = 2
 
 [node name="Title" type="Label" parent="Margin/Content"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 28
+theme_type_variation = &"ExtraBoldText"
+theme_override_font_sizes/font_size = 18
 text = "Game Review"
 
 [node name="Result" type="Label" parent="Margin/Content"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 20
+theme_type_variation = &"MutedText"
+theme_override_font_sizes/font_size = 11
 autowrap_mode = 3
 
 [node name="Progress" type="ProgressBar" parent="Margin/Content"]
@@ -181,7 +183,7 @@ autowrap_mode = 3
 layout_mode = 2
 size_flags_vertical = 3
 columns = 3
-column_titles_visible = true
+column_titles_visible = false
 hide_root = true
 
 [node name="RepertoireExit" type="Label" parent="Margin/Content/ReviewBody/Side"]

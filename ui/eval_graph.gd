@@ -17,7 +17,7 @@ func _gui_input(event: InputEvent) -> void:
 
 
 func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, size), Color(0.17, 0.18, 0.2))
+	draw_rect(Rect2(Vector2.ZERO, size), Color("363430"))
 	draw_line(Vector2(0, size.y / 2), Vector2(size.x, size.y / 2), Color.GRAY)
 	var previous := Vector2.ZERO
 	var have_previous := false
@@ -35,7 +35,8 @@ func _draw() -> void:
 		var fraction := 1.0 / (1.0 + exp(-Tunables.CLASSIFICATION_EP_FACTOR * clampi(score, -Tunables.CLASSIFICATION_CP_LIMIT, Tunables.CLASSIFICATION_CP_LIMIT)))
 		var point := Vector2(size.x * i / maxi(positions.size() - 1, 1), size.y * (1.0 - fraction))
 		if have_previous:
-			draw_line(previous, point, Color.WHITE, 2.0)
+			draw_colored_polygon(PackedVector2Array([previous, point, Vector2(point.x, size.y), Vector2(previous.x, size.y)]), Color("ece9e4"))
+			draw_line(previous, point, Color("a8a49c"), 1.0)
 		if i > 0 and i <= classes.size() and classes[i - 1] != null:
 			var colours := {"Inaccuracy": Color("f4bf44"), "Mistake": Color("e28c28"), "Miss": Color("ff7769"), "Blunder": Color("c93230")}
 			var label: String = classes[i - 1].class
