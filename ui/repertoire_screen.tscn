@@ -11,7 +11,7 @@
 
 [sub_resource type="StyleBoxFlat" id="LinesPanel"]
 content_margin_left = 8.0
-content_margin_top = 65.0
+content_margin_top = 8.0
 content_margin_right = 8.0
 content_margin_bottom = 8.0
 bg_color = Color(0.168627, 0.164706, 0.152941, 1)
@@ -95,30 +95,32 @@ horizontal_scroll_mode = 0
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="Lines" type="ItemList" parent="Margin/Form/Viewer"]
+[node name="Lines" type="PanelContainer" parent="Margin/Form/Viewer"]
 layout_mode = 2
 size_flags_horizontal = 3
 custom_minimum_size = Vector2(200, 0)
-icon_mode = 0
-max_text_lines = 2
 theme_override_styles/panel = SubResource("LinesPanel")
 
-[node name="LineHeading" type="Label" parent="Margin/Form/Viewer/Lines"]
-offset_left = 15.0
-offset_top = 12.0
-offset_right = 190.0
-offset_bottom = 34.0
-theme_type_variation = &"ExtraBoldText"
-mouse_filter = 2
+[node name="LineContent" type="VBoxContainer" parent="Margin/Form/Viewer/Lines"]
+layout_mode = 2
 
-[node name="LineDetail" type="Label" parent="Margin/Form/Viewer/Lines"]
-offset_left = 15.0
-offset_top = 34.0
-offset_right = 190.0
-offset_bottom = 54.0
+[node name="LineHeading" type="Label" parent="Margin/Form/Viewer/Lines/LineContent"]
+layout_mode = 2
+theme_type_variation = &"ExtraBoldText"
+
+[node name="LineDetail" type="Label" parent="Margin/Form/Viewer/Lines/LineContent"]
+layout_mode = 2
 theme_type_variation = &"MutedText"
 theme_override_font_sizes/font_size = 12
-mouse_filter = 2
+
+[node name="LineScroll" type="ScrollContainer" parent="Margin/Form/Viewer/Lines/LineContent"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="LineRows" type="VBoxContainer" parent="Margin/Form/Viewer/Lines/LineContent/LineScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
 
 [node name="BoardArea" type="VBoxContainer" parent="Margin/Form/Viewer"]
 custom_minimum_size = Vector2(280, 0)

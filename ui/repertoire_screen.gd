@@ -15,7 +15,7 @@ var _selection := ""
 @onready var _editor = $RepertoireEditor
 # Child of this popup, so closing it hands focus back here instead of closing the screen too.
 @onready var importer = $RepertoireImport
-@onready var _line_list: ItemList = $Margin/Form/Viewer/Lines
+@onready var _line_rows: VBoxContainer = $Margin/Form/Viewer/Lines/LineContent/LineScroll/LineRows
 @onready var _board = $Margin/Form/Viewer/BoardArea/Board
 @onready var _status: Label = $Margin/Form/Status
 
@@ -28,7 +28,6 @@ func _ready() -> void:
 	$Margin/Form/Buttons/Back.pressed.connect(hide)
 	_picker.saved.connect(_saved)
 	_list.item_selected.connect(_select_repertoire)
-	_line_list.item_selected.connect(_select_line)
 	$Margin/Form/Viewer/BoardArea/Navigation/Previous.pressed.connect(func(): _step(-1))
 	$Margin/Form/Viewer/BoardArea/Navigation/Next.pressed.connect(func(): _step(1))
 
@@ -46,9 +45,9 @@ func _refresh() -> void:
 	_list.clear()
 	for card in $Margin/Form/Viewer/CardScroll/Cards.get_children():
 		card.free()
-	_line_list.clear()
-	$Margin/Form/Viewer/Lines/LineHeading.text = ""
-	$Margin/Form/Viewer/Lines/LineDetail.text = ""
+	_clear_lines()
+	$Margin/Form/Viewer/Lines/LineContent/LineHeading.text = ""
+	$Margin/Form/Viewer/Lines/LineContent/LineDetail.text = ""
 	_lines.clear()
 	_selection = ""
 	$Margin/Form/Buttons/Edit.disabled = true
@@ -133,9 +132,9 @@ func _select_repertoire(index: int) -> void:
 		$Margin/Form/Viewer/CardScroll/Cards.get_child(i).get_child(0).button_pressed = i == index
 	$Margin/Form/Buttons/Edit.disabled = true
 	var error: String = repertoire.load_saved(_selection)
-	_line_list.clear()
-	$Margin/Form/Viewer/Lines/LineHeading.text = ""
-	$Margin/Form/Viewer/Lines/LineDetail.text = ""
+	_clear_lines()
+	$Margin/Form/Viewer/Lines/LineContent/LineHeading.text = ""
+	$Margin/Form/Viewer/Lines/LineContent/LineDetail.text = ""
 	_lines.clear()
 	_line = -1
 	_board.game = null
@@ -145,8 +144,8 @@ func _select_repertoire(index: int) -> void:
 		return
 	$Margin/Form/Buttons/Edit.disabled = false
 	_lines = repertoire.lines.duplicate(true)
-	$Margin/Form/Viewer/Lines/LineHeading.text = _selection
-	$Margin/Form/Viewer/Lines/LineDetail.text = "As %s · %d %s" % ["White" if repertoire.colour == "w" else "Black", _lines.size(), "line" if _lines.size() == 1 else "lines"]
+	$Margin/Form/Viewer/Lines/LineContent/LineHeading.text = _selection
+	$Margin/Form/Viewer/Lines/LineContent/LineDetail.text = "As %s · %d %s" % ["White" if repertoire.colour == "w" else "Black", _lines.size(), "line" if _lines.size() == 1 else "lines"]
 	_board.flipped = repertoire.colour == "b"
 	_show_names()
 	if not _lines.is_empty():
@@ -157,8 +156,13 @@ func _select_repertoire(index: int) -> void:
 		_show_names()
 
 
+func _clear_lines() -> void:
+	for row in _line_rows.get_children():
+		row.free()
+
+
 func _show_names() -> void:
-	_line_list.clear()
+	_clear_lines()
 	for i in _lines.size():
 		var line: Dictionary = _lines[i]
 		var label := "Line %d" % (i + 1)
@@ -166,14 +170,46 @@ func _show_names() -> void:
 			if entry.moves == line.moves and entry.positions[0] == line.positions[0]:
 				label = entry.name
 				break
-		_line_list.add_item(label + "\n" + _move_text(line))
-	if _line >= 0 and _line < _line_list.item_count:
-		_line_list.select(_line)
+		var row := Button.new()
+		row.custom_minimum_size.y = 54
+		row.toggle_mode = true
+		row.button_pressed = i == _line
+		row.accessibility_name = label
+		row.accessibility_description = _move_text(line)
+		row.pressed.connect(func(): _select_line(i))
+		_line_rows.add_child(row)
+		row.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
+		var selected_style: StyleBoxFlat = row.get_theme_stylebox("hover").duplicate()
+		row.add_theme_stylebox_override("pressed", selected_style)
+		row.add_theme_stylebox_override("hover_pressed", selected_style)
+		var content := VBoxContainer.new()
+		row.add_child(content)
+		content.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		content.offset_left = 10
+		content.offset_right = -10
+		content.alignment = BoxContainer.ALIGNMENT_CENTER
+		content.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var title := Label.new()
+		title.name = "Name"
+		title.text = label
+		title.theme_type_variation = "BoldText"
+		title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		content.add_child(title)
+		var moves := Label.new()
+		moves.name = "Moves"
+		moves.text = _move_text(line)
+		moves.theme_type_variation = "MutedText"
+		moves.add_theme_font_size_override("font_size", 12)
+		moves.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		moves.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		content.add_child(moves)
 
 
 func _select_line(index: int) -> void:
 	_line = index
-	_line_list.select(index)
+	for i in _line_rows.get_child_count():
+		_line_rows.get_child(i).button_pressed = i == index
 	_ply = _lines[index].moves.size()
 	_show_position()
 
