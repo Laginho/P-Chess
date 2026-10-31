@@ -302,3 +302,22 @@ func test_clicking_a_move_shows_its_position():
 	var board = review.get_node("Margin/Content/ReviewBody/BoardView")
 	assert_eq(board.game.moves, PackedStringArray(["e2e4"]))
 	main.free()
+
+
+func test_eval_bar_tracks_current_position_and_board_orientation():
+	var main = _session(FakeTime.new())
+	main.board_view.play("e2e4")
+	_key(main, KEY_ESCAPE)
+	_key(main, KEY_ESCAPE)
+	main.board_view.get_node("GameOver/Panel/Content/Review").pressed.emit()
+	var review = main.review
+	var bar = review.get_node_or_null("Margin/Content/ReviewBody/EvalBar")
+	assert_true(bar != null, "evaluation bar sits beside board")
+	if bar != null:
+		review.receive_position(1, {"pv": [{"cp": -200, "moves": ["e7e5"]}]})
+		assert_true(bar.white_fraction > 0.5, "black-to-move negative score favours white")
+		assert_true(not bar.flipped)
+		review.get_node("Margin/Content/ReviewBody/BoardView").flipped = true
+		review.receive_position(1, {"pv": [{"cp": -200, "moves": ["e7e5"]}]})
+		assert_true(bar.flipped, "bar follows the board orientation")
+	main.free()
