@@ -916,6 +916,41 @@ func test_repertoire_screen_fits_the_smallest_window():
 	_clean(folder)
 
 
+func test_long_repertoire_name_keeps_viewer_and_editor_inside_minimum_window():
+	var root: Window = Engine.get_main_loop().root
+	var old_embed := root.gui_embed_subwindows
+	var old_size := root.size
+	root.gui_embed_subwindows = true
+	root.size = Vector2i(800, 600)
+	var setup = load("res://ui/setup.tscn").instantiate()
+	var folder := _folder()
+	setup.repertoire.storage_dir = folder
+	var name := "My favourite repertoire for studying the Caro-Kann Defense and its classical and advance variations"
+	assert_eq(setup.repertoire.import_pgn("1. e4 e5 *", "w", name), "")
+	root.add_child(setup)
+	var screen = setup.get_node("RepertoireScreen")
+	screen.present()
+	screen.get_node("Margin/Form/List").item_selected.emit(0)
+	await Engine.get_main_loop().process_frame
+	await Engine.get_main_loop().process_frame
+	var heading = screen.find_child("LineHeading", true, false)
+	assert_true(screen.size.x <= 768 and screen.size.y <= 568, "viewer fits the minimum viewport")
+	assert_eq(heading.text, name)
+	assert_eq(heading.tooltip_text, name, "full name remains available")
+	var editor = screen.get_node("RepertoireEditor")
+	editor.present(setup.repertoire, name, 0)
+	await Engine.get_main_loop().process_frame
+	await Engine.get_main_loop().process_frame
+	var editor_heading = editor.find_child("Heading", true, false)
+	assert_true(editor.size.x <= 736 and editor.size.y <= 536, "editor fits the minimum viewport")
+	assert_true(editor_heading.text.ends_with(name))
+	assert_eq(editor_heading.tooltip_text, name, "full name remains available")
+	setup.free()
+	root.gui_embed_subwindows = old_embed
+	root.size = old_size
+	_clean(folder)
+
+
 func test_embedded_repertoire_windows_fill_the_available_viewport():
 	var root: Window = Engine.get_main_loop().root
 	var old_embed := root.gui_embed_subwindows
