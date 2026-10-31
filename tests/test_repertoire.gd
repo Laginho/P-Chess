@@ -100,6 +100,9 @@ func test_editor_keeps_a_linear_line_at_one_indentation():
 	assert_true(first != null and last != null, "every move remains selectable")
 	if first != null and last != null:
 		assert_eq(first.get_parent().get_parent(), last.get_parent().get_parent(), "a linear sequence shares one row")
+		assert_eq(first.text, "1.e4")
+		var third := _find_move(tree, PackedStringArray(["e2e4", "e7e5", "g1f3"]))
+		assert_eq(third.text, "2.Nf3")
 	editor.free()
 	_clean(folder)
 
