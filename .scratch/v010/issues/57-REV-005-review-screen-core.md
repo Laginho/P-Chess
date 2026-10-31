@@ -1,5 +1,5 @@
 # REV-005: The new review screen: board, eval bar and classified moves
-Stage: blocked
+Stage: to-implement
 Blocked by: REV-002, REV-003
 Review: human
 Difficulty: normal
@@ -14,7 +14,9 @@ Difficulty: normal
   - New: ui/icons/classes/*.svg (one per class)
   - tests/test_review.gd
   - tests/test_badges.gd, tests/test_book.gd, tests/test_history.gd (test-only: the assertions that read the old review's `Margin/Content/Moves` tree, `Result` and `RepertoireExit` nodes)
-  - docs/spec.md (§15.6)
+  - core/classification.gd (partial analysis: an unanalysed position has no `pv`; an unsettled ply is `null`)
+  - tests/test_classification.gd
+  - docs/spec.md (§15.4, the proxy's partial-analysis sentence below; §15.6)
 
 #### What to build
 
@@ -24,7 +26,7 @@ The review becomes a chess.com-style game review (§15.6). The post-game panel's
 
 1. The review shows a board that steps through the game with ←/→ and a move list; clicking a move jumps the board there.
 2. An eval bar sits on the left of the board, from the current position's PV1 score, and flips with the board's orientation.
-3. Each move in the list carries its class icon (REV-003) as soon as its analysis lands; moves not analysed yet show none. The Left repertoire marker shows on the move where the player left, with the expected moves.
+3. Each move in the list carries its class icon (REV-003) as soon as its class is settled: once its analysis lands, and for a possible Miss once the previous move's class is settled; moves not analysed yet show none. The Left repertoire marker shows on the move where the player left, with the expected moves.
 4. On the board, the current move's class icon sits on its destination square, and an arrow shows the best move from the position before it.
 5. The icons are our own SVGs in chess.com's style and colours, one per class (Brilliant, Great, Best, Excellent, Good, Book, Repertoire in blue, Inaccuracy, Mistake, Miss, Blunder, Forced).
 6. The post-game Review opens it and starts analysis on Max; a progress bar shows until it finishes. An analysis file that already exists and is not stale is read instead.
@@ -39,6 +41,7 @@ The review becomes a chess.com-style game review (§15.6). The post-game panel's
 ## Tests stage 2 writes (own commit, red)
 
 - `tests/test_review.gd`, with a fake analyser feeding fixture JSON: icons appear per move as positions land; ←/→ move the board; the eval bar follows the flip; the board icon and arrow match the current move (red: old review). The old time-spent and badge-column tests are rewritten; `move_times` and `lichess_url` keep their tests.
+- `tests/test_classification.gd`: positions without `pv` give `null` for the plies that touch them; a Miss candidate is `null` while the previous ply is `null`, and becomes `Miss` once that position lands; a Forced, Book, Repertoire or Best ply is classified even when its predecessor is unanalysed (red: the current classifier errors on a missing `pv`). The existing fixtures pass unchanged.
 - `tests/test_badges.gd`, `test_book.gd`, `test_history.gd`: assertions on the old nodes move to the new review's equivalents (test-only).
 
 ## Comments
@@ -92,3 +95,6 @@ The review becomes a chess.com-style game review (§15.6). The post-game panel's
 - 2026-10-30 Attempt 1 failed: exit 0. Log tail: **REV-005 está incompleto**, em `Stage: implementing`, na branch `REV-005-review-screen-core`. /  / Recuperei os dois commits da tentativa anterior, que cobrem a navegação do tabuleiro, e preservei a decisão do proxy sobre classificação parcial. Não consegui continuar o ciclo de testes: `godot` não está disponível no PATH e não encontrei o executável nas buscas locais. Por isso, o novo teste vermelho e o gate não foram executados. /  / É necessário disponibilizar o Godot compatível com o projeto nesta sessão para continuar a implementação. /  /
 
 - 2026-10-30 Attempt 2 failed: exit 0; blocked after two attempts. Log tail: O **REV-005 continua incompleto**, em `Stage: to-implement`. A branch da sessão preserva a implementação inicial da navegação do tabuleiro e a decisão do proxy sobre classificação parcial. /  / Não encontrei `godot` no PATH nem nos locais consultados. Sem ele, não consigo executar os testes vermelho/verde e o gate exigidos pelo fluxo. Também não fiz alterações nesta tentativa; a configuração atual permite leitura, mas não gravação dos metadados Git necessários aos commits do fluxo. /  / Para continuar, preciso que o executável do Godot compatível esteja disponível e que esta sessão possa criar os commits.
+
+- 2026-10-30 Foreman: the proxy's ticket drafts above are folded into Primary files, criterion 3 and the tests list; its §15.4 sentence for `docs/spec.md` is stage 2's to apply. Stage back to `to-implement`.
+- 2026-10-30 Foreman diagnosis of attempts 1-2 (23:09, 23:12): environment handling, not code or contract. `godot` is on PATH at `C:\Users\bruno\AppData\Local\Programs\Godot\godot.cmd` (console exe `Godot_v4.7-stable_win64_console.exe` beside it), but the Codex sandbox denies reading that folder, so a sandboxed `godot` says "not recognized" and `Get-ChildItem` on it says "Access is denied". The same denial applies to `.git` writes (`index.lock`). Rerun the denied `godot`, `git` and `gh` commands with escalation: the stage that asked (log `.scratch/run-log/REV-005-implement-20261030-230325.txt`) did exactly that and ran red 9/1, then green 10/0. Do not search for Godot with `-ErrorAction SilentlyContinue`: it hid the denial in both failed attempts. Resume from `recovery/asked/20261030-230636/REV-005` (`23d0143` test, `aeb5d63` board navigation); the proxy decision above stands.
