@@ -82,3 +82,5 @@ Verdict: Approve
 
 Acceptance: pending | Headless criteria pass with the receipt above; manual keyboard and visual acceptance across setup, play and post-game remains.
 Disclosure: pending | release | Manual keyboard and visual acceptance remains for UI-020; see this Resolution and the headless evidence above.
+
+- 2026-10-31 (PR #29 review loop): after PR #28 merged, the `not review.visible` guard described above was generalised in `e266c42`: `Ctrl+,` runs before the no-clock early return and is blocked whenever any visible screen sits above Settings (review, history, name prompt, searching); Home's Settings button focuses the first row.
