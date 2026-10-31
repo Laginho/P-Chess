@@ -5,7 +5,7 @@
 [sub_resource type="FontVariation" id="FontVariation_5wgtp"]
 base_font = ExtResource("1_7n72e")
 variation_opentype = {
-"wght": 700
+2003265652: 700
 }
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_3w2ri"]
@@ -112,7 +112,7 @@ image = SubResource("Image_3w2ri")
 [sub_resource type="FontVariation" id="FontVariation_hakwx"]
 base_font = ExtResource("1_7n72e")
 variation_opentype = {
-"wght": 800
+2003265652: 800
 }
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_385nj"]
@@ -198,7 +198,7 @@ corner_radius_bottom_left = 8
 [sub_resource type="FontVariation" id="FontVariation_82k60"]
 base_font = ExtResource("1_7n72e")
 variation_opentype = {
-"wght": 500
+2003265652: 500
 }
 
 [sub_resource type="Image" id="Image_x7pgs"]
@@ -292,7 +292,7 @@ corner_radius_bottom_left = 10
 [sub_resource type="FontVariation" id="FontVariation_guv2p"]
 base_font = ExtResource("1_7n72e")
 variation_opentype = {
-"wght": 700
+2003265652: 700
 }
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_h68sd"]
@@ -451,7 +451,7 @@ corner_radius_bottom_left = 8
 [sub_resource type="FontVariation" id="FontVariation_xp1j1"]
 base_font = ExtResource("1_7n72e")
 variation_opentype = {
-"wght": 600
+2003265652: 600
 }
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_n07rm"]
