@@ -177,6 +177,9 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	# No clock means no game has started: the setup screen is up.
 	var in_game: bool = clock != null and not board_view.game.is_over()
 	match event.keycode:
+		KEY_COMMA:
+			if event.ctrl_pressed and settings_screen.visible and not review.visible:
+				settings_screen.get_node("Panel").show()
 		KEY_F:
 			_set_flipped(not board_view.flipped)
 		KEY_SPACE:

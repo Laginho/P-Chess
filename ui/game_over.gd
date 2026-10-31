@@ -27,6 +27,8 @@ func _process(_delta: float) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if main and main.settings_screen.get_node("Panel").visible:
+		return
 	if visible and event is InputEventKey and event.is_pressed() and not event.is_echo():
 		if event.keycode == KEY_ESCAPE:
 			get_viewport().set_input_as_handled()

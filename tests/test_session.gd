@@ -155,7 +155,9 @@ func _session(waits):
 	main.uci = HeldBridge.new()
 	main.maia = Main.MaiaPlayer.new(main.uci, waits.start)
 	# Ignore the person's preferences without saving or changing them.
-	main.preferences = Main.Settings.new("res://tests/fixtures/no_session_settings.cfg")
+	var preferences_path := "user://test_session_settings_%d.cfg" % Time.get_ticks_usec()
+	main.preferences = Main.Settings.new(preferences_path)
+	main.tree_exiting.connect(func(): DirAccess.remove_absolute(ProjectSettings.globalize_path(preferences_path)))
 	Engine.get_main_loop().root.add_child(main)
 	main.board_view.slide_seconds = 0
 	main.sound_player.select_theme("__ui004_silent__")
@@ -575,4 +577,137 @@ func test_match_score_respects_focus_mode():
 	assert_true(not white.visible and not black.visible, "rematch started in focus hides boxes")
 	_key(main, KEY_F11)
 	assert_true(white.visible and black.visible, "leaving focus restores new rematch boxes")
+	main.free()
+
+func _push_key(viewport: Viewport, code: Key, ctrl := false, shift := false) -> void:
+	for down in [true, false]:
+		var event := InputEventKey.new()
+		event.keycode = code
+		event.pressed = down
+		event.ctrl_pressed = ctrl
+		event.shift_pressed = shift
+		viewport.push_input(event, true)
+
+
+func test_escape_closes_settings_from_spinbox():
+	var main = _session(ManualWaits.new())
+	await Engine.get_main_loop().process_frame
+	await Engine.get_main_loop().process_frame
+	var viewport = main.get_viewport()
+	_push_key(viewport, KEY_COMMA, true)
+	for i in 4:
+		_push_key(viewport, KEY_TAB)
+	_push_key(viewport, KEY_ESCAPE)
+	assert_true(not main.settings_screen.get_node("Panel").visible, "Esc closes Settings while editing a SpinBox")
+	assert_true(viewport.gui_get_focus_owner() == null, "closing releases focus")
+	main.free()
+
+
+func test_shortcut_closes_settings_with_choice_popup_open():
+	var main = _session(ManualWaits.new())
+	await Engine.get_main_loop().process_frame
+	await Engine.get_main_loop().process_frame
+	var viewport = main.get_viewport()
+	var panel = main.settings_screen.get_node("Panel")
+	var popup = panel.get_node("Center/Box/Form").get_child(1).get_popup()
+	_push_key(viewport, KEY_COMMA, true)
+	_push_key(viewport, KEY_SPACE)
+	await Engine.get_main_loop().process_frame
+	assert_true(popup.visible, "choice popup is open")
+	_push_key(viewport, KEY_COMMA, true)
+	assert_true(not panel.visible and not popup.visible, "shortcut closes popup and Settings")
+	assert_true(viewport.gui_get_focus_owner() == null, "closing releases focus")
+	main.free()
+
+
+func test_escape_closes_settings_with_choice_popup_open():
+	var main = _session(ManualWaits.new())
+	await Engine.get_main_loop().process_frame
+	await Engine.get_main_loop().process_frame
+	var viewport = main.get_viewport()
+	var panel = main.settings_screen.get_node("Panel")
+	var popup = panel.get_node("Center/Box/Form").get_child(1).get_popup()
+	_push_key(viewport, KEY_COMMA, true)
+	_push_key(viewport, KEY_SPACE)
+	await Engine.get_main_loop().process_frame
+	assert_true(popup.visible, "choice popup is open")
+	_push_key(viewport, KEY_ESCAPE)
+	assert_true(not panel.visible and not popup.visible, "Esc closes popup and Settings")
+	assert_true(viewport.gui_get_focus_owner() == null, "closing releases focus")
+	main.free()
+
+
+func test_keyboard_settings_focus_and_post_game_input():
+	var main = _session(ManualWaits.new())
+	await Engine.get_main_loop().process_frame
+	await Engine.get_main_loop().process_frame
+	var viewport = main.get_viewport()
+	var screen = main.settings_screen
+	var panel = screen.get_node("Panel")
+	var form = screen.get_node("Panel/Center/Box/Form")
+	var first = form.get_child(1)
+	var close = screen.get_node("Panel/Center/Box/Close")
+	_push_key(viewport, KEY_COMMA, true)
+	assert_true(panel.visible, "Ctrl+, opens Settings")
+	assert_eq(viewport.gui_get_focus_owner(), first, "first row receives focus")
+	_push_key(viewport, KEY_TAB, false, true)
+	assert_eq(viewport.gui_get_focus_owner(), close, "Shift+Tab wraps to Close")
+	_push_key(viewport, KEY_TAB)
+	assert_eq(viewport.gui_get_focus_owner(), first, "Tab wraps to first row")
+	_push_key(viewport, KEY_COMMA, true)
+	assert_true(not panel.visible, "Ctrl+, closes Settings")
+	assert_true(viewport.gui_get_focus_owner() == null, "closing releases focus")
+	_key(main, KEY_ESCAPE)
+	_key(main, KEY_ESCAPE)
+	var game = main.board_view.game
+	var game_over = main.board_view.get_node("GameOver")
+	_push_key(viewport, KEY_COMMA, true)
+	_push_key(viewport, KEY_TAB)
+	var checkbox = form.get_child(3)
+	var was_checked: bool = checkbox.button_pressed
+	_push_key(viewport, KEY_SPACE)
+	assert_true(checkbox.button_pressed != was_checked, "Space changes the focused checkbox")
+	assert_eq(main.board_view.game, game, "Space does not rematch behind Settings")
+	_push_key(viewport, KEY_ESCAPE)
+	assert_true(not panel.visible and game_over.visible, "Esc closes Settings, not game over")
+	assert_true(viewport.gui_get_focus_owner() == null, "Esc releases focus")
+	_push_key(viewport, KEY_SPACE)
+	assert_true(main.board_view.game != game, "Space rematches after closing")
+	main.free()
+
+
+func test_settings_shortcut_availability_and_mouse_close():
+	var main = _session(ManualWaits.new())
+	await Engine.get_main_loop().process_frame
+	await Engine.get_main_loop().process_frame
+	var viewport = main.get_viewport()
+	var screen = main.settings_screen
+	var panel = screen.get_node("Panel")
+	main._show_setup()
+	_push_key(viewport, KEY_COMMA, true)
+	assert_true(panel.visible, "shortcut opens in setup")
+	_push_key(viewport, KEY_ESCAPE)
+	assert_true(not panel.visible and viewport.gui_get_focus_owner() == null, "Esc closes and releases focus")
+	main._set_focus(true)
+	_push_key(viewport, KEY_COMMA, true)
+	assert_true(not panel.visible, "shortcut disabled in focus mode")
+	main._set_focus(false)
+	main.review.show()
+	_push_key(viewport, KEY_COMMA, true)
+	assert_true(not panel.visible, "shortcut disabled in review")
+	main.review.hide()
+	for control in [screen.get_node("Open"), screen.get_node("Panel/Center/Box/Close")]:
+		for down in [true, false]:
+			var mouse := InputEventMouseButton.new()
+			mouse.button_index = MOUSE_BUTTON_LEFT
+			mouse.pressed = down
+			mouse.position = control.get_global_rect().get_center()
+			viewport.push_input(mouse, true)
+		if control == screen.get_node("Open"):
+			assert_true(panel.visible and viewport.gui_get_focus_owner() == screen.get_node("Panel/Center/Box/Form").get_child(1), "mouse open focuses first row")
+	assert_true(not panel.visible and viewport.gui_get_focus_owner() == null, "mouse Close releases focus")
+	_push_key(viewport, KEY_F)
+	assert_true(main.board_view.flipped, "F still flips after closing")
+	_push_key(viewport, KEY_F11)
+	assert_true(main.focus, "F11 still toggles focus after closing")
 	main.free()
