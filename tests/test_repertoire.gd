@@ -210,7 +210,7 @@ func test_real_import_and_setup_controls_adopt_saved_colour_and_reject_invalid_f
 	setup.get_node("Center/Form/RepertoireControls/Import").pressed.emit()
 	var screen = setup.get_node("RepertoireScreen")
 	assert_true(screen.visible, "repertoire screen opens")
-	screen.get_node("Margin/Form/Import").pressed.emit()
+	screen.get_node("Margin/Form/Buttons/Import").pressed.emit()
 	var importer = screen.get_node("RepertoireImport")
 	assert_true(importer.visible)
 	importer.get_node("Margin/Form/Name").text = "My study"
@@ -230,7 +230,7 @@ func test_real_import_and_setup_controls_adopt_saved_colour_and_reject_invalid_f
 	assert_eq(started[0].colour, "b")
 	assert_eq(started[0].repertoire, "My study")
 	assert_eq(started[0].opening, "My repertoire")
-	screen.get_node("Margin/Form/Import").pressed.emit()
+	screen.get_node("Margin/Form/Buttons/Import").pressed.emit()
 	assert_true(not importer.import_file("res://missing-study.pgn", "Missing", "w").is_empty())
 	DirAccess.make_dir_recursive_absolute(folder)
 	var bad_file := FileAccess.open(folder.path_join("bad.pgn"), FileAccess.WRITE)
@@ -477,7 +477,7 @@ func test_editor_opens_from_screen_branches_and_cancel_discards():
 	var screen = setup.get_node("RepertoireScreen")
 	screen.present()
 	screen.get_node("Margin/Form/List").item_selected.emit(0)
-	var button = screen.get_node_or_null("Margin/Form/Edit")
+	var button = screen.get_node_or_null("Margin/Form/Buttons/Edit")
 	assert_true(button != null, "screen offers editing")
 	if button != null:
 		button.pressed.emit()
@@ -526,7 +526,7 @@ func test_editor_button_tracks_repertoire_selection():
 	Engine.get_main_loop().root.add_child(setup)
 	var screen = setup.get_node("RepertoireScreen")
 	screen.present()
-	var button: Button = screen.get_node("Margin/Form/Edit")
+	var button: Button = screen.get_node("Margin/Form/Buttons/Edit")
 	assert_true(button.disabled)
 	screen.get_node("Margin/Form/List").item_selected.emit(0)
 	assert_true(not button.disabled, "a loaded repertoire can be edited")
@@ -590,13 +590,33 @@ func test_cancelling_the_importer_returns_to_the_repertoire_screen():
 	var importer = screen.get_node("RepertoireImport")
 	screen.present()
 	await Engine.get_main_loop().process_frame
-	screen.get_node("Margin/Form/Import").pressed.emit()
+	screen.get_node("Margin/Form/Buttons/Import").pressed.emit()
 	await Engine.get_main_loop().process_frame
 	assert_true(importer.visible, "importer opens")
 	importer.get_node("Margin/Form/Done").pressed.emit()
 	await Engine.get_main_loop().process_frame
 	assert_true(not importer.visible and screen.visible, "closing the importer keeps Repertoires open")
 	setup.free()
+
+func test_repertoire_screen_fits_the_smallest_window():
+	var setup = load("res://ui/setup.tscn").instantiate()
+	var folder := _folder()
+	setup.repertoire.storage_dir = folder
+	Engine.get_main_loop().root.add_child(setup)
+	assert_eq(setup.repertoire.import_pgn("1. e4 e5 *", "w", "Study"), "")
+	var screen = setup.get_node("RepertoireScreen")
+	screen.present()
+	var editor = screen.get_node("RepertoireEditor")
+	editor.present(setup.repertoire, "Study", 0)
+	var picker = screen.get_node("OpeningPicker")
+	picker.present_repertoire(setup.repertoire)
+	await Engine.get_main_loop().process_frame
+	# 800x600 is the main window's minimum size (ui/main.gd).
+	for window in [screen, editor, picker]:
+		var needed: Vector2 = window.get_contents_minimum_size()
+		assert_true(needed.x <= 800 and needed.y <= 600, "%s needs %s" % [window.name, needed])
+	setup.free()
+	_clean(folder)
 
 func _editor_mouse(window: Window, point: Vector2, button: int, pressed: bool) -> void:
 	var motion := InputEventMouseMotion.new()

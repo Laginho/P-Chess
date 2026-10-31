@@ -49,20 +49,23 @@ mouse_filter = 2
 [node name="Status" type="Label" parent="Margin/Form"]
 layout_mode = 2
 
-[node name="Edit" type="Button" parent="Margin/Form"]
+[node name="Buttons" type="HBoxContainer" parent="Margin/Form"]
+layout_mode = 2
+
+[node name="Edit" type="Button" parent="Margin/Form/Buttons"]
 layout_mode = 2
 text = "Edit"
 disabled = true
 
-[node name="Import" type="Button" parent="Margin/Form"]
+[node name="Import" type="Button" parent="Margin/Form/Buttons"]
 layout_mode = 2
 text = "Import PGN…"
 
-[node name="FromOpenings" type="Button" parent="Margin/Form"]
+[node name="FromOpenings" type="Button" parent="Margin/Form/Buttons"]
 layout_mode = 2
 text = "From openings…"
 
-[node name="Back" type="Button" parent="Margin/Form"]
+[node name="Back" type="Button" parent="Margin/Form/Buttons"]
 layout_mode = 2
 text = "Back"
 

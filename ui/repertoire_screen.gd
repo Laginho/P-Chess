@@ -20,11 +20,11 @@ var _selection := ""
 
 
 func _ready() -> void:
-	$Margin/Form/Edit.pressed.connect(func(): _editor.present(repertoire, _selection, _line))
+	$Margin/Form/Buttons/Edit.pressed.connect(func(): _editor.present(repertoire, _selection, _line))
 	_editor.saved.connect(_saved)
-	$Margin/Form/Import.pressed.connect(func(): importer.present())
-	$Margin/Form/FromOpenings.pressed.connect(func(): _picker.present_repertoire(repertoire))
-	$Margin/Form/Back.pressed.connect(hide)
+	$Margin/Form/Buttons/Import.pressed.connect(func(): importer.present())
+	$Margin/Form/Buttons/FromOpenings.pressed.connect(func(): _picker.present_repertoire(repertoire))
+	$Margin/Form/Buttons/Back.pressed.connect(hide)
 	_picker.saved.connect(_saved)
 	_list.item_selected.connect(_select_repertoire)
 	_line_list.item_selected.connect(_select_line)
@@ -42,7 +42,7 @@ func _refresh() -> void:
 	_line_list.clear()
 	_lines.clear()
 	_selection = ""
-	$Margin/Form/Edit.disabled = true
+	$Margin/Form/Buttons/Edit.disabled = true
 	_line = -1
 	_board.game = null
 	_board.queue_redraw()
@@ -53,7 +53,7 @@ func _refresh() -> void:
 
 func _select_repertoire(index: int) -> void:
 	_selection = _list.get_item_text(index)
-	$Margin/Form/Edit.disabled = true
+	$Margin/Form/Buttons/Edit.disabled = true
 	var error: String = repertoire.load_saved(_selection)
 	_line_list.clear()
 	_lines.clear()
@@ -63,7 +63,7 @@ func _select_repertoire(index: int) -> void:
 	_status.text = error
 	if not error.is_empty():
 		return
-	$Margin/Form/Edit.disabled = false
+	$Margin/Form/Buttons/Edit.disabled = false
 	_lines = repertoire.lines.duplicate(true)
 	_board.flipped = repertoire.colour == "b"
 	_show_names()

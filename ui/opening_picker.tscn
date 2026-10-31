@@ -42,7 +42,10 @@ hide_root = true
 layout_mode = 2
 autowrap_mode = 3
 
-[node name="Colour" type="OptionButton" parent="Margin/Form"]
+[node name="SaveRow" type="HBoxContainer" parent="Margin/Form"]
+layout_mode = 2
+
+[node name="Colour" type="OptionButton" parent="Margin/Form/SaveRow"]
 visible = false
 layout_mode = 2
 item_count = 2
@@ -51,9 +54,6 @@ popup/item_0/text = "White"
 popup/item_0/id = 0
 popup/item_1/text = "Black"
 popup/item_1/id = 1
-
-[node name="SaveRow" type="HBoxContainer" parent="Margin/Form"]
-layout_mode = 2
 
 [node name="Name" type="LineEdit" parent="Margin/Form/SaveRow"]
 layout_mode = 2

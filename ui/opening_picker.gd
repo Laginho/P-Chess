@@ -39,7 +39,7 @@ func present_repertoire(target) -> void:
 	repertoire = target
 	$Margin/Form/Title.text = "From openings"
 	$Margin/Form/LoadRow.hide()
-	$Margin/Form/Colour.show()
+	$Margin/Form/SaveRow/Colour.show()
 	_name.placeholder_text = "Repertoire name"
 	_save.text = "Save repertoire"
 	present()
@@ -155,7 +155,7 @@ func _refresh_names(preferred := "") -> void:
 
 func _save_selection() -> void:
 	var name := _name.text.strip_edges()
-	var error: String = repertoire.save_openings(book, ["w", "b"][$Margin/Form/Colour.selected], name) if repertoire != null else book.save_selection(name)
+	var error: String = repertoire.save_openings(book, ["w", "b"][$Margin/Form/SaveRow/Colour.selected], name) if repertoire != null else book.save_selection(name)
 	if not error.is_empty():
 		_status.text = error
 		return
