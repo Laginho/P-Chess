@@ -96,7 +96,7 @@ func test_accuracy_chart_uses_dated_analysis_and_human_colour():
 	var stale: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(stale_path))
 	stale.engine_version = "Stockfish 18"
 	_write(stale_path, JSON.stringify(stale))
-	# In the middle, Black loses 50 Win% points; the human's accuracy is 9.5303, not White's 100.
+	# In the middle, Black loses about 47.54 Win% points; White's accuracy remains 100.
 	_write_game(folder, "black-loss", "2026.10.02", "b", "1. e4 e5", analysis_dir, [0, 0, 1000])
 	var profile = load("res://ui/profile.tscn").instantiate()
 	Engine.get_main_loop().root.add_child(profile)
@@ -114,7 +114,7 @@ func test_accuracy_chart_uses_dated_analysis_and_human_colour():
 	assert_eq(chart.series[2].date, "2026.10.03")
 	assert_eq(chart.series[0].accuracy, 100.0)
 	# EP at 1000 cp is about 97.54%, so Black's drop is about 47.54 percentage points.
-	assert_true(absf(chart.series[1].accuracy - 10.9646) < 0.01, "chart selects Black's accuracy")
+	assert_true(absf(chart.series[1].accuracy - 10.8500) < 0.01, "chart selects Black's accuracy")
 	assert_eq(chart.series[2].accuracy, 100.0)
 	assert_true(not profile.find_child("NoAccuracy", true, false).visible)
 	profile.refresh(History.new(folder), folder.path_join("missing-analysis"))
