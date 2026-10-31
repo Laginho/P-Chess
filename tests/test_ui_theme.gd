@@ -53,3 +53,17 @@ func test_placeholder_text_meets_contrast_on_the_ground():
 	var fg: float = lum.call(theme.get_color("font_placeholder_color", "LineEdit"))
 	var bg: float = lum.call(Color("#1f1e1c"))
 	assert_true((fg + 0.05) / (bg + 0.05) >= 4.5, "LineEdit placeholder contrast on #1f1e1c")
+
+
+# Checks the weight the TextServer applies, not the stored dictionary: a "wght" string key is stored but never applied.
+func test_font_variations_render_their_weights():
+	var theme: Theme = load("res://ui/theme/p_chess.tres")
+	var ts := TextServerManager.get_primary_interface()
+	var wght := ts.name_to_tag("wght")
+	var weights := {"BoldText": 700, "ExtraBoldText": 800, "MediumText": 500, "PrimaryButton": 700, "SectionLabel": 700, "SemiboldText": 600}
+	for type in weights:
+		var font := theme.get_font("font", type)
+		assert_true(font is FontVariation, "%s uses a FontVariation" % type)
+		if font is FontVariation:
+			var coords: Dictionary = ts.font_get_variation_coordinates(font.get_rids()[0])
+			assert_eq(coords.get(wght), weights[type], "%s renders weight %d" % [type, weights[type]])
