@@ -1,5 +1,5 @@
 # UI-020: Keyboard access to the Settings screen
-Stage: to-review
+Stage: done
 Status: needs-triage
 Blocked by: none
 Review: agent
@@ -66,3 +66,19 @@ Disclosure: decision | none | The two criterion 1 findings above were addressed 
 
 - Reopen verification: focused session tests 27 passed; full headless gate 342 passed, 0 failed, including 6 Lc0 skips (336 executed). Manual keyboard and visual acceptance remains pending.
 Gate evidence: C:\Users\bruno\AppData\Local\Temp\ui020-reopen-gate.json
+
+#### Resolution (2026-10-31)
+Verdict: Approve
+
+- Standards: no documented violations or actionable smells. The independent Standards and Spec reviews covered all six files in `5d71dca818ad6ef498669ca0dfa66e94b7603f08...393ddc59b70e0eb59a8b1ea4c9005c84f1e9caf3`, with detailed re-review of the changes since `8e9c837`. Primary-file boundaries and the test-only/production-only commit separation were respected. No reviewer production fixes were needed.
+- Criterion 1: passes. Both previous P2 findings are resolved: Esc closes Settings before a focused SpinBox consumes it, and each OptionButton popup routes Ctrl+, and Esc to close both popup and panel. Setup/play/post-game availability, focus/review exclusions and the echo guard remain as approved in the first review.
+- Criteria 2-5: pass. First-row focus, forward/reverse Tab wrapping, keyboard value changes, focus release on close, subsequent game hotkeys and Settings isolation over GameOver remain intact. The three new regression tests send press/release events through `Viewport.push_input`, including popup-open states.
+- Red-green proof: `9227346` -> `cd5e152` covers SpinBox Esc (24 passed/1 failed -> 25/0); `24c29a6` -> `a4fa997` covers popup Ctrl+, (25/1 -> 26/0); `0756f8c` -> `5727895` covers popup Esc (26/1 -> 27/0). The external `ui020-red-esc.log`, `ui020-red-popup.log` and `ui020-red-popup-esc.log` under `C:\Users\bruno\AppData\Local\Temp` fail on the expected closing/focus assertions, followed by the corresponding green logs.
+- Additional review probes: `C:\Users\bruno\AppData\Local\Temp\ui020-rereview-esc.log` confirms one Esc closes from an editing SpinBox, releases focus and leaves resignation unarmed. `C:\Users\bruno\AppData\Local\Temp\ui020-rereview-popup.log` confirms root-viewport Ctrl+, closes the embedded popup and Settings. Both probes exited 0. Direct `popup.push_input` bypasses `Window.window_input`, so its different result is a probe limitation: real native callbacks and embedded forwarding enter `Window::_window_input`, which emits the signal before calling `push_input`. Checked against installed Godot commit `5b4e0cb0f`: [Window input](https://github.com/godotengine/godot/blob/5b4e0cb0f/scene/main/window.cpp#L1873), [native callback](https://github.com/godotengine/godot/blob/5b4e0cb0f/scene/main/window.cpp#L1359), [embedded forwarding](https://github.com/godotengine/godot/blob/5b4e0cb0f/scene/main/viewport.cpp#L2969).
+- Gate: reused the run on `5727895e60c87ce79b92d0b11fc4d47cbe88e114`, validating its command, exit 0, log SHA-256 and unchanged code against the reviewed and integrated trees. `ui020-reopen-gate.log` reports 342 passed, 0 failed: 336 executed and six live-Lc0 SKIPs because `engine/lc0/lc0.exe` is absent. The unchanged gate was not rerun.
+- Integration: rebase onto `sweatshop/core/2026-10-31-0338` required no changes; merge `278bd13` preserves every test and implementation commit. This Resolution, `Stage: done` and the ledger entry are committed together on the session branch.
+- The existing `Proxy decided (opus-5.5 xhigh)` decision and its receipt above remain the approved contract. This review changes no criterion or product decision.
+- Coverage limits: headless input probes, source review and recorded gate evidence. Physical keyboard, rendered layout and live-Lc0 behavior were not exercised. Manual acceptance still needs setup/play/post-game checks for opening, row navigation, value editing, all close paths and game hotkeys afterward.
+
+Acceptance: pending | Headless criteria pass with the receipt above; manual keyboard and visual acceptance across setup, play and post-game remains.
+Disclosure: pending | release | Manual keyboard and visual acceptance remains for UI-020; see this Resolution and the headless evidence above.
