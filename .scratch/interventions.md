@@ -81,3 +81,4 @@
 | 2026-10-31T01:55-03:00 | HIST-005 | automatic-recovery | driver parked a to-review handoff on a parse defect (GateEvidenceField took the review's "- Gate evidence:" bullet); review bullet reworded on the ticket branch (cc3ee76), Stage to-review restored on the session (8780914) |
 | 2026-10-31T01:55-03:00 | UI-017 | automatic-recovery | foreman diagnosis of terra high's third early stop; rest of the run relaunched on -Lineup sol (authorized fallback); UI-017 back to to-implement (session 8780914) |
 | 2026-10-31T02:22-03:00 | HIST-005 | automatic-recovery | second-reopen diagnosis: new integration defect after HIST-006 merged; reviewer's repair plan, back to to-implement (session 476aee7) |
+| 2026-10-31T03:31-03:00 | UI-020 | proxy-decision | Proxy decided (opus-5.5 xhigh): Ctrl+, hotkey toggles Settings, Open stays unfocusable; asked by the core-lane foreman before launch and folded into the ticket on main (bdeaa35) |
