@@ -1,5 +1,5 @@
 # HIST-004: The history screen
-Stage: reviewing
+Stage: done
 Blocked by: REV-004, REV-005, HIST-003
 Review: agent
 Difficulty: hard
@@ -60,6 +60,26 @@ Acceptance: pending | Open History with saved games, switch tabs, open a review 
 
 Disclosure: pending | release | Manual history screen, keyboard navigation and minimum-size layout acceptance remain outstanding (verification above).
 
-Gate evidence: C:\Users\bruno\AppData\Local\Temp\p-chess-hist004-gate-fixed.json
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\p-chess-hist004-review-gate.json
 
 - 2026-10-31 Stage 3 small fix: first-use History emitted Godot errors because `games` does not exist before the first save (criterion 8). Reviewer `/root` added regression `3904545`, red with two missing-directory errors (exit 1), then the two-line guard in `6c44c39`, green with zero failures (exit 0). Independent review and a new full gate are required before integration.
+
+#### Resolution (2026-10-31)
+Verdict: Approve
+
+- Standards: no findings. Reviewed all 12 changed files and the complete implementation commit history against `AGENTS.md`, tracker conventions, Primary files and the test/production commit split. The recovered first red/green pair was explicitly authorized by the foreman note.
+- Spec: one first-use error corrected during review; no unresolved findings. The initial review covered `8ce8bdd8fb394b2be475db3636c5ff3155cdb8aa...6c30df5a2ff6c247019654f271faba10fb0d646a`; the final rebased implementation is `e24b8e2877830ae1b62a0189b889595c1cb495fe`.
+- Criterion 1: PASS — All/1+0/3+2/5+0 tabs, TimeControl filtering, newest-first listing and validated `history_tab` default/choices.
+- Criterion 2: PASS — catalog positions and deepest reached opening name, human orientation and last-move highlight; fallback at ply 10, last short-game ply or the initial empty-game position.
+- Criterion 3: PASS — opening name only on recognition, date, both player colours, human/opponent names, result/reason and move count.
+- Criterion 4: PASS — explicit Reason takes precedence; legacy time, mate, stalemate, insufficient material, 50-move, resignation and unknown draw paths inspected/tested.
+- Criterion 5: PASS — not analysed/stale/both cached accuracies and a 44-by-44 Copy PGN icon action.
+- Criterion 6: PASS — saved repertoire snapshot, no markers without a snapshot, Back to History/Esc and consumed Space without rematch.
+- Criterion 7: PASS — uncached/stale games offer Analyze; the existing analyser receives Max and fills the review through position signals. Cached review positions bypass a new analysis.
+- Criterion 8: PASS — Setup/History/Back wiring. First-use regression now covers both a missing profile root and an existing root without `games`.
+- Small repair author: `/root`. Independent reviewer: `/root/spec_review`, Verdict: Approve, examining the endpoint diff `6c30df5a2ff6c247019654f271faba10fb0d646a..e24b8e2877830ae1b62a0189b889595c1cb495fe` in `core/history.gd` and `tests/test_history.gd`, the `_folder()` fixture and the ErrorLog probe. The guard preserves existing directory enumeration and avoids creating player files.
+- Red/green proof: committed regression `3904545` failed with two Godot missing-directory errors (exit 1); production-only guard `6c44c39` passed the same focused test (exit 0). After rebase those commits are `d4bc106` and `959d75a`. Stage 2's separate red/green and mutation proof is retained in the preceding comments and commits.
+- Gate: `godot --headless -s tests/run.gd`, run once after the repair/rebase on `e24b8e2877830ae1b62a0189b889595c1cb495fe`: 360 PASS lines, 360 passed, 0 failed, no SKIP lines, ExitCode: 0. Log: `C:\Users\bruno\AppData\Local\Temp\p-chess-hist004-review-gate.log`; receipt above. Receipt SHA256 matches the log and tested production is unchanged through integration.
+- Coverage: inspected PGN parsing/saving, Game legacy terminal states, BoardView thumbnails, catalog completion, settings default/choice/UI row, setup entry/back, snapshot classification, cache/accuracy, Max analysis signals and review cancellation/navigation. All changed files and the connected callers/failure paths were examined. The focused first-use test and full gate ran live; independent reviews were static.
+- Limits: rendered cards/settings at minimum size, physical keyboard/focus and real-engine interactive history acceptance remain manual. The existing Acceptance and release Disclosure stay pending; implementation approval does not claim those product checks passed.
+- Integration: rebased onto `sweatshop/v010/2026-10-30-2302` and merged without squash as `dca01d81c31effb82a844e2b1fba14a80e2a8776`. No PR or push in this stage; the session driver owns publication.
