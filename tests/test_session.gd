@@ -624,3 +624,40 @@ func test_keyboard_settings_focus_and_post_game_input():
 	_push_key(viewport, KEY_SPACE)
 	assert_true(main.board_view.game != game, "Space rematches after closing")
 	main.free()
+
+
+func test_settings_shortcut_availability_and_mouse_close():
+	var main = _session(ManualWaits.new())
+	await Engine.get_main_loop().process_frame
+	await Engine.get_main_loop().process_frame
+	var viewport = main.get_viewport()
+	var screen = main.settings_screen
+	var panel = screen.get_node("Panel")
+	main._show_setup()
+	_push_key(viewport, KEY_COMMA, true)
+	assert_true(panel.visible, "shortcut opens in setup")
+	_push_key(viewport, KEY_ESCAPE)
+	assert_true(not panel.visible and viewport.gui_get_focus_owner() == null, "Esc closes and releases focus")
+	main._set_focus(true)
+	_push_key(viewport, KEY_COMMA, true)
+	assert_true(not panel.visible, "shortcut disabled in focus mode")
+	main._set_focus(false)
+	main.review.show()
+	_push_key(viewport, KEY_COMMA, true)
+	assert_true(not panel.visible, "shortcut disabled in review")
+	main.review.hide()
+	for control in [screen.get_node("Open"), screen.get_node("Panel/Center/Box/Close")]:
+		for down in [true, false]:
+			var mouse := InputEventMouseButton.new()
+			mouse.button_index = MOUSE_BUTTON_LEFT
+			mouse.pressed = down
+			mouse.position = control.get_global_rect().get_center()
+			viewport.push_input(mouse, true)
+		if control == screen.get_node("Open"):
+			assert_true(panel.visible and viewport.gui_get_focus_owner() == screen.get_node("Panel/Center/Box/Form").get_child(1), "mouse open focuses first row")
+	assert_true(not panel.visible and viewport.gui_get_focus_owner() == null, "mouse Close releases focus")
+	_push_key(viewport, KEY_F)
+	assert_true(main.board_view.flipped, "F still flips after closing")
+	_push_key(viewport, KEY_F11)
+	assert_true(main.focus, "F11 still toggles focus after closing")
+	main.free()
