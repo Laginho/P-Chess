@@ -394,6 +394,36 @@ func test_delete_confirmation_stays_with_its_game_after_refresh():
 	queue.free()
 	Storage.clean(folder)
 
+func test_long_analysis_error_keeps_toolbar_inside_minimum_window():
+	var folder := "user://history_error_layout_%d" % Time.get_ticks_usec()
+	var history = History.new(folder)
+	var game = Game.new()
+	game.resign("b")
+	var path: String = history.save(game, [], {"colour": "w", "level": "maia-1500", "control": "1+0"})
+	var runner := FakeQueueAnalyser.new()
+	var queue = load("res://core/analysis_queue.gd").new(runner, folder.path_join("queue.cfg"))
+	var root := Engine.get_main_loop().root
+	var old_size := root.size
+	root.size = Vector2i(800, 600)
+	var screen = load("res://ui/history_screen.tscn").instantiate()
+	screen.analysis_queue = queue
+	root.add_child(screen)
+	screen.present(history, Settings.new(folder.path_join("settings.cfg")))
+	queue.enqueue(path)
+	runner.finished.emit(false, "Stockfish stopped. Restart the app to play again. Run scripts/fetch-engine.ps1 if needed.")
+	await Engine.get_main_loop().process_frame
+	await Engine.get_main_loop().process_frame
+	for node_path in ["Header/Back", "Header/Title", "BatchActions/SelectAll", "BatchActions/AnalyzeSelected", "BatchActions/Status", "BatchActions/AnalyzeAll"]:
+		var control: Control = screen.get_node("Margin/Content/" + node_path)
+		var rect := control.get_global_rect()
+		assert_true(rect.position.x >= 0 and rect.end.x <= 800 and rect.position.y >= 0 and rect.end.y <= 600, node_path + " stays inside the window")
+	var status: Label = screen.get_node("Margin/Content/BatchActions/Status")
+	assert_true(status.text.contains("fetch-engine.ps1") and status.size.y >= status.get_line_height() * 2, "the full error wraps and remains readable")
+	screen.free()
+	queue.free()
+	root.size = old_size
+	Storage.clean(folder)
+
 func test_history_select_all_and_active_progress():
 	var folder := "user://history_toolbar_%d" % Time.get_ticks_usec()
 	var history = History.new(folder)
