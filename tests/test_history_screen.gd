@@ -406,12 +406,18 @@ func test_long_analysis_error_keeps_toolbar_inside_minimum_window():
 	var queue = load("res://core/analysis_queue.gd").new(runner, folder.path_join("queue.cfg"))
 	var root: Window = Engine.get_main_loop().root
 	var old_size: Vector2i = root.size
-	root.size = Vector2i(800, 600)
+	root.size = Vector2i(1280, 800)
 	var screen = load("res://ui/history_screen.tscn").instantiate()
 	screen.analysis_queue = queue
 	root.add_child(screen)
 	screen.present(history, Settings.new(folder.path_join("settings.cfg")))
 	queue.enqueue(path)
+	await Engine.get_main_loop().process_frame
+	await Engine.get_main_loop().process_frame
+	var status: Label = screen.get_node("Margin/Content/BatchActions/Status")
+	var text_width := status.get_theme_font("font").get_string_size(status.text, HORIZONTAL_ALIGNMENT_LEFT, -1, status.get_theme_font_size("font_size")).x
+	assert_true(status.size.x - text_width <= 12, "short queue status stays beside Analyze all without an empty gap")
+	root.size = Vector2i(800, 600)
 	runner.finished.emit(false, "Stockfish stopped. Restart the app to play again. Run scripts/fetch-engine.ps1 if needed.")
 	await Engine.get_main_loop().process_frame
 	await Engine.get_main_loop().process_frame
@@ -419,7 +425,6 @@ func test_long_analysis_error_keeps_toolbar_inside_minimum_window():
 		var control: Control = screen.get_node("Margin/Content/" + node_path)
 		var rect := control.get_global_rect()
 		assert_true(rect.position.x >= 0 and rect.end.x <= 800 and rect.position.y >= 0 and rect.end.y <= 600, node_path + " stays inside the window")
-	var status: Label = screen.get_node("Margin/Content/BatchActions/Status")
 	assert_true(status.text.contains("fetch-engine.ps1") and status.size.y >= status.get_line_height() * 2, "the full error wraps and remains readable")
 	screen.free()
 	queue.free()
