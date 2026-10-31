@@ -46,15 +46,16 @@ const THEMES := {"board_theme": "boards", "piece_theme": "pieces", "sound_theme"
 
 var path: String
 var _values := DEFAULTS.duplicate()
+var _config := ConfigFile.new()
 
 
 func _init(file := "user://settings.cfg") -> void:
 	path = file
-	var config := ConfigFile.new()
-	if config.load(path) != OK:
+	if _config.load(path) != OK:
+		_config = ConfigFile.new()
 		return
 	for key in DEFAULTS:
-		var value = config.get_value(SECTION, key) if config.has_section_key(SECTION, key) else null
+		var value = _config.get_value(SECTION, key) if _config.has_section_key(SECTION, key) else null
 		if valid(key, value):
 			_values[key] = type_convert(value, typeof(DEFAULTS[key]))
 
@@ -68,27 +69,21 @@ func set_value(key: String, value) -> bool:
 	if not valid(key, value):
 		return false
 	_values[key] = type_convert(value, typeof(DEFAULTS[key]))
-	var config := ConfigFile.new()
-	config.load(path)
 	for k in _values:
-		config.set_value(SECTION, k, _values[k])
-	config.save(path)
+		_config.set_value(SECTION, k, _values[k])
+	_config.save(path)
 	changed.emit(key, _values[key])
 	return true
 
 
 func last_game() -> Dictionary:
-	var config := ConfigFile.new()
-	config.load(path)
-	var value = config.get_value("game", "last", {})
-	return value if value is Dictionary else {}
+	var value = _config.get_value("game", "last", {})
+	return value.duplicate(true) if value is Dictionary else {}
 
 
 func save_last_game(value: Dictionary) -> void:
-	var config := ConfigFile.new()
-	config.load(path)
-	config.set_value("game", "last", value)
-	config.save(path)
+	_config.set_value("game", "last", value.duplicate(true))
+	_config.save(path)
 
 
 # Numbers may be int or float; NaN fails both bounds. A theme must exist now, bundled or user's,
