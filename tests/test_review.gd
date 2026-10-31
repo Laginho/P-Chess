@@ -655,3 +655,18 @@ func test_move_classes_collapse_in_small_review():
 		assert_true(side.get_node("Counts").visible, "toggle opens class table")
 	main.free()
 	root.size = old_size
+
+func test_review_navigation_buttons_visit_first_and_last_move():
+	var main = await _session(FakeTime.new())
+	var game = Game.new()
+	game.play("e2e4")
+	game.play("e7e5")
+	main.review.present(game, [180000, 180000], SETTINGS, "")
+	var nav = main.review.get_node_or_null("Margin/Content/ReviewBody/Side/Navigation")
+	assert_true(nav != null, "review has navigation buttons")
+	if nav != null:
+		nav.get_node("First").pressed.emit()
+		assert_eq(main.review.get_node("Margin/Content/ReviewBody/BoardView").game.moves.size(), 0)
+		nav.get_node("Last").pressed.emit()
+		assert_eq(main.review.get_node("Margin/Content/ReviewBody/BoardView").game.moves.size(), 2)
+	main.free()
