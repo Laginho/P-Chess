@@ -63,11 +63,19 @@ func test_invalid_fen_sends_nothing_and_cancellation_writes_nothing():
 	assert_true(bridge.searches.is_empty())
 	assert_true(not analyser.analyse([START, "8/8/8/8/8/8/8/8 w - - 0 1"], path, true), "missing kings")
 	assert_true(bridge.searches.is_empty())
+	for fen in ["6k1/8/8/8/8/P7/PPPPPPPP/6K1 w - - 0 1", "6k1/8/8/8/8/8/PPPPPPPP/QQ4K1 w - - 0 1",
+			"6k1/8/8/8/8/8/8/6K1 w - - 32768 1", "6k1/8/8/8/8/8/8/6K1 w - - 0 100001"]:
+		assert_true(not analyser.analyse([START, fen], path, true), "Stockfish rejects " + fen)
+	assert_true(bridge.searches.is_empty())
 	assert_true(analyser.analyse([START], path, true))
 	analyser.cancel()
 	bridge.answer()
 	assert_eq(bridge.stops, 1)
 	assert_true(not FileAccess.file_exists(path))
+	analyser.free()
+	analyser = Analyser.new(FakeBridge.new())
+	assert_true(analyser.analyse(["Q5k1/8/8/8/8/8/1PPPPPPP/6K1 b - - 0 1"], path, true), "a promoted queen for a missing pawn is legal")
+	analyser.cancel()
 	analyser.free()
 
 

@@ -96,6 +96,14 @@ static func _valid_position(fen: String) -> bool:
 	for i in range(8):
 		if board.squares[i].to_lower() == "p" or board.squares[i + 56].to_lower() == "p":
 			return false
+	# Stockfish exits on these: per side more than 8 pawns, or more promoted pieces than missing pawns.
+	for pieces in ["PNBRQ", "pnbrq"]:
+		var pawns: int = board.squares.count(pieces[0])
+		var extra := maxi(board.squares.count(pieces[1]) - 2, 0) + maxi(board.squares.count(pieces[2]) - 2, 0) 				+ maxi(board.squares.count(pieces[3]) - 2, 0) + maxi(board.squares.count(pieces[4]) - 1, 0)
+		if pawns > 8 or extra > 8 - pawns:
+			return false
+	if board.halfmove_clock > 32767 or board.fullmove_number > 100000:
+		return false
 	var other = board.copy()
 	other.side_to_move = "b" if board.side_to_move == "w" else "w"
 	if other.in_check():
