@@ -1017,3 +1017,21 @@ func test_legend_opens_and_dismisses_with_keyboard_without_review_shortcuts():
 	assert_true(not triggered[0], "legend keyboard input does not trigger rematch")
 	main.free()
 	root.gui_embed_subwindows = old_embed
+
+func test_review_keeps_history_error_clear_of_analysis_progress():
+	var root = Engine.get_main_loop().root
+	var old_size: Vector2i = root.size
+	root.size = Vector2i(1280, 800)
+	var main = await _session(FakeTime.new())
+	var review = main.review
+	review.present(Game.new(), [], SETTINGS, "White wins by resignation (1-0)\nSpace for a rematch\nHistory: Could not save game")
+	var result: Control = review.get_node("Margin/Content/Result")
+	var progress: Control = review.get_node("Margin/Content/Progress")
+	progress.show()
+	await root.get_tree().process_frame
+	await root.get_tree().process_frame
+	assert_true(result.text.contains("History: Could not save game"), "save failures remain visible")
+	assert_true(not result.text.contains("Space for a rematch"), "shortcut is not part of review summary")
+	assert_true(result.global_position.y + result.size.y <= progress.global_position.y, "progress stays below the whole warning")
+	main.free()
+	root.size = old_size
