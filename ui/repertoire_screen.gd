@@ -39,6 +39,8 @@ func present() -> void:
 
 func _refresh() -> void:
 	_list.clear()
+	for card in $Margin/Form/Cards.get_children():
+		card.free()
 	_line_list.clear()
 	_lines.clear()
 	_selection = ""
@@ -49,6 +51,24 @@ func _refresh() -> void:
 	_status.text = ""
 	for name in repertoire.names():
 		_list.add_item(name)
+		var index := _list.item_count - 1
+		var card := HBoxContainer.new()
+		$Margin/Form/Cards.add_child(card)
+		var select := Button.new()
+		select.text = name
+		select.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		select.pressed.connect(func(): _select_repertoire(index))
+		card.add_child(select)
+		var edit := Button.new()
+		edit.name = "Edit"
+		edit.text = "✎"
+		edit.tooltip_text = "Edit " + name
+		edit.pressed.connect(func():
+			_select_repertoire(index)
+			if $Margin/Form/Buttons/Edit.disabled == false:
+				_editor.present(repertoire, _selection, _line)
+		)
+		card.add_child(edit)
 
 
 func _select_repertoire(index: int) -> void:
