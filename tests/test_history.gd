@@ -17,6 +17,8 @@ func test_thumbnail_uses_deepest_named_position_or_fallback():
 	history.book = book
 	var known := PackedStringArray(["e2e4", "e7e5", "g1f3", "b8c6", "f1c4"])
 	assert_eq(history.thumbnail(known), {"ply": 4, "opening": "King's Knight"})
+	var prefix := PackedStringArray(["e2e4", "e7e5", "g1f3", "g8f6"])
+	assert_eq(history.thumbnail(prefix), {"ply": 3, "opening": "King's Pawn"}, "the thumbnail includes a catalog prefix after the last named position")
 	var unknown := PackedStringArray(["a2a3", "a7a6", "b2b3", "b7b6", "c2c3", "c7c6", "d2d3", "d7d6", "e2e3", "e7e6", "f2f3"])
 	assert_eq(history.thumbnail(unknown), {"ply": 10, "opening": ""})
 	assert_eq(history.thumbnail(unknown.slice(0, 6)), {"ply": 6, "opening": ""})
