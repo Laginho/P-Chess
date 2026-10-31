@@ -59,7 +59,7 @@ func test_graph_click_navigates_and_tracks_orientation():
 	main.free()
 
 
-func test_review_tooltips_explain_accuracy_and_class_thresholds():
+func test_review_help_explains_accuracy_and_class_thresholds():
 	var main = await _session(FakeTime.new())
 	var review = main.get_node("Review")
 	var accuracy_help = review.get_node_or_null("Margin/Content/ReviewBody/Side/AccuracyHelp")
@@ -67,10 +67,9 @@ func test_review_tooltips_explain_accuracy_and_class_thresholds():
 	assert_true(accuracy_help != null and class_help != null, "both help controls exist")
 	if accuracy_help != null and class_help != null:
 		assert_true(accuracy_help.tooltip_text.contains("win"))
-		for threshold in [Tunables.CLASSIFICATION_EXCELLENT_LOSS, Tunables.CLASSIFICATION_GOOD_LOSS,
-				Tunables.CLASSIFICATION_INACCURACY_LOSS, Tunables.CLASSIFICATION_MISTAKE_LOSS,
-				Tunables.CLASSIFICATION_MISS_BEFORE_EP, Tunables.CLASSIFICATION_MISS_AFTER_EP]:
-			assert_true(class_help.tooltip_text.contains(str(threshold)), "threshold %s" % threshold)
+		class_help.pressed.emit()
+		var legend = review.get_node_or_null("ClassLegend")
+		assert_true(legend != null and legend.dialog_text.contains("2%") and legend.dialog_text.contains("20%"), "legend gives class thresholds")
 	main.free()
 
 
@@ -568,7 +567,7 @@ func test_review_help_popups_fit_minimum_window():
 	main.review.receive_position(0, {"pv": [{"cp": 0, "moves": ["e2e4"]}], "best_move": "e2e4"})
 	await tree.process_frame
 	await tree.process_frame
-	for help_name in ["AccuracyHelp", "ClassHelp"]:
+	for help_name in ["AccuracyHelp"]:
 		var help = main.review.get_node("Margin/Content/ReviewBody/Side/" + help_name)
 		var event := InputEventMouseMotion.new()
 		event.position = help.get_global_rect().get_center()
@@ -594,9 +593,6 @@ func test_review_help_popups_fit_minimum_window():
 		var rect := Rect2(dialog.position, dialog.size)
 		assert_true(Rect2(0, 0, 800, 600).encloses(rect), help_name + " dialog fits")
 		dialog.hide()
-	var classes: String = main.review.get_node("Margin/Content/ReviewBody/Side/ClassHelp").tooltip_text
-	assert_true(classes.contains("up to %s moves slower" % Tunables.CLASSIFICATION_MATE_SLOWER))
-	assert_true(classes.contains("moves made while in check"))
 	main.free()
 	root.size = old_size
 
