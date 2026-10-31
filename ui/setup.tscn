@@ -38,7 +38,7 @@ theme_override_constants/separation = 12
 [node name="Title" type="Label" parent="Center/Form"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
-text = "Play Maia"
+text = "Custom game"
 horizontal_alignment = 1
 
 [node name="Colour" type="OptionButton" parent="Center/Form"]
@@ -83,9 +83,9 @@ text = "Repertoires..."
 layout_mode = 2
 text = "Start"
 
-[node name="History" type="Button" parent="Center/Form"]
+[node name="Back" type="Button" parent="Center/Form"]
 layout_mode = 2
-text = "History"
+text = "Back"
 
 [node name="Missing" type="Label" parent="Center/Form"]
 visible = false

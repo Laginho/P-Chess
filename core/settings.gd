@@ -69,11 +69,26 @@ func set_value(key: String, value) -> bool:
 		return false
 	_values[key] = type_convert(value, typeof(DEFAULTS[key]))
 	var config := ConfigFile.new()
+	config.load(path)
 	for k in _values:
 		config.set_value(SECTION, k, _values[k])
 	config.save(path)
 	changed.emit(key, _values[key])
 	return true
+
+
+func last_game() -> Dictionary:
+	var config := ConfigFile.new()
+	config.load(path)
+	var value = config.get_value("game", "last", {})
+	return value if value is Dictionary else {}
+
+
+func save_last_game(value: Dictionary) -> void:
+	var config := ConfigFile.new()
+	config.load(path)
+	config.set_value("game", "last", value)
+	config.save(path)
 
 
 # Numbers may be int or float; NaN fails both bounds. A theme must exist now, bundled or user's,

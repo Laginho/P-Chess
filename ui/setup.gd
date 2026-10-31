@@ -125,6 +125,7 @@ func _on_start() -> void:
 	var colour: String = ["w", "b", ["w", "b"].pick_random()][_colour.selected]
 	var settings := {"colour": colour, "level": LEVELS[_level.selected],
 			"control": _control.get_item_text(_control.selected), "opening": OPENINGS[_opening.selected]}
+	settings["colour_choice"] = ["w", "b", "random"][_colour.selected]
 	if _repertoires.selected >= 0:
 		settings["repertoire"] = _repertoires.get_item_text(_repertoires.selected)
 	if settings.opening == "Catalog":
@@ -138,5 +139,6 @@ func _on_start() -> void:
 			return
 		_colour.select(0 if repertoire.colour == "w" else 1)
 		settings.colour = repertoire.colour
+		settings.colour_choice = repertoire.colour
 		settings["repertoire"] = name
 	started.emit(settings)

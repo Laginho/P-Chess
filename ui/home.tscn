@@ -59,3 +59,24 @@ text = "3+2"
 layout_mode = 2
 size_flags_horizontal = 3
 text = "5+0"
+
+[node name="Custom" type="Button" parent="Center/Form"]
+layout_mode = 2
+text = "Custom game"
+
+[node name="History" type="Button" parent="Center/Form"]
+layout_mode = 2
+text = "History"
+
+[node name="Settings" type="Button" parent="Center/Form"]
+layout_mode = 2
+text = "Settings"
+
+[node name="Quit" type="Button" parent="Center/Form"]
+layout_mode = 2
+text = "Quit"
+
+[node name="Missing" type="Label" parent="Center/Form"]
+visible = false
+layout_mode = 2
+autowrap_mode = 3
