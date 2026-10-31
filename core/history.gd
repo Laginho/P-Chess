@@ -114,7 +114,7 @@ func delete(path: String) -> bool:
 		return false
 	var game: Dictionary = parsed.games[0]
 	var headers: Dictionary = game.headers
-	var human := "w" if headers.get("White", "") == "You" else "b"
+	var human := human_colour(headers)
 	var opponent: String = headers.get("Black" if human == "w" else "White", "")
 	var level := "maia-" + opponent.trim_prefix("Maia ")
 	var controls := {"60+0": "1+0", "180+2": "3+2", "300+0": "5+0"}
@@ -171,6 +171,11 @@ func delete(path: String) -> bool:
 		error = "Could not save history stats."
 		return false
 	return true
+
+
+static func human_colour(headers: Dictionary) -> String:
+	var colour: String = headers.get("HumanColor", "")
+	return colour if colour in ["w", "b"] else ("w" if headers.get("White", "") == "You" else "b")
 
 
 func _restore_deleted_files(paths: Array, contents: Dictionary) -> void:
