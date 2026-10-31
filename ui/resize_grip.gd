@@ -15,7 +15,8 @@ func _ready() -> void:
 func _place() -> void:
 	var board: Control = get_parent()
 	var side := minf(board.size.x, board.size.y)
-	position = Vector2((board.size.x + side) / 2.0, (board.size.y + side) / 2.0) - size
+	# As in Game.png, the icon hangs off the board's corner onto the dark background: grey on a light square is unreadable.
+	position = Vector2((board.size.x + side) / 2.0, (board.size.y + side) / 2.0) - Vector2(4, 4)
 
 
 func _draw() -> void:

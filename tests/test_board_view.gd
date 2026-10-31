@@ -40,6 +40,10 @@ func test_grip_drag_saves_size_and_double_click_restores_fit():
 	main.history = preload("res://core/history.gd").new(path.get_basename())
 	Engine.get_main_loop().root.add_child(main)
 	var grip = main.get_node("Layout/BoardView/ResizeGrip")
+	var board: Control = main.board_view
+	var corner := (board.size + Vector2.ONE * minf(board.size.x, board.size.y)) / 2.0
+	# The icon (drawn from 5,5) sits off the board on the dark background, where it stays readable.
+	assert_true(grip.position.x + 5 >= corner.x and grip.position.y + 5 >= corner.y, "grip icon is outside the board square")
 	var press := _mouse(true, Vector2(10, 10))
 	grip._gui_input(press)
 	var motion := InputEventMouseMotion.new()
