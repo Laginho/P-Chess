@@ -1,5 +1,5 @@
 # CLEAN-012: Apply the shared theme's declared font weights
-Stage: to-implement
+Stage: done
 Blocked by: none
 Review: agent
 Difficulty: normal
@@ -33,6 +33,7 @@ Make the existing shared font variations render their declared weights. This rep
 - 2026-10-31 Opened by [UI-022 stage-3 review](../../ui-game/issues/74-UI-022-home-name-dialog-searching.md#resolution-2026-10-31), preserving the already recorded foundation finding. The earlier UI-021 approval missed the effective rendering of weight axes; existing tests only assert the font resource/name.
 - Confirmed on Godot 4.7: ExtraBoldText stores `{"wght":800}`, but `TextServer.font_get_variation_coordinates(font.get_rids()[0])` returns `{}`. A duplicate using numeric OpenType tag `2003265652` returns `{2003265652:800}`. The same string-key configuration occurs at `ui/theme/p_chess.tres:7`, `:114`, `:200`, `:294` and `:453`.
 - Reproduction script and log: `C:/Users/bruno/AppData/Local/Temp/pchess-ui022-review-49a91834-fd8a-477e-a4e5-e18183901cda/probe.gd` and `probe-long-name.log`. That script also checks UI-022's independent long-name finding; only the font output belongs to this ticket.
+- 2026-10-31 Shipped separately in [PR #37](https://github.com/Laginho/P-Chess/pull/37) (merged to `main` as 0635b3d) and merged into this session branch for PR #36.
 
 Acceptance: pending | Rendered font weights and new graphical comparisons after the repair.
 Disclosure: pending | integration | UI-022 and the remaining screen redesigns require the correct shared font weights before visual acceptance/integration.
