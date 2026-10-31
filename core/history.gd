@@ -157,7 +157,13 @@ func delete(path: String) -> bool:
 	_results.set_value(level, control, counts)
 	if not target.is_empty():
 		_results.set_value("practice", target, maxi(0, practiced - 1))
-	if _results.save(_root.path_join("stats.cfg")) != OK:
+	var stats_path := _root.path_join("stats.cfg")
+	var temp_path := _root.path_join("stats.cfg.deleting")
+	var status := _results.save(temp_path)
+	if status == OK:
+		status = DirAccess.rename_absolute(temp_path, stats_path)
+	if status != OK:
+		DirAccess.remove_absolute(temp_path)
 		_results.set_value(level, control, previous)
 		if not target.is_empty():
 			_results.set_value("practice", target, practiced)
