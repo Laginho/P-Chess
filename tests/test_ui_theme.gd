@@ -29,3 +29,13 @@ func test_class_icon_colours_match_canvas():
 func test_trash_icon_uses_canvas_delete_glyph():
 	var svg := FileAccess.get_file_as_string("res://ui/icons/trash.svg")
 	assert_true('d="M4 7h16M10 7V4.5h4V7M6.5 7l1 13h9l1-13"' in svg, "Delete game glyph from History.dc.html")
+
+
+func test_primary_button_focus_ring_contrasts_with_its_fill():
+	var theme: Theme = load("res://ui/theme/p_chess.tres")
+	var focus := theme.get_stylebox("focus", "PrimaryButton") as StyleBoxFlat
+	var normal := theme.get_stylebox("normal", "PrimaryButton") as StyleBoxFlat
+	assert_true(focus != null and normal != null, "PrimaryButton has flat focus and normal styles")
+	if focus and normal:
+		assert_eq(focus.border_color, theme.get_color("font_color", "PrimaryButton"), "focus ring uses the text-on-accent colour")
+		assert_true(focus.border_color != normal.bg_color, "focus ring is visible on the green fill")
