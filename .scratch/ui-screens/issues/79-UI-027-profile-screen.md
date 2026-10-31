@@ -1,5 +1,5 @@
 # UI-027: Profile screen to the design
-Stage: implementing
+Stage: to-review
 Blocked by: UI-021
 Review: agent
 Difficulty: normal
@@ -36,7 +36,10 @@ Restyle the profile to `docs/design/v0.1.0/png/Profile.png`, with the layout Bru
 ## Comments
 
 - 2026-10-31 Written from `.scratch/ui-redo/spec.md`. Bruno took the canvas layout and kept the spec's chart (all games, 0–100).
-
-- 2026-10-31 Review ended at blocked (exit 0); branch ui-027 holds the review; left for a human
+- Stage 2: focused profile tests pass (4/4); the games tile, summary/table and filename-date tests were observed red before their implementations. The former below-scroll Back assertion was updated for the canvas header.
+- Gate: 413 reported passed, 0 failed, including 6 Lc0 skips (407 executed); exit 0. Tested commit: b5a9d1fc8a558740ac2a3ab32aee476080ada9fa.
+- Screenshot checks: `C:\Users\bruno\AppData\Local\Temp\pchess-ui027-c881251d-7437-4691-8ad3-01a7acfb027c\profile-1280.png` (earlier iteration) and `C:\Users\bruno\AppData\Local\Temp\pchess-ui027-final-87105672-a105-47a1-bf74-c0b09c3b69bc\profile-800.png` (final). The 800px table headings are compact; the fixture has one row and no analysed games. The app-wide Settings control remains visible above the screen. Stage 3 must capture the final 1280px screen, compare a populated fixture to the reference and attach before/after images.
+- Acceptance: pending | Manual Profile rename and graphical comparison with populated history, including the 800×600 layout.
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\pchess-ui027-gate.json
 
 - 2026-10-31 Foreman: the escalated prerequisite is resolved by the owner. The shared font-axis fix was merged to main as PR #37 (CLEAN-012, f0789db; it supersedes UI-030), and the session took it in sync merge 9ad4daf (gate 436 passed, 0 failed). Restoring `to-review` per the re-review's own resume instructions: rebase `ui-027` onto the session, run the gate on the resulting production, recapture populated Profile at 1280x800 and 800x600 and verify the resolved weights.
