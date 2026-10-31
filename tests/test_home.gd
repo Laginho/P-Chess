@@ -221,3 +221,32 @@ func test_profile_keeps_settings_available_after_opening_from_home():
 	assert_true(main.settings_screen.get_node("Open").visible, "Settings remains available in Profile")
 	main.free()
 	Session.HistoryStorage.clean(folder)
+
+
+func test_home_and_searching_boards_follow_theme_preferences():
+	var main = MainScene.instantiate()
+	var folder := "user://test_home_themes_%d" % Time.get_ticks_usec()
+	main.history = load("res://core/history.gd").new(folder)
+	main.uci.free()
+	main.uci = Session.HeldBridge.new()
+	main.maia = main.MaiaPlayer.new(main.uci)
+	main.preferences = main.Settings.new("res://tests/fixtures/no_session_settings.cfg")
+	Engine.get_main_loop().root.add_child(main)
+	var home_board = main.get_node("Home/Center/Board")
+	var search_board = main.get_node("Searching/Board")
+	search_board.board_theme = "stale"
+	search_board.piece_theme = "stale"
+	main.searching.present({"control": "3+2", "level": "maia-1500"})
+	assert_eq(search_board.board_theme, "brown", "Searching loads the saved board theme")
+	assert_eq(search_board.piece_theme, "cburnett", "Searching loads the saved piece theme")
+	home_board.board_theme = "stale"
+	home_board.piece_theme = "stale"
+	search_board.board_theme = "stale"
+	search_board.piece_theme = "stale"
+	main.preferences.changed.emit("board_theme", "brown")
+	main.preferences.changed.emit("piece_theme", "cburnett")
+	for board in [home_board, search_board]:
+		assert_eq(board.board_theme, "brown", "board follows theme changes")
+		assert_eq(board.piece_theme, "cburnett", "pieces follow theme changes")
+	main.free()
+	Session.HistoryStorage.clean(folder)
