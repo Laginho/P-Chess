@@ -4,6 +4,7 @@ signal rematch_requested
 signal setup_requested
 
 # Clock snapshots are the mover's remaining milliseconds after each move (HIST-001).
+const ThemeLoader = preload("res://ui/theme_loader.gd")
 const Clock = preload("res://core/clock.gd")
 const Pgn = preload("res://core/pgn.gd")
 const Board = preload("res://core/board.gd")
@@ -30,6 +31,7 @@ var _game_moves := PackedStringArray()
 var _ply := 0
 var _positions := []
 var _classes := []
+var _icons := {}
 var _move_rows := []
 var _catalog := []
 var _repertoire := []
@@ -183,7 +185,10 @@ func _refresh_classes() -> void:
 
 
 func _class_icon(label: String) -> Texture2D:
-	return load("res://ui/icons/classes/" + label.to_lower() + ".svg")
+	if not _icons.has(label):
+		var path := "res://ui/icons/classes/" + label.to_lower() + ".svg"
+		_icons[label] = load(path) if ResourceLoader.exists(path) else ThemeLoader.load_texture(path)
+	return _icons[label]
 
 
 func _update_board_annotations() -> void:
