@@ -258,6 +258,7 @@ func _start(new_settings: Dictionary) -> void:
 	if not uci.error.is_empty():
 		_starting = false
 		searching.hide()
+		analysis_queue.resume()
 		return
 	searching.status("Loading Maia %s…" % new_settings.level.trim_prefix("maia-"))
 	var ready := [false]
@@ -271,6 +272,7 @@ func _start(new_settings: Dictionary) -> void:
 	if not uci.error.is_empty():
 		_starting = false
 		searching.hide()
+		analysis_queue.resume()
 		return
 	searching.status("Preparing game…")
 	var error := ""
