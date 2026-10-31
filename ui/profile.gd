@@ -53,7 +53,7 @@ func refresh(history, analysis_dir := "user://analysis") -> void:
 		if cached.state != "analysed":
 			continue
 		var positions = cached.data.get("positions")
-		if not positions is Array or positions.size() != game.moves.size() + 1:
+		if not _complete_analysis(positions, game.moves.size() + 1):
 			continue
 		var values := Accuracy.evaluate(cached.data)
 		var value = values.white if History.human_colour(game.headers) == "w" else values.black
@@ -67,6 +67,28 @@ func refresh(history, analysis_dir := "user://analysis") -> void:
 		return first < second if first != second else a.path < b.path)
 	$Margin/Content/Scroll/Body/AccuracyChart.set_series(series)
 	$Margin/Content/Scroll/Body/NoAccuracy.visible = series.is_empty()
+
+
+# Cache metadata alone does not guarantee that every scored position was written.
+func _complete_analysis(positions, count: int) -> bool:
+	if not positions is Array or positions.size() != count:
+		return false
+	for position in positions:
+		if not position is Dictionary or not position.get("pv") is Array:
+			return false
+		var score = position.get("terminal_score")
+		if not position.pv.is_empty():
+			var line = position.pv[0]
+			if not line is Dictionary:
+				return false
+			score = line.get("cp", line.get("mate"))
+		if not (score is int or score is float) or not is_finite(float(score)):
+			return false
+	var fen = positions[0].get("fen")
+	if not fen is String:
+		return false
+	var fields: PackedStringArray = fen.split(" ")
+	return fields.size() >= 2 and fields[1] in ["w", "b"]
 
 
 func _cell(table: GridContainer, value: String) -> void:
