@@ -160,6 +160,8 @@ func play(move: String, premove := false) -> bool:
 
 func _draw() -> void:
 	var side := _side()
+	if side < 40:
+		return
 	var cell := Vector2.ONE * side / 8
 	var last: String = game.moves[-1] if game and game.moves else ""
 	var checked := ""
