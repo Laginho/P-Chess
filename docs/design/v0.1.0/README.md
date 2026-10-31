@@ -59,7 +59,9 @@ try {
 The first argument is a board name from `canvas.json` without `.dc.html`.
 `Settings`, `Setup`, `PromotionPicker`, and `RepertoireImport` are also
 available. `GameOverStates` accepts an optional fifth argument `loss` or `draw`
-(the default is a win). The fixture uses a short game and a repertoire; its
+(the default is a win). `GamePanelStates` defaults to the resign confirmation;
+pass `declined` as the fifth argument to show a declined draw offer. The fixture
+uses a short game and a repertoire; its
 data and PNG remain in the printed temporary folder. Components and states
 whose redesign has not landed use the current screen or its current help
 dialog, so they may differ from the canvas. The script refuses to run without

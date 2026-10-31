@@ -122,6 +122,12 @@ func capture() -> void:
    main.clock = load("res://core/clock.gd").new("3+2", Time.get_ticks_msec)
    main.white_clock.clock = main.clock
    main.black_clock.clock = main.clock
+   if board == "GamePanelStates":
+    if state == "declined":
+     main.draw_notice.text = "Maia declined"
+     main.draw_notice.show()
+    else:
+     main.resign_key.press()
    if board in ["GameOver", "GameOverStates", "GameOverCard"]:
     if state == "loss":
      game.result = "0-1"
