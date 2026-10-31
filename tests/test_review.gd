@@ -625,3 +625,19 @@ func test_unsettled_move_has_placeholder_while_analysis_arrives():
 	var moves: Tree = main.review.get_node("Margin/Content/ReviewBody/Side/Moves")
 	assert_true(moves.get_root().get_first_child().get_icon(1) != null, "unsettled move has a placeholder")
 	main.free()
+
+func test_move_classes_help_opens_ordered_legend():
+	var main = await _session(FakeTime.new())
+	var review = main.review
+	review.present(Game.new(), [180000, 180000], SETTINGS, "")
+	review.get_node("Margin/Content/ReviewBody/Side/ClassHelp").pressed.emit()
+	var legend = review.get_node_or_null("ClassLegend")
+	assert_true(legend != null and legend.visible, "move classes opens the legend")
+	if legend != null:
+		var text: String = legend.dialog_text
+		var previous := -1
+		for name in ["Brilliant", "Great", "Best", "Excellent", "Good", "Book", "Repertoire", "Inaccuracy", "Mistake", "Miss", "Blunder", "Forced"]:
+			var at := text.find(name, previous + 1)
+			assert_true(at > previous, name + " appears in order")
+			previous = at
+	main.free()
