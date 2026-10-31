@@ -1,5 +1,5 @@
 # UI-017: The searching screen
-Stage: to-review
+Stage: done
 Blocked by: HIST-006, UI-016
 Review: agent
 Difficulty: normal
@@ -80,3 +80,16 @@ These test-only changes follow the asynchronous startup required by criteria 1 a
 - Stop Maia during startup and try a missing repertoire or saved opening selection; confirm searching closes, the existing error is visible and analysis resumes. Confirm a valid retry succeeds after fixing the repertoire/selection.
 
 Stage 2 ends at `to-review`; no stage-3 review, integration or ledger closure was performed here.
+
+#### Resolution (2026-10-31)
+Verdict: Approve
+
+- Reviewed the complete 16-file diff from session base `5c5f9a795eaf173d8a334781e2867a6f6f9d5cd5` to ticket handoff `0141e2b04a068c6484375ac947631eb48ea3182b`, plus connected callers and failure paths. Independent Standards and Spec reviewers agreed with the stage-3 review; no production repair was needed.
+- Standards: 0 documented violations and 0 actionable complexity findings. All changed files are within Primary files. Inspected all 12 commits: tests and production remain separate; the legacy-test changes retain their behavioral assertions while waiting for the new asynchronous startup.
+- Spec: 0 findings. Criterion 1 passes: Quick play, Custom game and rematch share `_start` and show the selected time control and Maia level. Criterion 2 passes: active analysis cancellation precedes the selected net's `readyok`, followed by catalog/repertoire/selection preparation. Criterion 3 passes: the screen remains for at least 500 ms and until startup completes; the previous clock stops and the new game/clock are created only after it closes. Criterion 4 passes: repertoire, selection, catalog and engine failures close searching and preserve existing error and retry paths.
+- Coverage: Home and Custom game; game-over, Review and Space rematches; repeated starts and game hotkeys; analysis pause/resume and cancellation racing with engine failure; UCI callback serialization; old clocks and late policy replies; cold/delayed catalog loading and late completion after engine failure; repertoire snapshots/checking; saved selection failure and repaired retry; history, badges, premoves and review callers. Every changed scene, script, test and documentation file was examined. Rendered layout, physical mouse/keyboard and interactive Maia/Stockfish batch acceptance were not performed; the Manual acceptance section remains the release checklist.
+- Red/green evidence reviewed: tracer red before `a8b85cf`; analysis-stop race red before `79814e8`; minimum-duration mutant red on Quick play, Custom game and rematch. Existing gate log and receipt were inspected and validated with `Assert-GateEvidence`: tested commit `21f6a79ab64d6b0584b119584265ada2a94befd6`, **380 passed, 0 failed**, 380 PASS lines, 0 actual SKIP lines, ExitCode: 0. Live UCI tests passed, including level switching and missing-net failure. The log SHA256 matches `9277A60FA2670091CDD520460706A9F20911CFC1A9A2F2C91DB0C667292DC835`.
+- Integration: `ui-017` was already based on the current session; rebase made no changes. Merged without squash into `sweatshop/v010/2026-10-30-2302` as `f196729eb8cc54c084167364a14be5ba01365a34`. Gate evidence remains valid after merge; reused the green receipt because the tested code is identical. This closure changes only the ticket and feature ledger. No PR or push is part of this session-stage handoff.
+
+Acceptance: pending | [Manual acceptance](#manual-acceptance): interactive real-engine batch/startup, rendered layout and physical input remain unchecked.
+Disclosure: pending | release | [Manual acceptance](#manual-acceptance): these product checks remain release conditions after session integration.
