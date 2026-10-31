@@ -39,6 +39,34 @@ func _fresh() -> String:
 	return PATH
 
 
+func test_name_dialog_requires_a_nonempty_choice_and_stays_closed_after_restart():
+	var scene = load("res://ui/name_dialog.tscn")
+	assert_true(scene != null, "first-launch name dialog exists")
+	if scene == null:
+		return
+	var store = Settings.new(_fresh())
+	var dialog = scene.instantiate()
+	Engine.get_main_loop().root.add_child(dialog)
+	dialog.present(store)
+	assert_true(dialog.visible and dialog.exclusive)
+	assert_true(not dialog.dialog_close_on_escape and dialog.borderless, "only OK dismisses the modal")
+	var input = dialog.get_node("Name")
+	assert_eq(input.text, "You")
+	input.text = "   "
+	input.text_changed.emit(input.text)
+	assert_true(dialog.get_ok_button().disabled)
+	input.text_submitted.emit(input.text)
+	assert_true(dialog.visible and not store.has_player_name())
+	input.text = "Bruno"
+	input.text_changed.emit(input.text)
+	dialog.get_ok_button().pressed.emit()
+	assert_true(not dialog.visible)
+	assert_eq(Settings.new(PATH).get_value("player_name"), "Bruno")
+	dialog.present(Settings.new(PATH))
+	assert_true(not dialog.visible, "a confirmed name survives restart")
+	dialog.free()
+
+
 func test_board_size_defaults_round_trips_and_rejects_invalid_values():
 	var store = Settings.new(_fresh())
 	assert_eq(store.get_value("board_size"), 0, "zero means fit to window")

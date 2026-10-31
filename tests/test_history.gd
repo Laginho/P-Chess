@@ -55,6 +55,54 @@ func test_legacy_delete_falls_back_to_you_in_either_colour():
 	HistoryStorage.clean(folder)
 
 
+func test_history_shows_saved_names_and_renames_legacy_you_without_changing_pgn():
+	for colour in ["w", "b"]:
+		for legacy in [false, true]:
+			var folder := _folder()
+			DirAccess.make_dir_recursive_absolute(folder)
+			var main = MainScene.instantiate()
+			main.history = History.new(folder)
+			main.preferences = main.Settings.new(folder.path_join("settings.cfg"))
+			main.preferences.set_value("player_name", "Current name")
+			main.get_node("Setup").book.load_tsv("eco\tname\tpgn\nA00\tFixture\t1. h3\n")
+			main.uci.free()
+			main.uci = HeldEngine.new()
+			main.maia = main.MaiaPlayer.new(main.uci)
+			var settings := SETTINGS.duplicate()
+			settings.colour = colour
+			settings.player_name = "You" if legacy else "Maia 1500"
+			var game = Game.new()
+			game.flag("b" if colour == "w" else "w")
+			var path: String = main.history.save(game, [], settings)
+			if legacy:
+				var saved: Dictionary = Pgn.parse(FileAccess.get_file_as_string(path)).games[0]
+				saved.headers.erase("HumanColor")
+				var file := FileAccess.open(path, FileAccess.WRITE)
+				file.store_string(Pgn.write(saved))
+				file.close()
+			var original := FileAccess.get_file_as_string(path)
+			Engine.get_main_loop().root.add_child(main)
+			main.get_node("Home/Center/Form/History").pressed.emit()
+			var card = main.history_screen.get_node("Margin/Content/Cards/List").get_child(0)
+			assert_eq(card.get_child(0).flipped, colour == "b", "thumbnail follows HumanColor")
+			var displayed := "Current name" if legacy else "Maia 1500"
+			var text: String = card.get_node("Details/Text").text
+			assert_true(text.contains(displayed + (" (White)" if colour == "w" else " (Black)")))
+			assert_true(text.contains("Won on time"), "result follows HumanColor")
+			card.get_node("Details/HBoxContainer/Review").pressed.emit()
+			assert_eq(main.review.get_node("Margin/Content/ReviewBody/BoardView").flipped, colour == "b")
+			main.review.receive_position(0, {"pv": [{"cp": 0, "moves": ["e2e4"]}]})
+			var summary: String = main.review.get_node("Margin/Content/ReviewBody/Side/Summary").text
+			assert_true(summary.contains(("White: " if colour == "w" else "Black: ") + displayed))
+			var copied := []
+			main.review.copy_text = func(value): copied.append(value)
+			main.review.get_node("Margin/Content/Actions/CopyPgn").pressed.emit()
+			assert_eq(copied, [original], "export keeps the saved names too")
+			assert_eq(FileAccess.get_file_as_string(path), original)
+			main.free()
+			HistoryStorage.clean(folder)
+
+
 # Hold the external UCI reply while the real analyser, queue and screen run.
 class HeldAnalysisBridge extends RefCounted:
 	var engine_id := "Stockfish 19"
