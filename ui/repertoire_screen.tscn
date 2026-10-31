@@ -56,6 +56,7 @@ custom_minimum_size = Vector2(0, 90)
 layout_mode = 2
 
 [node name="Back" type="Button" parent="Margin/Form/Buttons"]
+custom_minimum_size = Vector2(44, 44)
 layout_mode = 2
 icon = ExtResource("6")
 tooltip_text = "Back"
@@ -64,7 +65,7 @@ tooltip_text = "Back"
 layout_mode = 2
 size_flags_horizontal = 3
 theme_type_variation = &"ExtraBoldText"
-theme_override_font_sizes/font_size = 24
+theme_override_font_sizes/font_size = 28
 text = "Repertoires"
 
 [node name="Edit" type="Button" parent="Margin/Form/Buttons"]
@@ -74,11 +75,13 @@ text = "Edit"
 disabled = true
 
 [node name="Import" type="Button" parent="Margin/Form/Buttons"]
+custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
 icon = ExtResource("7")
 text = "Import PGN"
 
 [node name="FromOpenings" type="Button" parent="Margin/Form/Buttons"]
+custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
 theme_type_variation = &"PrimaryButton"
 icon = ExtResource("8")
