@@ -82,6 +82,16 @@ func test_profile_table_matches_stats_and_omits_empty_rows():
 	assert_eq(cells, ["Level", "1+0 · W D L", "3+2 · W D L", "5+0 · W D L", "Flag wins", "Flag losses",
 			"Maia 1100", "0  1  0", "–", "–", "0", "0",
 			"Maia 1500", "–", "4  2  3", "1  0  1", "2", "3"])
+	var header: Label = table.get_child(0)
+	var level: Label = table.get_child(6)
+	var flag_win: Label = table.get_child(16)
+	var flag_loss: Label = table.get_child(17)
+	assert_eq(header.get_theme_font_size("font_size"), 12, "table headers match the design")
+	assert_eq(level.get_theme_font_size("font_size"), 14, "table rows are readable")
+	assert_eq(level.horizontal_alignment, HORIZONTAL_ALIGNMENT_LEFT, "level names align left")
+	assert_eq(flag_win.get_theme_color("font_color"), Color("8fbc5a"), "flag wins are green")
+	assert_eq(flag_loss.get_theme_color("font_color"), Color("ee7a72"), "flag losses are red")
+	assert_true(profile.find_child("GamesCard", true, false).get_minimum_size().y >= 86, "tiles have the design's vertical space")
 	assert_true(not profile.find_child("NoResults", true, false).visible)
 	stats.clear()
 	stats.save(folder.path_join("stats.cfg"))
