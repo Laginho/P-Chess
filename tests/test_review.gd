@@ -582,10 +582,11 @@ func test_review_help_popups_fit_minimum_window():
 		var dialog: AcceptDialog = main.review.get_node("HelpDialog")
 		assert_eq(help.focus_mode, Control.FOCUS_ALL, help_name + " takes keyboard focus")
 		help.grab_focus()
-		var enter := InputEventKey.new()
-		enter.keycode = KEY_ENTER
-		enter.pressed = true
-		root.push_input(enter)
+		for pressed in [true, false]:
+			var enter := InputEventKey.new()
+			enter.keycode = KEY_ENTER
+			enter.pressed = pressed
+			root.push_input(enter)
 		await tree.process_frame
 		assert_true(dialog.visible and dialog.dialog_text == help.tooltip_text, help_name + " opens its explanation with Enter")
 		var rect := Rect2(dialog.position, dialog.size)

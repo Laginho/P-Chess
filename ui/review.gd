@@ -66,6 +66,9 @@ func _ready() -> void:
 	help_dialog.name = "HelpDialog"
 	add_child(help_dialog)
 	for help: Button in [$Margin/Content/ReviewBody/Side/AccuracyHelp, $Margin/Content/ReviewBody/Side/ClassHelp]:
+		# Label height, so the review still fits 800x600; the focus box still shows.
+		for style in ["normal", "hover", "pressed", "hover_pressed"]:
+			help.add_theme_stylebox_override(style, StyleBoxEmpty.new())
 		help.pressed.connect(func():
 			help_dialog.title = help.text.trim_suffix("?").strip_edges()
 			help_dialog.dialog_text = help.tooltip_text
