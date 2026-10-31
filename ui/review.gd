@@ -121,6 +121,7 @@ func _ready() -> void:
 		_layout_review())
 	_graph.ply_selected.connect(_show_ply)
 	_board_view.resized.connect(_update_player_labels)
+	_result.resized.connect(_layout_review)
 	$Margin/Content/ReviewBody/Side.resized.connect(_layout_review)
 	resized.connect(_layout_review)
 	_layout_review.call_deferred()
@@ -667,7 +668,7 @@ func present(game, clocks: Array, settings: Dictionary, result_text: String,
 	_update_player_labels()
 	_show_ply(_game_moves.size())
 	var moves: int = (game.moves.size() + 1) / 2
-	_result.text = "%s \u00b7 %s \u00b7 %d %s" % [settings.get("control", ""), result_text.get_slice("\n", 0), moves, "move" if moves == 1 else "moves"]
+	_result.text = "%s \u00b7 %s \u00b7 %d %s" % [settings.get("control", ""), result_text.replace("\nSpace for a rematch", ""), moves, "move" if moves == 1 else "moves"]
 	_moves.clear()
 	var root := _moves.create_item()
 	var board = Board.from_fen(Pgn.START)
