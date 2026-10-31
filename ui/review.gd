@@ -295,7 +295,7 @@ func _refresh_classes() -> void:
 	# ponytail: reevaluate all plies as positions land; incremental classification if long games stutter.
 	_classes = Classification.evaluate(_game_moves, {"positions": _positions}, _catalog, _repertoire, _colour, _check_repertoire)
 	for i in _classes.size():
-		var icon: Texture2D = null if _classes[i] == null else _class_icon(_classes[i].class)
+		var icon: Texture2D = _class_icon("Pending" if _classes[i] == null else _classes[i].class)
 		_move_rows[i].set_icon(i % 2 + 1, icon)
 		if _classes[i] != null:
 			var detail: String = _move_rows[i].get_tooltip_text(i % 2 + 1)
@@ -305,8 +305,16 @@ func _refresh_classes() -> void:
 
 func _class_icon(label: String) -> Texture2D:
 	if not _icons.has(label):
-		var path := "res://ui/icons/classes/" + label.to_lower() + ".svg"
-		_icons[label] = load(path) if ResourceLoader.exists(path) else ThemeLoader.load_texture(path)
+		if label == "Pending":
+			var image := Image.create(16, 16, false, Image.FORMAT_RGBA8)
+			for degrees in range(0, 360, 8):
+				if degrees % 64 < 40:
+					var angle := deg_to_rad(float(degrees))
+					image.set_pixel(roundi(7.5 + 6.0 * cos(angle)), roundi(7.5 + 6.0 * sin(angle)), Color(0.65, 0.64, 0.61))
+			_icons[label] = ImageTexture.create_from_image(image)
+		else:
+			var path := "res://ui/icons/classes/" + label.to_lower() + ".svg"
+			_icons[label] = load(path) if ResourceLoader.exists(path) else ThemeLoader.load_texture(path)
 	return _icons[label]
 
 
