@@ -22,7 +22,12 @@ func _ready() -> void:
 		child.size_flags_horizontal = Control.SIZE_EXPAND_FILL if child == get_ok_button() else 0
 	get_ok_button().size_flags_vertical = Control.SIZE_EXPAND_FILL
 	get_ok_button().theme_type_variation = "PrimaryButton"
-	get_ok_button().custom_minimum_size.y = 48
+	# The dialog sizes its buttons from this constant, over any custom minimum size.
+	add_theme_constant_override("buttons_min_height", 48)
+	add_theme_constant_override("buttons_separation", 20)
+	get_ok_button().add_theme_font_override("font", get_theme_font("font", "ExtraBoldText"))
+	get_ok_button().add_theme_font_size_override("font_size", 16)
+	$Content/NameLabel.add_theme_font_override("font", get_theme_font("font", "SemiboldText"))
 	confirmed.connect(_confirm)
 	$Content/Name.text_submitted.connect(func(_text): _confirm())
 	$Content/Name.text_changed.connect(func(text): get_ok_button().disabled = text.strip_edges().is_empty())

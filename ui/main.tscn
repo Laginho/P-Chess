@@ -10,13 +10,7 @@
 [ext_resource type="PackedScene" path="res://ui/searching.tscn" id="8"]
 [ext_resource type="Texture2D" path="res://ui/icons/robot.svg" id="9"]
 [ext_resource type="Texture2D" path="res://ui/icons/flag.svg" id="10"]
-
-[sub_resource type="StyleBoxFlat" id="ScoreBox"]
-bg_color = Color(0.2, 0.2, 0.2, 1)
-content_margin_left = 6.0
-content_margin_right = 6.0
-content_margin_top = 3.0
-content_margin_bottom = 3.0
+[ext_resource type="Script" path="res://ui/icon_button.gd" id="11"]
 
 [sub_resource type="StyleBoxFlat" id="AvatarBox"]
 bg_color = Color(0.498, 0.651, 0.314, 1)
@@ -44,7 +38,16 @@ shader = SubResource("BotShader")
 
 [sub_resource type="StyleBoxFlat" id="NoticeBox"]
 bg_color = Color(0.212, 0.204, 0.188, 1)
-content_margin_left = 14.0
+content_margin_left = 58.0
+content_margin_bottom = 10.0
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.2706, 0.2588, 0.2392, 1)
+expand_margin_left = -12.0
+expand_margin_right = -12.0
+expand_margin_bottom = -10.0
 corner_radius_top_left = 8
 corner_radius_top_right = 8
 corner_radius_bottom_right = 8
@@ -97,13 +100,21 @@ theme_override_constants/separation = 0
 [node name="BlackClockRow" type="HBoxContainer" parent="Layout/Side"]
 custom_minimum_size = Vector2(0, 72)
 layout_mode = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 12
+
+[node name="Lead" type="Control" parent="Layout/Side/BlackClockRow"]
+custom_minimum_size = Vector2(4, 0)
+layout_mode = 2
+mouse_filter = 2
 
 [node name="Score" type="Label" parent="Layout/Side/BlackClockRow"]
 visible = false
+custom_minimum_size = Vector2(16, 0)
 layout_mode = 2
 size_flags_vertical = 4
-theme_override_styles/normal = SubResource("ScoreBox")
+theme_type_variation = &"ExtraBoldText"
+theme_override_font_sizes/font_size = 18
+horizontal_alignment = 1
 
 [node name="Avatar" type="PanelContainer" parent="Layout/Side/BlackClockRow"]
 custom_minimum_size = Vector2(36, 36)
@@ -122,6 +133,8 @@ stretch_mode = 5
 custom_minimum_size = Vector2(36, 36)
 layout_mode = 2
 size_flags_vertical = 4
+theme_type_variation = &"ExtraBoldText"
+theme_override_font_sizes/font_size = 16
 theme_override_colors/font_color = Color(0.078, 0.078, 0.071, 1)
 theme_override_styles/normal = SubResource("AvatarBox")
 horizontal_alignment = 1
@@ -129,8 +142,9 @@ vertical_alignment = 1
 text = "Y"
 
 [node name="Name" type="Label" parent="Layout/Side/BlackClockRow"]
+custom_minimum_size = Vector2(0, 38)
 layout_mode = 2
-theme_type_variation = &"SemiboldText"
+theme_type_variation = &"BoldText"
 theme_override_font_sizes/font_size = 15
 size_flags_horizontal = 3
 size_flags_vertical = 4
@@ -140,7 +154,8 @@ text_overrun_behavior = 3
 [node name="Colour" type="Label" parent="Layout/Side/BlackClockRow/Name"]
 layout_mode = 0
 offset_top = 20.0
-theme_override_font_sizes/font_size = 11
+theme_type_variation = &"MutedText"
+theme_override_font_sizes/font_size = 12
 text = "White"
 mouse_filter = 2
 
@@ -148,39 +163,63 @@ mouse_filter = 2
 layout_mode = 2
 side = "b"
 
+[node name="Trail" type="Control" parent="Layout/Side/BlackClockRow"]
+layout_mode = 2
+mouse_filter = 2
+
 [node name="MoveList" parent="Layout/Side" instance=ExtResource("3")]
 layout_mode = 2
 
 [node name="Result" type="Label" parent="Layout/Side"]
+visible = false
 layout_mode = 2
 autowrap_mode = 3
 
 [node name="DrawNotice" type="Label" parent="Layout/Side"]
 visible = false
-custom_minimum_size = Vector2(0, 40)
+custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
+theme_type_variation = &"SemiboldText"
 theme_override_styles/normal = SubResource("NoticeBox")
 vertical_alignment = 1
 
 [node name="Actions" type="HBoxContainer" parent="Layout/Side"]
-custom_minimum_size = Vector2(0, 44)
+custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="DrawButton" type="Button" parent="Layout/Side/Actions"]
+[node name="Lead" type="Control" parent="Layout/Side/Actions"]
+custom_minimum_size = Vector2(4, 0)
 layout_mode = 2
+mouse_filter = 2
+
+[node name="DrawButton" type="Button" parent="Layout/Side/Actions"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+size_flags_vertical = 0
 theme_type_variation = &"RaisedButton"
+theme_override_constants/h_separation = 8
+theme_override_constants/icon_max_width = 18
 theme_override_font_sizes/font_size = 15
+script = ExtResource("11")
+font_type = &"SemiboldText"
 disabled = true
 size_flags_horizontal = 3
 text = "½  Offer draw"
 tooltip_text = "Offer a draw"
 
 [node name="ResignButton" type="Button" parent="Layout/Side/Actions"]
+custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
+size_flags_vertical = 0
 theme_type_variation = &"RaisedButton"
+theme_override_constants/h_separation = 8
+theme_override_constants/icon_max_width = 18
 theme_override_font_sizes/font_size = 15
+script = ExtResource("11")
+font_type = &"SemiboldText"
 icon = ExtResource("10")
+expand_icon = true
 disabled = true
 size_flags_horizontal = 3
 text = "Resign"
@@ -202,27 +241,49 @@ theme_override_styles/background = SubResource("BarEmpty")
 theme_override_styles/fill = SubResource("BarFill")
 show_percentage = false
 
+[node name="Trail" type="Control" parent="Layout/Side/Actions"]
+custom_minimum_size = Vector2(4, 0)
+layout_mode = 2
+mouse_filter = 2
+
 [node name="DrawNoticeTimer" type="Timer" parent="Layout/Side"]
 wait_time = 3.0
 one_shot = true
 
-[node name="ClaimDraw" type="Button" parent="Layout/Side"]
+[node name="ClaimBox" type="MarginContainer" parent="Layout/Side"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="ClaimDraw" type="Button" parent="Layout/Side/ClaimBox"]
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 focus_mode = 0
 disabled = true
 text = "Claim draw"
+script = ExtResource("11")
+font_type = &"SemiboldText"
 
 [node name="WhiteClockRow" type="HBoxContainer" parent="Layout/Side"]
 custom_minimum_size = Vector2(0, 72)
 layout_mode = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 12
+
+[node name="Lead" type="Control" parent="Layout/Side/WhiteClockRow"]
+custom_minimum_size = Vector2(4, 0)
+layout_mode = 2
+mouse_filter = 2
 
 [node name="Score" type="Label" parent="Layout/Side/WhiteClockRow"]
 visible = false
+custom_minimum_size = Vector2(16, 0)
 layout_mode = 2
 size_flags_vertical = 4
-theme_override_styles/normal = SubResource("ScoreBox")
+theme_type_variation = &"ExtraBoldText"
+theme_override_font_sizes/font_size = 18
+horizontal_alignment = 1
 
 [node name="Avatar" type="PanelContainer" parent="Layout/Side/WhiteClockRow"]
 custom_minimum_size = Vector2(36, 36)
@@ -241,6 +302,8 @@ stretch_mode = 5
 custom_minimum_size = Vector2(36, 36)
 layout_mode = 2
 size_flags_vertical = 4
+theme_type_variation = &"ExtraBoldText"
+theme_override_font_sizes/font_size = 16
 theme_override_colors/font_color = Color(0.078, 0.078, 0.071, 1)
 theme_override_styles/normal = SubResource("AvatarBox")
 horizontal_alignment = 1
@@ -248,8 +311,9 @@ vertical_alignment = 1
 text = "Y"
 
 [node name="Name" type="Label" parent="Layout/Side/WhiteClockRow"]
+custom_minimum_size = Vector2(0, 38)
 layout_mode = 2
-theme_type_variation = &"SemiboldText"
+theme_type_variation = &"BoldText"
 theme_override_font_sizes/font_size = 15
 size_flags_horizontal = 3
 size_flags_vertical = 4
@@ -259,12 +323,17 @@ text_overrun_behavior = 3
 [node name="Colour" type="Label" parent="Layout/Side/WhiteClockRow/Name"]
 layout_mode = 0
 offset_top = 20.0
-theme_override_font_sizes/font_size = 11
+theme_type_variation = &"MutedText"
+theme_override_font_sizes/font_size = 12
 text = "White"
 mouse_filter = 2
 
 [node name="WhiteClock" parent="Layout/Side/WhiteClockRow" instance=ExtResource("5")]
 layout_mode = 2
+
+[node name="Trail" type="Control" parent="Layout/Side/WhiteClockRow"]
+layout_mode = 2
+mouse_filter = 2
 
 [node name="Setup" parent="." instance=ExtResource("4")]
 visible = false

@@ -1,9 +1,13 @@
 ﻿extends Control
 
 var _spin := 0.0
+var _robot_box := StyleBoxFlat.new()
 
 
 func _ready() -> void:
+	_robot_box.bg_color = Color("#5a5650")
+	_robot_box.set_corner_radius_all(6)
+	$Card.draw.connect(_draw_card)
 	$Board.game = preload("res://core/game.gd").new()
 	$Spinner.draw.connect(func(): $Spinner.draw_arc(Vector2(48, 48), 40, _spin, _spin + PI * 1.25, 32, Color("7fa650"), 8, true))
 	visibility_changed.connect(_sync_settings_button)
@@ -23,6 +27,7 @@ func present(settings: Dictionary) -> void:
 			preferences.changed.connect(_apply_board_theme)
 	$Player.text = preferences.get_value("player_name") if preferences else settings.get("player_name", "You")
 	$Avatar.text = $Player.text.left(1).to_upper()
+	_layout_searching()
 	show()
 
 
@@ -45,10 +50,10 @@ func _layout_searching() -> void:
 	var card: Control = $Card
 	card.position = Vector2(margin + side + gap, (size.y - side) / 2)
 	card.size = Vector2(size.x - card.position.x - margin, side)
-	$Spinner.position = card.position + Vector2(card.size.x / 2 - 48, card.size.y / 2 - 128)
+	$Spinner.position = card.position + Vector2(card.size.x / 2 - 48, card.size.y / 2 - 119)
 	$Spinner.size = Vector2(96, 96)
-	$Robot.position = card.position + Vector2(22, 20)
-	$Robot.size = Vector2(24, 24)
+	$Robot.position = card.position + Vector2(23, 21)
+	$Robot.size = Vector2(22, 22)
 	$Avatar.position = card.position + Vector2(16, card.size.y - 50)
 	$Avatar.size = Vector2(36, 36)
 	$Opponent.position = card.position + Vector2(64, 0)
@@ -60,16 +65,30 @@ func _layout_searching() -> void:
 	var content: Control = $Center/Content
 	content.size = card.size
 	var middle := card.size.y / 2
-	$Center/Content/Title.position = Vector2(0, middle - 8)
+	$Center/Content/Title.position = Vector2(0, middle - 1)
 	$Center/Content/Title.size = Vector2(card.size.x, 34)
-	$Center/Content/Status.position = Vector2(0, middle + 32)
+	$Center/Content/Status.position = Vector2(0, middle + 37)
 	$Center/Content/Status.size = Vector2(card.size.x, 26)
-	var chip_width := minf(135, (card.size.x - 40) / 2)
-	$Center/Content/ControlChip.position = Vector2(card.size.x / 2 - chip_width - 5, middle + 78)
-	$Center/Content/ControlChip.size = Vector2(chip_width, 36)
-	$Center/Content/LevelChip.position = Vector2(card.size.x / 2 + 5, middle + 78)
-	$Center/Content/LevelChip.size = Vector2(chip_width, 36)
+	# Chips as wide as their labels, centred as a pair 10 px apart.
+	var control_chip = $Center/Content/ControlChip
+	var level_chip = $Center/Content/LevelChip
+	var control_width := minf(control_chip.get_combined_minimum_size().x + control_chip.icon_width(), (card.size.x - 40) / 2)
+	var level_width := minf(level_chip.get_combined_minimum_size().x + level_chip.icon_width(), (card.size.x - 40) / 2)
+	var left := (card.size.x - control_width - level_width - 10) / 2
+	$Center/Content/ControlChip.position = Vector2(left, middle + 82)
+	$Center/Content/ControlChip.size = Vector2(control_width, 36)
+	$Center/Content/LevelChip.position = Vector2(left + control_width + 10, middle + 82)
+	$Center/Content/LevelChip.size = Vector2(level_width, 36)
 	queue_redraw()
+
+
+# The opponent's avatar box and the rules under the header and above the player's row.
+func _draw_card() -> void:
+	var card: Control = $Card
+	card.draw_style_box(_robot_box, Rect2(16, 14, 36, 36))
+	var border := Color("#45423d")
+	card.draw_line(Vector2(1, 64), Vector2(card.size.x - 1, 64), border)
+	card.draw_line(Vector2(1, card.size.y - 64), Vector2(card.size.x - 1, card.size.y - 64), border)
 
 
 func _sync_settings_button() -> void:

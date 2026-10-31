@@ -96,7 +96,7 @@ class ResignKey:
 @onready var draw_button: Button = $Layout/Side/Actions/DrawButton
 @onready var draw_notice: Label = $Layout/Side/DrawNotice
 @onready var draw_notice_timer: Timer = $Layout/Side/DrawNoticeTimer
-@onready var claim_draw: Button = $Layout/Side/ClaimDraw
+@onready var claim_draw: Button = $Layout/Side/ClaimBox/ClaimDraw
 @onready var searching = $Searching
 
 
@@ -117,8 +117,21 @@ func _ready() -> void:
 	card.border_color = Color("#45423d")
 	card.set_border_width_all(1)
 	card.set_corner_radius_all(10)
-	side.draw.connect(func(): side.draw_style_box(card, Rect2(Vector2.ZERO, side.size)))
-	side.resized.connect(side.queue_redraw)
+	side.draw.connect(func():
+		side.draw_style_box(card, Rect2(Vector2.ZERO, side.size))
+		# The canvas's rules under Maia's row, above the player's row and above Claim draw.
+		var rules := [side.get_child(0).get_rect().end.y]
+		for row in [side.get_child(-2), side.get_child(-1)]:
+			if row.visible:
+				rules.append(row.position.y)
+		for y in rules:
+			side.draw_line(Vector2(1, y), Vector2(side.size.x - 1, y), card.border_color))
+	side.sort_children.connect(side.queue_redraw)
+	# The canvas's ½ badge in front of the notice.
+	draw_notice.draw.connect(func():
+		draw_notice.draw_circle(Vector2(37, 20), 11, Color("#45423d"))
+		draw_notice.draw_string(get_theme_font("font", "ExtraBoldText"), Vector2(26, 25), String.chr(189),
+				HORIZONTAL_ALIGNMENT_CENTER, 22, 13))
 	if history == null:
 		history = History.new()
 	get_window().min_size = Vector2i(800, 600)
@@ -195,16 +208,19 @@ func _process(_delta: float) -> void:
 	if clock:
 		clock.tick()
 	var confirming: bool = clock != null and not board_view.game.is_over() and resign_key.armed()
-	resign_button.text = "Click again to resign" if confirming else "Resign"
 	var bar: ProgressBar = resign_button.get_node("Bar")
 	bar.visible = confirming
 	if confirming:
 		bar.value = maxf(0, 2000 - (resign_key._now.call() - resign_key._armed_at))
-		resign_button.add_theme_stylebox_override("normal", _resign_style)
-		resign_button.add_theme_stylebox_override("hover", _resign_style)
-	else:
-		resign_button.remove_theme_stylebox_override("normal")
-		resign_button.remove_theme_stylebox_override("hover")
+	# Restyled only when the state flips, not every frame.
+	if resign_button.text != ("Click again to resign" if confirming else "Resign"):
+		resign_button.text = "Click again to resign" if confirming else "Resign"
+		resign_button.add_theme_font_override("font", get_theme_font("font", "BoldText" if confirming else "SemiboldText"))
+		for state in ["normal", "hover"]:
+			if confirming:
+				resign_button.add_theme_stylebox_override(state, _resign_style)
+			else:
+				resign_button.remove_theme_stylebox_override(state)
 
 
 # Global input runs before GUI input: a flag or low-time warning must precede the drop
@@ -367,6 +383,7 @@ func _start(new_settings: Dictionary) -> void:
 	resign_key = ResignKey.new(Time.get_ticks_msec)
 	move_list.reset()
 	result_label.text = ""
+	result_label.hide()
 	claim_draw.disabled = true
 	clock = Clock.new(settings.control, Time.get_ticks_msec)
 	resign_button.disabled = false
@@ -522,9 +539,12 @@ func _set_flipped(flipped: bool) -> void:
 	var player = black_clock.get_parent() if human == "b" else white_clock.get_parent()
 	$Layout/Side.move_child(bot, 0)
 	$Layout/Side.move_child(player, -1)
-	$Layout/Side.move_child(claim_draw, -1)
+	$Layout/Side.move_child(claim_draw.get_parent(), -1)
 	bot.get_node("Name").text = "Maia"
 	bot.get_node("Name/Colour").hide()
+	# The player's name and colour centre as a pair; Maia's name alone.
+	bot.get_node("Name").vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	player.get_node("Name").vertical_alignment = VERTICAL_ALIGNMENT_TOP
 	bot.get_node("Avatar").show()
 	bot.get_node("Initial").hide()
 	player.get_node("Name").text = preferences.get_value("player_name")
@@ -542,8 +562,10 @@ func _set_focus(on: bool) -> void:
 		_notice_before_focus = draw_notice.visible
 	focus = on
 	draw_notice.visible = not on and _notice_before_focus
-	for node in [move_list, result_label, claim_draw, $Layout/Side/Actions, settings_screen]:
+	for node in [move_list, claim_draw.get_parent(), $Layout/Side/Actions, settings_screen]:
 		node.visible = not on
+	# The game-over card shows the result; the side panel keeps only a history failure.
+	result_label.visible = not on and result_label.text.contains("History: ")
 	for row in [white_clock.get_parent(), black_clock.get_parent()]:
 		row.get_node("Name").visible = not on
 		row.get_node("Avatar").visible = not on and row == (white_clock.get_parent() if human == "b" else black_clock.get_parent())
@@ -631,6 +653,7 @@ func _show_result() -> void:
 		review_analysis_path = history.analysis_folder().path_join(name + ".json")
 	if history.error:
 		result_label.text += "\nHistory: " + history.error
+	result_label.visible = not focus and not history.error.is_empty()
 	review.present(game, _move_clocks, named_settings, result_label.text,
 			setup.book.entries, _review_repertoire, preferences.get_value("check_repertoire"))
 	review.hide()

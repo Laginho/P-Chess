@@ -18,7 +18,7 @@ func present(session, finished_game) -> void:
 	$Panel/Content/Icon.visible = not draw
 	$Panel/Content/Half.visible = draw
 	if not draw and not won:
-		$Panel/Content/Icon.texture = load("res://ui/icons/flag.svg")
+		$Panel/Content/Icon.texture = load("res://ui/icons/flag-filled.svg")
 		$Panel/Content/Icon.modulate = Color("a8a49c")
 	var tint := Color("a8a49c") if draw else (Color("7fa650") if won else Color("c93230"))
 	var gradient = $Panel/Content/Tint.texture.duplicate(true)
@@ -31,6 +31,15 @@ func present(session, finished_game) -> void:
 			style.set_border_width_all(3)
 			style.border_color = Color("f4bf44")
 		avatar.add_theme_stylebox_override("panel", style)
+	var review: Button = $Panel/Content/Review
+	review.add_theme_font_override("font", get_theme_font("font", "ExtraBoldText"))
+	# Room for the star on the left, so star and label centre as one group.
+	for state in ["normal", "hover", "pressed", "hover_pressed"]:
+		var style: StyleBox = review.get_theme_stylebox(state).duplicate()
+		style.content_margin_left = 34
+		review.add_theme_stylebox_override(state, style)
+	for button in [$Panel/Content/NewGame, $Panel/Content/Rematch]:
+		button.add_theme_font_override("font", get_theme_font("font", "BoldText"))
 	$Panel/Content/CopyPgn.pressed.connect(func(): main.review.get_node("Margin/Content/Actions/CopyPgn").pressed.emit())
 	$Panel/Content/Review.pressed.connect(_open_review)
 	$Panel/Content/Rematch.pressed.connect(_rematch)

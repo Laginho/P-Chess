@@ -18,9 +18,10 @@ func _ready() -> void:
 	_inactive.bg_color = Color("#1f1e1c")
 	for style in [_active, _inactive]:
 		style.set_corner_radius_all(6)
-		style.content_margin_right = 12
+		style.content_margin_right = 14
 	add_theme_stylebox_override("normal", _inactive)
 	add_theme_color_override("font_color", Color("#a8a49c"))
+	add_theme_font_override("font", get_theme_font("font", "BoldText"))
 
 
 func _process(_delta: float) -> void:
@@ -30,3 +31,4 @@ func _process(_delta: float) -> void:
 		_was_running = running
 		add_theme_stylebox_override("normal", _active if running else _inactive)
 		add_theme_color_override("font_color", Color("#141412") if running else Color("#a8a49c"))
+		add_theme_font_override("font", get_theme_font("font", "ExtraBoldText" if running else "BoldText"))

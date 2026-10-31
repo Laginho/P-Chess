@@ -1033,6 +1033,19 @@ func test_game_panel_identifies_players_and_actions():
 	main.free()
 
 
+func test_game_over_result_shows_on_the_card_not_the_side_panel():
+	var main = await _session(ManualWaits.new())
+	main.board_view.game.resign(main.human)
+	main._show_result()
+	assert_true(main.history.error.is_empty())
+	assert_true(not main.result_label.visible, "the game-over card shows the result")
+	assert_true(not main.settings_screen.get_node("Open").visible, "game over has no Settings button")
+	main._set_focus(true)
+	main._set_focus(false)
+	assert_true(not main.result_label.visible, "leaving focus mode keeps it hidden")
+	main.free()
+
+
 func test_flip_keeps_player_details_hidden_in_focus_mode():
 	var main = await _session(ManualWaits.new())
 	main._set_focus(true)

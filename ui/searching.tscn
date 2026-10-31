@@ -3,7 +3,23 @@
 [ext_resource type="Script" path="res://ui/searching.gd" id="1"]
 [ext_resource type="PackedScene" path="res://ui/board_view.tscn" id="2"]
 [ext_resource type="Texture2D" path="res://ui/icons/robot.svg" id="3"]
-[ext_resource type="Texture2D" path="res://ui/icons/blitz.svg" id="4"]
+[ext_resource type="Texture2D" path="res://ui/icons/blitz-accent.svg" id="4"]
+[ext_resource type="Script" path="res://ui/icon_button.gd" id="5"]
+
+[sub_resource type="StyleBoxFlat" id="ChipStyle"]
+bg_color = Color(0.212, 0.204, 0.188, 1)
+content_margin_left = 14.0
+content_margin_right = 14.0
+corner_radius_top_left = 18
+corner_radius_top_right = 18
+corner_radius_bottom_right = 18
+corner_radius_bottom_left = 18
+
+[sub_resource type="Shader" id="LightShader"]
+code = "shader_type canvas_item; void fragment() { COLOR = vec4(0.925, 0.914, 0.894, texture(TEXTURE, UV).a); }"
+
+[sub_resource type="ShaderMaterial" id="LightMaterial"]
+shader = SubResource("LightShader")
 
 [sub_resource type="StyleBoxFlat" id="AvatarStyle"]
 bg_color = Color(0.498, 0.651, 0.314, 1)
@@ -40,6 +56,7 @@ mouse_filter = 2
 mouse_filter = 2
 
 [node name="Robot" type="TextureRect" parent="."]
+material = SubResource("LightMaterial")
 texture = ExtResource("3")
 expand_mode = 1
 stretch_mode = 5
@@ -54,12 +71,15 @@ vertical_alignment = 1
 mouse_filter = 2
 
 [node name="Opponent" type="Label" parent="."]
-theme_type_variation = &"SectionLabel"
+theme_type_variation = &"BoldText"
+theme_override_colors/font_color = Color(0.659, 0.643, 0.612, 1)
+theme_override_font_sizes/font_size = 15
 text = "Opponent"
 vertical_alignment = 1
 
 [node name="Player" type="Label" parent="."]
-theme_type_variation = &"SemiboldText"
+theme_type_variation = &"BoldText"
+theme_override_font_sizes/font_size = 15
 text = "You"
 vertical_alignment = 1
 clip_text = true
@@ -91,14 +111,24 @@ vertical_alignment = 1
 theme_type_variation = &"RaisedButton"
 focus_mode = 0
 mouse_filter = 2
+theme_override_constants/h_separation = 8
 theme_override_constants/icon_max_width = 16
+theme_override_styles/normal = SubResource("ChipStyle")
+theme_override_styles/disabled = SubResource("ChipStyle")
+theme_override_styles/hover = SubResource("ChipStyle")
+script = ExtResource("5")
+font_type = &"BoldText"
 icon = ExtResource("4")
-expand_icon = true
 
 [node name="LevelChip" type="Button" parent="Center/Content"]
 theme_type_variation = &"RaisedButton"
 focus_mode = 0
 mouse_filter = 2
+theme_override_constants/h_separation = 8
 theme_override_constants/icon_max_width = 16
+theme_override_styles/normal = SubResource("ChipStyle")
+theme_override_styles/disabled = SubResource("ChipStyle")
+theme_override_styles/hover = SubResource("ChipStyle")
+script = ExtResource("5")
+font_type = &"BoldText"
 icon = ExtResource("3")
-expand_icon = true

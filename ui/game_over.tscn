@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://ui/game_over.gd" id="1"]
 [ext_resource type="Texture2D" path="res://ui/icons/copy.svg" id="2"]
@@ -31,6 +31,24 @@ corner_radius_top_left = 10
 corner_radius_top_right = 10
 corner_radius_bottom_right = 10
 corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="ReviewStyle"]
+bg_color = Color(0.498, 0.651, 0.314, 1)
+border_width_bottom = 4
+border_color = Color(0.388, 0.506, 0.243, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="SecondaryStyle"]
+bg_color = Color(0.2706, 0.2588, 0.2392, 1)
+border_width_bottom = 3
+border_color = Color(0.212, 0.2, 0.184, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
 
 [sub_resource type="Gradient" id="Gradient"]
 colors = PackedColorArray(0.498, 0.651, 0.314, 0.32, 0.498, 0.651, 0.314, 0)
@@ -232,13 +250,14 @@ offset_right = 320.0
 offset_bottom = 319.0
 theme_type_variation = &"PrimaryButton"
 theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("ReviewStyle")
 text = "Review"
 
 [node name="Star" type="Label" parent="Panel/Content/Review"]
 layout_mode = 0
-offset_left = 75.0
+offset_left = 100.0
 offset_top = 12.0
-offset_right = 101.0
+offset_right = 126.0
 offset_bottom = 44.0
 mouse_filter = 2
 theme_override_colors/font_color = Color(0.078, 0.078, 0.071, 1)
@@ -253,6 +272,10 @@ offset_top = 329.0
 offset_right = 164.0
 offset_bottom = 373.0
 theme_type_variation = &"RaisedButton"
+theme_override_font_sizes/font_size = 15
+theme_override_styles/normal = SubResource("SecondaryStyle")
+theme_override_styles/hover = SubResource("SecondaryStyle")
+theme_override_styles/pressed = SubResource("SecondaryStyle")
 text = "New game"
 
 [node name="Rematch" type="Button" parent="Panel/Content"]
@@ -262,6 +285,10 @@ offset_top = 329.0
 offset_right = 320.0
 offset_bottom = 373.0
 theme_type_variation = &"RaisedButton"
+theme_override_font_sizes/font_size = 15
+theme_override_styles/normal = SubResource("SecondaryStyle")
+theme_override_styles/hover = SubResource("SecondaryStyle")
+theme_override_styles/pressed = SubResource("SecondaryStyle")
 text = "Rematch"
 
 [node name="CopyPgn" type="Button" parent="Panel/Content"]

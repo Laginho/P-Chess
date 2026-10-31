@@ -9,6 +9,7 @@
 [ext_resource type="Texture2D" path="res://ui/icons/profile.svg" id="7"]
 [ext_resource type="Texture2D" path="res://ui/icons/settings.svg" id="8"]
 [ext_resource type="Texture2D" path="res://ui/icons/quit.svg" id="9"]
+[ext_resource type="Script" path="res://ui/icon_button.gd" id="10"]
 
 [node name="Home" type="Control"]
 layout_mode = 3
@@ -63,6 +64,9 @@ mouse_filter = 2
 theme_type_variation = &"PrimaryButton"
 theme_override_font_sizes/font_size = 34
 theme_override_constants/icon_max_width = 34
+script = ExtResource("10")
+icon_left = 20.0
+font_type = &"ExtraBoldText"
 text = "1+0"
 icon = ExtResource("3")
 expand_icon = true
@@ -71,6 +75,9 @@ expand_icon = true
 theme_type_variation = &"PrimaryButton"
 theme_override_font_sizes/font_size = 34
 theme_override_constants/icon_max_width = 34
+script = ExtResource("10")
+icon_left = 20.0
+font_type = &"ExtraBoldText"
 text = "3+2"
 icon = ExtResource("4")
 expand_icon = true
@@ -79,6 +86,9 @@ expand_icon = true
 theme_type_variation = &"PrimaryButton"
 theme_override_font_sizes/font_size = 34
 theme_override_constants/icon_max_width = 34
+script = ExtResource("10")
+icon_left = 20.0
+font_type = &"ExtraBoldText"
 text = "5+0"
 icon = ExtResource("4")
 expand_icon = true
@@ -87,6 +97,9 @@ expand_icon = true
 theme_type_variation = &"RaisedButton"
 theme_override_font_sizes/font_size = 24
 theme_override_constants/icon_max_width = 30
+script = ExtResource("10")
+icon_left = 22.0
+font_type = &"ExtraBoldText"
 text = "Custom"
 icon = ExtResource("5")
 expand_icon = true
@@ -94,7 +107,10 @@ expand_icon = true
 [node name="History" type="Button" parent="Center/Form"]
 theme_type_variation = &"Button"
 theme_override_font_sizes/font_size = 15
+theme_override_constants/h_separation = 10
 theme_override_constants/icon_max_width = 18
+script = ExtResource("10")
+font_type = &"SemiboldText"
 text = "History"
 icon = ExtResource("6")
 expand_icon = true
@@ -102,7 +118,10 @@ expand_icon = true
 [node name="Profile" type="Button" parent="Center/Form"]
 theme_type_variation = &"Button"
 theme_override_font_sizes/font_size = 15
+theme_override_constants/h_separation = 10
 theme_override_constants/icon_max_width = 18
+script = ExtResource("10")
+font_type = &"SemiboldText"
 text = "Profile"
 icon = ExtResource("7")
 expand_icon = true
@@ -110,7 +129,10 @@ expand_icon = true
 [node name="Settings" type="Button" parent="Center/Form"]
 theme_type_variation = &"Button"
 theme_override_font_sizes/font_size = 15
+theme_override_constants/h_separation = 10
 theme_override_constants/icon_max_width = 18
+script = ExtResource("10")
+font_type = &"SemiboldText"
 text = "Settings"
 icon = ExtResource("8")
 expand_icon = true
@@ -118,7 +140,10 @@ expand_icon = true
 [node name="Quit" type="Button" parent="Center/Form"]
 theme_type_variation = &"Button"
 theme_override_font_sizes/font_size = 15
+theme_override_constants/h_separation = 10
 theme_override_constants/icon_max_width = 18
+script = ExtResource("10")
+font_type = &"SemiboldText"
 text = "Quit"
 icon = ExtResource("9")
 expand_icon = true

@@ -233,8 +233,8 @@ func _draw_annotation(from: String, to: String, cell: float) -> void:
 
 # Files along the bottom edge, ranks along the left edge, in the other square colour.
 func _draw_coordinates(cell: float) -> void:
-	var font := get_theme_default_font()
-	var font_size := int(cell / 5)
+	var font := get_theme_font("font", "BoldText")
+	var font_size := maxi(9, roundi(cell * 0.18))
 	var pad := cell / 20
 	for i in 8:
 		var bottom := _corner() + Vector2(i, 7) * cell

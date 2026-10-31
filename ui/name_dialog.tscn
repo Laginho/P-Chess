@@ -12,7 +12,7 @@ size = Vector2i(420, 280)
 script = ExtResource("1")
 
 [node name="Content" type="VBoxContainer" parent="."]
-theme_override_constants/separation = 12
+theme_override_constants/separation = 6
 
 [node name="Question" type="Label" parent="Content"]
 layout_mode = 2
@@ -25,11 +25,18 @@ layout_mode = 2
 theme_type_variation = &"MutedText"
 theme_override_font_sizes/font_size = 14
 text = "Your name appears in game history and in exported PGNs."
+custom_minimum_size = Vector2(362, 0)
+autowrap_mode = 3
 
+
+[node name="Gap" type="Control" parent="Content"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
 
 [node name="NameLabel" type="Label" parent="Content"]
 layout_mode = 2
-theme_type_variation = &"SectionLabel"
+theme_type_variation = &"MutedText"
+theme_override_font_sizes/font_size = 13
 text = "Name"
 
 [node name="Name" type="LineEdit" parent="Content"]
