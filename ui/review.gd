@@ -40,7 +40,7 @@ var _check_repertoire := false
 @onready var _board_view = $Margin/Content/ReviewBody/BoardView
 
 @onready var _result: Label = $Margin/Content/Result
-@onready var _moves: Tree = $Margin/Content/Moves
+@onready var _moves: Tree = $Margin/Content/ReviewBody/Side/Moves
 
 
 func _ready() -> void:
@@ -55,10 +55,8 @@ func _ready() -> void:
 			if ply != null:
 				_show_ply(ply))
 	_moves.set_column_title(0, "Move")
-	_moves.set_column_title(1, "White · time spent")
-	_moves.set_column_title(2, "Black · time spent")
-	_moves.set_column_title(3, "White · badges")
-	_moves.set_column_title(4, "Black · badges")
+	_moves.set_column_title(1, "White")
+	_moves.set_column_title(2, "Black")
 	_moves.set_column_expand(0, false)
 	_moves.set_column_custom_minimum_width(0, 60)
 	$Margin/Content/Actions/CopyPgn.pressed.connect(func(): copy_text.call(_pgn))
@@ -179,7 +177,9 @@ func _refresh_classes() -> void:
 		var icon: Texture2D = null if _classes[i] == null else _class_icon(_classes[i].class)
 		_move_rows[i].set_icon(i % 2 + 1, icon)
 		if _classes[i] != null:
-			_move_rows[i].set_tooltip_text(i % 2 + 1, _classes[i].class)
+			var detail: String = _move_rows[i].get_tooltip_text(i % 2 + 1)
+			if not detail.begins_with(_classes[i].class + ":"):
+				_move_rows[i].set_tooltip_text(i % 2 + 1, _classes[i].class + ": " + detail)
 
 
 func _class_icon(label: String) -> Texture2D:
@@ -234,7 +234,6 @@ func present(game, clocks: Array, settings: Dictionary, result_text: String,
 	_moves.clear()
 	var root := _moves.create_item()
 	var board = Board.from_fen(Pgn.START)
-	var times := move_times(clocks, settings.control)
 	var badges := Badges.evaluate(game.moves, catalog, repertoire, settings.colour, check_repertoire)
 	var exit_text := ""
 	var row: TreeItem
@@ -242,18 +241,17 @@ func present(game, clocks: Array, settings: Dictionary, result_text: String,
 		if i % 2 == 0:
 			row = _moves.create_item(root)
 			row.set_text(0, "%d." % (i / 2 + 1))
-		row.set_text(i % 2 + 1, "%s (%.3f s)" % [board.san(game.moves[i]), times[i] / 1000.0])
+		row.set_text(i % 2 + 1, board.san(game.moves[i]) + (" (left)" if badges[i].left_repertoire else ""))
 		row.set_metadata(i % 2 + 1, i + 1)
 		_move_rows.append(row)
 		var text := _badge_text(badges[i])
-		row.set_text(i % 2 + 3, text)
-		row.set_tooltip_text(i % 2 + 3, text)
+		row.set_tooltip_text(i % 2 + 1, text)
 		if badges[i].left_repertoire:
 			exit_text = "%d. %s: %s" % [i / 2 + 1, "White" if i % 2 == 0 else "Black", text]
 		board.make_move(game.moves[i])
 	# Keep expected moves readable even when a badge column is narrow.
-	$Margin/Content/RepertoireExit.text = exit_text
-	$Margin/Content/RepertoireExit.visible = not exit_text.is_empty()
+	$Margin/Content/ReviewBody/Side/RepertoireExit.text = exit_text
+	$Margin/Content/ReviewBody/Side/RepertoireExit.visible = not exit_text.is_empty()
 	_pgn = Pgn.write(Pgn.finished_game(game, clocks, settings))
 	_url = lichess_url(game)
 	show()
