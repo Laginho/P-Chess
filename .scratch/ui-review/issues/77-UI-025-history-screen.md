@@ -1,5 +1,5 @@
 # UI-025: History screen to the design
-Stage: to-review
+Stage: reviewing
 Blocked by: UI-021
 Review: agent
 Difficulty: normal

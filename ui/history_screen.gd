@@ -55,7 +55,6 @@ func _ready() -> void:
 	var status := Label.new()
 	status.name = "Status"
 	status.custom_minimum_size.x = 200
-	status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	actions.add_child(status)
 	var select_all := CheckBox.new()
