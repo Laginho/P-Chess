@@ -25,6 +25,14 @@ including `COPYING`, the bundled network `791556.pb.gz`, and the DNNL/mimalloc
 licence and attribution files. Each extracted file also has a pinned SHA-256.
 Release ZIPs preserve these notices under `engine/lc0/`, beside the application.
 
+## Engine: Stockfish
+
+`scripts/fetch-engine.ps1` downloads the unmodified Windows x86-64 universal
+build from the official [Stockfish 19 release](https://github.com/official-stockfish/Stockfish/releases/tag/sf_19).
+Its exact source tag is [sf_19](https://github.com/official-stockfish/Stockfish/tree/sf_19).
+Stockfish is licensed under [GPL-3.0](https://github.com/official-stockfish/Stockfish/blob/sf_19/Copying.txt).
+Release ZIPs ship the unmodified executable and its `Copying.txt` in `engine/stockfish/`.
+
 ## Runtime: Microsoft Visual C++
 
 `lc0.exe` needs the Visual C++ runtime, which the Lc0 archive does not ship and a

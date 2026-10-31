@@ -36,7 +36,7 @@ P-Chess/
 
 ### 3.1 Engine files
 
-- `scripts/fetch-engine.ps1` downloads the pinned Lc0 zip and the 9 Maia nets into `engine/`, and checks their SHA-256 hashes. It must run in Windows PowerShell 5.1. CI uses the same script.
+- `scripts/fetch-engine.ps1` downloads the pinned Lc0 and Stockfish zips and the 9 Maia nets into `engine/`, and checks their SHA-256 hashes. It must run in Windows PowerShell 5.1. CI uses the same script.
 - At startup the app looks for `engine/lc0/lc0.exe` next to the executable (or in the project root inside the editor). If it is missing, the app shows how to run the fetch script.
 
 ### 3.2 Getting Maia's probabilities
@@ -380,6 +380,7 @@ Every tunable number in §15 (analysis budget, convergence, classification thres
 - **Threads:** "Background" uses 1 thread; "Max" uses the logical cores − 1. No GPU (Stockfish is CPU only).
 - **Speed** on the i5-12400F, roughly 6M nodes/s on 10 threads: up to ~40 s per 40-move game on Max, ~5 min on Background. Convergence should cut that. These numbers are this machine's.
 - **Storage:** `user://analysis/<game file name>.json` holds, for every position, up to two PV lines with their scores and best moves, plus the engine version and the node budget. A position with one legal move has only PV1 (its move is Forced, so no rule reads PV2); a position where the game is over has no PV and stores its terminal score instead (§15.4). A file whose version or budget differs from the current one is **stale**. The PGN is never touched.
+- **Analysis interface:** `engine/analyser.gd` accepts the ordered FENs, destination, thread mode, and whether the final position ends in a draw. It emits `position_ready(index, position)` and `progress(done, total)` as positions land, then `finished(success, error)`; cancellation writes no partial file. `scripts/analyse.gd -- <pgn>` runs one game on Max. The JSON has `engine_version`, `node_budget`, and `positions` in game order, including the initial position. Each position has `fen`, `best_move` and `pv`; each PV has `moves`, `depth`, and either `cp` or `mate`. Scores, including `terminal_score`, are from the side to move; checkmate is −1000 and a draw is 0.
 - **When:** analysis runs only when asked (§15.6, §15.7), never on its own after a game.
 
 ### 15.4 Move classification
@@ -422,6 +423,8 @@ These thresholds are chess.com's published expected-points table. Unlike chess.c
   - Allowing a mate: mated in ≤ 2 is a Blunder, in ≤ 5 a Mistake, otherwise an Inaccuracy.
 - **Left repertoire** stays a separate marker, on the move where you left your repertoire, with the expected moves shown.
 
+The headless classifier `core/classification.gd` takes UCI moves, the stored analysis JSON, catalog and repertoire lines, the human colour, and whether to check the repertoire. It returns one record per ply with `class`, `loss`, `before_ep`, `after_ep`, `left_repertoire` and `expected`. It uses the first stored FEN as the game's starting position. A free capture is a capture of an undefended piece; the material comparison values knights and bishops at 3, rooks at 5 and queens at 9, excluding pawns and kings. Those values and the classification thresholds live in `core/tunables.gd`.
+
 These rules are restated from public descriptions (chess.com's help pages, Lichess, Chesskit, WintrChess). No code is copied: Chesskit is AGPL-3.0 and WintrChess GPL-3.0.
 
 ### 15.5 Accuracy
@@ -430,6 +433,8 @@ Lichess's formulas (`AccuracyPercent.scala` in lila). Win% is `100·EP`, so drop
 - **Per move:** 100 when the win% did not drop. Otherwise `103.1668·e^(−0.04354·drop) − 3.1669 + 1`, clamped to 0–100.
 - **Per game:** the mean of the volatility-weighted mean and the harmonic mean of that side's move accuracies. The window is plies/10 rounded down, clamped to 2–8. The win% series starts at the initial position; windows slide over it one ply at a time, and the first window is repeated so the opening plies also get one, as in lila. A move's weight is the std-dev of win% in its window, clamped to 0.5–12.
 - **A side with no moves** (you resigned before your first move) has no accuracy: the review and the history card show "–" for it, and the profile's accuracy over time leaves the game out.
+
+The headless `core/accuracy.gd` takes the stored analysis JSON and returns `white` and `black` accuracy values or null. It reads each position's PV1 or terminal score in the side-to-move perspective, converting them to a single white-perspective series; the starting FEN selects the first mover.
 
 chess.com's CAPS2 is not published.
 
