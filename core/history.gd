@@ -130,9 +130,18 @@ func delete(path: String) -> bool:
 	var practiced: int = practice_counts().get(target, 0)
 	var paths := [path, path.trim_suffix(".pgn") + ".repertoire.json", "user://analysis".path_join(path.get_file() + ".json")]
 	var moved := []
+	var contents := {}
 	for source in paths:
 		if not FileAccess.file_exists(source):
 			continue
+		var file := FileAccess.open(source, FileAccess.READ)
+		if file == null:
+			for item in moved:
+				DirAccess.rename_absolute(item + ".deleting", item)
+			error = "Could not read game files."
+			return false
+		contents[source] = file.get_buffer(file.get_length())
+		file.close()
 		var backup: String = source + ".deleting"
 		if FileAccess.file_exists(backup) or DirAccess.rename_absolute(source, backup) != OK:
 			for item in moved:
@@ -140,6 +149,11 @@ func delete(path: String) -> bool:
 			error = "Could not delete game files."
 			return false
 		moved.append(source)
+	for item in moved:
+		if DirAccess.remove_absolute(item + ".deleting") != OK:
+			_restore_deleted_files(moved, contents)
+			error = "Could not delete game files."
+			return false
 	_results.set_value(level, control, counts)
 	if not target.is_empty():
 		_results.set_value("practice", target, maxi(0, practiced - 1))
@@ -147,13 +161,21 @@ func delete(path: String) -> bool:
 		_results.set_value(level, control, previous)
 		if not target.is_empty():
 			_results.set_value("practice", target, practiced)
-		for item in moved:
-			DirAccess.rename_absolute(item + ".deleting", item)
+		_restore_deleted_files(moved, contents)
 		error = "Could not save history stats."
 		return false
-	for item in moved:
-		DirAccess.remove_absolute(item + ".deleting")
 	return true
+
+
+func _restore_deleted_files(paths: Array, contents: Dictionary) -> void:
+	for path in paths:
+		if FileAccess.file_exists(path + ".deleting"):
+			DirAccess.rename_absolute(path + ".deleting", path)
+		else:
+			var file := FileAccess.open(path, FileAccess.WRITE)
+			if file != null:
+				file.store_buffer(contents[path])
+				file.close()
 
 
 func games() -> Array:
