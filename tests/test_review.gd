@@ -88,7 +88,7 @@ func test_lichess_url_encodes_san_moves_and_mate():
 	assert_eq(Review.lichess_url(empty), "https://lichess.org/analysis/pgn/0-1")
 
 
-func test_checkmate_opens_review_with_result_reason_and_both_sides_times():
+func test_checkmate_opens_review_with_result_and_both_sides_moves():
 	var time := FakeTime.new()
 	var main = _session(time)
 	var review = main.get_node_or_null("Review")
@@ -113,14 +113,14 @@ func test_checkmate_opens_review_with_result_reason_and_both_sides_times():
 	assert_true(review.visible, "also opens in focus mode")
 	var result: String = review.get_node("Margin/Content/Result").text
 	assert_true(result.contains("0-1") and result.contains("checkmate") and result.contains("Black wins"))
-	var rows = review.get_node("Margin/Content/Moves").get_root().get_children()
+	var rows = review.get_node("Margin/Content/ReviewBody/Side/Moves").get_root().get_children()
 	assert_eq(rows.size(), 2)
 	if rows.size() == 2:
 		assert_eq(rows[0].get_text(0), "1.")
-		assert_eq(rows[0].get_text(1), "f3 (0.000 s)")
-		assert_eq(rows[0].get_text(2), "e5 (0.000 s)")
-		assert_eq(rows[1].get_text(1), "g4 (0.250 s)")
-		assert_eq(rows[1].get_text(2), "Qh4# (1.000 s)")
+		assert_eq(rows[0].get_text(1), "f3")
+		assert_eq(rows[0].get_text(2), "e5")
+		assert_eq(rows[1].get_text(1), "g4")
+		assert_eq(rows[1].get_text(2), "Qh4#")
 	main.free()
 
 
@@ -153,7 +153,7 @@ func test_review_opens_for_no_move_resignation_flag_and_claimed_draw():
 			assert_true(review.visible, ending)
 			assert_true(review.get_node("Margin/Content/Result").text.contains(ending))
 			if ending == "resignation":
-				assert_eq(review.get_node("Margin/Content/Moves").get_root().get_child_count(), 0)
+				assert_eq(review.get_node("Margin/Content/ReviewBody/Side/Moves").get_root().get_child_count(), 0)
 		main.free()
 
 
@@ -200,7 +200,7 @@ func test_space_with_review_focused_rematches_and_replaces_the_previous_game():
 	_key(main, KEY_ESCAPE)
 	main.board_view.get_node("GameOver/Panel/Content/Review").pressed.emit()
 	var review = main.get_node("Review")
-	review.get_node("Margin/Content/Moves").grab_focus()
+	review.get_node("Margin/Content/ReviewBody/Side/Moves").grab_focus()
 	var event := InputEventKey.new()
 	event.keycode = KEY_SPACE
 	event.pressed = true
@@ -214,10 +214,10 @@ func test_space_with_review_focused_rematches_and_replaces_the_previous_game():
 	_key(main, KEY_ESCAPE)
 	main.board_view.get_node("GameOver/Panel/Content/Review").pressed.emit()
 	assert_true(review.visible)
-	var rows = review.get_node("Margin/Content/Moves").get_root().get_children()
+	var rows = review.get_node("Margin/Content/ReviewBody/Side/Moves").get_root().get_children()
 	assert_eq(rows.size(), 1)
 	if rows.size() == 1:
-		assert_eq(rows[0].get_text(1), "d4 (0.000 s)", "no moves or times from the previous game")
+		assert_eq(rows[0].get_text(1), "d4", "no moves or times from the previous game")
 		assert_eq(rows[0].get_text(2), "")
 	var sent := {"pgn": ""}
 	review.copy_text = func(text: String): sent.pgn = text
@@ -261,7 +261,7 @@ func test_review_returns_to_setup_and_starts_a_fresh_game():
 	_key(main, KEY_ESCAPE)
 	main.board_view.get_node("GameOver/Panel/Content/Review").pressed.emit()
 	assert_true(review.visible)
-	assert_eq(review.get_node("Margin/Content/Moves").get_root().get_child_count(), 0)
+	assert_eq(review.get_node("Margin/Content/ReviewBody/Side/Moves").get_root().get_child_count(), 0)
 	main.free()
 
 func test_review_steps_through_game_with_arrow_keys():
@@ -295,7 +295,7 @@ func test_clicking_a_move_shows_its_position():
 	_key(main, KEY_ESCAPE)
 	main.board_view.get_node("GameOver/Panel/Content/Review").pressed.emit()
 	var review = main.get_node("Review")
-	var list: Tree = review.get_node("Margin/Content/Moves")
+	var list: Tree = review.get_node("Margin/Content/ReviewBody/Side/Moves")
 	var row: TreeItem = list.get_root().get_first_child()
 	row.select(1)
 	list.item_selected.emit()
@@ -330,7 +330,7 @@ func test_analysis_landing_shows_class_icon_and_best_move_on_board():
 	_key(main, KEY_ESCAPE)
 	main.board_view.get_node("GameOver/Panel/Content/Review").pressed.emit()
 	var review = main.review
-	var list: Tree = review.get_node("Margin/Content/Moves")
+	var list: Tree = review.get_node("Margin/Content/ReviewBody/Side/Moves")
 	var row: TreeItem = list.get_root().get_first_child()
 	assert_true(row.get_icon(1) == null, "unanalysed move has no class")
 	review.receive_position(1, {"pv": [{"cp": -20, "moves": ["e7e5"]}], "best_move": "e7e5"})
@@ -386,4 +386,17 @@ func test_open_review_starts_max_analysis_and_tracks_progress():
 		assert_eq(progress.value, 50.0)
 		fake.finished.emit(true, "")
 		assert_true(not progress.visible)
+	main.free()
+
+
+func test_review_places_move_list_beside_board():
+	var main = _session(FakeTime.new())
+	main.board_view.play("e2e4")
+	_key(main, KEY_ESCAPE)
+	_key(main, KEY_ESCAPE)
+	main.board_view.get_node("GameOver/Panel/Content/Review").pressed.emit()
+	var body = main.review.get_node("Margin/Content/ReviewBody")
+	assert_true(body.has_node("BoardView") and body.has_node("Side/Moves"), "board and list share the review body")
+	if body.has_node("Side/Moves"):
+		assert_eq(body.get_node("Side/Moves").columns, 3)
 	main.free()

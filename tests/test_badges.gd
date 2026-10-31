@@ -65,13 +65,13 @@ func _session(folder: String, book = null):
 
 
 func _marks(main, ply: int) -> String:
-	var tree: Tree = main.review.get_node("Margin/Content/Moves")
-	assert_eq(tree.columns, 5, "review exposes separate badge columns for both sides")
-	if tree.columns < 5:
+	var tree: Tree = main.review.get_node("Margin/Content/ReviewBody/Side/Moves")
+	assert_eq(tree.columns, 3, "review has move number and both sides")
+	if tree.columns < 3:
 		return ""
 	var rows := tree.get_root().get_children()
 	assert_true(rows.size() > ply / 2, "review contains the fixture move")
-	return rows[ply / 2].get_text(3 + ply % 2) if rows.size() > ply / 2 else ""
+	return rows[ply / 2].get_tooltip_text(1 + ply % 2) if rows.size() > ply / 2 else ""
 
 
 func _finish(main) -> void:
@@ -308,7 +308,7 @@ func test_expected_moves_are_visible_in_review_without_hovering_over_a_clipped_b
 	for move in ["e2e4", "e7e5", "d2d4"]:
 		assert_true(main.board_view.play(move))
 	_finish(main)
-	var details = main.review.get_node_or_null("Margin/Content/RepertoireExit")
+	var details = main.review.get_node_or_null("Margin/Content/ReviewBody/Side/RepertoireExit")
 	assert_true(details != null, "expected moves have a readable area outside the narrow badge column")
 	if details != null:
 		assert_true(details.is_visible_in_tree())
