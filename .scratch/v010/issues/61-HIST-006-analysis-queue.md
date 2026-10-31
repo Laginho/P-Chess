@@ -1,9 +1,9 @@
 # HIST-006: The analysis queue
-Stage: implementing
+Stage: to-review
 Blocked by: REV-002, HIST-004
 Review: agent
 Difficulty: hard
-Gate evidence: C:\Users\bruno\AppData\Local\Temp\hist006-final-gate.json
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\hist006-reopen-gate.json
 Acceptance: pending | Manual batch pause/resume and app restart with Stockfish installed; see Verification below.
 Disclosure: pending | release | [HIST-006 manual verification](61-HIST-006-analysis-queue.md): real Stockfish and interactive batch pause/restart remain to be checked.
 
@@ -79,3 +79,10 @@ Verification: validated the existing receipt `C:\Users\bruno\AppData\Local\Temp\
 
 Disclosure: pending | integration | [Stage 3 review](#stage-3-review-2026-10-31): restore current-cache reuse for nonqueued post-game Review without undoing queued-game promotion.
 Disclosure: pending | integration | [Stage 3 review](#stage-3-review-2026-10-31): satisfy criterion 3's batch ordinal/total status, including presentation of a restored queue.
+
+
+#### Stage 2 reopen handoff (2026-10-31)
+
+- Post-game Review reuses a current saved analysis when the game is not queued; queued Review and explicit History Analyze still prioritize the game. The saved-PGN cache regression test failed before the fix and passed after it.
+- History displays the batch ordinal and total when opened, after each completion and after restoring a queue. The focused status test failed in all three cases before the fix and passed after it.
+- Gate at 42806de: 367 passed, 0 failed; exit 0. Manual batch pause/resume and restart with real Stockfish remain pending as stated above. The integration findings above await stage 3 verification.
