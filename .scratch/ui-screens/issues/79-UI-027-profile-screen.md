@@ -1,5 +1,5 @@
 # UI-027: Profile screen to the design
-Stage: to-implement
+Stage: blocked
 Blocked by: UI-021
 Review: agent
 Difficulty: normal
@@ -36,3 +36,5 @@ Restyle the profile to `docs/design/v0.1.0/png/Profile.png`, with the layout Bru
 ## Comments
 
 - 2026-10-31 Written from `.scratch/ui-redo/spec.md`. Bruno took the canvas layout and kept the spec's chart (all games, 0–100).
+
+- 2026-10-31 Review ended at blocked (exit 0); branch ui-027 holds the review; left for a human
