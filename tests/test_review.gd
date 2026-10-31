@@ -7,6 +7,7 @@ const History = preload("res://core/history.gd")
 const HistoryStorage = preload("res://tests/history_storage.gd")
 const Clock = preload("res://core/clock.gd")
 const Pgn = preload("res://core/pgn.gd")
+const Tunables = preload("res://core/tunables.gd")
 const SETTINGS := {"colour": "w", "level": "maia-1500", "control": "3+2", "opening": "Free"}
 
 
@@ -55,6 +56,21 @@ func test_graph_click_navigates_and_tracks_orientation():
 		flip.pressed = true
 		review._input(flip)
 		assert_true(graph.flipped)
+	main.free()
+
+
+func test_review_tooltips_explain_accuracy_and_class_thresholds():
+	var main = _session(FakeTime.new())
+	var review = main.get_node("Review")
+	var accuracy_help = review.get_node_or_null("Margin/Content/ReviewBody/Side/AccuracyHelp")
+	var class_help = review.get_node_or_null("Margin/Content/ReviewBody/Side/ClassHelp")
+	assert_true(accuracy_help != null and class_help != null, "both help controls exist")
+	if accuracy_help != null and class_help != null:
+		assert_true(accuracy_help.tooltip_text.contains("win"))
+		for threshold in [Tunables.CLASSIFICATION_EXCELLENT_LOSS, Tunables.CLASSIFICATION_GOOD_LOSS,
+				Tunables.CLASSIFICATION_INACCURACY_LOSS, Tunables.CLASSIFICATION_MISTAKE_LOSS,
+				Tunables.CLASSIFICATION_MISS_BEFORE_EP, Tunables.CLASSIFICATION_MISS_AFTER_EP]:
+			assert_true(class_help.tooltip_text.contains(str(threshold)), "threshold %s" % threshold)
 	main.free()
 
 
