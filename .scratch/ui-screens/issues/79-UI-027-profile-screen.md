@@ -1,6 +1,6 @@
 # UI-027: Profile screen to the design
-Stage: to-review
-Blocked by: UI-021
+Stage: blocked
+Blocked by: UI-021, UI-030
 Review: agent
 Difficulty: normal
 
@@ -85,3 +85,44 @@ Disclosure: pending | integration | Criterion 6 above and UI-030 must be resolve
 - Populated fixture with nine levels and 30 analysed games: [1280x800](C:/Users/bruno/AppData/Local/Temp/pchess-ui027-reopen-committed/profile1280.png), [800x600](C:/Users/bruno/AppData/Local/Temp/pchess-ui027-reopen-committed/profile800.png), [800x600 chart after scrolling](C:/Users/bruno/AppData/Local/Temp/pchess-ui027-reopen-bottom/profile800-bottom.png). Reference and before image remain in the prior review above. The 1280 table card is 387 px high and the chart starts at y=487 as in the reference. The headings wrap at 800 px. The chart data and scale follow the agreed spec rather than the illustrative canvas.
 Acceptance: pending | Independent stage-3 comparison after UI-030, manual Profile rename and Bruno's v0.1.0 QA. No physical input or live Lc0 was exercised in this follow-up.
 Disclosure: pending | integration | UI-030 must fix the shared font axes before the final visual comparison and UI-027 integration.
+
+#### Resolution (2026-10-31, re-review)
+Verdict: Needs your call: local Profile repairs pass; integration waits for the shared font correction UI-030.
+
+Reviewed pinned `775988aa8fc68f86428baed7c83fb8bce58ee10f...3d5e0ce6eab18da8d99b9c73bf3c620c8ee6597b`, concentrating on the prior ❌ and `b22a28e...3d5e0ce`. Independent Standards and Spec reviews covered all seven full-diff files and the four follow-up files (100%, zero skipped); OCR excluded all seven as unsupported extensions, so each was reviewed manually. No production was authored in this review.
+
+##### Standards
+
+0 documented-standard violations; 0 actionable baseline smells. Follow-up commits preserve test-only / production-only separation, including the test-harness encoding correction. Production stays in Primary files. Inspected Home opening/Back, Profile present/refresh, table reconstruction/resize, name validation/persistence, stats aggregation and chart empty/single/complete-series paths; no new regression identified.
+
+##### Spec
+
+- Criteria 1–5: pass, retaining the previous review's data and typed-input evidence. The follow-up changes no data, identity or rename behavior.
+- Prior local criterion-6 P2: repaired. Headers/body are 12/14 px, Level aligns left, rows have dividers, flags use green/red, tiles have 16 px padding, and the W/D/L and flag values request 22 px shared ExtraBoldText. Fresh populated 1280×800 rendering measures ResultsCard at (380,84), 876×387, and ChartCard at y=487; 800×600 renders compact two-line headings and reaches the full chart and both dates by scrolling.
+- Criterion 6: still ❌ only for the already recorded shared font-axis P2, owned by [UI-030](../../ui-base/issues/82-UI-030-variable-font-weights.md), `ui/theme/p_chess.tres:7` and the other font dictionaries. A fresh probe confirms Title, DisplayName, GamesValue and WdlValue all obtain the shared variation declaring `{"wght":800}`, but its TextServer RID resolves `{}`; the integer-axis comparison resolves `{2003265652:800}`. No Profile workaround is needed. UI-030 is `to-implement`; fresh remote/branch discovery found no active implementation or merged fix. This is the known prerequisite, not a second local implementation finding or a newly discovered defect.
+- The chart's all-games/0–100 behavior and the app-wide Settings control retain the prior review's explicit scope disposition.
+
+##### Evidence and remaining acceptance
+
+Same isolated populated fixture: nine result levels and 30 complete cached analyses; illustrative totals differ from the design. The new capture script reuses the prior fixture script, adding only the bottom-scroll capture. All three final captures exited 0.
+
+| Reference | Before, session base 1280×800 | After, reviewed HEAD 1280×800 |
+|---|---|---|
+| [Profile design](../../../docs/design/v0.1.0/png/Profile.png) | [Before](C:/Users/bruno/AppData/Local/Temp/pchess-ui027-review-07aff169-9b64-487b-bd92-56c0ce4ad4d8/before-1280.png) | [After](C:/Users/bruno/AppData/Local/Temp/pchess-ui027-rereview-a2ce873c-3e35-490c-9b8b-49f1636d8ab6/profile1280.png) |
+
+- Fresh minimum window: [800×600 top](C:/Users/bruno/AppData/Local/Temp/pchess-ui027-rereview-a2ce873c-3e35-490c-9b8b-49f1636d8ab6/profile800.png), [800×600 chart end](C:/Users/bruno/AppData/Local/Temp/pchess-ui027-rereview-a2ce873c-3e35-490c-9b8b-49f1636d8ab6/profile800-bottom.png).
+- Capture and font-probe logs: `C:/Users/bruno/AppData/Local/Temp/pchess-ui027-rereview-a2ce873c-3e35-490c-9b8b-49f1636d8ab6/`.
+- Reused and validated the existing gate receipt with `Assert-GateEvidence` against reviewed HEAD: tested production `c51a2b04a36f3122fd94cea181a07177fe288cd6`, matching log hash, exit 0, 413 reported passed including six Lc0 skips (407 executed, zero failed). The gate was not rerun because production did not change.
+- No new physical input, audio or live Lc0 check; Bruno's v0.1.0 release QA remains pending. Previous typed rename/persistence/blank-name/Enter probe evidence remains valid for unchanged behavior.
+
+Acceptance: pending | UI-030, then final populated graphical comparison at both sizes; physical input and Bruno's v0.1.0 QA remain pending.
+Disclosure: pending | integration | UI-030 is required before UI-027 integration. Preserve all UI-027 commits; after bringing the reviewed shared fix onto the loop base and ticket branch, repeat the graphical comparison and obtain valid gate evidence for the resulting production.
+
+##### Escalated prerequisite and resumption
+
+- Proxy escalated (opus-5.5 xhigh): UI-027 can't pass criterion 6 or be merged until UI-030 lands, and UI-030 can't run from this lane. It sits in `.scratch/ui-base/`, the ui-screens driver only runs `ui-screens` tickets (`driver.ps1:282`), the ui-base session is already merged (PR #33), and the ticket isn't on main. Someone has to push to main and start a lane, and that's the owner's or parent's call. (receipt C:\Users\bruno\AppData\Local\Temp\sweatshop-proxy\20261031-175503-UI-027-37aba9.json)
+- Escalated question for Bruno/the parent: publish UI-030 on main and run a separate ui-base lane (recommended), or explicitly accept changing the existing integration hold into a release condition? No waiver has been accepted. This review preserves the integration hold and changes only this ticket on `ui-027`.
+- UI-030's tracker file is currently present on this branch only. A tracker-only commit to the ui-screens session would not make its driver execute a ui-base ticket. Register it on main through the owner/parent, run and review UI-030 in its lane, merge it, then sync main into the ui-screens session.
+- Resume after that sync: rebase `ui-027` onto `sweatshop/ui-screens/2026-10-31-1731`; if UI-030's ticket conflicts with this branch's original addition, retain the session's reviewed copy. Clear `blocked` in both the session ticket (if parked by the driver) and the branch ticket, returning to `to-review`; there is no remaining local stage-2 repair.
+- The resumed review must run the gate for the new production tree and recapture populated 1280×800 and 800×600 screens, verifying actual resolved font weights before integration. Do not reuse the current pre-UI-030 gate receipt for changed production.
+- No session merge, ledger closure, push or edits to another ticket were performed. Related screens also use the shared acceptance; the parent can add UI-030 dependency edges before restarting their lanes.
