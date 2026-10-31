@@ -25,19 +25,28 @@ func _ready() -> void:
 	$Margin/Content.add_child(actions)
 	$Margin/Content.move_child(actions, 2)
 	var selected := Button.new()
+	selected.name = "AnalyzeSelected"
 	selected.text = "Analyze selected"
+	selected.theme_type_variation = "PrimaryButton"
 	selected.pressed.connect(func():
 		for path in _selected:
 			if _selected[path] and analysis_queue != null:
 				analysis_queue.enqueue(path))
 	actions.add_child(selected)
 	var all := Button.new()
+	all.name = "AnalyzeAll"
 	all.text = "Analyze all"
 	all.pressed.connect(_analyze_all)
 	actions.add_child(all)
 	var status := Label.new()
 	status.name = "Status"
 	actions.add_child(status)
+	var select_all := CheckBox.new()
+	select_all.name = "SelectAll"
+	select_all.toggled.connect(func(on):
+		for card in $Margin/Content/Cards/List.get_children():
+			card.get_node("Select").button_pressed = on)
+	actions.add_child(select_all)
 	if analysis_queue != null:
 		analysis_queue.changed.connect(_queue_changed)
 	for tab in TABS:
@@ -82,6 +91,8 @@ func _refresh() -> void:
 		if selected != "All" and selected != control:
 			continue
 		_add_card(list, record)
+	_update_selection()
+	$Margin/Content/BatchActions/AnalyzeAll.text = "Analyze all in “%s”" % selected
 	if not focus_path.is_empty() and list.has_node(focus_path):
 		list.get_node(focus_path).grab_focus()
 
@@ -108,7 +119,9 @@ func _add_card(list: Node, record: Dictionary) -> void:
 	var select := CheckBox.new()
 	select.name = "Select"
 	select.button_pressed = _selected.get(record.path, false)
-	select.toggled.connect(func(on): _selected[record.path] = on)
+	select.toggled.connect(func(on):
+		_selected[record.path] = on
+		_update_selection())
 	card.add_child(select)
 	var details := VBoxContainer.new()
 	details.name = "Details"
@@ -125,6 +138,12 @@ func _add_card(list: Node, record: Dictionary) -> void:
 	var opponent: String = headers.get("Black" if colour == "w" else "White", "?")
 	text.text = "%s%s  ·  %s (%s) x %s (%s)\n%s (%s)  ·  %d moves\n%s" % [opening, date, human, "White" if colour == "w" else "Black", opponent, "Black" if colour == "w" else "White", _result_text(game, colour), game.result, (moves.size() + 1) / 2, _analysis_text(record.path)]
 	details.add_child(text)
+	if analysis_queue != null and analysis_queue.current() == record.path:
+		var progress := ProgressBar.new()
+		progress.name = "AnalysisProgress"
+		progress.value = analysis_queue.percent
+		progress.custom_minimum_size = Vector2(140, 8)
+		details.add_child(progress)
 	var actions := HBoxContainer.new()
 	actions.name = "HBoxContainer"
 	details.add_child(actions)
@@ -139,7 +158,7 @@ func _add_card(list: Node, record: Dictionary) -> void:
 		analyze.text = "Re-analyze" if _analysis_text(record.path) == "Stale" else "Analyze"
 		analyze.disabled = record.path in analysis_queue.pending()
 		if analyze.disabled:
-			analyze.text = "Analysing?" if analysis_queue.current() == record.path else "Queued"
+			analyze.text = "Analysing…" if analysis_queue.current() == record.path else "Queued"
 		analyze.pressed.connect(func(): analysis_queue.enqueue(record.path))
 		actions.add_child(analyze)
 	var copy := Button.new()
@@ -177,6 +196,20 @@ func _add_card(list: Node, record: Dictionary) -> void:
 		confirm.hide()
 		actions.show())
 	confirm.add_child(cancel)
+
+
+func _update_selection() -> void:
+	var count := 0
+	for path in _selected:
+		if _selected[path]:
+			count += 1
+	var box: CheckBox = $Margin/Content/BatchActions/SelectAll
+	box.text = "%d selected" % count
+	var cards = $Margin/Content/Cards/List.get_children()
+	var checked := not cards.is_empty()
+	for card in cards:
+		checked = checked and card.get_node("Select").button_pressed
+	box.set_pressed_no_signal(checked)
 
 
 func _confirm_delete() -> void:
