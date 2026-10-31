@@ -8,7 +8,8 @@ const BoardView = preload("res://ui/board_view.gd")
 
 func test_board_size_clamps_and_fit_follows_layout():
 	var main = preload("res://ui/main.tscn").instantiate()
-	main.preferences = preload("res://core/settings.gd").new("user://test_ui015_size.cfg")
+	var path := "user://test_ui015_size_%d.cfg" % Time.get_ticks_usec()
+	main.preferences = preload("res://core/settings.gd").new(path)
 	main.preferences.set_value("board_size", 0)
 	Engine.get_main_loop().root.add_child(main)
 	var layout = main.get_node("Layout")
@@ -25,12 +26,12 @@ func test_board_size_clamps_and_fit_follows_layout():
 	main._fit_board()
 	assert_eq(main.board_view.custom_minimum_size.x, 500)
 	main.free()
-	DirAccess.remove_absolute("user://test_ui015_size.cfg")
+	DirAccess.remove_absolute(path)
 
 
 func test_grip_drag_saves_size_and_double_click_restores_fit():
 	var main = preload("res://ui/main.tscn").instantiate()
-	var path := "user://test_ui015_grip.cfg"
+	var path := "user://test_ui015_grip_%d.cfg" % Time.get_ticks_usec()
 	DirAccess.remove_absolute(path)
 	main.preferences = preload("res://core/settings.gd").new(path)
 	Engine.get_main_loop().root.add_child(main)
@@ -55,7 +56,7 @@ func test_grip_drag_saves_size_and_double_click_restores_fit():
 # Keyboard users set the size through Settings; the row follows the grip.
 func test_settings_row_sets_board_size_and_follows_the_grip():
 	var main = preload("res://ui/main.tscn").instantiate()
-	var path := "user://test_ui015_row.cfg"
+	var path := "user://test_ui015_row_%d.cfg" % Time.get_ticks_usec()
 	DirAccess.remove_absolute(path)
 	main.preferences = preload("res://core/settings.gd").new(path)
 	Engine.get_main_loop().root.add_child(main)
@@ -71,6 +72,8 @@ func test_settings_row_sets_board_size_and_follows_the_grip():
 		assert_eq(main.preferences.get_value("board_size"), 400)
 		main._resize_board(0)
 		assert_eq(spin.value, 0.0, "the row follows a grip reset")
+	var box: Control = main.settings_screen.get_node("Panel/Center/Box")
+	assert_true(box.get_combined_minimum_size().y <= 600, "the form fits the 800x600 minimum window")
 	main.free()
 	DirAccess.remove_absolute(path)
 
