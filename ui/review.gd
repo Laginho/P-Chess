@@ -76,6 +76,8 @@ func _ready() -> void:
 		card.add_theme_stylebox_override("panel", style)
 		var value := Label.new()
 		value.name = "Value"
+		value.theme_type_variation = "ExtraBoldText"
+		value.add_theme_font_size_override("font_size", 20)
 		value.add_theme_color_override("font_color", Color("141412") if side == "White" else Color("ece9e4"))
 		card.add_child(value)
 		cards.add_child(card)
@@ -93,13 +95,13 @@ func _ready() -> void:
 		name_label.name = label + "Label"
 		name_label.text = label
 		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		name_label.add_theme_font_size_override("font_size", 11)
+		name_label.add_theme_font_size_override("font_size", 12)
 		table.add_child(name_label)
 		var white := Label.new()
 		white.name = label + "White"
 		white.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		white.custom_minimum_size.x = 26
-		white.add_theme_font_size_override("font_size", 11)
+		white.add_theme_font_size_override("font_size", 12)
 		table.add_child(white)
 		var icon := TextureRect.new()
 		icon.name = label + "Icon"
@@ -112,7 +114,7 @@ func _ready() -> void:
 		black.name = label + "Black"
 		black.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		black.custom_minimum_size.x = 26
-		black.add_theme_font_size_override("font_size", 11)
+		black.add_theme_font_size_override("font_size", 12)
 		table.add_child(black)
 	$Margin/Content/Progress.visibility_changed.connect(func():
 		$Margin/Content/ProgressText.visible = $Margin/Content/Progress.visible
@@ -171,12 +173,12 @@ func _ready() -> void:
 		var title := Label.new()
 		title.text = line.get_slice(" \u2014 ", 0)
 		title.theme_type_variation = "BoldText"
-		title.add_theme_font_size_override("font_size", 11)
+		title.add_theme_font_size_override("font_size", 12)
 		text.add_child(title)
 		var description := Label.new()
 		description.text = line.get_slice(" \u2014 ", 1)
 		description.theme_type_variation = "MutedText"
-		description.add_theme_font_size_override("font_size", 10)
+		description.add_theme_font_size_override("font_size", 11)
 		text.add_child(description)
 		row.add_child(text)
 		rows.add_child(row)
@@ -229,6 +231,7 @@ func _ready() -> void:
 	var analyze := Button.new()
 	analyze.name = "Analyze"
 	analyze.text = "Analyze"
+	analyze.theme_type_variation = "PrimaryButton"
 	analyze.pressed.connect(func():
 		analyze.hide()
 		open_analysis(_analysis_path, _history_draw))
@@ -262,8 +265,10 @@ func _layout_review() -> void:
 	error.position = at + Vector2(4, 43)
 	error.size = Vector2(side.size.x - 8, 20)
 	var actions: Control = $Margin/Content/Actions
-	actions.position = at + Vector2(4, side.size.y - 70)
-	actions.size = Vector2(side.size.x - 8, 70)
+	var footer_height := 70.0 if size.x <= 800 else 35.0
+	$Margin/Content/ReviewBody/Side/FooterSpace.custom_minimum_size.y = footer_height
+	actions.position = at + Vector2(4, side.size.y - footer_height)
+	actions.size = Vector2(side.size.x - 8, footer_height)
 
 
 func _resize_classes() -> void:
@@ -633,7 +638,7 @@ func present(game, clocks: Array, settings: Dictionary, result_text: String,
 			exit_row.set_icon(1, _class_icon("Repertoire"))
 			exit_row.set_icon_max_width(1, 16)
 			exit_row.set_custom_color(1, Color("4ca9f0"))
-			exit_row.set_custom_bg_color(1, Color("17314a"))
+			exit_row.set_custom_bg_color(1, Color("4ca9f0"), true)
 			for column in 3:
 				exit_row.set_selectable(column, false)
 		board.make_move(game.moves[i])

@@ -151,7 +151,7 @@ autowrap_mode = 3
 [node name="ClassHelp" type="Button" parent="Margin/Content/ReviewBody/Side"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 11
-text = "Move classes  ?"
+text = "Moves  ?"
 flat = true
 alignment = 0
 
