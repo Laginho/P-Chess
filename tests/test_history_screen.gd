@@ -1,4 +1,4 @@
-extends "res://tests/run.gd".Test
+﻿extends "res://tests/run.gd".Test
 
 const History = preload("res://core/history.gd")
 const Settings = preload("res://core/settings.gd")
@@ -34,6 +34,18 @@ class FakeAnalyser extends Node:
 		pass
 
 
+class FakeQueueAnalyser extends RefCounted:
+	signal progress(done: int, total: int)
+	signal finished(success: bool, error: String)
+	var called := false
+	var maximum := false
+	func start(_path: String, max_threads: bool) -> bool:
+		called = true
+		maximum = max_threads
+		return true
+	func cancel() -> void:
+		finished.emit(false, "cancelled")
+
 func test_open_review_from_history_and_return_with_escape():
 	var folder := "user://history_review_%d" % Time.get_ticks_usec()
 	DirAccess.make_dir_recursive_absolute(folder)
@@ -48,9 +60,8 @@ func test_open_review_from_history_and_return_with_escape():
 	game.play("e2e4")
 	game.resign("b")
 	main.history.save(game, [60000], {"colour": "w", "level": "maia-1500", "control": "1+0"})
-	var fake := FakeAnalyser.new()
-	main.review.analysis_bridge_factory = func(): return FakeAnalysisBridge.new()
-	main.review.analyser_factory = func(_bridge): return fake
+	var fake := FakeQueueAnalyser.new()
+	main.analysis_queue = load("res://core/analysis_queue.gd").new(fake, folder.path_join("queue.cfg"))
 	Engine.get_main_loop().root.add_child(main)
 	var history_button = main.get_node_or_null("Setup/Center/Form/History")
 	assert_true(history_button != null, "setup opens history")
@@ -193,3 +204,4 @@ func test_tabs_and_won_on_time_card():
 	assert_eq(cards.get_child_count(), 0, "3+2 filters out 1+0")
 	screen.free()
 	Storage.clean(folder)
+
