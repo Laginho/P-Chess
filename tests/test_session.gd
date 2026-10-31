@@ -984,3 +984,40 @@ func test_flip_keeps_player_details_hidden_in_focus_mode():
 	for row in [main.white_clock.get_parent(), main.black_clock.get_parent()]:
 		assert_true(not row.get_node("Avatar").visible and not row.get_node("Initial").visible, "focus keeps avatars hidden after flip")
 	main.free()
+
+
+func test_new_moves_preserve_manual_scroll_and_follow_at_bottom():
+	var main = await _session(ManualWaits.new())
+	await _laid_out(main)
+	for i in 100:
+		main.move_list.add("e4" if i % 2 == 0 else "e5")
+	for i in 4:
+		await Engine.get_main_loop().process_frame
+	var scroll = main.move_list.get_v_scroll_bar()
+	assert_true(scroll.max_value > scroll.page, "the move list overflows")
+	scroll.value = 0
+	await Engine.get_main_loop().process_frame
+	main.move_list.add("Nf3")
+	for i in 4:
+		await Engine.get_main_loop().process_frame
+	assert_eq(scroll.value, 0.0, "new moves preserve the reading position")
+	scroll.value = scroll.max_value - scroll.page
+	await Engine.get_main_loop().process_frame
+	main.move_list.add("Nc6")
+	for i in 4:
+		await Engine.get_main_loop().process_frame
+	assert_eq(scroll.value, scroll.max_value - scroll.page, "new moves follow at the bottom")
+	main.free()
+
+
+func test_draw_notice_does_not_return_after_focus_rematch():
+	var main = await _session(ManualWaits.new())
+	main.draw_notice.text = "Maia declined"
+	main.draw_notice.show()
+	main.draw_notice_timer.start()
+	main._set_focus(true)
+	await _flag_and_rematch(main)
+	main._set_focus(false)
+	assert_true(not main.draw_notice.visible, "the previous game's notice stays hidden")
+	assert_true(main.draw_notice_timer.is_stopped(), "the previous notice timer is stopped")
+	main.free()

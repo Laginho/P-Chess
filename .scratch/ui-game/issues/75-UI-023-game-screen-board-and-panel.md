@@ -1,5 +1,5 @@
 # UI-023: Game screen: board and side panel to the design
-Stage: to-implement
+Stage: implementing
 Blocked by: UI-021
 Review: human
 Difficulty: hard
