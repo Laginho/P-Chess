@@ -167,7 +167,11 @@ func _ready() -> void:
 		description.add_theme_font_size_override("font_size", 11)
 		row.add_child(description)
 		rows.add_child(row)
-	$Margin/Content/ReviewBody/Side/ClassHelp.pressed.connect(func(): legend.popup_centered())
+	$Margin/Content/ReviewBody/Side/ClassHelp.pressed.connect(func():
+		legend.popup_centered(Vector2i(480, 430))
+		await get_tree().process_frame
+		legend.size = Vector2i(480, 430)
+		legend.move_to_center())
 	var toggle: Button = $Margin/Content/ReviewBody/Side/ClassToggle
 	toggle.pressed.connect(func(): $Margin/Content/ReviewBody/Side/Counts.visible = not $Margin/Content/ReviewBody/Side/Counts.visible)
 	resized.connect(_resize_classes)
@@ -569,7 +573,7 @@ func present(game, clocks: Array, settings: Dictionary, result_text: String,
 	_update_player_labels()
 	_show_ply(_game_moves.size())
 	var moves: int = (game.moves.size() + 1) / 2
-	_result.text = "%s ? %s ? %d %s" % [settings.get("control", ""), result_text, moves, "move" if moves == 1 else "moves"]
+	_result.text = "%s \u00b7 %s \u00b7 %d %s" % [settings.get("control", ""), result_text, moves, "move" if moves == 1 else "moves"]
 	_moves.clear()
 	var root := _moves.create_item()
 	var board = Board.from_fen(Pgn.START)
