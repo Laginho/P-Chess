@@ -1,5 +1,5 @@
 # UI-016: The home screen
-Stage: to-implement
+Stage: implementing
 Blocked by: HIST-004
 Review: agent
 Difficulty: normal
