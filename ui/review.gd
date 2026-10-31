@@ -60,12 +60,11 @@ func _ready() -> void:
 		analysis_queue.changed.connect(_queue_changed)
 	_graph.ply_selected.connect(_show_ply)
 	$Margin/Content/ReviewBody/Side/AccuracyHelp.tooltip_text = "Accuracy uses the change in win probability for each move.\nThe game score averages a volatility-weighted mean and\nthe harmonic mean of those move scores."
-	$Margin/Content/ReviewBody/Side/ClassHelp.tooltip_text = _class_help()
 	# Tooltips need a mouse; Enter on the focused "?" shows the same text in a dialog.
 	var help_dialog := AcceptDialog.new()
 	help_dialog.name = "HelpDialog"
 	add_child(help_dialog)
-	for help: Button in [$Margin/Content/ReviewBody/Side/AccuracyHelp, $Margin/Content/ReviewBody/Side/ClassHelp]:
+	for help: Button in [$Margin/Content/ReviewBody/Side/AccuracyHelp]:
 		# Label height, so the review still fits 800x600; the focus box still shows.
 		for style in ["normal", "hover", "pressed", "hover_pressed"]:
 			help.add_theme_stylebox_override(style, StyleBoxEmpty.new())
@@ -73,6 +72,23 @@ func _ready() -> void:
 			help_dialog.title = help.text.trim_suffix("?").strip_edges()
 			help_dialog.dialog_text = help.tooltip_text
 			help_dialog.popup_centered())
+	var legend := AcceptDialog.new()
+	legend.name = "ClassLegend"
+	legend.title = "Move classes, best to worst"
+	legend.dialog_text = ("Brilliant — The best move, and it sacrifices a piece.\n"
+			+ "Great — The only good move here, or one that turns the game around.\n"
+			+ "Best — The engine's top choice.\n"
+			+ "Excellent — Almost as good as the best move (under 2%).\n"
+			+ "Good — A solid move with a slightly better option (under 5%).\n"
+			+ "Book — A known opening move, from opening theory.\n"
+			+ "Repertoire — A move from your own repertoire.\n"
+			+ "Inaccuracy — A weaker move that gives away a little (under 10%).\n"
+			+ "Mistake — A bad move that gives away a clear edge (under 20%).\n"
+			+ "Miss — An opponent's error was not punished.\n"
+			+ "Blunder — A serious error that costs over 20%.\n"
+			+ "Forced — The only legal move.")
+	add_child(legend)
+	$Margin/Content/ReviewBody/Side/ClassHelp.pressed.connect(func(): legend.popup_centered())
 	visibility_changed.connect(func():
 		if not visible:
 			_cancel_analysis())
