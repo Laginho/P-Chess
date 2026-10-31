@@ -568,6 +568,13 @@ func present(game, clocks: Array, settings: Dictionary, result_text: String,
 		row.set_tooltip_text(i % 2 + 1, text)
 		if badges[i].left_repertoire:
 			exit_text = "%d. %s: %s" % [i / 2 + 1, "White" if i % 2 == 0 else "Black", text]
+			var exit_row := _moves.create_item(root)
+			exit_row.set_text(1, text)
+			exit_row.set_icon(1, _class_icon("Repertoire"))
+			exit_row.set_custom_color(1, Color("4ca9f0"))
+			exit_row.set_custom_bg_color(1, Color("17314a"))
+			for column in 3:
+				exit_row.set_selectable(column, false)
 		board.make_move(game.moves[i])
 	# Keep expected moves readable even when a badge column is narrow.
 	$Margin/Content/ReviewBody/Side/RepertoireExit.text = exit_text
