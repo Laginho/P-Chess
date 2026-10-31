@@ -1,8 +1,10 @@
 # REV-006: Review summary, eval graph and tooltips
-Stage: implementing
+Stage: to-review
 Blocked by: REV-004, REV-005
 Review: agent
 Difficulty: normal
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\rev006-stage2-gate.json
+Acceptance: pending | Review a real analysed game, inspect both accuracies and final counts, click the graph in both orientations and hover both help controls, including at the minimum window size.
 
 - Primary files:
   - ui/review.gd
@@ -35,3 +37,5 @@ The review's side panel gets its summary and graph (§15.6): both players with t
 ## Comments
 
 - 2026-10-30 Written from spec §15.6.
+- Stage 2: the fixture test verifies incremental counts and completed accuracy; disabling the count increment made it fail. The graph test initially emitted `gui_input` directly, which does not invoke the control's virtual input handler; it was corrected to call that handler. The original missing-graph test failed before the implementation.
+- Gate on code commit `905e185`: 350 passed, 0 failed; receipt and full log are local. Headless tests do not establish rendered layout, physical input, tooltip readability, or real Stockfish acceptance.
