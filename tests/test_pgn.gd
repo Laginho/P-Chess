@@ -8,6 +8,29 @@ const Game = preload("res://core/game.gd")
 const FIXTURES := "res://tests/fixtures/pgn/"
 
 
+func test_finished_game_round_trips_the_player_name_and_human_colour():
+	var game = Game.new()
+	game.resign("w")
+	for colour in ["w", "b"]:
+		for player_name in ["Maia 1500", "Bruno \"B\" \\ Silva", "João"]:
+			var settings := {"colour": colour, "level": "maia-1500", "control": "3+2", "player_name": player_name}
+			var parsed := Pgn.parse(Pgn.write(Pgn.finished_game(game, [], settings)))
+			assert_eq(parsed.error, "")
+			var headers: Dictionary = parsed.games[0].headers
+			assert_eq(headers.get("HumanColor"), colour)
+			assert_eq(headers["White" if colour == "w" else "Black"], player_name)
+			assert_eq(headers["Black" if colour == "w" else "White"], "Maia 1500")
+
+
+func test_finished_game_records_only_a_selected_practice_target():
+	var game = Game.new()
+	game.resign("w")
+	var settings := {"colour": "w", "level": "maia-1500", "control": "3+2"}
+	var targeted: Dictionary = Pgn.finished_game(game, [], settings, "", "line-1")
+	assert_eq(Pgn.parse(Pgn.write(targeted)).games[0].headers.PracticeTarget, "line-1")
+	assert_true(not Pgn.finished_game(game, [], settings).headers.has("PracticeTarget"))
+
+
 func _read(file: String) -> Dictionary:
 	return Pgn.parse(FileAccess.get_file_as_string(FIXTURES + file))
 
@@ -104,7 +127,7 @@ func test_finished_game_builds_the_headers_and_clock_records_both_exports_share(
 	var built: Dictionary = Pgn.finished_game(game, [180000, 180000, 179534, 181001],
 			{"colour": "w", "level": "maia-1500", "control": "3+2"})
 	assert_eq(built.headers, {"White": "You", "Black": "Maia 1500", "TimeControl": "180+2",
-			"Result": "0-1", "Termination": "Normal", "Reason": "checkmate"})
+			"Result": "0-1", "Termination": "Normal", "Reason": "checkmate", "HumanColor": "w"})
 	assert_eq(built.moves, [{"uci": "f2f3", "clock_ms": 180000}, {"uci": "e7e5", "clock_ms": 180000},
 			{"uci": "g2g4", "clock_ms": 179534}, {"uci": "d8h4", "clock_ms": 181001}])
 	assert_eq(built.result, "0-1")
@@ -118,7 +141,7 @@ func test_finished_game_names_a_flag_and_an_optional_opening_last():
 	var built: Dictionary = Pgn.finished_game(game, [60000, 59000],
 			{"colour": "b", "level": "maia-1900", "control": "1+0"}, "King's Pawn Game")
 	assert_eq(built.headers, {"White": "Maia 1900", "Black": "You", "TimeControl": "60+0",
-			"Result": "0-1", "Termination": "Time forfeit", "Reason": "time", "Opening": "King's Pawn Game"})
+			"Result": "0-1", "Termination": "Time forfeit", "Reason": "time", "HumanColor": "b", "Opening": "King's Pawn Game"})
 	assert_eq(str(built.headers.keys().back()), "Opening")
 	assert_eq(built.moves, [{"uci": "e2e4", "clock_ms": 60000}, {"uci": "e7e5", "clock_ms": 59000}])
 	assert_eq(built.result, "0-1")

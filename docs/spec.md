@@ -219,7 +219,7 @@ All attributions go in `docs/THIRD_PARTY.md`.
 
 ### 9.1 Setup and rematch
 
-- The setup screen picks your colour (white / black / random), the time control, the Maia level and the opening mode with its selection.
+- Home offers quick play, Custom game, History, Settings and Quit. Quick play uses the last level, colour choice and opening mode; initially Maia 1500, random and Free. Custom game picks colour, time control, level and opening mode with its selection, and saves those choices for quick play.
 - `Space` starts a rematch with the same settings and the colours swapped.
 - Match score: consecutive rematches form a match. The game-over panel (§9.3) shows the running score between the two players (for example "2 – 1"), and from the first rematch onwards the game side panel shows each player's score in a small box beside their clock. A win counts 1 and a draw ½ to each side. The score resets on New game, on any settings change, when the engine stops, or when you return to Home. It is not saved across launches.
 
@@ -248,7 +248,7 @@ The review screen opens on request:
 
 ### 9.4 History and stats
 
-- Every game is saved to `user://games/` as PGN, with `%clk` on each move. Headers: players ("Maia 1500" / "You"), `TimeControl`, `Result`, `Termination`, and the opening name.
+- Every game is saved to `user://games/` as PGN, with `%clk` on each move. Headers: players ("Maia 1500" / your `player_name`), `HumanColor` (`w` or `b`), `TimeControl`, `Result`, `Termination`, and the opening name. Your side is read from `HumanColor`, falling back to the player named "You" in older PGNs (§15.8).
 - The level is shown as the net's name only.
 - Stats per (level, time control): wins, draws and losses, plus flag wins and flag losses.
 - A practice count per opening line, used to pick the target line (§6.3).
@@ -424,7 +424,7 @@ These thresholds are chess.com's published expected-points table. Unlike chess.c
   - Allowing a mate: mated in ≤ 2 is a Blunder, in ≤ 5 a Mistake, otherwise an Inaccuracy.
 - **Left repertoire** stays a separate marker, on the move where you left your repertoire, with the expected moves shown.
 
-The headless classifier `core/classification.gd` takes UCI moves, the stored analysis JSON, catalog and repertoire lines, the human colour, and whether to check the repertoire. It returns one record per ply with `class`, `loss`, `before_ep`, `after_ep`, `left_repertoire` and `expected`. It uses the first stored FEN as the game's starting position. A free capture is a capture of an undefended piece; the material comparison values knights and bishops at 3, rooks at 5 and queens at 9, excluding pawns and kings. Those values and the classification thresholds live in `core/tunables.gd`.
+The headless classifier `core/classification.gd` takes UCI moves, the stored analysis JSON, catalog and repertoire lines, the human colour, and whether to check the repertoire. It returns one record per ply with `class`, `loss`, `before_ep`, `after_ep`, `left_repertoire` and `expected`. While analysis is still landing, a position not yet analysed is passed with its `fen` and no `pv`; a ply that cannot be settled yet (either of its positions is unanalysed, or it would be a Mistake or Blunder that may be a Miss while the previous ply is unsettled) gets `null` instead of a record. A complete analysis never yields `null`. It uses the first stored FEN as the game's starting position. A free capture is a capture of an undefended piece; the material comparison values knights and bishops at 3, rooks at 5 and queens at 9, excluding pawns and kings. Those values and the classification thresholds live in `core/tunables.gd`.
 
 These rules are restated from public descriptions (chess.com's help pages, Lichess, Chesskit, WintrChess). No code is copied: Chesskit is AGPL-3.0 and WintrChess GPL-3.0.
 
@@ -471,18 +471,19 @@ chess.com's CAPS2 is not published.
   - Games run one at a time, in the thread mode set in the settings (Background by default).
   - Clicking Review on a queued game, or Analyze inside the review of an unqueued one, jumps it ahead on Max; the batch then resumes where it stopped.
   - The queue pauses while a game is played and resumes after it, and also survives restarting the app.
+  - `core/analysis_queue.gd` persists the ordered PGN paths in `user://analysis_queue.cfg`; an interrupted game starts again from the beginning. The history shows queued and active progress, and the queue removes games whose PGN was deleted.
 
 ### 15.8 Home screen, profile and your name
 
 - **Home screen:** the app opens on it.
   - Quick-play buttons for 1+0, 3+2 and 5+0 reuse your last level, colour and opening mode. The first time they use Maia 1500, a random colour and Free mode. A small level selector sits next to them.
   - Also: Custom game (today's setup screen), History, Profile, Settings and Quit.
-- **Searching screen:** shown between the click and the game for at least 0.5 s. Its message follows the real work: pausing the analysis, loading the Maia net, preparing the game.
+- **Searching screen:** Quick play, Custom game and rematch show the time control and Maia level between the click and the game for at least 0.5 s, and until startup work finishes. Its status follows the real work in order: "Pausing analysis…" only when analysis is active, "Loading Maia 1500…" (with the selected level) until that net's `readyok`, then "Preparing game…" while loading the catalog, repertoire and opening selection. The new game and clock start only after it closes. Startup errors close it and use the existing Custom game or Home error message.
 - **Your name:**
-  - On first launch, a dialog asks for it, prefilled with "You". It has only OK, no skip.
+  - On first launch, a modal over Home asks "What should I call you?", prefilled with "You". It has only OK, no skip or dismissal with Esc. A blank or whitespace-only name is refused; confirming stores the trimmed name in `player_name` in `settings.cfg`, and the dialog stays closed on later launches. Confirming "You" is a valid choice; changing another setting does not count as choosing a name.
   - The name changes in the Profile.
-  - New PGNs write it in the player header, plus a `HumanColor` header (`w` or `b`), since a name such as "Maia 1500" could match the opponent's. Stats, thumbnails and Delete read your side from `HumanColor`; older PGNs have none, and there your side is the one named "You". Old PGNs keep "You" in the file but show the current name.
-- **Profile:** your name, W/D/L per level and time control (with flag wins and losses), and your accuracy over time.
+  - New PGNs write it in the player header, plus a `HumanColor` header (`w` or `b`), since a name such as "Maia 1500" could match the opponent's. Stats, thumbnails and Delete read your side from `HumanColor`; older PGNs have none, and there your side is the one named "You". Old PGNs keep "You" in the file and in copied PGN but show the current name in History and review. Named PGNs retain their saved player name when the current name changes.
+- **Profile:** opened from Home, with a Back button. Edit your name and confirm with Save name or Enter; blank names are refused. The table shows W/D/L per level and time control, including flag wins and flag losses as subsets, omitting rows with no games. A small 0–100% chart shows your accuracy per analysed game in date order, selecting your side through `HumanColor` (or the legacy "You" fallback). Stale or missing analysis and games where you made no move are omitted; an empty series has an explicit message. The first and last dates label the chart, and its tooltip lists each game's date and accuracy.
 
 ### 15.9 Repertoire from names, viewer and editor
 

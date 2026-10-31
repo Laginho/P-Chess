@@ -15,9 +15,12 @@ static func evaluate(moves: PackedStringArray, analysis: Dictionary, catalog: Ar
 	var result := []
 	for i in moves.size():
 		var before: Dictionary = positions[i]
+		var after: Dictionary = positions[i + 1]
+		if not before.has("pv") or not after.has("pv"):
+			result.append(null)
+			continue
 		var lines: Array = before.pv
 		var best: Dictionary = lines[0]
-		var after: Dictionary = positions[i + 1]
 		var played: Dictionary = after.pv[0].duplicate() if not after.pv.is_empty() else {"cp": after.terminal_score}
 		if played.has("cp"):
 			played.cp = -int(played.cp)
@@ -38,16 +41,21 @@ static func evaluate(moves: PackedStringArray, analysis: Dictionary, catalog: Ar
 		var after_ep := _ep(played_score)
 		var loss := maxf(0.0, before_ep - after_ep)
 		var label := _mate_or_band(best, played, loss)
-		if label in ["Mistake", "Blunder"] and i > 0 and result[i - 1].class in ["Mistake", "Blunder"] \
+		var possible_miss := label in ["Mistake", "Blunder"] and i > 0 \
 				and before_ep >= Tunables.CLASSIFICATION_MISS_BEFORE_EP \
 				and after_ep <= Tunables.CLASSIFICATION_MISS_AFTER_EP \
-				and loss >= Tunables.CLASSIFICATION_MISS_LOSS:
+				and loss >= Tunables.CLASSIFICATION_MISS_LOSS
+		var board = Board.from_fen(before.fen)
+		var forced: bool = board.legal_moves().size() == 1
+		if possible_miss and result[i - 1] == null and not (forced or marks[i].repertoire or marks[i].book or moves[i] == before.best_move):
+			result.append(null)
+			continue
+		if possible_miss and result[i - 1] != null and result[i - 1].class in ["Mistake", "Blunder"]:
 			label = "Miss"
 		elif label == "Blunder" and (played_score >= Tunables.CLASSIFICATION_LENIENT_CP \
 				or _score(best) <= -Tunables.CLASSIFICATION_LENIENT_CP):
 			label = "Good"
-		var board = Board.from_fen(before.fen)
-		if board.legal_moves().size() == 1:
+		if forced:
 			label = "Forced"
 		elif marks[i].repertoire:
 			label = "Repertoire"

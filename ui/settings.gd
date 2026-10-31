@@ -16,6 +16,9 @@ var _spins := {} # key -> [SpinBox, scale]
 
 
 func _ready() -> void:
+	# Keep the additional history row within the minimum window height.
+	$Panel/Center/Box.add_theme_constant_override("separation", 0)
+	_form.add_theme_constant_override("v_separation", 0)
 	$Open.pressed.connect(func() -> void: _panel.visible = not _panel.visible)
 	$Panel/Center/Box/Close.pressed.connect(_panel.hide)
 	_choice("premove_style", "Premove style", Settings.CHOICES.premove_style)
@@ -34,6 +37,8 @@ func _ready() -> void:
 	_choice("book_intensity", "Book intensity", Settings.CHOICES.book_intensity)
 	_check("auto_claim", "Auto-claim threefold")
 	_check("check_repertoire", "Check my moves against my repertoire")
+	_choice("history_tab", "History default tab", Settings.CHOICES.history_tab)
+	_choice("analysis_threads", "Batch analysis threads", Settings.CHOICES.analysis_threads)
 	var first: Control = _form.get_child(1)
 	var close: Control = $Panel/Center/Box/Close
 	first.focus_previous = first.get_path_to(close)
