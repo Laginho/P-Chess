@@ -232,6 +232,28 @@ func test_game_over_copies_the_same_pgn_as_review():
 	main.free()
 
 
+func test_game_over_space_activates_the_focused_button():
+	var main = await _session(ManualWaits.new())
+	main.board_view.game.resign("b")
+	main._show_result()
+	var panel = main.board_view.get_node("GameOver")
+	var close = panel.get_node("Panel/Content/Close")
+	close.grab_focus()
+	assert_true(close.has_focus(), "Close receives keyboard focus")
+	var event := InputEventKey.new()
+	event.keycode = KEY_SPACE
+	event.pressed = true
+	main.get_viewport().push_input(event)
+	event = InputEventKey.new()
+	event.keycode = KEY_SPACE
+	event.pressed = false
+	main.get_viewport().push_input(event)
+	await Engine.get_main_loop().process_frame
+	assert_true(not panel.visible, "Space activates Close")
+	assert_true(not main._starting, "Space does not start a rematch")
+	main.free()
+
+
 func _resign_and_rematch(main) -> void:
 	_key(main, KEY_ESCAPE)
 	_key(main, KEY_ESCAPE)
