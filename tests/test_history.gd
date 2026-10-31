@@ -116,8 +116,10 @@ func _check_delete_rollback(failure: String) -> void:
 		assert_true(FileAccess.file_exists(item), "original file restored: " + item)
 		assert_eq(FileAccess.get_file_as_bytes(item), contents[item])
 		assert_true(not FileAccess.file_exists(item + ".deleting"))
-	FileAccess.set_read_only_attribute(analysis, false)
-	DirAccess.remove_absolute(analysis)
+	for item in [analysis, analysis + ".deleting"]:
+		if FileAccess.file_exists(item):
+			FileAccess.set_read_only_attribute(item, false)
+			DirAccess.remove_absolute(item)
 	if DirAccess.dir_exists_absolute(temp):
 		DirAccess.remove_absolute(temp)
 	assert_true(not FileAccess.file_exists(temp))

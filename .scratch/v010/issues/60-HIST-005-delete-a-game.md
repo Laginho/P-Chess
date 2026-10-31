@@ -1,5 +1,5 @@
 # HIST-005: Delete a game, and the PracticeTarget header
-Stage: blocked
+Stage: implementing
 Blocked by: HIST-004
 Review: agent
 Difficulty: normal
