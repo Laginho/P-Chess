@@ -1,8 +1,11 @@
 # HIST-006: The analysis queue
-Stage: implementing
+Stage: to-review
 Blocked by: REV-002, HIST-004
 Review: agent
 Difficulty: hard
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\hist006-final-gate.json
+Acceptance: pending | Manual batch pause/resume and app restart with Stockfish installed; see Verification below.
+Disclosure: pending | release | [HIST-006 manual verification](61-HIST-006-analysis-queue.md): real Stockfish and interactive batch pause/restart remain to be checked.
 
 - Primary files:
   - New: core/analysis_queue.gd
@@ -45,3 +48,4 @@ Games can be queued for analysis from the history, alone or in batches, and are 
 
 
 - Stage 2: the serial/persistence test failed before the queue existed; the priority and settings tests failed before their implementations. A temporary removal of the active guard made the delayed-cancellation test fail. The prior history-review test now injects the shared queue analyser, preserving its Max assertion.
+- Final gate at 6f7d6f8: 365 passed, 0 failed, exit 0; the real Stockfish executable is absent in this checkout. The cached queued-review test failed before the priority fix and passed afterwards.
