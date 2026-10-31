@@ -67,9 +67,9 @@ func test_viewer_numbers_and_highlights_a_line_starting_with_black():
 	assert_eq(row.accessibility_description, "1...e5 2.e4")
 	var navigation = screen.find_child("Navigation", true, false)
 	var moves = navigation.get_node("Moves")
-	assert_eq(moves.text, "1...e5 [bgcolor=#45423d]2.e4[/bgcolor]")
+	assert_eq(moves.text, "1...e5 [bgcolor=#4a4741][color=#ece9e4][b]2.e4[/b][/color][/bgcolor]")
 	navigation.get_node("Previous").pressed.emit()
-	assert_eq(moves.text, "[bgcolor=#45423d]1...e5[/bgcolor] 2.e4")
+	assert_eq(moves.text, "[bgcolor=#4a4741][color=#ece9e4][b]1...e5[/b][/color][/bgcolor] 2.e4")
 	setup.free()
 	_clean(folder)
 
@@ -954,7 +954,7 @@ func test_long_repertoire_name_keeps_viewer_and_editor_inside_minimum_window():
 	await Engine.get_main_loop().process_frame
 	await Engine.get_main_loop().process_frame
 	var editor_heading = editor.find_child("Heading", true, false)
-	assert_true(editor.size.x <= 736 and editor.size.y <= 536, "editor fits the minimum viewport")
+	assert_eq(editor.size, Vector2i(800, 600), "editor fills the minimum viewport")
 	assert_true(editor_heading.text.ends_with(name))
 	assert_eq(editor_heading.tooltip_text, name, "full name remains available")
 	setup.free()
@@ -979,10 +979,37 @@ func test_embedded_repertoire_windows_fill_the_available_viewport():
 	assert_eq(screen.size, Vector2i(1248, 768), "screen uses the embedded viewport")
 	var editor = screen.get_node("RepertoireEditor")
 	editor.present(setup.repertoire, "Study", 0)
-	assert_eq(editor.size, Vector2i(1216, 736), "editor uses the embedded viewport")
+	assert_eq(editor.size, Vector2i(1280, 800), "editor is a full screen, as in the design")
 	setup.free()
 	root.gui_embed_subwindows = old_embed
 	root.size = old_size
+	_clean(folder)
+
+
+func test_repertoire_screen_dims_behind_its_dialogs():
+	var root: Window = Engine.get_main_loop().root
+	var old_embed := root.gui_embed_subwindows
+	root.gui_embed_subwindows = true
+	var setup = load("res://ui/setup.tscn").instantiate()
+	var folder := _folder()
+	DirAccess.make_dir_recursive_absolute(folder)
+	setup.repertoire.storage_dir = folder
+	root.add_child(setup)
+	var screen = setup.get_node("RepertoireScreen")
+	screen.present()
+	var dim = screen.get_node_or_null("Dim")
+	assert_true(dim != null and not dim.visible, "no backdrop on the screen itself")
+	if dim != null:
+		for dialog in [screen.get_node("OpeningPicker"), screen.get_node("RepertoireImport")]:
+			if dialog.name == "OpeningPicker":
+				dialog.present_repertoire(setup.repertoire)
+			else:
+				dialog.present()
+			assert_true(dim.visible, "%s dims the screen behind it" % dialog.name)
+			dialog.hide()
+			assert_true(not dim.visible, "closing %s removes the backdrop" % dialog.name)
+	setup.free()
+	root.gui_embed_subwindows = old_embed
 	_clean(folder)
 
 
