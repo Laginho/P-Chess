@@ -105,6 +105,21 @@ func test_missing_engine_disables_quick_play():
 	main.free()
 
 
+func test_home_settings_remain_available_after_focus_mode():
+	var main = MainScene.instantiate()
+	main.uci.free()
+	main.uci = Session.HeldBridge.new()
+	main.maia = main.MaiaPlayer.new(main.uci)
+	main.preferences = main.Settings.new("res://tests/fixtures/no_session_settings.cfg")
+	Engine.get_main_loop().root.add_child(main)
+	main._set_focus(true)
+	main._show_home()
+	main.get_node("Home/Center/Form/Settings").pressed.emit()
+	assert_true(main.settings_screen.is_visible_in_tree(), "Settings is accessible from Home")
+	assert_true(main.settings_screen.get_node("Panel").visible)
+	main.free()
+
+
 func test_custom_catalog_mode_is_reused_after_restart():
 	var folder := "user://test_home_catalog_%d" % Time.get_ticks_usec()
 	DirAccess.make_dir_recursive_absolute(folder)
