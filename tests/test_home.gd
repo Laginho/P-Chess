@@ -100,3 +100,42 @@ func test_missing_engine_disables_quick_play():
 	for button in home.get_node("Center/Form/Quick").get_children():
 		assert_true(button.disabled, "quick play is disabled")
 	main.free()
+
+
+func test_custom_catalog_mode_is_reused_after_restart():
+	var folder := "user://test_home_catalog_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var main = MainScene.instantiate()
+	var book = main.get_node("Setup").book
+	book.selection_dir = folder
+	book.load_tsv("eco\tname\tpgn\nA00\tFixture\t1. h3\n")
+	book.set_checked("Fixture", true)
+	assert_eq(book.save_selection("Practice"), "")
+	main.uci.free()
+	main.uci = Session.HeldBridge.new()
+	main.maia = main.MaiaPlayer.new(main.uci)
+	main.preferences = main.Settings.new(folder.path_join("settings.cfg"))
+	main.history = load("res://core/history.gd").new(folder)
+	Engine.get_main_loop().root.add_child(main)
+	main.get_node("Home/Center/Form/Custom").pressed.emit()
+	var opening = main.setup.get_node("Center/Form/Opening")
+	opening.select(1)
+	opening.item_selected.emit(1)
+	main.setup.get_node("Center/Form/Start").pressed.emit()
+	assert_eq(main.settings.get("opening"), "Catalog")
+	main.free()
+	var next = MainScene.instantiate()
+	next.get_node("Setup").book.selection_dir = folder
+	next.get_node("Setup").book.load_tsv("eco\tname\tpgn\nA00\tFixture\t1. h3\n")
+	next.uci.free()
+	next.uci = Session.HeldBridge.new()
+	next.maia = next.MaiaPlayer.new(next.uci)
+	next.preferences = next.Settings.new(folder.path_join("settings.cfg"))
+	next.history = load("res://core/history.gd").new(folder)
+	Engine.get_main_loop().root.add_child(next)
+	next.get_node("Home/Center/Form/Quick/FiveZero").pressed.emit()
+	assert_eq(next.settings.get("opening"), "Catalog")
+	assert_eq(next.settings.get("selection"), "Practice")
+	assert_eq(next.settings.get("control"), "5+0")
+	next.free()
+	Session.HistoryStorage.clean(folder)
