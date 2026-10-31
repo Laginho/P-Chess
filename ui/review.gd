@@ -59,6 +59,7 @@ func _ready() -> void:
 		analysis_queue.position_ready.connect(_queue_position)
 		analysis_queue.changed.connect(_queue_changed)
 	_graph.ply_selected.connect(_show_ply)
+	_board_view.resized.connect(_update_player_labels)
 	$Margin/Content/ReviewBody/Side/AccuracyHelp.tooltip_text = "Accuracy uses the change in win probability for each move.\nThe game score averages a volatility-weighted mean and\nthe harmonic mean of those move scores."
 	# Tooltips need a mouse; Enter on the focused "?" shows the same text in a dialog.
 	var help_dialog := AcceptDialog.new()
@@ -279,10 +280,22 @@ func _input(event: InputEvent) -> void:
 	elif visible and event is InputEventKey and event.is_pressed() and not event.is_echo() and event.keycode == KEY_F:
 		get_viewport().set_input_as_handled()
 		_board_view.flipped = not _board_view.flipped
+		_update_player_labels()
 		_update_eval_bar()
 	elif visible and event is InputEventKey and event.is_pressed() and not event.is_echo() and event.keycode in [KEY_LEFT, KEY_RIGHT]:
 		get_viewport().set_input_as_handled()
 		_show_ply(_ply + (-1 if event.keycode == KEY_LEFT else 1))
+
+
+func _update_player_labels() -> void:
+	var side: float = minf(_board_view.size.x, _board_view.size.y)
+	var corner: Vector2 = (_board_view.size - Vector2.ONE * side) / 2.0
+	var top: Label = _board_view.get_node("TopPlayer")
+	var bottom: Label = _board_view.get_node("BottomPlayer")
+	top.text = ("? " if _board_view.flipped else "? ") + _player_names[0 if _board_view.flipped else 1]
+	bottom.text = ("? " if _board_view.flipped else "? ") + _player_names[1 if _board_view.flipped else 0]
+	top.position = corner + Vector2(0, -24)
+	bottom.position = corner + Vector2(0, side + 2)
 
 
 func _show_ply(ply: int) -> void:
@@ -419,6 +432,7 @@ func present(game, clocks: Array, settings: Dictionary, result_text: String,
 		position.play(move)
 		_positions.append({"fen": position.board.to_fen()})
 	_board_view.flipped = settings.colour == "b"
+	_update_player_labels()
 	_show_ply(_game_moves.size())
 	_result.text = result_text
 	_moves.clear()
