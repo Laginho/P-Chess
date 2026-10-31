@@ -126,6 +126,30 @@ visible = false
 layout_mode = 2
 autowrap_mode = 3
 
+[node name="Navigation" type="HBoxContainer" parent="Margin/Content/ReviewBody/Side"]
+layout_mode = 2
+alignment = 1
+
+[node name="First" type="Button" parent="Margin/Content/ReviewBody/Side/Navigation"]
+layout_mode = 2
+text = "|◀"
+tooltip_text = "First move"
+
+[node name="Previous" type="Button" parent="Margin/Content/ReviewBody/Side/Navigation"]
+layout_mode = 2
+text = "◀"
+tooltip_text = "Previous move"
+
+[node name="Next" type="Button" parent="Margin/Content/ReviewBody/Side/Navigation"]
+layout_mode = 2
+text = "▶"
+tooltip_text = "Next move"
+
+[node name="Last" type="Button" parent="Margin/Content/ReviewBody/Side/Navigation"]
+layout_mode = 2
+text = "▶|"
+tooltip_text = "Last move"
+
 [node name="Actions" type="HBoxContainer" parent="Margin/Content"]
 layout_mode = 2
 theme_override_constants/separation = 12
