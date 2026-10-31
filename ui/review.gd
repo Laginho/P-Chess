@@ -89,6 +89,10 @@ func _ready() -> void:
 			+ "Forced — The only legal move.")
 	add_child(legend)
 	$Margin/Content/ReviewBody/Side/ClassHelp.pressed.connect(func(): legend.popup_centered())
+	var toggle: Button = $Margin/Content/ReviewBody/Side/ClassToggle
+	toggle.pressed.connect(func(): $Margin/Content/ReviewBody/Side/Counts.visible = not $Margin/Content/ReviewBody/Side/Counts.visible)
+	resized.connect(_resize_classes)
+	_resize_classes()
 	visibility_changed.connect(func():
 		if not visible:
 			_cancel_analysis())
@@ -122,6 +126,12 @@ func _ready() -> void:
 		open_analysis(_analysis_path, _history_draw))
 	$Margin/Content/ReviewBody/Side.add_child(analyze)
 	analyze.hide()
+
+
+func _resize_classes() -> void:
+	var compact := size.x <= 800
+	$Margin/Content/ReviewBody/Side/ClassToggle.visible = compact
+	$Margin/Content/ReviewBody/Side/Counts.visible = not compact
 
 
 func _class_help() -> String:

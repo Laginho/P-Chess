@@ -109,6 +109,11 @@ custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 script = ExtResource("4")
 
+[node name="ClassToggle" type="Button" parent="Margin/Content/ReviewBody/Side"]
+visible = false
+layout_mode = 2
+text = "Move classes"
+
 [node name="Moves" type="Tree" parent="Margin/Content/ReviewBody/Side"]
 layout_mode = 2
 size_flags_vertical = 3
