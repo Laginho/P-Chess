@@ -591,8 +591,8 @@ func test_searching_waits_for_the_net_before_starting_the_clock():
 	if screen == null:
 		main.free()
 		return
-	assert_eq(screen.get_node("Center/Content/Match").text, "3+2  ?  Maia 1700")
-	assert_eq(screen.get_node("Center/Content/Status").text, "Loading Maia 1700?")
+	assert_eq(screen.get_node("Center/Content/Match").text, "3+2  ·  Maia 1700")
+	assert_eq(screen.get_node("Center/Content/Status").text, "Loading Maia 1700…")
 	await Engine.get_main_loop().create_timer(0.6).timeout
 	assert_true(screen.visible, "slow work outlasts the minimum display time")
 	assert_eq(main.clock, null, "no clock after 0.5 seconds if the net is still loading")
