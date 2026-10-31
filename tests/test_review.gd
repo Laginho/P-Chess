@@ -805,3 +805,15 @@ func test_analysis_progress_counts_settled_moves():
 	if progress != null:
 		assert_eq(progress.text, "1 of 2 moves")
 	main.free()
+
+
+func test_review_result_header_includes_time_control_and_move_count():
+	var main = await _session(FakeTime.new())
+	var game = Game.new()
+	game.play("e2e4")
+	game.play("e7e5")
+	var review = main.get_node("Review")
+	review.present(game, [180000, 180000], SETTINGS, "White wins by resignation")
+	var result: Label = review.get_node("Margin/Content/Result")
+	assert_true(result.text.contains("3+2") and result.text.contains("resignation") and result.text.contains("1 move"))
+	main.free()
