@@ -631,6 +631,8 @@ func test_editor_right_click_refreshes_tree_and_board():
 	_editor_mouse(editor, point, MOUSE_BUTTON_RIGHT, true)
 	_editor_mouse(editor, point, MOUSE_BUTTON_RIGHT, false)
 	await Engine.get_main_loop().process_frame
+	# The deletion refreshes the tree deferred, which can land after the frame the click arrived in.
+	await Engine.get_main_loop().process_frame
 	assert_eq(tree.get_root().get_first_child().get_first_child().get_child_count(), 0, "deleted subtree disappears")
 	assert_eq(editor.board.game.board.position_key(), editor._node().position, "board returns to parent")
 	assert_eq(editor.path, PackedStringArray(["e2e4"]))
