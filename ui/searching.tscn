@@ -62,6 +62,8 @@ vertical_alignment = 1
 theme_type_variation = &"SemiboldText"
 text = "You"
 vertical_alignment = 1
+clip_text = true
+text_overrun_behavior = 3
 
 [node name="Center" type="Control" parent="."]
 mouse_filter = 2
