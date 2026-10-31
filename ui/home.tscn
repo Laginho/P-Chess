@@ -72,6 +72,10 @@ text = "History"
 layout_mode = 2
 text = "Settings"
 
+[node name="Profile" type="Button" parent="Center/Form"]
+layout_mode = 2
+text = "Profile"
+
 [node name="Quit" type="Button" parent="Center/Form"]
 layout_mode = 2
 text = "Quit"
