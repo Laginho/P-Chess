@@ -5,6 +5,8 @@ signal ply_selected(ply: int)
 const Board = preload("res://core/board.gd")
 const Tunables = preload("res://core/tunables.gd")
 
+const COLOURS := {"Inaccuracy": Color("f4bf44"), "Mistake": Color("e28c28"), "Miss": Color("ff7769"), "Blunder": Color("c93230")}
+
 var positions: Array = []
 var classes: Array = []
 var current_ply := 0
@@ -17,8 +19,11 @@ func _gui_input(event: InputEvent) -> void:
 
 
 func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, size), Color("363430"))
-	draw_line(Vector2(0, size.y / 2), Vector2(size.x, size.y / 2), Color.GRAY)
+	var card := StyleBoxFlat.new()
+	card.bg_color = Color("403d39")
+	card.set_corner_radius_all(6)
+	draw_style_box(card, Rect2(Vector2.ZERO, size))
+	var dots := []
 	var previous := Vector2.ZERO
 	var have_previous := false
 	for i in positions.size():
@@ -36,15 +41,15 @@ func _draw() -> void:
 		var point := Vector2(size.x * i / maxi(positions.size() - 1, 1), size.y * (1.0 - fraction))
 		if have_previous:
 			draw_colored_polygon(PackedVector2Array([previous, point, Vector2(point.x, size.y), Vector2(previous.x, size.y)]), Color("ece9e4"))
-			draw_line(previous, point, Color("a8a49c"), 1.0)
-		if i > 0 and i <= classes.size() and classes[i - 1] != null:
-			var colours := {"Inaccuracy": Color("f4bf44"), "Mistake": Color("e28c28"), "Miss": Color("ff7769"), "Blunder": Color("c93230")}
-			var label: String = classes[i - 1].class
-			if colours.has(label):
-				draw_circle(point, 4.0, Color("1f1e1c"))
-				draw_circle(point, 3.0, colours[label])
+		if i > 0 and i <= classes.size() and classes[i - 1] != null and COLOURS.has(classes[i - 1].class):
+			dots.append([point, COLOURS[classes[i - 1].class]])
 		previous = point
 		have_previous = true
+	draw_dashed_line(Vector2(0, size.y / 2), Vector2(size.x, size.y / 2), Color("8c887f"), 1.0, 3.0)
 	if not positions.is_empty():
 		var x := size.x * current_ply / maxi(positions.size() - 1, 1)
-		draw_line(Vector2(x, 0), Vector2(x, size.y), Color(0.9, 0.7, 0.25), 2.0)
+		draw_line(Vector2(x, 0), Vector2(x, size.y), Color("7fa650"), 2.0)
+	# Dots go on top of the area, the midline and the current-move marker, as drawn.
+	for dot in dots:
+		draw_circle(dot[0], 4.5, Color("141412"))
+		draw_circle(dot[0], 3.5, dot[1])

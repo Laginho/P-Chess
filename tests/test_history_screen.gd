@@ -76,7 +76,7 @@ func test_open_review_from_history_and_return_with_escape():
 		assert_true(review.get_node("Margin/Content/Actions/BackHistory").visible)
 		assert_true(not review.get_node("Margin/Content/Actions/Rematch").visible)
 		assert_true(review.get_node("Margin/Content/ReviewBody/Side/Analyze").visible)
-		assert_true(not review.get_node("Margin/Content/ReviewBody/Side/RepertoireExit").visible)
+		assert_eq(_exit_rows(review), PackedStringArray(), "no repertoire exit without a snapshot")
 		review.get_node("Margin/Content/ReviewBody/Side/Analyze").pressed.emit()
 		assert_true(fake.called and fake.maximum, "Analyze starts Max analysis")
 		var space := InputEventKey.new()
@@ -143,8 +143,7 @@ func test_history_review_uses_saved_repertoire_snapshot():
 	main.get_node("Home/Center/Form/History").pressed.emit()
 	var card = main.get_node("HistoryScreen/Margin/Content/Cards/List").get_child(0)
 	card.get_node("Details/HBoxContainer/Review").pressed.emit()
-	var exit_label = main.review.get_node("Margin/Content/ReviewBody/Side/RepertoireExit")
-	assert_true(exit_label.visible and exit_label.text.contains("expected: e4"), "markers come from the saved snapshot")
+	assert_eq(_exit_rows(main.review), PackedStringArray(["Left repertoire · expected 1.e4"]), "markers come from the saved snapshot")
 	main.free()
 	Storage.clean(folder)
 
@@ -491,3 +490,11 @@ func test_history_stale_analysis_shows_cached_accuracy_and_reason():
 	screen.analysis_queue.free()
 	screen.free()
 	Storage.clean(folder)
+
+
+func _exit_rows(review) -> PackedStringArray:
+	var rows := PackedStringArray()
+	for row in review.get_node("Margin/Content/ReviewBody/Side/Moves").get_root().get_children():
+		if row.get_text(1).begins_with("Left repertoire"):
+			rows.append(row.get_text(1))
+	return rows

@@ -33,6 +33,7 @@ func _ready() -> void:
 	var actions := HFlowContainer.new()
 	actions.name = "BatchActions"
 	actions.custom_minimum_size.y = 44
+	actions.add_theme_constant_override("h_separation", 12)
 	$Margin/Content.add_child(actions)
 	$Margin/Content.move_child(actions, 1)
 	var selected := Button.new()
@@ -50,15 +51,20 @@ func _ready() -> void:
 	all.name = "AnalyzeAll"
 	all.text = "Analyze all"
 	all.custom_minimum_size.y = 40
+	all.theme_type_variation = "RaisedButton"
+	all.add_theme_font_override("font", get_theme_font("font", "SemiboldText"))
+	_pad(all, 16)
 	all.pressed.connect(_analyze_all)
 	actions.add_child(all)
 	var status := Label.new()
 	status.name = "Status"
 	status.custom_minimum_size.x = 200
+	status.theme_type_variation = "MutedText"
 	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	actions.add_child(status)
 	var select_all := CheckBox.new()
 	select_all.name = "SelectAll"
+	_style_check(select_all, 12, Color("a8a49c"))
 	select_all.toggled.connect(func(on):
 		for card in $Margin/Content/Cards/List.get_children():
 			card.get_node("Details/Select").button_pressed = on)
@@ -80,12 +86,42 @@ func _ready() -> void:
 	if analysis_queue != null:
 		analysis_queue.changed.connect(_queue_changed)
 	var tabs: TabBar = $Margin/Content/Header/Tabs
-	for key in ["tab_selected", "tab_unselected", "tab_hovered"]:
+	for key in ["tab_selected", "tab_unselected", "tab_hovered", "tab_focus"]:
 		var style := StyleBoxFlat.new()
-		style.bg_color = Color("45423d") if key == "tab_selected" else Color("2b2a27")
+		style.bg_color = {"tab_selected": Color("45423d"), "tab_hovered": Color("363430")}.get(key, Color.TRANSPARENT)
 		style.set_corner_radius_all(6)
-		style.set_content_margin_all(12)
+		style.content_margin_left = 16
+		style.content_margin_right = 16
+		if key == "tab_focus":
+			style.draw_center = false
+			style.border_color = Color("7fa650")
+			style.set_border_width_all(2)
 		tabs.add_theme_stylebox_override(key, style)
+	tabs.add_theme_constant_override("h_separation", 4)
+	tabs.add_theme_font_override("font", get_theme_font("font", "BoldText"))
+	for key in ["font_selected_color", "font_unselected_color", "font_hovered_color"]:
+		tabs.add_theme_color_override(key, Color.TRANSPARENT)
+	var tray := Panel.new()
+	tray.name = "Tray"
+	tray.show_behind_parent = true
+	tray.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var tray_style := StyleBoxFlat.new()
+	tray_style.bg_color = Color("2b2a27")
+	tray_style.set_corner_radius_all(8)
+	tray.add_theme_stylebox_override("panel", tray_style)
+	tabs.add_child(tray)
+	tabs.resized.connect(_fit_tray)
+	tabs.draw.connect(func():
+		for index in tabs.tab_count:
+			var rect := tabs.get_tab_rect(index)
+			var title := tabs.get_tab_title(index)
+			var label := title.get_slice(" ", 0)
+			var font := tabs.get_theme_font("font") if index == tabs.current_tab else get_theme_font("font", "SemiboldText")
+			var count_font := get_theme_font("font", "SemiboldText")
+			var at := Vector2(rect.position.x + 16, rect.get_center().y + (font.get_ascent(14) - font.get_descent(14)) / 2)
+			tabs.draw_string(font, at, label, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("ece9e4"))
+			at.x += font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x
+			tabs.draw_string(count_font, at, title.substr(label.length()), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("a8a49c")))
 	for tab in TABS:
 		tabs.add_tab(tab)
 	$Margin/Content/Header/Tabs.tab_changed.connect(func(_index): _refresh())
@@ -137,6 +173,8 @@ func _refresh() -> void:
 		_add_card(list, record)
 	_update_selection()
 	$Margin/Content/BatchActions/AnalyzeAll.text = "Analyze all in “%s”" % selected
+	_pad($Margin/Content/BatchActions/AnalyzeAll, 16)
+	_fit_tray.call_deferred()
 	if not focus_path.is_empty() and list.has_node(focus_path):
 		list.get_node(focus_path).grab_focus()
 
@@ -156,15 +194,18 @@ func _add_card(list: Node, record: Dictionary) -> void:
 	list.add_child(card)
 	var panel_style: StyleBoxFlat = card.get_theme_stylebox("panel").duplicate()
 	panel_style.border_color = Color("7fa650") if _selected.get(record.path, false) else Color("45423d")
+	panel_style.content_margin_left = 4
+	panel_style.content_margin_right = 8 if _compact else 14
 	card.add_theme_stylebox_override("panel", panel_style)
 	var details := HBoxContainer.new()
 	details.name = "Details"
-	details.add_theme_constant_override("separation", 8)
+	details.add_theme_constant_override("separation", 8 if _compact else 14)
 	card.add_child(details)
 	var select := CheckBox.new()
 	select.name = "Select"
 	select.tooltip_text = "Select game"
 	select.custom_minimum_size.x = 44
+	_style_check(select, 14, Color("ece9e4"))
 	select.button_pressed = _selected.get(record.path, false)
 	select.toggled.connect(func(on):
 		_selected[record.path] = on
@@ -187,6 +228,7 @@ func _add_card(list: Node, record: Dictionary) -> void:
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	info.custom_minimum_size.x = 150
+	info.add_theme_constant_override("separation", 4)
 	details.add_child(info)
 	var date: String = headers.get("Date", record.path.get_file().left(10))
 	var human: String = headers.get("White" if colour == "w" else "Black", "?")
@@ -201,12 +243,15 @@ func _add_card(list: Node, record: Dictionary) -> void:
 		opening.add_theme_font_size_override("font_size", 15)
 		opening.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		info.add_child(opening)
-	var players := Label.new()
+	var players := RichTextLabel.new()
 	players.name = "Players"
-	players.text = "%s %s  x  %s %s" % ["●" if colour == "w" else "○", human, "○" if colour == "w" else "●", opponent]
+	players.bbcode_enabled = true
+	players.fit_content = true
+	players.scroll_active = false
+	players.add_theme_font_override("normal_font", get_theme_font("font", "SemiboldText"))
+	players.add_theme_font_size_override("normal_font_size", 14)
+	players.text = "%s %s  [color=#a8a49c]x[/color]  %s %s" % [_swatch(colour == "w"), _bb(human), _swatch(colour != "w"), _bb(opponent)]
 	players.tooltip_text = "%s: %s; %s: %s" % ["White" if colour == "w" else "Black", human, "Black" if colour == "w" else "White", opponent]
-	players.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	players.add_theme_font_size_override("font_size", 14)
 	info.add_child(players)
 	var metadata := HFlowContainer.new()
 	metadata.name = "Metadata"
@@ -230,6 +275,7 @@ func _add_card(list: Node, record: Dictionary) -> void:
 	var control := Label.new()
 	control.text = CONTROLS.get(headers.get("TimeControl", ""), headers.get("TimeControl", ""))
 	control.theme_type_variation = "MutedText"
+	control.add_theme_font_override("font", get_theme_font("font", "SemiboldText"))
 	control.add_theme_font_size_override("font_size", 13)
 	chip.add_child(control)
 	var move_count := Label.new()
@@ -241,6 +287,7 @@ func _add_card(list: Node, record: Dictionary) -> void:
 	var outcome := Label.new()
 	outcome.name = "Result"
 	outcome.text = "·  " + _result_text(game, colour)
+	outcome.theme_type_variation = "BoldText"
 	outcome.add_theme_font_size_override("font_size", 13)
 	var result_color := Color("a8a49c") if game.result == "1/2-1/2" else (Color("8fbc5a") if (game.result == "1-0") == (colour == "w") else Color("ee7a72"))
 	outcome.add_theme_color_override("font_color", result_color)
@@ -261,6 +308,7 @@ func _add_card(list: Node, record: Dictionary) -> void:
 		heading.add_theme_font_size_override("font_size", 12)
 		status.add_child(heading)
 		var boxes := HBoxContainer.new()
+		boxes.add_theme_constant_override("separation", 6)
 		for side in ["white", "black"]:
 			var box := Label.new()
 			box.name = "WhiteAccuracy" if side == "white" else "BlackAccuracy"
@@ -270,8 +318,12 @@ func _add_card(list: Node, record: Dictionary) -> void:
 			box.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 			box.custom_minimum_size = Vector2(65, 32)
 			box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			box.theme_type_variation = "ExtraBoldText"
+			box.add_theme_font_size_override("font_size", 16)
 			var style := StyleBoxFlat.new()
 			style.bg_color = Color("ece9e4") if side == "white" else Color("141412")
+			style.border_color = Color("6b675f")
+			style.set_border_width_all(1)
 			style.set_corner_radius_all(6)
 			box.add_theme_stylebox_override("normal", style)
 			box.add_theme_color_override("font_color", Color("141412") if side == "white" else Color("ece9e4"))
@@ -297,12 +349,26 @@ func _add_card(list: Node, record: Dictionary) -> void:
 			reason_text = "engine settings changed" if data.get("engine_version") != "Stockfish 19" or data.get("node_budget") != Tunables.ANALYSIS_NODES else "incomplete analysis"
 		reason.text = "Stale: " + reason_text
 		reason.add_theme_color_override("font_color", Color("f4bf44"))
+		reason.theme_type_variation = "BoldText"
+		reason.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		reason.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		reason.add_theme_font_size_override("font_size", 12)
 		stale_row.add_child(reason)
 	elif state.begins_with("Analysing"):
+		var row := HBoxContainer.new()
+		status.add_child(row)
 		var label := Label.new()
-		label.text = state
-		status.add_child(label)
+		label.text = "Analysing…"
+		label.theme_type_variation = "SemiboldText"
+		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		label.add_theme_font_size_override("font_size", 13)
+		row.add_child(label)
+		var percent := Label.new()
+		percent.name = "AnalysisPercent"
+		percent.text = "%d%%" % analysis_queue.percent
+		percent.theme_type_variation = "BoldText"
+		percent.add_theme_font_size_override("font_size", 13)
+		row.add_child(percent)
 		var progress := ProgressBar.new()
 		progress.name = "AnalysisProgress"
 		progress.value = analysis_queue.percent
@@ -312,6 +378,9 @@ func _add_card(list: Node, record: Dictionary) -> void:
 		fill.bg_color = Color("7fa650")
 		fill.set_corner_radius_all(4)
 		progress.add_theme_stylebox_override("fill", fill)
+		var track := fill.duplicate()
+		track.bg_color = Color("1f1e1c")
+		progress.add_theme_stylebox_override("background", track)
 		status.add_child(progress)
 	elif state == "Queued":
 		var pill := PanelContainer.new()
@@ -337,16 +406,20 @@ func _add_card(list: Node, record: Dictionary) -> void:
 		var label := Label.new()
 		var place: int = analysis_queue.pending().find(record.path) + (1 if analysis_queue.current().is_empty() else 0)
 		label.text = "Queued · %d%s in line" % [place, _ordinal(place)]
+		label.theme_type_variation = "SemiboldText"
+		label.add_theme_font_size_override("font_size", 13)
 		row.add_child(label)
 	elif cached.is_empty():
 		var label := Label.new()
 		label.text = "Not analysed"
 		label.theme_type_variation = "MutedText"
+		label.add_theme_font_size_override("font_size", 13)
 		status.add_child(label)
 	var actions := HBoxContainer.new()
 	actions.name = "HBoxContainer"
 	actions.alignment = BoxContainer.ALIGNMENT_END
-	actions.custom_minimum_size.x = 0 if _compact else 300
+	actions.custom_minimum_size.x = 0 if _compact else 330
+	actions.add_theme_constant_override("separation", 4 if _compact else 8)
 	actions.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	details.add_child(actions)
 	var review := Button.new()
@@ -355,6 +428,10 @@ func _add_card(list: Node, record: Dictionary) -> void:
 	review.custom_minimum_size.y = 40
 	if not cached.is_empty() and state != "Queued" and not state.begins_with("Analysing"):
 		review.theme_type_variation = "PrimaryButton"
+	else:
+		review.theme_type_variation = "RaisedButton"
+		review.add_theme_font_override("font", get_theme_font("font", "BoldText"))
+	_pad(review, 16)
 	review.pressed.connect(func(): review_requested.emit(record.path, game))
 	actions.add_child(review)
 	if analysis_queue != null:
@@ -366,6 +443,10 @@ func _add_card(list: Node, record: Dictionary) -> void:
 			analyze.text = "Analysing…" if analysis_queue.current() == record.path else "Queued"
 		if state == "Stale":
 			analyze.add_theme_color_override("font_color", Color("f4bf44"))
+		analyze.custom_minimum_size.y = 40
+		analyze.theme_type_variation = "RaisedButton"
+		analyze.add_theme_font_override("font", get_theme_font("font", "SemiboldText"))
+		_pad(analyze, 14)
 		analyze.pressed.connect(func(): analysis_queue.enqueue(record.path))
 		actions.add_child(analyze)
 	var copy := Button.new()
@@ -393,9 +474,13 @@ func _add_card(list: Node, record: Dictionary) -> void:
 	confirm.visible = _delete_path == record.path
 	actions.visible = not confirm.visible
 	confirm.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	confirm.alignment = BoxContainer.ALIGNMENT_END
+	confirm.custom_minimum_size.x = 0 if _compact else 330
+	confirm.add_theme_constant_override("separation", 8)
 	details.add_child(confirm)
 	var question := Label.new()
 	question.text = "Delete this game?"
+	question.theme_type_variation = "SemiboldText"
 	confirm.add_child(question)
 	var yes := Button.new()
 	yes.name = "Confirm"
@@ -404,17 +489,62 @@ func _add_card(list: Node, record: Dictionary) -> void:
 	red.bg_color = Color("c93230")
 	red.set_corner_radius_all(8)
 	red.set_content_margin_all(10)
-	yes.add_theme_stylebox_override("normal", red)
+	red.content_margin_left = 14
+	red.content_margin_right = 14
+	for style in ["normal", "hover", "pressed", "hover_pressed"]:
+		yes.add_theme_stylebox_override(style, red)
+	yes.custom_minimum_size.y = 40
+	yes.add_theme_font_override("font", get_theme_font("font", "BoldText"))
+	for key in ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color", "font_focus_color"]:
+		yes.add_theme_color_override(key, Color.WHITE)
 	yes.pressed.connect(func(): _confirm_delete(record.path))
 	confirm.add_child(yes)
 	var cancel := Button.new()
 	cancel.name = "Cancel"
 	cancel.text = "Cancel"
+	cancel.custom_minimum_size.y = 40
+	cancel.theme_type_variation = "RaisedButton"
+	cancel.add_theme_font_override("font", get_theme_font("font", "SemiboldText"))
+	_pad(cancel, 14)
 	cancel.pressed.connect(func():
 		_delete_path = ""
 		confirm.hide()
 		actions.show())
 	confirm.add_child(cancel)
+
+
+func _fit_tray() -> void:
+	var tabs: TabBar = $Margin/Content/Header/Tabs
+	var width := 0.0
+	for index in tabs.tab_count:
+		width = maxf(width, tabs.get_tab_rect(index).end.x)
+	tabs.get_node("Tray").position = Vector2(-4, -4)
+	tabs.get_node("Tray").size = Vector2(width + 8, tabs.size.y + 8)
+
+
+# Canvas buttons pad their text by a fixed amount; the theme's buttons pad by 8.
+func _pad(button: Button, padding: int) -> void:
+	var font := button.get_theme_font("font")
+	var width := font.get_string_size(button.text, HORIZONTAL_ALIGNMENT_LEFT, -1, button.get_theme_font_size("font_size")).x
+	button.custom_minimum_size.x = width + 2 * (8 if _compact else padding)
+
+
+func _style_check(box: CheckBox, left: int, colour: Color) -> void:
+	var style := StyleBoxEmpty.new()
+	style.content_margin_left = left
+	for key in ["normal", "hover", "pressed", "hover_pressed"]:
+		box.add_theme_stylebox_override(key, style)
+	box.add_theme_constant_override("h_separation", 10)
+	for key in ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color", "font_focus_color"]:
+		box.add_theme_color_override(key, colour)
+
+
+func _swatch(white: bool) -> String:
+	return "[color=#ece9e4]●[/color]" if white else "[color=#8c887f]○[/color]"
+
+
+func _bb(text: String) -> String:
+	return text.replace("[", "[lb]")
 
 
 func _icon(svg: String) -> ImageTexture:

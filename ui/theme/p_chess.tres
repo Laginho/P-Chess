@@ -556,9 +556,60 @@ content_margin_top = 3.0
 content_margin_right = 8.0
 content_margin_bottom = 3.0
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_acclight"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0.9254902, 0.9137255, 0.89411765, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_accdark"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0.078431375, 0.078431375, 0.07058824, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.41960785, 0.40392157, 0.37254903, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_emptycard"]
+bg_color = Color(0.12156863, 0.11764706, 0.10980392, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.27058825, 0.25882354, 0.23921569, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
 [resource]
 default_font = ExtResource("1_7n72e")
 default_font_size = 14
+AccuracyCardDark/base_type = &"PanelContainer"
+AccuracyCardDark/styles/panel = SubResource("StyleBoxFlat_accdark")
+AccuracyCardLight/base_type = &"PanelContainer"
+AccuracyCardLight/styles/panel = SubResource("StyleBoxFlat_acclight")
+AccuracyValueDark/base_type = &"Label"
+AccuracyValueDark/colors/font_color = Color(0.9254902, 0.9137255, 0.89411765, 1)
+AccuracyValueDark/font_sizes/font_size = 22
+AccuracyValueDark/fonts/font = SubResource("FontVariation_hakwx")
+AccuracyValueLight/base_type = &"Label"
+AccuracyValueLight/colors/font_color = Color(0.078431375, 0.078431375, 0.07058824, 1)
+AccuracyValueLight/font_sizes/font_size = 22
+AccuracyValueLight/fonts/font = SubResource("FontVariation_hakwx")
 BoldText/base_type = &"Label"
 BoldText/fonts/font = SubResource("FontVariation_5wgtp")
 Button/colors/font_color = Color(0.9254902, 0.9137255, 0.89411765, 1)
@@ -591,6 +642,8 @@ CheckBox/styles/hover = SubResource("StyleBoxEmpty_check")
 CheckBox/styles/hover_pressed = SubResource("StyleBoxEmpty_check")
 CheckBox/styles/normal = SubResource("StyleBoxEmpty_check")
 CheckBox/styles/pressed = SubResource("StyleBoxEmpty_check")
+EmptyAnalysisCard/base_type = &"Panel"
+EmptyAnalysisCard/styles/panel = SubResource("StyleBoxFlat_emptycard")
 ExtraBoldText/base_type = &"Label"
 ExtraBoldText/fonts/font = SubResource("FontVariation_hakwx")
 HScrollBar/styles/grabber = SubResource("StyleBoxFlat_385nj")

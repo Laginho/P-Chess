@@ -1076,3 +1076,22 @@ func test_review_keeps_history_error_clear_of_analysis_progress():
 	assert_true(result.global_position.y + result.size.y <= progress.global_position.y, "progress stays below the whole warning")
 	main.free()
 	root.size = old_size
+
+
+# CLEAN-013: the review's palettes live in the shared theme, not in per-node overrides.
+func test_review_cards_use_theme_variations():
+	var main = await _session(FakeTime.new())
+	var review = main.get_node("Review")
+	var cards = review.get_node("Margin/Content/ReviewBody/Side/Summary/AccuracyCards")
+	for side in ["White", "Black"]:
+		var card: PanelContainer = cards.get_node(side + "Score")
+		var tone := "Light" if side == "White" else "Dark"
+		assert_eq(card.theme_type_variation, StringName("AccuracyCard" + tone), side + " card style")
+		assert_true(not card.has_theme_stylebox_override("panel"), side + " card has no inline style")
+		var value: Label = card.get_node("Value")
+		assert_eq(value.theme_type_variation, StringName("AccuracyValue" + tone), side + " value style")
+		assert_true(not value.has_theme_color_override("font_color") and not value.has_theme_font_size_override("font_size"), side + " value has no inline palette")
+	var empty: Panel = review.get_node("Margin/Content/ReviewBody/Side/UnanalysedNotice/NoticeCard")
+	assert_eq(empty.theme_type_variation, &"EmptyAnalysisCard")
+	assert_true(not empty.has_theme_stylebox_override("panel"), "empty-analysis card has no inline style")
+	main.free()
