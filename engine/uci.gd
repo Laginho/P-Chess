@@ -12,6 +12,8 @@ const ENGINE := "engine/lc0/lc0.exe"
 # One VerboseMoveStats line per root move: "info string e2e4  (322 ) N: ... (P: 12.34%) ...".
 const MOVE_LINE := "^info string ([a-h][1-8][a-h][1-8][qrbn]?) .*\\(P: *([0-9.]+)%\\)"
 
+# The score of the search that just emitted policy_ready, in pawns; null if absent.
+var evaluation = null
 var available := false
 var error := ""
 var pid := -1
@@ -82,6 +84,17 @@ static func parse_policy(lines: PackedStringArray, board) -> Dictionary:
 		if move in legal:
 			policy[move] = found.get_string(2).to_float() / 100.0
 	return policy
+
+
+# UCI scores are from the side to move in the searched position.
+static func parse_score(lines: PackedStringArray):
+	var pattern := RegEx.create_from_string("^info .*\\bscore cp (-?[0-9]+)(?: |$)")
+	var score = null
+	for line in lines:
+		var found := pattern.search(line)
+		if found != null:
+			score = found.get_string(1).to_int() / 100.0
+	return score
 
 
 func start(dirs := search_dirs()) -> bool:
@@ -158,11 +171,12 @@ func poll() -> void:
 			return
 		if _awaiting == "bestmove" and _callback.is_valid() and (line.begins_with("info ") or line.begins_with("bestmove")):
 			_callback.call(line)
-		if _awaiting == "bestmove" and line.begins_with("info string "):
+		if _awaiting == "bestmove" and _board != null and line.begins_with("info "):
 			_info.append(line)
 		elif _awaiting != "" and line.begins_with(_awaiting):
 			_awaiting = ""
 			if line.begins_with("bestmove") and _board != null:
+				evaluation = parse_score(_info)
 				policy_ready.emit(parse_policy(_info, _board))
 			_send()
 

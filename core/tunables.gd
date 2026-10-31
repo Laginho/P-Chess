@@ -1,5 +1,12 @@
 extends RefCounted
 
+# Draw offers (§15.2).
+const DRAW_COOLDOWN_MOVES := 10
+const DRAW_EVAL_MAX := 0.5
+const DRAW_EVAL_LOSING := -1.5
+const DRAW_PHASE_MIN := 0.6
+const DRAW_START_NONPAWN := 62.0
+
 const ANALYSIS_NODES := 3000000
 const ANALYSIS_MIN_DEPTH := 12
 const ANALYSIS_STABLE_DEPTHS := 3

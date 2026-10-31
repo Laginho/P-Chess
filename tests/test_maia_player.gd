@@ -234,3 +234,13 @@ func test_live_game_through_lc0_plays_legal_moves():
 	uci.free()
 	assert_eq(maia.latencies_ms.size(), game.moves.size(), "one latency per move")
 	print("maia-1500 median %.1f ms over %d moves" % [maia.median_ms(), maia.latencies_ms.size()])
+
+
+func test_draw_decision_uses_evaluation_material_and_clock_boundaries():
+	var endgame = Game.new("4k3/8/8/8/8/8/8/4K3 w - - 0 1").board
+	assert_true(MaiaPlayer.accepts_draw(0.5, endgame, 80.0, 100.0), "+0.5 and v=0.6")
+	assert_true(not MaiaPlayer.accepts_draw(0.51, endgame, 80.0, 100.0), "+0.51")
+	assert_true(not MaiaPlayer.accepts_draw(0.5, endgame, 82.0, 100.0), "v=0.59")
+	assert_true(MaiaPlayer.accepts_draw(-1.5, Game.new().board, 100.0, 100.0), "-1.5 regardless of phase")
+	assert_true(not MaiaPlayer.accepts_draw(null, endgame, 0.0, 100.0), "missing evaluation declines")
+	assert_true(not MaiaPlayer.accepts_draw(0.5, Game.new().board, 100.0, 100.0), "opening at full clock")

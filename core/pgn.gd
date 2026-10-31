@@ -153,6 +153,7 @@ static func finished_game(game, clocks: Array, settings: Dictionary, opening_nam
 		"TimeControl": "%d+%d" % [control[0] / 1000, control[1] / 1000],
 		"Result": game.result,
 		"Termination": "Time forfeit" if game.reason == "time" else "Normal",
+		"Reason": game.reason,
 	}
 	if opening_name:
 		headers.Opening = opening_name

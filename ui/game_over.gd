@@ -12,6 +12,7 @@ func present(session, finished_game, side_review: Button) -> void:
 	review_button.hide()
 	$Panel/Content/Headline.text = {"1-0": "White won", "0-1": "Black won", "1/2-1/2": "Draw"}[game.result]
 	$Panel/Content/Reason.text = "by " + game.reason
+	$Panel/Content/Score.text = main.match_score_text()
 	$Panel/Content/Review.pressed.connect(_open_review)
 	$Panel/Content/Rematch.pressed.connect(_rematch)
 	$Panel/Content/NewGame.pressed.connect(_new_game)

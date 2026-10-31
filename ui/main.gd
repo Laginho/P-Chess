@@ -7,6 +7,7 @@ extends Control
 
 const Game = preload("res://core/game.gd")
 const Clock = preload("res://core/clock.gd")
+const Tunables = preload("res://core/tunables.gd")
 const SoundPlayer = preload("res://ui/sound_player.gd")
 const UCI = preload("res://engine/uci.gd")
 const MaiaPlayer = preload("res://bot/maia_player.gd")
@@ -16,6 +17,7 @@ const History = preload("res://core/history.gd")
 const ReviewScreen = preload("res://ui/review.tscn")
 
 const WINNERS := {"1-0": "White wins", "0-1": "Black wins", "1/2-1/2": "Draw"}
+const MIN_BOARD_SIZE := 320
 
 var sound_player := SoundPlayer.new()
 var uci := UCI.new()
@@ -35,6 +37,8 @@ var resign_key := ResignKey.new(Time.get_ticks_msec)
 # Only the board and the clocks show (§8.7).
 var focus := false
 var _playing_premove := false
+var _draw_offered := false
+var _draw_moves_left := 0
 # Created at ready time so scene tests can supply isolated storage before any file is read.
 var history
 var _move_clocks := []
@@ -42,6 +46,12 @@ var _history_saved := false
 var _recording_move := false
 var _starting := false
 var _review_repertoire: Array = []
+var _review_repertoire_colour := ""
+# Scores are half-points, attached to the players rather than board colours.
+var _human_score := 0
+var _maia_score := 0
+var _match_games := 0
+var _show_match_score := false
 
 
 # Esc resigns on a second press within 2 s of the first (§7). The time source returns milliseconds.
@@ -76,10 +86,16 @@ const BLACK_GLYPHS := {"q": "♛", "r": "♜", "b": "♝", "n": "♞", "p": "♟
 @onready var result_label: Label = $Layout/Side/Result
 @onready var white_material: Label = $Layout/Side/WhiteMaterial
 @onready var black_material: Label = $Layout/Side/BlackMaterial
-@onready var white_clock = $Layout/Side/WhiteClock
-@onready var black_clock = $Layout/Side/BlackClock
+@onready var white_clock = $Layout/Side/WhiteClockRow/WhiteClock
+@onready var black_clock = $Layout/Side/BlackClockRow/BlackClock
+@onready var white_score: Label = $Layout/Side/WhiteClockRow/Score
+@onready var black_score: Label = $Layout/Side/BlackClockRow/Score
 @onready var setup = $Setup
 @onready var resign_hint: Label = $Layout/Side/ResignHint
+@onready var resign_button: Button = $Layout/Side/Actions/ResignButton
+@onready var draw_button: Button = $Layout/Side/Actions/DrawButton
+@onready var draw_notice: Label = $Layout/Side/DrawNotice
+@onready var draw_notice_timer: Timer = $Layout/Side/DrawNoticeTimer
 @onready var claim_draw: Button = $Layout/Side/ClaimDraw
 @onready var starting: Control = $Layout/BoardView/Starting
 
@@ -119,10 +135,14 @@ func _ready() -> void:
 	claim_draw.pressed.connect(func() -> void:
 		board_view.game.claim_draw()
 		_show_result())
+	resign_button.pressed.connect(_resign)
+	draw_button.pressed.connect(_offer_draw)
+	draw_notice_timer.timeout.connect(draw_notice.hide)
 	setup.started.connect(_start)
 	# The catalog takes seconds to parse: start it now so the first game does not wait for it.
 	setup.get_node("OpeningPicker").ensure_catalog()
 	$Layout.resized.connect(_fit_board)
+	$Layout/BoardView/ResizeGrip.size_requested.connect(_resize_board)
 	_fit_board()
 	settings_screen.store = preferences
 	add_child(settings_screen)
@@ -141,7 +161,7 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	if clock:
 		clock.tick()
-	resign_hint.visible = resign_key.armed()
+	resign_hint.visible = clock != null and not board_view.game.is_over() and resign_key.armed()
 
 
 # Global input runs before GUI input: a flag or low-time warning must precede the drop
@@ -163,11 +183,23 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			if clock and not in_game:
 				_start(rematch(settings))
 		KEY_ESCAPE:
-			if in_game and resign_key.press():
-				board_view.game.resign(human)
-				_show_result()
+			_resign()
 		KEY_F11:
 			_set_focus(not focus)
+
+
+func _resign() -> void:
+	if not settings_screen.get_node("Panel").visible and clock != null and not board_view.game.is_over() and resign_key.press():
+		board_view.game.resign(human)
+		_show_result()
+
+
+func _offer_draw() -> void:
+	if settings_screen.get_node("Panel").visible or clock == null or board_view.game.is_over() or draw_button.disabled:
+		return
+	_draw_offered = true
+	_draw_moves_left = Tunables.DRAW_COOLDOWN_MOVES
+	draw_button.disabled = true
 
 
 func _start(new_settings: Dictionary) -> void:
@@ -183,6 +215,7 @@ func _start(new_settings: Dictionary) -> void:
 	var error := ""
 	var practice_book = setup.book
 	var review_repertoire: Array = []
+	var review_repertoire_colour := ""
 	var repertoire_name: String = new_settings.get("repertoire", "")
 	var repertoire_mode: bool = new_settings.opening == "My repertoire"
 	var repertoire_error := ""
@@ -193,6 +226,7 @@ func _start(new_settings: Dictionary) -> void:
 		if repertoire_error.is_empty():
 			# Snapshot even with checking off, so enabling it during play uses this PGN.
 			review_repertoire = setup.repertoire.lines.duplicate(true)
+			review_repertoire_colour = setup.repertoire.colour
 		if repertoire_mode and error.is_empty():
 			practice_book = setup.Book.new()
 			practice_book.load_repertoire(setup.repertoire.lines, "b" if new_settings.colour == "w" else "w")
@@ -216,9 +250,16 @@ func _start(new_settings: Dictionary) -> void:
 	setup.get_node("Center/Form/Missing").hide()
 	_move_clocks.clear()
 	_history_saved = false
+	if settings.is_empty() or new_settings != rematch(settings) or not board_view.game.is_over():
+		_reset_match()
 	settings = new_settings.duplicate()
 	_review_repertoire = review_repertoire
+	_review_repertoire_colour = review_repertoire_colour
 	human = settings.colour
+	_show_match_score = _match_games > 0
+	white_score.visible = _show_match_score and not focus
+	black_score.visible = _show_match_score and not focus
+	_update_score_text()
 	uci.set_level(MaiaPlayer.net_path(settings.level))
 	var game = Game.new()
 	maia.book = practice_book
@@ -233,6 +274,12 @@ func _start(new_settings: Dictionary) -> void:
 		label.text = ""
 	claim_draw.disabled = true
 	clock = Clock.new(settings.control, Time.get_ticks_msec)
+	resign_button.disabled = false
+	_draw_offered = false
+	_draw_moves_left = 0
+	draw_button.disabled = false
+	draw_notice.hide()
+	draw_notice_timer.stop()
 	maia.clock = clock
 	maia.control = settings.control
 	maia.level = settings.level
@@ -248,6 +295,13 @@ func _start(new_settings: Dictionary) -> void:
 
 
 func _show_setup() -> void:
+	_reset_match()
+	draw_button.disabled = true
+	_draw_offered = false
+	draw_notice.hide()
+	draw_notice_timer.stop()
+	resign_button.disabled = true
+	resign_hint.hide()
 	review.hide()
 	clock = null
 	white_clock.clock = null
@@ -300,19 +354,32 @@ func _apply(key: String, value) -> void:
 			maia.book_intensity = value
 		"auto_claim":
 			board_view.game.auto_claim = value
+		"board_size":
+			_fit_board()
 
 
 # The board stays square and the side panel sits right next to it.
 func _fit_board() -> void:
-	board_view.custom_minimum_size.x = maxf(0, minf($Layout.size.y,
+	var fit := _board_fit_size()
+	var chosen: int = preferences.get_value("board_size")
+	board_view.custom_minimum_size.x = fit if chosen == 0 else clampf(chosen, minf(MIN_BOARD_SIZE, fit), fit)
+
+
+func _board_fit_size() -> float:
+	return maxf(0, minf($Layout.size.y,
 			$Layout.size.x - $Layout/Side.get_combined_minimum_size().x - 16))
+
+
+func _resize_board(side: int) -> void:
+	var fit := _board_fit_size()
+	preferences.set_value("board_size", 0 if side == 0 else roundi(clampf(side, minf(MIN_BOARD_SIZE, fit), fit)))
 
 
 func _set_flipped(flipped: bool) -> void:
 	board_view.flipped = flipped
 	# Each side's clock and material sit on that side's edge of the board, the clock outermost.
-	var top := [white_clock, white_material] if flipped else [black_clock, black_material]
-	var bottom := [black_material, black_clock] if flipped else [white_material, white_clock]
+	var top := [white_clock.get_parent(), white_material] if flipped else [black_clock.get_parent(), black_material]
+	var bottom := [black_material, black_clock.get_parent()] if flipped else [white_material, white_clock.get_parent()]
 	var side_panel := white_material.get_parent()
 	for i in top.size():
 		side_panel.move_child(top[i], i)
@@ -324,8 +391,10 @@ func _set_focus(on: bool) -> void:
 	focus = on
 	# The Esc hint and the result stay out of this list: criteria 4 and 2 show them when they apply,
 	# and the result is empty during play.
-	for node in [move_list, white_material, black_material, claim_draw, settings_screen]:
+	for node in [move_list, white_material, black_material, claim_draw, $Layout/Side/Actions, settings_screen]:
 		node.visible = not on
+	white_score.visible = _show_match_score and not on
+	black_score.visible = _show_match_score and not on
 
 
 # Like _input: Maia's think-time timer can fire after its clock hit zero but before the next
@@ -333,6 +402,19 @@ func _set_focus(on: bool) -> void:
 func _on_maia_move(move: String) -> void:
 	if clock:
 		clock.tick()
+	if clock == null or board_view.game.is_over():
+		return
+	if _draw_offered:
+		_draw_offered = false
+		var accepted := MaiaPlayer.accepts_draw(maia.evaluation, board_view.game.board,
+				clock.left(board_view.game.board.side_to_move), Clock.CONTROLS[settings.control][0])
+		draw_notice.text = "Draw agreed" if accepted else "Maia declined"
+		draw_notice.show()
+		draw_notice_timer.start()
+		if accepted:
+			board_view.game.agree_draw()
+			_show_result()
+			return
 	board_view.play(move)
 
 
@@ -341,6 +423,9 @@ func _on_move_played(san: String) -> void:
 	var game = board_view.game
 	claim_draw.disabled = not game.can_claim_draw()
 	var mover: String = "b" if game.board.side_to_move == "w" else "w"
+	if mover == human and _draw_moves_left > 0:
+		_draw_moves_left -= 1
+		draw_button.disabled = _draw_moves_left > 0
 	_recording_move = true
 	if not _playing_premove:
 		# May flag, when the time ran out before the move landed.
@@ -366,14 +451,27 @@ func _on_flagged(side: String) -> void:
 
 # Every way a game ends lands here, after the game has its result.
 func _show_result() -> void:
+	draw_button.disabled = true
+	_draw_offered = false
+	resign_button.disabled = true
+	resign_hint.hide()
 	var game = board_view.game
 	board_view.cancel_premoves()
 	clock.stop()
 	claim_draw.disabled = true
 	result_label.text = "%s by %s (%s)\nSpace for a rematch" % [WINNERS[game.result], game.reason, game.result]
 	if not _history_saved:
+		_match_games += 1
+		if game.result == "1/2-1/2":
+			_human_score += 1
+			_maia_score += 1
+		elif (game.result == "1-0") == (human == "w"):
+			_human_score += 2
+		else:
+			_maia_score += 2
+		_update_score_text()
 		_history_saved = true
-		history.save(game, _move_clocks, settings, "", maia.target_id)
+		history.save(game, _move_clocks, settings, "", maia.target_id, _review_repertoire, _review_repertoire_colour)
 	if history.error:
 		result_label.text += "\nHistory: " + history.error
 	review.present(game, _move_clocks, settings, result_label.text,
@@ -417,3 +515,23 @@ static func _captured(roles: String, glyphs: Dictionary) -> String:
 
 static func _lead(points: int) -> String:
 	return " +%d" % points if points > 0 else ""
+
+
+func _update_score_text() -> void:
+	white_score.text = _format_score(_human_score if human == "w" else _maia_score)
+	black_score.text = _format_score(_human_score if human == "b" else _maia_score)
+
+
+func _reset_match() -> void:
+	_human_score = 0
+	_maia_score = 0
+	_match_games = 0
+
+
+static func _format_score(half_points: int) -> String:
+	var whole := half_points / 2
+	return (str(whole) if whole > 0 or half_points == 0 else "") + (String.chr(0x00bd) if half_points % 2 else "")
+
+
+func match_score_text() -> String:
+	return "You %s %s %s Maia %s" % [_format_score(_human_score), String.chr(0x2013), _format_score(_maia_score), settings.level.trim_prefix("maia-")]

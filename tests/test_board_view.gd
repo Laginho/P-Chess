@@ -6,6 +6,78 @@ extends "res://tests/run.gd".Test
 const BoardView = preload("res://ui/board_view.gd")
 
 
+func test_board_size_clamps_and_fit_follows_layout():
+	var main = preload("res://ui/main.tscn").instantiate()
+	var path := "user://test_ui015_size_%d.cfg" % Time.get_ticks_usec()
+	main.preferences = preload("res://core/settings.gd").new(path)
+	main.preferences.set_value("board_size", 0)
+	Engine.get_main_loop().root.add_child(main)
+	var layout = main.get_node("Layout")
+	layout.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	layout.size = Vector2(1000, 700)
+	main._fit_board()
+	assert_eq(main.board_view.custom_minimum_size.x, 700)
+	main.preferences.set_value("board_size", 1)
+	assert_eq(main.board_view.custom_minimum_size.x, 320)
+	main.preferences.set_value("board_size", 900)
+	assert_eq(main.board_view.custom_minimum_size.x, 700)
+	main.preferences.set_value("board_size", 0)
+	layout.size = Vector2(900, 500)
+	main._fit_board()
+	assert_eq(main.board_view.custom_minimum_size.x, 500)
+	main.free()
+	DirAccess.remove_absolute(path)
+
+
+func test_grip_drag_saves_size_and_double_click_restores_fit():
+	var main = preload("res://ui/main.tscn").instantiate()
+	var path := "user://test_ui015_grip_%d.cfg" % Time.get_ticks_usec()
+	DirAccess.remove_absolute(path)
+	main.preferences = preload("res://core/settings.gd").new(path)
+	Engine.get_main_loop().root.add_child(main)
+	var grip = main.get_node("Layout/BoardView/ResizeGrip")
+	var press := _mouse(true, Vector2(10, 10))
+	grip._gui_input(press)
+	var motion := InputEventMouseMotion.new()
+	motion.relative = Vector2(-100, -100)
+	grip._gui_input(motion)
+	var saved: int = main.preferences.get_value("board_size")
+	assert_true(saved > 0, "drag selects a fixed size")
+	assert_eq(preload("res://core/settings.gd").new(path).get_value("board_size"), saved)
+	grip._gui_input(_mouse(false, Vector2(10, 10)))
+	press.double_click = true
+	grip._gui_input(press)
+	assert_eq(main.preferences.get_value("board_size"), 0, "double-click resets fit")
+	assert_eq(preload("res://core/settings.gd").new(path).get_value("board_size"), 0)
+	main.free()
+	DirAccess.remove_absolute(path)
+
+
+# Keyboard users set the size through Settings; the row follows the grip.
+func test_settings_row_sets_board_size_and_follows_the_grip():
+	var main = preload("res://ui/main.tscn").instantiate()
+	var path := "user://test_ui015_row_%d.cfg" % Time.get_ticks_usec()
+	DirAccess.remove_absolute(path)
+	main.preferences = preload("res://core/settings.gd").new(path)
+	Engine.get_main_loop().root.add_child(main)
+	var form = main.settings_screen.get_node("Panel/Center/Box/Form")
+	var spin: SpinBox
+	for i in form.get_child_count():
+		if form.get_child(i) is Label and form.get_child(i).text == "Board size (px, 0 = fit)":
+			spin = form.get_child(i + 1)
+	assert_true(spin != null, "Settings has a board size row")
+	if spin != null:
+		assert_true(spin.get_line_edit().focus_mode != Control.FOCUS_NONE, "the row takes keyboard focus")
+		spin.value = 400
+		assert_eq(main.preferences.get_value("board_size"), 400)
+		main._resize_board(0)
+		assert_eq(spin.value, 0.0, "the row follows a grip reset")
+	var box: Control = main.settings_screen.get_node("Panel/Center/Box")
+	assert_true(box.get_combined_minimum_size().y <= 600, "the form fits the 800x600 minimum window")
+	main.free()
+	DirAccess.remove_absolute(path)
+
+
 func test_point_to_square_with_white_at_the_bottom():
 	assert_eq(BoardView.square_at(Vector2(0, 0), 800, false), "a8")
 	assert_eq(BoardView.square_at(Vector2(799, 799), 800, false), "h1")

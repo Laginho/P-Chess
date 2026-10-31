@@ -356,3 +356,223 @@ func test_two_rematches_drop_a_stale_white_move_legal_in_the_current_game():
 	_finish(waits, 0)
 	assert_eq(main.board_view.game.moves, PackedStringArray(["g1f3", "e7e5"]), "only the current reply plays")
 	main.free()
+
+
+func test_resign_button_shares_the_two_second_window_with_escape():
+	for sequence in ["click_click", "click_escape", "escape_click", "expired_click"]:
+		var main = _session(ManualWaits.new())
+		var button = main.get_node_or_null("Layout/Side/Actions/ResignButton")
+		assert_true(button != null, "resign button exists")
+		if button == null:
+			main.free()
+			continue
+		var time := FakeTime.new()
+		main.resign_key = Main.ResignKey.new(time.ms)
+		assert_true(not button.disabled, "enabled during game")
+		if sequence == "escape_click":
+			_key(main, KEY_ESCAPE)
+		else:
+			button.pressed.emit()
+		main._process(0)
+		assert_true(not main.board_view.game.is_over(), "first action arms")
+		assert_true(main.resign_hint.visible, "hint visible")
+		assert_eq(main.resign_hint.text, "Click again to resign")
+		time.now = 2100 if sequence == "expired_click" else 1900
+		if sequence == "expired_click":
+			main._process(0)
+			assert_true(not main.resign_hint.visible, "expired hint is hidden")
+		if sequence == "click_escape":
+			_key(main, KEY_ESCAPE)
+		else:
+			button.pressed.emit()
+		assert_eq(main.board_view.game.is_over(), sequence != "expired_click")
+		if sequence != "expired_click":
+			assert_eq(main.board_view.game.reason, "resignation")
+			assert_true(button.disabled, "disabled after game")
+		main.free()
+
+
+func test_resign_button_disabled_in_setup_and_after_engine_stops():
+	var main = _session(ManualWaits.new())
+	var button = main.get_node_or_null("Layout/Side/Actions/ResignButton")
+	assert_true(button != null, "resign button exists")
+	if button:
+		main._show_setup()
+		assert_true(button.disabled, "disabled in setup")
+		main._start(SETTINGS.duplicate())
+		main._on_engine_stopped()
+		assert_true(button.disabled, "disabled after engine stops")
+	main.free()
+
+
+func test_settings_blocks_focused_resign_button_from_space():
+	var main = _session(ManualWaits.new())
+	await Engine.get_main_loop().process_frame
+	await Engine.get_main_loop().process_frame
+	var viewport = main.get_viewport()
+	for control in [main.resign_button, main.settings_screen.get_node("Open")]:
+		for down in [true, false]:
+			var mouse := InputEventMouseButton.new()
+			mouse.button_index = MOUSE_BUTTON_LEFT
+			mouse.pressed = down
+			mouse.position = control.get_global_rect().get_center()
+			viewport.push_input(mouse, true)
+	assert_true(main.resign_key.armed(), "click arms resignation")
+	assert_true(main.settings_screen.get_node("Panel").visible, "Settings opened")
+	for down in [true, false]:
+		var key := InputEventKey.new()
+		key.keycode = KEY_SPACE
+		key.pressed = down
+		viewport.push_input(key, true)
+	assert_true(not main.board_view.game.is_over(), "Space in Settings cannot resign")
+	main.free()
+
+
+func test_draw_offer_accepted_on_reply_without_playing_it():
+	var waits := ManualWaits.new()
+	var main = _session(waits)
+	var button = main.get_node_or_null("Layout/Side/Actions/DrawButton")
+	assert_true(button != null, "draw offer button exists")
+	if button == null:
+		main.free()
+		return
+	assert_eq(button.text, String.chr(0x00bd), "draw button label")
+	assert_true(not button.disabled, "offer available during game")
+	assert_true(main.board_view.play("e2e4"))
+	button.pressed.emit()
+	assert_true(button.disabled, "offer starts cooldown")
+	main.uci.evaluation = 9.0
+	main.uci.policy_ready.emit({"e2e4": 1.0})
+	main.uci.evaluation = -1.5
+	main.uci.policy_ready.emit({"e7e5": 1.0})
+	main.uci.evaluation = 9.0
+	_finish(waits, 0)
+	var game = main.board_view.game
+	assert_eq(game.moves, PackedStringArray(["e2e4"]), "Maia's move is not played")
+	assert_eq(game.result, "1/2-1/2")
+	assert_eq(game.reason, "agreement")
+	assert_eq(main.history.stats("maia-1700", "3+2").draws, 1)
+	var files := DirAccess.get_files_at(main.history._root.path_join("games"))
+	assert_eq(files.size(), 1, "one saved PGN")
+	if files.size() == 1:
+		var pgn := FileAccess.get_file_as_string(main.history._root.path_join("games").path_join(files[0]))
+		assert_true('[Result "1/2-1/2"]' in pgn)
+		assert_true('[Reason "agreement"]' in pgn)
+		assert_true('[Termination "Normal"]' in pgn)
+	var panel = main.board_view.get_node_or_null("GameOver")
+	assert_true(panel != null, "game-over panel")
+	if panel:
+		assert_eq(panel.get_node("Panel/Content/Headline").text, "Draw")
+		assert_eq(panel.get_node("Panel/Content/Reason").text, "by agreement")
+	main.free()
+
+
+func test_declined_offer_reenables_only_after_ten_human_moves():
+	var waits := ManualWaits.new()
+	var main = _session(waits)
+	var button = main.get_node("Layout/Side/Actions/DrawButton")
+	button.pressed.emit()
+	assert_true(button.disabled, "offer immediately disables button")
+	var human_moves := ["e2e4", "g1f3", "f1c4", "d2d3", "c2c3", "b1d2", "a2a3", "h2h3", "e1g1", "b2b4"]
+	var maia_moves := ["e7e5", "b8c6", "g8f6", "f8c5", "d7d6", "a7a6", "h7h6", "c8e6", "e8g8", "c5b6"]
+	for i in human_moves.size():
+		assert_true(main.board_view.play(human_moves[i]), "human move %d" % (i + 1))
+		assert_eq(button.disabled, i < 9, "cooldown after %d human moves" % (i + 1))
+		main.uci.evaluation = null
+		main.uci.policy_ready.emit({})
+		main.uci.policy_ready.emit({maia_moves[i]: 1.0})
+		_finish(waits, i)
+		assert_true(not main.board_view.game.is_over(), "decline plays on")
+		if i == 0:
+			assert_eq(main.board_view.game.moves, PackedStringArray(["e2e4", "e7e5"]))
+			assert_eq(main.get_node("Layout/Side/DrawNotice").text, "Maia declined")
+			assert_true(main.get_node("Layout/Side/DrawNotice").visible)
+			main.get_node("Layout/Side/DrawNoticeTimer").timeout.emit()
+			assert_true(not main.get_node("Layout/Side/DrawNotice").visible)
+	main._show_setup()
+	assert_true(button.disabled, "disabled in setup")
+	main.free()
+
+
+func test_draw_offer_does_not_pass_through_settings_and_resets_on_rematch():
+	var main = _session(ManualWaits.new())
+	var button = main.get_node("Layout/Side/Actions/DrawButton")
+	main.settings_screen.get_node("Panel").show()
+	button.pressed.emit()
+	assert_true(not button.disabled, "settings blocks an offer")
+	main.settings_screen.get_node("Panel").hide()
+	button.pressed.emit()
+	assert_true(button.disabled)
+	_resign_and_rematch(main)
+	assert_true(not button.disabled, "new game resets cooldown")
+	main._set_focus(true)
+	assert_true(not button.is_visible_in_tree(), "focus mode hides actions")
+	main._set_focus(false)
+	assert_true(button.is_visible_in_tree(), "actions return after focus mode")
+	main.free()
+
+func test_match_score_follows_players_and_resets():
+	var main = _session(ManualWaits.new())
+	var white = main.get_node_or_null("Layout/Side/WhiteClockRow/Score")
+	var black = main.get_node_or_null("Layout/Side/BlackClockRow/Score")
+	assert_true(white != null and black != null, "score boxes exist")
+	if white == null or black == null:
+		main.free()
+		return
+	assert_true(not white.visible and not black.visible, "first game hides boxes")
+	main.board_view.game.resign("b")
+	main._show_result()
+	var score = main.board_view.get_node_or_null("GameOver/Panel/Content/Score")
+	assert_true(score != null, "game-over score exists")
+	if score:
+		assert_eq(score.text, "You 1 – 0 Maia 1700")
+	_key(main, KEY_SPACE)
+	assert_true(white.visible and black.visible, "rematch shows boxes")
+	assert_eq(black.text, "1", "human score follows black")
+	assert_eq(white.text, "0", "Maia follows white")
+	main.board_view.game.agree_draw()
+	main._show_result()
+	score = main.board_view.get_node("GameOver/Panel/Content/Score")
+	assert_eq(score.text, "You 1½ – ½ Maia 1700")
+	assert_eq(black.text, "1½", "finished rematch updates human score")
+	assert_eq(white.text, "½", "finished rematch updates Maia score")
+	main.board_view.get_node("GameOver/Panel/Content/Close").pressed.emit()
+	assert_eq(black.text, "1½", "human score remains after closing panel")
+	assert_eq(white.text, "½", "Maia score remains after closing panel")
+	main.board_view.get_node("GameOver/Panel/Content/Rematch").pressed.emit()
+	assert_eq(white.text, "1½")
+	assert_eq(black.text, "½")
+	main._show_setup()
+	main._start(SETTINGS.duplicate())
+	assert_true(not white.visible and not black.visible, "New game resets score")
+	main.board_view.game.resign("b")
+	main._show_result()
+	var changed = Main.rematch(main.settings)
+	changed.level = "maia-1500"
+	main._start(changed)
+	assert_true(not white.visible and not black.visible, "changed level resets score")
+	main.free()
+
+
+func test_match_score_respects_focus_mode():
+	var main = _session(ManualWaits.new())
+	var white = main.white_score
+	var black = main.black_score
+	_key(main, KEY_F11)
+	_key(main, KEY_F11)
+	assert_true(not white.visible and not black.visible, "first game stays without boxes after focus")
+	main.board_view.game.resign("b")
+	main._show_result()
+	_key(main, KEY_SPACE)
+	_key(main, KEY_F11)
+	assert_true(not white.visible and not black.visible, "focus hides rematch boxes")
+	_key(main, KEY_F11)
+	assert_true(white.visible and black.visible, "leaving focus restores rematch boxes")
+	main.board_view.game.agree_draw()
+	main._show_result()
+	_key(main, KEY_F11)
+	_key(main, KEY_SPACE)
+	assert_true(not white.visible and not black.visible, "rematch started in focus hides boxes")
+	_key(main, KEY_F11)
+	assert_true(white.visible and black.visible, "leaving focus restores new rematch boxes")
+	main.free()

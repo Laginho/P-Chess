@@ -9,6 +9,7 @@ const Settings = preload("res://core/settings.gd")
 const ThemeLoader = preload("res://ui/theme_loader.gd")
 
 var store
+var _spins := {} # key -> [SpinBox, scale]
 
 @onready var _panel: Control = $Panel
 @onready var _form: GridContainer = $Panel/Center/Box/Form
@@ -24,6 +25,7 @@ func _ready() -> void:
 	_spin("animation_ms", "Animation length (ms)", 10)
 	_choice("board_theme", "Board", _themes("boards"))
 	_choice("piece_theme", "Pieces", _themes("pieces"))
+	_spin("board_size", "Board size (px, 0 = fit)", 10)
 	_choice("sound_theme", "Sounds", _themes("sounds"))
 	_spin("volume", "Volume (%)", 1)
 	_spin("tau", "Threshold τ (%)", 0.1, 100.0)
@@ -32,6 +34,7 @@ func _ready() -> void:
 	_choice("book_intensity", "Book intensity", Settings.CHOICES.book_intensity)
 	_check("auto_claim", "Auto-claim threefold")
 	_check("check_repertoire", "Check my moves against my repertoire")
+	store.changed.connect(_follow)
 
 
 # While open, the screen keeps keys from the game: Esc closes it instead of resigning.
@@ -58,7 +61,15 @@ func _spin(key: String, label: String, step: float, scale := 1.0) -> void:
 	spin.step = step
 	spin.value = store.get_value(key) * scale
 	spin.value_changed.connect(func(value: float) -> void: store.set_value(key, value / scale))
+	_spins[key] = [spin, scale]
 	_row(label, spin)
+
+
+# The board grip also writes board_size, so number rows follow the store. A method, not a lambda,
+# so freeing this screen disconnects it from the longer-lived store.
+func _follow(key: String, value) -> void:
+	if key in _spins:
+		_spins[key][0].set_value_no_signal(value * _spins[key][1])
 
 
 func _choice(key: String, label: String, items: Array) -> void:
