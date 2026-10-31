@@ -41,3 +41,8 @@ func show_missing(message: String) -> void:
 	$Center/Form/Missing.show()
 	for button in $Center/Form/Quick.get_children():
 		button.disabled = true
+
+
+func sync_level() -> void:
+	var index := Setup.LEVELS.find(store.last_game().get("level", "maia-1500"))
+	$Center/Form/Level.select(index if index >= 0 else Setup.LEVELS.find("maia-1500"))

@@ -143,7 +143,10 @@ func _ready() -> void:
 	resign_button.pressed.connect(_resign)
 	draw_button.pressed.connect(_offer_draw)
 	draw_notice_timer.timeout.connect(draw_notice.hide)
-	setup.started.connect(_start)
+	setup.started.connect(func(choice):
+		var saved: Dictionary = choice.duplicate()
+		saved.colour_choice = ["w", "b", "random"][setup.get_node("Center/Form/Colour").selected]
+		_start(saved))
 	$Home.configure(preferences)
 	$Home.started.connect(_start)
 	$Home.custom_requested.connect(_show_setup)
@@ -350,6 +353,7 @@ func _show_setup() -> void:
 func _show_home() -> void:
 	_show_setup()
 	setup.hide()
+	$Home.sync_level()
 	$Home.show()
 
 
