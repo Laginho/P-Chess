@@ -26,6 +26,24 @@ func test_unanalysed_history_explains_state_and_hides_analysis_summary():
 	main.free()
 
 
+func test_eval_bar_shows_white_perspective_score_for_current_position():
+	var main = await _session(FakeTime.new())
+	var review = main.get_node("Review")
+	var game = Game.new()
+	game.play("e2e4")
+	review.present(game, [180000], SETTINGS, "")
+	var bar = review.get_node("Margin/Content/ReviewBody/EvalBar")
+	var score = bar.get_node_or_null("Score")
+	assert_true(score != null, "evaluation score is visible on the bar")
+	if score != null:
+		assert_eq(score.text, "", "unknown position has no score")
+		review.receive_position(1, {"pv": [{"cp": -120, "moves": ["e7e5"]}]})
+		assert_eq(score.text, "+1.2", "black-to-move evaluation is converted to white's perspective")
+		review.get_node("Margin/Content/ReviewBody/Side/Navigation/First").pressed.emit()
+		assert_eq(score.text, "", "navigating to an unknown position clears the score")
+	main.free()
+
+
 func test_summary_waits_for_analysis_and_shows_accuracy_and_counts():
 	var main = await _session(FakeTime.new())
 	var review = main.get_node("Review")
