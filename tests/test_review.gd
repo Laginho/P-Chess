@@ -924,3 +924,35 @@ func test_postgame_analysis_progress_follows_real_result():
 	assert_true(result.global_position.y + result.size.y <= progress.global_position.y, "progress stays below post-game result")
 	main.free()
 	root.size = old_size
+
+func test_long_review_keeps_selected_move_visible():
+	var root = Engine.get_main_loop().root
+	var old_size: Vector2i = root.size
+	root.size = Vector2i(1280, 800)
+	var main = await _session(FakeTime.new())
+	var game = Game.new()
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 260026
+	for i in 80:
+		if game.is_over():
+			break
+		var legal = game.board.legal_moves()
+		game.play(legal[rng.randi_range(0, legal.size() - 1)])
+	assert_true(game.moves.size() >= 40, "fixture must exceed the visible move list")
+	main.review.present(game, [], SETTINGS, "Fixture")
+	await root.get_tree().process_frame
+	await root.get_tree().process_frame
+	var list: Tree = main.review.get_node("Margin/Content/ReviewBody/Side/Moves")
+	var rect := list.get_item_area_rect(list.get_selected(), list.get_selected_column())
+	assert_true(rect.position.y >= 0 and rect.end.y <= list.size.y, "initial final move is visible")
+	main.review.get_node("Margin/Content/ReviewBody/Side/Navigation/First").pressed.emit()
+	main.review.get_node("Margin/Content/ReviewBody/Side/Navigation/Next").pressed.emit()
+	await root.get_tree().process_frame
+	rect = list.get_item_area_rect(list.get_selected(), list.get_selected_column())
+	assert_true(rect.position.y >= 0 and rect.end.y <= list.size.y, "first move is visible after navigation")
+	main.review.get_node("Margin/Content/ReviewBody/Side/EvalGraph").ply_selected.emit(game.moves.size())
+	await root.get_tree().process_frame
+	rect = list.get_item_area_rect(list.get_selected(), list.get_selected_column())
+	assert_true(rect.position.y >= 0 and rect.end.y <= list.size.y, "graph jump scrolls to last move")
+	main.free()
+	root.size = old_size
