@@ -1,5 +1,5 @@
-# UI-025: History screen to the design
-Stage: to-implement
+﻿# UI-025: History screen to the design
+Stage: implementing
 Blocked by: UI-021
 Review: agent
 Difficulty: normal
@@ -15,9 +15,9 @@ Restyle History to `docs/design/v0.1.0/png/History.png`, which shows every card 
 #### Acceptance criteria
 
 1. Header: back button, "History", and the tabs All, 1+0, 3+2 and 5+0 as a segmented control, each with its game count.
-2. Toolbar: select-all checkbox with "N selected", "Analyze selected" (green), the queue status line with a spinner ("Analysing 2 of 7 · Background"), and "Analyze all in “<tab>”".
+2. Toolbar: select-all checkbox with "N selected", "Analyze selected" (green), the queue status line with a spinner ("Analysing 2 of 7 Â· Background"), and "Analyze all in â€œ<tab>â€".
 3. Each card matches the canvas: checkbox, thumbnail, opening name (only when known), "Bruno x Maia 1500" with colour dots, date, time-control chip, the result coloured by outcome (green win, red loss, grey draw) and the move count.
-4. Every analysis state matches the canvas: analysed (both accuracy boxes, white's light and black's dark); analysing (bar and percentage, the action disabled as "Analysing…"); queued ("Queued · 3rd in line", the action disabled as "Queued"); stale (dimmed accuracies, "Stale: <reason>" and "Re-analyze" in gold); not analysed ("Not analysed", "Analyze").
+4. Every analysis state matches the canvas: analysed (both accuracy boxes, white's light and black's dark); analysing (bar and percentage, the action disabled as "Analysingâ€¦"); queued ("Queued Â· 3rd in line", the action disabled as "Queued"); stale (dimmed accuracies, "Stale: <reason>" and "Re-analyze" in gold); not analysed ("Not analysed", "Analyze").
 5. Review (green when analysed), the Copy PGN and Delete icon buttons, and the inline delete confirm ("Delete this game?", red Delete, Cancel) replace today's controls; behaviour unchanged.
 6. The shared acceptance in `.scratch/ui-redo/spec.md` holds for the board.
 
