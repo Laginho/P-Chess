@@ -637,3 +637,21 @@ func test_move_classes_help_opens_ordered_legend():
 			assert_true(at > previous, name + " appears in order")
 			previous = at
 	main.free()
+
+func test_move_classes_collapse_in_small_review():
+	var root = Engine.get_main_loop().root
+	var old_size: Vector2i = root.size
+	root.size = Vector2i(800, 600)
+	var main = await _session(FakeTime.new())
+	main.review.present(Game.new(), [180000, 180000], SETTINGS, "")
+	await Engine.get_main_loop().process_frame
+	await Engine.get_main_loop().process_frame
+	var side = main.review.get_node("Margin/Content/ReviewBody/Side")
+	var toggle = side.get_node_or_null("ClassToggle")
+	assert_true(toggle != null and toggle.visible, "small review offers a move classes toggle")
+	assert_true(not side.get_node("Counts").visible, "class table starts collapsed")
+	if toggle != null:
+		toggle.pressed.emit()
+		assert_true(side.get_node("Counts").visible, "toggle opens class table")
+	main.free()
+	root.size = old_size
