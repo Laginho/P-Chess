@@ -17,7 +17,9 @@ var _pgn := ""
 var _url := ""
 var _game_moves := PackedStringArray()
 var _ply := 0
+var _positions := []
 
+@onready var _eval_bar = $Margin/Content/ReviewBody/EvalBar
 @onready var _board_view = $Margin/Content/ReviewBody/BoardView
 
 @onready var _result: Label = $Margin/Content/Result
@@ -63,11 +65,38 @@ func _show_ply(ply: int) -> void:
 		position.play(_game_moves[i])
 	_board_view.game = position
 	_board_view.queue_redraw()
+	_update_eval_bar()
+
+
+func receive_position(index: int, position: Dictionary) -> void:
+	if index < 0 or index >= _positions.size():
+		return
+	_positions[index].merge(position, true)
+	_update_eval_bar()
+
+
+func _update_eval_bar() -> void:
+	_eval_bar.flipped = _board_view.flipped
+	_eval_bar.white_fraction = 0.5
+	if _positions.is_empty() or not _positions[_ply].has("pv"):
+		return
+	var position: Dictionary = _positions[_ply]
+	var line: Dictionary = position.pv[0] if not position.pv.is_empty() else {"cp": position.get("terminal_score", 0)}
+	var cp: int = line.get("cp", 1000 if line.get("mate", 0) > 0 else -1000)
+	if Board.from_fen(position.fen).side_to_move == "b":
+		cp = -cp
+	_eval_bar.white_fraction = 1.0 / (1.0 + exp(-0.00368208 * clampi(cp, -1000, 1000)))
 
 
 func present(game, clocks: Array, settings: Dictionary, result_text: String,
 		catalog: Array = [], repertoire: Array = [], check_repertoire := false) -> void:
 	_game_moves = game.moves.duplicate()
+	_positions = []
+	var position = Game.new()
+	_positions.append({"fen": position.board.to_fen()})
+	for move in _game_moves:
+		position.play(move)
+		_positions.append({"fen": position.board.to_fen()})
 	_board_view.flipped = settings.colour == "b"
 	_show_ply(_game_moves.size())
 	_result.text = result_text

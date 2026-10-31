@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" path="res://ui/review.gd" id="1"]
 [ext_resource type="PackedScene" path="res://ui/board_view.tscn" id="2"]
+[ext_resource type="Script" path="res://ui/eval_bar.gd" id="3"]
 
 [node name="Review" type="Control"]
 visible = false
@@ -51,6 +52,12 @@ autowrap_mode = 3
 [node name="ReviewBody" type="HBoxContainer" parent="Margin/Content"]
 layout_mode = 2
 size_flags_vertical = 3
+
+[node name="EvalBar" type="Control" parent="Margin/Content/ReviewBody"]
+custom_minimum_size = Vector2(20, 0)
+layout_mode = 2
+size_flags_vertical = 3
+script = ExtResource("3")
 
 [node name="BoardView" parent="Margin/Content/ReviewBody" instance=ExtResource("2")]
 layout_mode = 2
