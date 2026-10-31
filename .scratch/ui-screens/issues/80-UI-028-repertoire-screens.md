@@ -9,6 +9,7 @@ Difficulty: normal
   - ui/opening_picker.gd, ui/opening_picker.tscn
   - ui/repertoire_editor.gd, ui/repertoire_editor.tscn
   - tests/test_repertoire.gd, tests/test_catalog.gd
+  - bot/repertoire.gd (persist and reload source, preserving it through edits)
 
 #### What to build
 
@@ -17,6 +18,7 @@ Restyle the repertoire screens to `docs/design/v0.1.0/png/Repertoire.png`, `Open
 #### Acceptance criteria
 
 1. Repertoires: back button and title; Import PGN and From openings (green) at the top right; the repertoires as cards (colour dot, name, "14 lines · from openings" or "· imported PGN", the selected one outlined green), each with a pencil button that opens the editor on it; the lines column (repertoire name, "As Black · 14 lines", each line's name and moves); the board from the repertoire's side, with ←/→ buttons and the line's moves, the current one boxed.
+   Repertoires saved before this ticket have no recorded source; their card shows only "N lines", without an origin suffix.
 2. The From openings picker is a modal matching `OpeningPicker.png`: the Name field, a White/Black segmented control, the tree with checkboxes (partial state on parents), "N openings selected", Cancel and Create repertoire.
 3. The editor matches `RepertoireEditor.png`: the board, and a card with the repertoire's colour dot and name, "Unsaved changes" in gold once edited, the hint line, the indented branch tree with the current move highlighted, a trash button on the hovered branch (right-click delete kept), Cancel and Save.
 4. The shared acceptance in `.scratch/ui-redo/spec.md` holds for the three boards.
@@ -29,6 +31,7 @@ Restyle the repertoire screens to `docs/design/v0.1.0/png/Repertoire.png`, `Open
 ## Tests stage 2 writes (own commit, red)
 
 - `tests/test_repertoire.gd`: each repertoire card has an edit button that opens the editor on it; the editor shows "Unsaved changes" after a move and not after Save (red: neither exists).
+- `tests/test_repertoire.gd`: opening and PGN sources survive reload and editing; a legacy file without source remains loadable and has no source.
 
 ## Comments
 
@@ -43,3 +46,4 @@ Restyle the repertoire screens to `docs/design/v0.1.0/png/Repertoire.png`, `Open
 
 - 2026-10-31 Stage stopped (incomplete handoff): Invalid committed handoff: UI-028: code changed after gate (tests/test_repertoire.gd, ui/repertoire_editor.gd, ui/repertoire_editor.tscn, ui/repertoire_screen.gd, ui/repertoire_screen.tscn); reuse evidence only for identical code. See C:\Users\bruno\Desktop\Pastinha\Programas\Projects\P-Chess\.artifacts-build\lanes\ui-screens\.scratch\run-log\UI-028-implement-20261031-190919.txt.runtime.json and run-log/recovery.txt; inspect the saved work before retrying.
 - 2026-10-31 Foreman: the handoff at b0bd516 was parked as "code changed after gate" because the driver reads the first `Gate evidence:` line, the attempt-3 receipt (bfb09c8). The current receipt `ui028-reopen-gate.json` is valid: Code 42fa431 equals production at b0bd516 (only this ticket differs), log SHA-256 matches, ExitCode 0, 433 passed / 0 failed. The stale line is relabelled `Superseded gate evidence:`; Stage restored to `to-review`.
+- Proxy decided (opus-5.5 xhigh): Add the seam: an optional `"source"` key in the existing version-1 file, persisted for new saves and carried through edits. A legacy file without the key shows only "N lines", with no origin suffix. — This keeps every existing file loadable. OPEN-005 and OPEN-007 set the precedent of adding `bot/repertoire.gd` to Primary files when the UI needs it. (receipt C:\Users\bruno\AppData\Local\Temp\sweatshop-proxy\20261031-180734-UI-028-dca09e.json)

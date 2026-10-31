@@ -429,6 +429,31 @@ func test_catalog_selection_saves_repertoire_and_book_uses_it():
 	assert_true(book.weights(board, 0).e2e4 > 1.0, "My repertoire follows the selected lines")
 	_clean(folder)
 
+func test_repertoire_source_survives_reload_and_edits_and_legacy_has_no_source():
+	var folder := _folder()
+	var repertoire = _repertoire()
+	repertoire.storage_dir = folder
+	assert_eq(repertoire.import_pgn("1. e4 e5 *", "w", "PGN"), "")
+	var book = load("res://bot/book.gd").new()
+	book.load_tsv("eco\tname\tpgn\nC20\tKing's Pawn Game\t1. e4 e5\n")
+	book.set_checked("King's Pawn Game", true)
+	assert_eq(repertoire.save_openings(book, "b", "Opening"), "")
+	for pair in [["PGN", "pgn"], ["Opening", "openings"]]:
+		var loaded = _repertoire()
+		loaded.storage_dir = folder
+		assert_eq(loaded.load_saved(pair[0]), "")
+		assert_eq(loaded.get("source"), pair[1], "source survives reload")
+		assert_eq(loaded.save_edited(loaded.tree, pair[0]), "")
+		assert_eq(loaded.load_saved(pair[0]), "")
+		assert_eq(loaded.get("source"), pair[1], "source survives editing")
+	var file := FileAccess.open(folder.path_join("Legacy.json"), FileAccess.WRITE)
+	file.store_string('{"version":1,"colour":"w","pgn":"1. e4 *"}')
+	file.close()
+	assert_eq(repertoire.load_saved("Legacy"), "")
+	assert_eq(repertoire.get("source"), "", "legacy origin is unknown")
+	_clean(folder)
+
+
 func test_editor_shows_unsaved_changes_only_after_a_change():
 	var repertoire = _repertoire()
 	var folder := _folder()
