@@ -100,7 +100,7 @@ func test_profile_table_matches_stats_and_omits_empty_rows():
 	assert_eq(table.get_child(1).text, "1+0\nW D L", "refresh keeps narrow headings readable")
 	table.size = Vector2(860, table.size.y)
 	table.resized.emit()
-	assert_eq(table.get_child(1).text, "1+0 ? W D L", "wide screens restore the full heading")
+	assert_eq(table.get_child(1).text, "1+0 · W D L", "wide screens restore the full heading")
 	assert_true(not profile.find_child("NoResults", true, false).visible)
 	stats.clear()
 	stats.save(folder.path_join("stats.cfg"))
