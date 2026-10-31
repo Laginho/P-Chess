@@ -24,6 +24,11 @@ var _catalog_error := ""
 
 
 func _ready() -> void:
+	_tree.add_theme_icon_override("checked", _tree.get_theme_icon("checked", "CheckBox"))
+	_tree.add_theme_icon_override("unchecked", _tree.get_theme_icon("unchecked", "CheckBox"))
+	var partial := Image.new()
+	partial.load_svg_from_string('<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><rect width="16" height="16" rx="3" fill="#7fa650"/><path d="M4 8h8" stroke="#141412" stroke-width="2"/></svg>')
+	_tree.add_theme_icon_override("indeterminate", ImageTexture.create_from_image(partial))
 	_search.text_changed.connect(func(_text): _rebuild())
 	_tree.item_edited.connect(_on_item_edited)
 	_save.pressed.connect(_save_selection)
