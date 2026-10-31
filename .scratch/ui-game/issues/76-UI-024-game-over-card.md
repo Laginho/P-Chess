@@ -1,5 +1,5 @@
 # UI-024: Game-over card to the design
-Stage: to-implement
+Stage: implementing
 Blocked by: UI-021, UI-023
 Review: agent
 Difficulty: normal

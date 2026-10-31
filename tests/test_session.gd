@@ -188,7 +188,7 @@ func test_game_over_panel_actions():
 		var panel = main.board_view.get_node_or_null("GameOver")
 		assert_true(panel != null and panel.visible, "game-over panel appears")
 		if panel:
-			assert_eq(panel.get_node("Panel/Content/Headline").text, "Black won")
+			assert_eq(panel.get_node("Panel/Content/Headline").text, "You lost")
 			assert_eq(panel.get_node("Panel/Content/Reason").text, "by resignation")
 			if action == "Escape":
 				var event := InputEventKey.new()
@@ -209,6 +209,27 @@ func test_game_over_panel_actions():
 					assert_true(not panel.visible, "the final board remains visible")
 					assert_true(main.get_node_or_null("Layout/Side/ReviewButton") == null, "side Review is removed")
 		main.free()
+
+
+func test_game_over_copies_the_same_pgn_as_review():
+	var main = await _session(ManualWaits.new())
+	assert_true(main.board_view.play("e2e4"))
+	main.board_view.game.resign("b")
+	main._show_result()
+	var panel = main.board_view.get_node("GameOver")
+	assert_eq(panel.get_node("Panel/Content/Review").text, "Review")
+	var copied := [""]
+	main.review.copy_text = func(text): copied[0] = text
+	var copy = panel.get_node_or_null("Panel/Content/CopyPgn")
+	assert_true(copy != null, "Copy PGN exists on the card")
+	if copy:
+		copy.pressed.emit()
+		assert_true('[Result "1-0"]' in copied[0] and "1. e4" in copied[0], "copies the finished game")
+		var from_card: String = copied[0]
+		copied[0] = ""
+		main.review.get_node("Margin/Content/Actions/CopyPgn").pressed.emit()
+		assert_eq(copied[0], from_card, "card and review copy the same PGN")
+	main.free()
 
 
 func _resign_and_rematch(main) -> void:
