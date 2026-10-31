@@ -1,6 +1,6 @@
 extends Control
 
-# A game against Maia (BOT-004): the setup screen, the board, the clocks (CLOCK-001), the move list
+# A game against Maia (BOT-004): Home, Custom game, the board, the clocks (CLOCK-001), the move list
 # and the post-game review (HIST-002), then the hotkeys (UI-004, §9.2): Space rematch,
 # Esc Esc resign, F11 focus.
 # The settings screen (UI-005, §10) sits on top, and each setting applies the moment it changes.
@@ -14,7 +14,10 @@ const MaiaPlayer = preload("res://bot/maia_player.gd")
 const Settings = preload("res://core/settings.gd")
 const SettingsScreen = preload("res://ui/settings.tscn")
 const History = preload("res://core/history.gd")
+const AnalysisQueue = preload("res://core/analysis_queue.gd")
 const ReviewScreen = preload("res://ui/review.tscn")
+const HistoryScreen = preload("res://ui/history_screen.tscn")
+const NameDialog = preload("res://ui/name_dialog.tscn")
 
 const WINNERS := {"1-0": "White wins", "0-1": "Black wins", "1/2-1/2": "Draw"}
 const MIN_BOARD_SIZE := 320
@@ -33,6 +36,10 @@ var preferences := Settings.new()
 # Their screen, over everything else; hidden in focus mode.
 var settings_screen := SettingsScreen.instantiate()
 var review := ReviewScreen.instantiate()
+var history_screen := HistoryScreen.instantiate()
+var name_dialog := NameDialog.instantiate()
+var analysis_queue
+var review_analysis_path := ""
 var resign_key := ResignKey.new(Time.get_ticks_msec)
 # Only the board and the clocks show (§8.7).
 var focus := false
@@ -97,7 +104,7 @@ const BLACK_GLYPHS := {"q": "♛", "r": "♜", "b": "♝", "n": "♞", "p": "♟
 @onready var draw_notice: Label = $Layout/Side/DrawNotice
 @onready var draw_notice_timer: Timer = $Layout/Side/DrawNoticeTimer
 @onready var claim_draw: Button = $Layout/Side/ClaimDraw
-@onready var starting: Control = $Layout/BoardView/Starting
+@onready var searching = $Searching
 
 
 # The same settings with the colours swapped.
@@ -138,24 +145,52 @@ func _ready() -> void:
 	resign_button.pressed.connect(_resign)
 	draw_button.pressed.connect(_offer_draw)
 	draw_notice_timer.timeout.connect(draw_notice.hide)
-	setup.started.connect(_start)
+	setup.started.connect(func(choice):
+		var saved: Dictionary = choice.duplicate()
+		saved.colour_choice = ["w", "b", "random"][setup.get_node("Center/Form/Colour").selected]
+		_start(saved))
+	$Home.configure(preferences)
+	$Home.started.connect(_start)
+	$Home.custom_requested.connect(_show_setup)
+	$Home.history_requested.connect(_show_history)
+	$Home.settings_requested.connect(func(): settings_screen.get_node("Panel").show())
+	setup.get_node("Center/Form/Back").pressed.connect(_show_home)
+	setup.get_node("OpeningPicker").catalog_ready.connect(func(_error):
+		if history_screen.visible:
+			history.book = setup.book
+			history_screen._refresh())
 	# The catalog takes seconds to parse: start it now so the first game does not wait for it.
 	setup.get_node("OpeningPicker").ensure_catalog()
 	$Layout.resized.connect(_fit_board)
 	$Layout/BoardView/ResizeGrip.size_requested.connect(_resize_board)
 	_fit_board()
+	if analysis_queue == null:
+		# Beside the history, so a test's isolated root never touches the player's queue.
+		analysis_queue = AnalysisQueue.new(null, history._root.path_join("analysis_queue.cfg"))
+	analysis_queue.maximum = preferences.get_value("analysis_threads") == "Max"
+	add_child(analysis_queue)
+	review.analysis_queue = analysis_queue
+	history_screen.analysis_queue = analysis_queue
 	settings_screen.store = preferences
 	add_child(settings_screen)
 	add_child(review)
+	add_child(history_screen)
+	add_child(name_dialog)
+	history_screen.back_requested.connect(_show_home)
+	history_screen.review_requested.connect(_review_history_game)
+	review.back_history_requested.connect(_show_history)
 	review.rematch_requested.connect(func(): _start(rematch(settings)))
-	review.setup_requested.connect(_show_setup)
+	review.setup_requested.connect(_show_home)
 	preferences.changed.connect(_apply)
 	for key in Settings.DEFAULTS:
 		_apply(key, preferences.get_value(key))
 	if not uci.start():
 		setup.show_missing(uci.error)
+		$Home.show_missing(uci.error)
 	elif not FileAccess.file_exists(MaiaPlayer.net_path(setup.LEVELS[0])):
 		setup.show_missing("The Maia nets are missing from engine/weights. Run scripts/fetch-engine.ps1 to download them.")
+		$Home.show_missing("The Maia nets are missing from engine/weights.")
+	name_dialog.present(preferences)
 
 
 func _process(_delta: float) -> void:
@@ -172,9 +207,9 @@ func _input(_event: InputEvent) -> void:
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
-	if not event.is_pressed() or event.is_echo():
+	if not event.is_pressed() or event.is_echo() or clock == null or _starting:
 		return
-	# No clock means no game has started: the setup screen is up.
+	# Home and Custom game have no clock; game hotkeys apply only after a game starts.
 	var in_game: bool = clock != null and not board_view.game.is_over()
 	match event.keycode:
 		KEY_F:
@@ -206,12 +241,45 @@ func _start(new_settings: Dictionary) -> void:
 	if _starting or not uci.error.is_empty():
 		return
 	_starting = true
+	var started_at := Time.get_ticks_msec()
+	searching.present(new_settings)
+	searching.move_to_front()
+	searching.grab_focus()
+	if clock:
+		clock.stop()
+	$Home.hide()
+	if not analysis_queue.current().is_empty():
+		searching.status("Pausing analysis…")
+		await get_tree().process_frame
+	analysis_queue.pause()
 	setup.hide()
 	setup.get_node("OpeningPicker").hide()
 	setup.get_node("RepertoireScreen/RepertoireImport").hide()
 	review.hide()
+	history_screen.hide()
 	board_view.mouse_filter = MOUSE_FILTER_IGNORE
-	starting.show()
+	while not analysis_queue.current().is_empty() and uci.error.is_empty():
+		await get_tree().process_frame
+	if not uci.error.is_empty():
+		_starting = false
+		searching.hide()
+		analysis_queue.resume()
+		return
+	searching.status("Loading Maia %s…" % new_settings.level.trim_prefix("maia-"))
+	var ready := [false]
+	var on_ready := func(): ready[0] = true
+	uci.level_ready.connect(on_ready, CONNECT_ONE_SHOT)
+	uci.set_level(MaiaPlayer.net_path(new_settings.level))
+	while not ready[0] and uci.error.is_empty():
+		await get_tree().process_frame
+	if uci.level_ready.is_connected(on_ready):
+		uci.level_ready.disconnect(on_ready)
+	if not uci.error.is_empty():
+		_starting = false
+		searching.hide()
+		analysis_queue.resume()
+		return
+	searching.status("Preparing game…")
 	var error := ""
 	var practice_book = setup.book
 	var review_repertoire: Array = []
@@ -237,17 +305,25 @@ func _start(new_settings: Dictionary) -> void:
 		error = repertoire_error
 	if error.is_empty() and new_settings.opening == "Catalog":
 		error = setup.book.load_selection(new_settings.get("selection", ""))
+	while error.is_empty() and uci.error.is_empty() and Time.get_ticks_msec() - started_at < 500:
+		await get_tree().process_frame
 	_starting = false
-	starting.hide()
+	searching.hide()
 	if not uci.error.is_empty():
+		analysis_queue.resume()
 		return
 	if not error.is_empty():
+		analysis_queue.resume()
 		setup.show()
 		var status: Label = setup.get_node("Center/Form/Missing")
 		status.text = error
 		status.show()
 		return
 	setup.get_node("Center/Form/Missing").hide()
+	if new_settings.has("colour_choice"):
+		preferences.save_last_game(new_settings)
+		new_settings = new_settings.duplicate()
+		new_settings.erase("colour_choice")
 	_move_clocks.clear()
 	_history_saved = false
 	if settings.is_empty() or new_settings != rematch(settings) or not board_view.game.is_over():
@@ -260,7 +336,6 @@ func _start(new_settings: Dictionary) -> void:
 	white_score.visible = _show_match_score and not focus
 	black_score.visible = _show_match_score and not focus
 	_update_score_text()
-	uci.set_level(MaiaPlayer.net_path(settings.level))
 	var game = Game.new()
 	maia.book = practice_book
 	history.book = setup.book
@@ -295,6 +370,8 @@ func _start(new_settings: Dictionary) -> void:
 
 
 func _show_setup() -> void:
+	$Home.hide()
+	analysis_queue.resume()
 	_reset_match()
 	draw_button.disabled = true
 	_draw_offered = false
@@ -303,14 +380,54 @@ func _show_setup() -> void:
 	resign_button.disabled = true
 	resign_hint.hide()
 	review.hide()
+	history_screen.hide()
 	clock = null
 	white_clock.clock = null
 	black_clock.clock = null
 	setup.show()
 
 
+func _show_home() -> void:
+	_show_setup()
+	_set_focus(false)
+	setup.hide()
+	$Home.sync_level()
+	$Home.show()
+
+
+func _show_history() -> void:
+	review.hide()
+	setup.hide()
+	$Home.hide()
+	history.book = setup.book if setup.get_node("OpeningPicker")._worker == null else null
+	history_screen.present(history, preferences)
+
+
+func _review_history_game(path: String, saved: Dictionary) -> void:
+	var headers: Dictionary = saved.headers
+	var colour: String = History.human_colour(headers)
+	var game = Game.new()
+	var clocks := []
+	for move in saved.moves:
+		game.play(move.uci)
+		clocks.append(move.clock_ms)
+	game.result = saved.result
+	game.reason = history.reason(saved)
+	var other: String = headers.get("Black" if colour == "w" else "White", "Maia 1500")
+	var review_settings := {"colour": colour, "level": "maia-" + other.trim_prefix("Maia "), "control": "1+0"}
+	var player_name: String = headers.get("White" if colour == "w" else "Black", "You")
+	review_settings.player_name = preferences.get_value("player_name") if not headers.has("HumanColor") and player_name == "You" else player_name
+	var snapshot: Dictionary = history.read_repertoire(path)
+	review.present(game, clocks, review_settings, history_screen._result_text(saved, colour),
+			setup.book.entries, snapshot.lines, not snapshot.lines.is_empty())
+	history_screen.hide()
+	var analysis_path := "user://analysis".path_join(path.get_file() + ".json")
+	review.present_history(path, analysis_path, saved.result == "1/2-1/2")
+
+
 # Abort without recording a chess result, and invalidate Maia's already scheduled moves.
 func _on_engine_stopped() -> void:
+	searching.hide()
 	if clock:
 		clock.stop()
 	maia.clock = null
@@ -319,13 +436,16 @@ func _on_engine_stopped() -> void:
 	board_view.mouse_filter = MOUSE_FILTER_IGNORE
 	claim_draw.disabled = true
 	resign_key = ResignKey.new(Time.get_ticks_msec)
-	_show_setup()
+	_show_home()
 	setup.show_missing(uci.error)
+	$Home.show_missing(uci.error)
 
 
 # One setting to whatever reads it; the next move, sound or game picks it up.
 func _apply(key: String, value) -> void:
 	match key:
+		"analysis_threads":
+			analysis_queue.maximum = value == "Max"
 		"premove_style":
 			board_view.premove_style = value
 		"click_click":
@@ -451,11 +571,14 @@ func _on_flagged(side: String) -> void:
 
 # Every way a game ends lands here, after the game has its result.
 func _show_result() -> void:
+	analysis_queue.resume()
 	draw_button.disabled = true
 	_draw_offered = false
 	resign_button.disabled = true
 	resign_hint.hide()
 	var game = board_view.game
+	var named_settings := settings.duplicate()
+	named_settings.player_name = preferences.get_value("player_name")
 	board_view.cancel_premoves()
 	clock.stop()
 	claim_draw.disabled = true
@@ -471,10 +594,12 @@ func _show_result() -> void:
 			_maia_score += 2
 		_update_score_text()
 		_history_saved = true
-		history.save(game, _move_clocks, settings, "", maia.target_id, _review_repertoire, _review_repertoire_colour)
+		var game_path: String = history.save(game, _move_clocks, named_settings, "", maia.target_id, _review_repertoire, _review_repertoire_colour)
+		var name := game_path.get_file() if not game_path.is_empty() else "unsaved-%d.pgn" % Time.get_ticks_usec()
+		review_analysis_path = "user://analysis".path_join(name + ".json")
 	if history.error:
 		result_label.text += "\nHistory: " + history.error
-	review.present(game, _move_clocks, settings, result_label.text,
+	review.present(game, _move_clocks, named_settings, result_label.text,
 			setup.book.entries, _review_repertoire, preferences.get_value("check_repertoire"))
 	review.hide()
 	var old_panel = board_view.get_node_or_null("GameOver")
@@ -534,4 +659,4 @@ static func _format_score(half_points: int) -> String:
 
 
 func match_score_text() -> String:
-	return "You %s %s %s Maia %s" % [_format_score(_human_score), String.chr(0x2013), _format_score(_maia_score), settings.level.trim_prefix("maia-")]
+	return "%s %s %s %s Maia %s" % [preferences.get_value("player_name"), _format_score(_human_score), String.chr(0x2013), _format_score(_maia_score), settings.level.trim_prefix("maia-")]

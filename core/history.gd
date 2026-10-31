@@ -2,6 +2,7 @@ extends RefCounted
 
 # Finished games and per-level/control results (§9.4). A different root isolates tests.
 const Pgn = preload("res://core/pgn.gd")
+const Game = preload("res://core/game.gd")
 
 var error := ""
 # Shared loaded catalog; recognition applies in every mode, independently of its checks.
@@ -45,7 +46,7 @@ func save(game, clocks: Array, settings: Dictionary, opening_name := "", target_
 	if file == null:
 		error = "Could not save game PGN (%s)." % error_string(FileAccess.get_open_error())
 		return ""
-	file.store_string(Pgn.write(Pgn.finished_game(game, clocks, settings, opening_name)))
+	file.store_string(Pgn.write(Pgn.finished_game(game, clocks, settings, opening_name, target_id)))
 	file.flush()
 	status = file.get_error()
 	file.close()
@@ -100,6 +101,152 @@ func read_repertoire(path: String) -> Dictionary:
 		line.moves = PackedStringArray(line.moves)
 		line.positions = PackedStringArray(line.positions)
 	return data
+
+
+func delete(path: String) -> bool:
+	error = ""
+	if _load_error not in [OK, ERR_FILE_NOT_FOUND] or not FileAccess.file_exists(path):
+		error = "Could not read game or history stats."
+		return false
+	var parsed := Pgn.parse(FileAccess.get_file_as_string(path))
+	if not parsed.error.is_empty() or parsed.games.size() != 1:
+		error = "Could not read game PGN."
+		return false
+	var game: Dictionary = parsed.games[0]
+	var headers: Dictionary = game.headers
+	var human := human_colour(headers)
+	var opponent: String = headers.get("Black" if human == "w" else "White", "")
+	var level := "maia-" + opponent.trim_prefix("Maia ")
+	var controls := {"60+0": "1+0", "180+2": "3+2", "300+0": "5+0"}
+	var control: String = controls.get(headers.get("TimeControl", ""), "")
+	var counts := stats(level, control)
+	var previous := counts.duplicate()
+	var key := "draws" if game.result == "1/2-1/2" else ("wins" if (game.result == "1-0") == (human == "w") else "losses")
+	counts[key] = maxi(0, counts[key] - 1)
+	if key != "draws" and reason(game) == "time":
+		var flag := "flag_wins" if key == "wins" else "flag_losses"
+		counts[flag] = maxi(0, counts[flag] - 1)
+	var target: String = headers.get("PracticeTarget", "")
+	var practiced: int = practice_counts().get(target, 0)
+	var paths := [path, path.trim_suffix(".pgn") + ".repertoire.json", "user://analysis".path_join(path.get_file() + ".json")]
+	var moved := []
+	var contents := {}
+	for source in paths:
+		if not FileAccess.file_exists(source):
+			continue
+		var file := FileAccess.open(source, FileAccess.READ)
+		if file == null:
+			for item in moved:
+				DirAccess.rename_absolute(item + ".deleting", item)
+			error = "Could not read game files."
+			return false
+		contents[source] = file.get_buffer(file.get_length())
+		file.close()
+		var backup: String = source + ".deleting"
+		if FileAccess.file_exists(backup) or DirAccess.rename_absolute(source, backup) != OK:
+			for item in moved:
+				DirAccess.rename_absolute(item + ".deleting", item)
+			error = "Could not delete game files."
+			return false
+		moved.append(source)
+	for item in moved:
+		if _remove(item + ".deleting") != OK:
+			_restore_deleted_files(moved, contents)
+			error = "Could not delete game files."
+			return false
+	_results.set_value(level, control, counts)
+	if not target.is_empty():
+		_results.set_value("practice", target, maxi(0, practiced - 1))
+	var stats_path := _root.path_join("stats.cfg")
+	var temp_path := _root.path_join("stats.cfg.deleting")
+	var status := _results.save(temp_path)
+	if status == OK:
+		status = DirAccess.rename_absolute(temp_path, stats_path)
+	if status != OK:
+		DirAccess.remove_absolute(temp_path)
+		_results.set_value(level, control, previous)
+		if not target.is_empty():
+			_results.set_value("practice", target, practiced)
+		_restore_deleted_files(moved, contents)
+		error = "Could not save history stats."
+		return false
+	return true
+
+
+static func human_colour(headers: Dictionary) -> String:
+	var colour: String = headers.get("HumanColor", "")
+	return colour if colour in ["w", "b"] else ("w" if headers.get("White", "") == "You" else "b")
+
+
+# Test seam: Linux unlinks read-only files, so no portable file state fails this removal after its rename.
+func _remove(path: String) -> Error:
+	return DirAccess.remove_absolute(path)
+
+
+func _restore_deleted_files(paths: Array, contents: Dictionary) -> void:
+	for path in paths:
+		if FileAccess.file_exists(path + ".deleting"):
+			DirAccess.rename_absolute(path + ".deleting", path)
+		else:
+			var file := FileAccess.open(path, FileAccess.WRITE)
+			if file != null:
+				file.store_buffer(contents[path])
+				file.close()
+
+
+func games() -> Array:
+	var folder := _root.path_join("games")
+	var result := []
+	if not DirAccess.dir_exists_absolute(folder):
+		return result
+	for file in DirAccess.get_files_at(folder):
+		if not file.ends_with(".pgn"):
+			continue
+		var path := folder.path_join(file)
+		var parsed := Pgn.parse(FileAccess.get_file_as_string(path))
+		if parsed.error.is_empty() and parsed.games.size() == 1:
+			result.append({"path": path, "game": parsed.games[0], "modified": FileAccess.get_modified_time(path)})
+	result.sort_custom(func(a, b): return a.modified > b.modified if a.modified != b.modified else a.path > b.path)
+	return result
+
+
+func thumbnail(moves: PackedStringArray) -> Dictionary:
+	var endings := {}
+	var positions := {}
+	if book != null:
+		for entry in book.entries:
+			for key in entry.positions:
+				positions[key] = true
+			endings[entry.positions[-1]] = entry.name
+	var game = Game.new()
+	var match_ply := 0
+	var opening := ""
+	for i in moves.size():
+		if not game.play(moves[i]):
+			break
+		var key: String = game.board.position_key()
+		if positions.has(key):
+			match_ply = i + 1
+		if endings.has(key):
+			opening = endings[key]
+	return {"ply": match_ply if match_ply > 0 else mini(10, moves.size()), "opening": opening}
+
+
+func reason(game: Dictionary) -> String:
+	var headers: Dictionary = game.headers
+	if not headers.get("Reason", "").is_empty():
+		return headers.Reason
+	if headers.get("Termination", "") == "Time forfeit":
+		return "time"
+	var replay = Game.new(headers.get("FEN", Pgn.START))
+	for move in game.moves:
+		if not replay.play(move.uci):
+			break
+	if replay.reason in ["checkmate", "stalemate", "insufficient material", "50-move"]:
+		return replay.reason
+	if game.result in ["1-0", "0-1"] and headers.get("Termination", "") == "Normal":
+		return "resignation"
+	return ""
 
 
 # Counters are from the human's perspective; flag results are subsets of wins/losses.

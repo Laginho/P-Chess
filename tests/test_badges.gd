@@ -21,7 +21,7 @@ class HeldEngine extends "res://engine/uci.gd":
 
 
 	func set_level(_net_path: String) -> void:
-		pass
+		level_ready.emit()
 
 
 	func request_policy(_fen: String, moves: PackedStringArray) -> void:
@@ -65,13 +65,13 @@ func _session(folder: String, book = null):
 
 
 func _marks(main, ply: int) -> String:
-	var tree: Tree = main.review.get_node("Margin/Content/Moves")
-	assert_eq(tree.columns, 5, "review exposes separate badge columns for both sides")
-	if tree.columns < 5:
+	var tree: Tree = main.review.get_node("Margin/Content/ReviewBody/Side/Moves")
+	assert_eq(tree.columns, 3, "review has move number and both sides")
+	if tree.columns < 3:
 		return ""
 	var rows := tree.get_root().get_children()
 	assert_true(rows.size() > ply / 2, "review contains the fixture move")
-	return rows[ply / 2].get_text(3 + ply % 2) if rows.size() > ply / 2 else ""
+	return rows[ply / 2].get_tooltip_text(1 + ply % 2) if rows.size() > ply / 2 else ""
 
 
 func _finish(main) -> void:
@@ -243,6 +243,7 @@ func test_real_games_show_badges_only_in_review_in_every_mode_and_keep_book_when
 			var config := CONFIG.duplicate()
 			config.opening = mode
 			main.setup.started.emit(config)
+			await _wait_start(main)
 			assert_eq(main.settings.opening, mode)
 			assert_true(main.history.book == main.setup.book, "history keeps the catalog")
 			if mode == "Free":
@@ -267,8 +268,10 @@ func test_rematch_checks_actual_black_moves_and_no_continuation_is_explicit():
 	var main = _session(folder)
 	main.preferences.set_value("check_repertoire", true)
 	main.setup.started.emit(CONFIG.duplicate())
+	await _wait_start(main)
 	_finish(main)
 	main.review.rematch_requested.emit()
+	await _wait_start(main)
 	assert_eq(main.human, "b")
 	for move in ["e2e4", "e7e5", "g1f3", "h7h6"]:
 		assert_true(main.board_view.play(move))
@@ -276,7 +279,7 @@ func test_rematch_checks_actual_black_moves_and_no_continuation_is_explicit():
 	assert_eq(_marks(main, 0), "Book", "White is now the opponent")
 	assert_eq(_marks(main, 1), "Book · Repertoire", "check the actual Black player")
 	assert_eq(_marks(main, 3), "Left repertoire — expected: Nc6")
-	main._start(CONFIG.duplicate())
+	await main._start(CONFIG.duplicate())
 	for move in ["e2e4", "c7c5", "g1f3"]:
 		assert_true(main.board_view.play(move))
 	_finish(main)
@@ -291,6 +294,7 @@ func test_game_snapshots_repertoire_and_uses_live_check_preference_at_review():
 	# Start with checking off; enabling it during play uses this game's PGN,
 	# even if a saved study was replaced after the game started.
 	main.setup.started.emit(CONFIG.duplicate())
+	await _wait_start(main)
 	assert_eq(main.setup.repertoire.import_pgn("1. d4 d5 *", "w", "Study"), "")
 	main.preferences.set_value("check_repertoire", true)
 	assert_true(main.board_view.play("e2e4"))
@@ -305,15 +309,17 @@ func test_expected_moves_are_visible_in_review_without_hovering_over_a_clipped_b
 	var main = _session(folder)
 	main.preferences.set_value("check_repertoire", true)
 	main.setup.started.emit(CONFIG.duplicate())
+	await _wait_start(main)
 	for move in ["e2e4", "e7e5", "d2d4"]:
 		assert_true(main.board_view.play(move))
 	_finish(main)
-	var details = main.review.get_node_or_null("Margin/Content/RepertoireExit")
+	var details = main.review.get_node_or_null("Margin/Content/ReviewBody/Side/RepertoireExit")
 	assert_true(details != null, "expected moves have a readable area outside the narrow badge column")
 	if details != null:
 		assert_true(details.is_visible_in_tree())
 		assert_eq(details.text, "2. White: Left repertoire — expected: Nc3, Nf3")
 	main.review.rematch_requested.emit()
+	await _wait_start(main)
 	_finish(main)
 	if details != null:
 		assert_true(not details.visible, "a fresh no-move review clears the previous exit details")
@@ -333,11 +339,13 @@ func test_required_repertoire_load_failure_prevents_new_game_and_retry_uses_repa
 		var config := CONFIG.duplicate()
 		config.opening = mode
 		main.setup.started.emit(config)
+		await _wait_start(main)
 		assert_eq(main.clock, null, "failed checking load does not start " + mode)
 		assert_true(main.setup.visible, "failed load returns to setup")
 		assert_true(main.setup.get_node("Center/Form/Missing").visible, "show the load error")
 		assert_eq(main.setup.repertoire.import_pgn(STUDY, "w", "Study"), "")
 		main.setup.started.emit(config)
+		await _wait_start(main)
 		assert_true(main.clock != null, "repaired repertoire permits retry")
 		assert_true(main.board_view.play("e2e4"))
 		_finish(main)
@@ -379,6 +387,7 @@ func test_enabling_checking_during_catalog_load_rejects_bad_repertoire_and_allow
 	while ready.is_empty() and Time.get_ticks_msec() < deadline:
 		picker._process(0)
 		OS.delay_msec(1)
+	await _wait_start(main)
 	assert_eq(ready, [""], "the real catalog await completed successfully")
 	assert_eq(main.clock, null, "newly required corrupt repertoire prevents clock creation")
 	assert_eq(main.uci.requests.size(), 0, "no Maia request after the failed required load")
@@ -388,6 +397,7 @@ func test_enabling_checking_during_catalog_load_rejects_bad_repertoire_and_allow
 	assert_true(status.is_visible_in_tree() and status.text == "The repertoire is not valid JSON.")
 	assert_eq(main.setup.repertoire.import_pgn("1. d4 d5 *", "w", "Study"), "")
 	main.setup.get_node("Center/Form/Start").pressed.emit()
+	await _wait_start(main)
 	assert_true(main.clock != null, "repair permits retry without a stuck start guard")
 	assert_eq(main.human, "b", "Free mode preserves the chosen colour")
 	assert_eq(main.settings.opening, "Free")
@@ -399,3 +409,9 @@ func test_enabling_checking_during_catalog_load_rejects_bad_repertoire_and_allow
 	assert_eq(_marks(main, 1), "Repertoire", "retry snapshots the repaired study, not the old e4 paths")
 	main.free()
 	_clean(folder)
+
+
+# Starts now cross a real asynchronous searching screen.
+func _wait_start(main) -> void:
+	while main._starting:
+		await Engine.get_main_loop().process_frame

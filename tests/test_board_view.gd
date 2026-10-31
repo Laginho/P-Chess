@@ -10,6 +10,8 @@ func test_board_size_clamps_and_fit_follows_layout():
 	var main = preload("res://ui/main.tscn").instantiate()
 	var path := "user://test_ui015_size_%d.cfg" % Time.get_ticks_usec()
 	main.preferences = preload("res://core/settings.gd").new(path)
+	# Isolated history root, so Main's analysis queue file stays out of the player's (nothing is saved).
+	main.history = preload("res://core/history.gd").new(path.get_basename())
 	main.preferences.set_value("board_size", 0)
 	Engine.get_main_loop().root.add_child(main)
 	var layout = main.get_node("Layout")
@@ -34,6 +36,8 @@ func test_grip_drag_saves_size_and_double_click_restores_fit():
 	var path := "user://test_ui015_grip_%d.cfg" % Time.get_ticks_usec()
 	DirAccess.remove_absolute(path)
 	main.preferences = preload("res://core/settings.gd").new(path)
+	# Isolated history root, so Main's analysis queue file stays out of the player's (nothing is saved).
+	main.history = preload("res://core/history.gd").new(path.get_basename())
 	Engine.get_main_loop().root.add_child(main)
 	var grip = main.get_node("Layout/BoardView/ResizeGrip")
 	var press := _mouse(true, Vector2(10, 10))
@@ -59,6 +63,8 @@ func test_settings_row_sets_board_size_and_follows_the_grip():
 	var path := "user://test_ui015_row_%d.cfg" % Time.get_ticks_usec()
 	DirAccess.remove_absolute(path)
 	main.preferences = preload("res://core/settings.gd").new(path)
+	# Isolated history root, so Main's analysis queue file stays out of the player's (nothing is saved).
+	main.history = preload("res://core/history.gd").new(path.get_basename())
 	Engine.get_main_loop().root.add_child(main)
 	var form = main.settings_screen.get_node("Panel/Center/Box/Form")
 	var spin: SpinBox

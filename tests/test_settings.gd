@@ -11,9 +11,82 @@ const ThemeLoader = preload("res://ui/theme_loader.gd")
 const PATH := "user://test_settings.cfg"
 
 
+func test_player_name_is_chosen_once_and_survives_restart():
+	var store = Settings.new(_fresh())
+	assert_eq(store.get_value("player_name"), "You")
+	assert_true(not store.has_player_name())
+	# Saving a different preference must not silently accept the default name.
+	assert_true(store.set_value("volume", 50))
+	assert_true(not Settings.new(PATH).has_player_name())
+	for invalid in ["", "   ", "\t\n", 42]:
+		assert_true(not store.set_value("player_name", invalid))
+	assert_eq(store.get_value("player_name"), "You")
+	assert_true(store.set_value("player_name", "You"), "accepting the default is a choice too")
+	assert_true(Settings.new(PATH).has_player_name())
+	assert_true(store.set_value("player_name", "Bruno"))
+	assert_eq(Settings.new(PATH).get_value("player_name"), "Bruno")
+	assert_true(not store.set_value("player_name", ""))
+	assert_eq(Settings.new(PATH).get_value("player_name"), "Bruno")
+	var file := ConfigFile.new()
+	file.set_value("settings", "player_name", "  ")
+	file.save(PATH)
+	assert_eq(Settings.new(PATH).get_value("player_name"), "You")
+	assert_true(not Settings.new(PATH).has_player_name())
+
+
 func _fresh() -> String:
 	DirAccess.remove_absolute(PATH)
 	return PATH
+
+
+func test_name_dialog_shows_the_question_above_the_name_field():
+	var dialog = load("res://ui/name_dialog.tscn").instantiate()
+	var tree = Engine.get_main_loop()
+	tree.root.add_child(dialog)
+	dialog.present(Settings.new(_fresh()))
+	await tree.process_frame
+	await tree.process_frame
+	var question: Label
+	for label in dialog.find_children("*", "Label", true, false):
+		if label.text == "What should I call you?" and label.is_visible_in_tree():
+			question = label
+	assert_true(question != null, "the first-launch question is visible")
+	if question != null:
+		var input = dialog.find_child("Name", true, false)
+		var question_rect = question.get_global_rect()
+		var input_rect = input.get_global_rect()
+		assert_true(question_rect.has_area() and input_rect.has_area())
+		assert_true(not question_rect.intersects(input_rect), "the name field must not cover the question")
+		assert_true(question_rect.end.y <= input_rect.position.y, "the question is above the name field")
+	dialog.free()
+
+
+func test_name_dialog_requires_a_nonempty_choice_and_stays_closed_after_restart():
+	var scene = load("res://ui/name_dialog.tscn")
+	assert_true(scene != null, "first-launch name dialog exists")
+	if scene == null:
+		return
+	var store = Settings.new(_fresh())
+	var dialog = scene.instantiate()
+	Engine.get_main_loop().root.add_child(dialog)
+	dialog.present(store)
+	assert_true(dialog.visible and dialog.exclusive)
+	assert_true(not dialog.dialog_close_on_escape and dialog.borderless, "only OK dismisses the modal")
+	var input = dialog.find_child("Name", true, false)
+	assert_eq(input.text, "You")
+	input.text = "   "
+	input.text_changed.emit(input.text)
+	assert_true(dialog.get_ok_button().disabled)
+	input.text_submitted.emit(input.text)
+	assert_true(dialog.visible and not store.has_player_name())
+	input.text = "Bruno"
+	input.text_changed.emit(input.text)
+	dialog.get_ok_button().pressed.emit()
+	assert_true(not dialog.visible)
+	assert_eq(Settings.new(PATH).get_value("player_name"), "Bruno")
+	dialog.present(Settings.new(PATH))
+	assert_true(not dialog.visible, "a confirmed name survives restart")
+	dialog.free()
 
 
 func test_board_size_defaults_round_trips_and_rejects_invalid_values():
@@ -170,3 +243,18 @@ func test_maia_reads_tau_temperature_and_panic():
 	maia.tau = 0.0
 	maia.temperature = 0.01
 	assert_eq(_played(maia), ["e2e4"], "a cold temperature always plays the top move")
+
+func test_history_tab_defaults_and_accepts_only_supported_tabs():
+	var settings = Settings.new(_fresh())
+	assert_eq(settings.get_value("history_tab"), "All")
+	for tab in ["All", "1+0", "3+2", "5+0"]:
+		assert_true(settings.set_value("history_tab", tab))
+		assert_eq(Settings.new(PATH).get_value("history_tab"), tab)
+	assert_true(not settings.set_value("history_tab", "other"))
+
+func test_analysis_threads_defaults_and_choices():
+	var settings = Settings.new(_fresh())
+	assert_eq(settings.get_value("analysis_threads"), "Background")
+	assert_true(settings.set_value("analysis_threads", "Max"))
+	assert_eq(Settings.new(PATH).get_value("analysis_threads"), "Max")
+	assert_true(not settings.set_value("analysis_threads", "other"))

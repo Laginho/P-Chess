@@ -6,6 +6,7 @@ extends Node
 
 signal policy_ready(policy: Dictionary)
 signal stopped
+signal level_ready
 
 const Board = preload("res://core/board.gd")
 const ENGINE := "engine/lc0/lc0.exe"
@@ -125,7 +126,7 @@ func start(dirs := search_dirs()) -> bool:
 # Loads a Maia net (engine/weights/maia-<level>.pb.gz); later requests wait for readyok.
 func set_level(net_path: String) -> void:
 	if _engine_path == ENGINE:
-		_queue(["ucinewgame", "setoption name WeightsFile value " + net_path, "isready"], "readyok")
+		_queue(["ucinewgame", "setoption name WeightsFile value " + net_path, "isready"], "readyok", null, func(): level_ready.emit())
 
 
 func new_game() -> void:
@@ -175,6 +176,8 @@ func poll() -> void:
 			_info.append(line)
 		elif _awaiting != "" and line.begins_with(_awaiting):
 			_awaiting = ""
+			if line.begins_with("readyok") and _callback.is_valid():
+				_callback.call()
 			if line.begins_with("bestmove") and _board != null:
 				evaluation = parse_score(_info)
 				policy_ready.emit(parse_policy(_info, _board))
