@@ -134,6 +134,7 @@ func _show_names() -> void:
 
 func _select_line(index: int) -> void:
 	_line = index
+	_line_list.select(index)
 	_ply = _lines[index].moves.size()
 	_show_position()
 
