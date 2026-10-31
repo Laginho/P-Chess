@@ -140,6 +140,9 @@ func _add_card(list: Node, record: Dictionary) -> void:
 
 func _confirm_delete() -> void:
 	if history.delete(_delete_path):
+		_selected.erase(_delete_path)
+		if analysis_queue != null:
+			analysis_queue.remove(_delete_path)
 		_refresh()
 	else:
 		$DeleteError.dialog_text = history.error
