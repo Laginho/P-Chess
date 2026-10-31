@@ -1003,9 +1003,12 @@ func test_new_moves_preserve_manual_scroll_and_follow_at_bottom():
 	assert_eq(scroll.value, 100.0, "new moves preserve the reading position")
 	scroll.value = scroll.max_value - scroll.page
 	await Engine.get_main_loop().process_frame
+	var old_bottom: float = scroll.max_value - scroll.page
 	main.move_list.add("Nc6")
+	main.move_list.add("d4")
 	for i in 4:
 		await Engine.get_main_loop().process_frame
+	assert_true(scroll.max_value - scroll.page > old_bottom, "the new row extends the list")
 	assert_eq(scroll.value, scroll.max_value - scroll.page, "new moves follow at the bottom")
 	main.free()
 
