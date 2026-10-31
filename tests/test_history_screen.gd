@@ -115,7 +115,7 @@ func test_black_player_and_cached_analysis_appear_on_card():
 	var card = screen.get_node("Margin/Content/Cards/List").get_child(0)
 	var text: String = card.get_node("Details/Info/Players").text
 	assert_true(text.contains("You") and text.contains("Maia 1500"), "human name comes first with both colours")
-	assert_true(card.get_node("Details/Info/Result").text.contains("Won"), "the game outcome is visible")
+	assert_true(card.get_node("Details/Info/Metadata/Result").text.contains("Won"), "the game outcome is visible")
 	assert_true(card.find_child("WhiteAccuracy", true, false).text == "100.0%" and card.find_child("BlackAccuracy", true, false).text == "100.0%", "both cached accuracies are visible")
 	screen.free()
 	DirAccess.remove_absolute(analysis_path)
@@ -200,7 +200,7 @@ func test_tabs_and_won_on_time_card():
 	if cards.get_child_count() > 0:
 		var text: String = cards.get_child(0).get_node("Details/Info/Players").text
 		assert_true(text.contains("You") and text.contains("Maia 1500"))
-		assert_true(cards.get_child(0).get_node("Details/Info/Result").text.contains("Won on time"))
+		assert_true(cards.get_child(0).get_node("Details/Info/Metadata/Result").text.contains("Won on time"))
 	tabs.current_tab = 2
 	assert_eq(cards.get_child_count(), 0, "3+2 filters out 1+0")
 	screen.free()
