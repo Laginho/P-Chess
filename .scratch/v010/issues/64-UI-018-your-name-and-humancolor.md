@@ -1,5 +1,5 @@
 # UI-018: Your name, and the HumanColor header
-Stage: to-review
+Stage: to-implement
 Blocked by: HIST-005, UI-016
 Review: agent
 Difficulty: normal
@@ -62,3 +62,16 @@ The player has a name (§15.8). It is asked once, written into new games, and sh
 Gate evidence: C:/Users/bruno/AppData/Local/Temp/UI-018-gate-final.json
 Acceptance: pending | Rendered first-launch/restart check with isolated settings, keyboard/mouse confirmation and blank-name rejection, then a played game showing the chosen name in History and review; automated evidence is recorded in Resolution above.
 Disclosure: pending | release | .scratch/v010/issues/64-UI-018-your-name-and-humancolor.md#resolution--stage-2-2026-10-31 — rendered first-launch and physical-input product acceptance remain pending; the headless gate passed.
+
+#### Resolution (2026-10-31) — stage 3, round 1
+Verdict: Reopen — criterion 1 fails because the name field overlaps the first-launch question.
+
+- Standards: no confirmed findings. All 16 changed files were reviewed, including the tracker, documentation, tests and TSCN. The 11 stage-2 commits separate tests, production and handoff; returning-player fixture corrections preserve the retained assertions and are allowed by the test-harness rule. No Primary-files violation or actionable baseline smell was found.
+- Spec, P2 — `ui/name_dialog.tscn:14` (with `dialog_text` at line 9): the direct-child LineEdit and AcceptDialog's message label occupy the same content rectangle. On first launch the field is drawn over "What should I call you?", so the requested question is obscured. A focused probe on the installed official Godot 4.7 reported `PROMPT_RECT=[P: (8.0, 8.0), S: (340.0, 40.0)]`, the identical `INPUT_RECT`, `INPUT_COVERS_PROMPT=true`, and child order `1,2` (label, field). Evidence: `C:/Users/bruno/AppData/Local/Temp/ui018-review-dialog-layout.gd` and `C:/Users/bruno/AppData/Local/Temp/ui018-review-dialog-layout.log` (exit 0). This is runtime geometry evidence, not rendered or physical-input acceptance. Godot's layout implementation also assigns the same rectangle to these controls: https://github.com/godotengine/godot/blob/master/scene/gui/dialogs.cpp (`AcceptDialog::_update_child_rects`).
+- Criterion 1: ❌ the modal exists and rejects blank names, but its question overlaps the input. Smallest repair: give an explicit question Label and the LineEdit separate rows in a container, clear the built-in `dialog_text`, and update affected node paths. Commit a red geometry assertion in `tests/test_settings.gd` proving that the visible question and field do not intersect, then the production correction and green proof, following the existing test-only/production-only split. This stays within the existing Primary files and approved dialog test seam; the numbered contract is unchanged.
+- Criteria 2–5: ✅ on inspected paths and existing automated evidence: confirmed/default name persistence; name plus `HumanColor` in new PGNs; same-name players in either colour; stats deletion, thumbnail/result orientation and review sharing the colour resolver; legacy display using the current name while original/copy PGN stays unchanged. Identity remains outside rematch choices.
+- Coverage: fixed diff `891335b4b5c3abaec6eb78f45403dddb55df31d6...0e3eebef6b61fc77bf46674c829d76821f5a60f7`; 16/16 files reviewed, 0 skipped, 100% coverage. OCR delegate preview excluded all 16 as `unsupported_ext`; both review axes inspected them directly using the resolved default rules. Examined Settings → NameDialog/Main, finished_game → save/live review, History → thumbnail/result/review/export, Delete identity/rollback surroundings, and rematch interactions. No other confirmed finding remains from this pass.
+- Verification: independently checked all recorded red/green focused logs and validated the gate receipt's command, exit, log SHA-256, tested commit and unchanged production through the reviewed HEAD. Existing gate: **395 passed, 0 failed**, exit 0, with no SKIP lines; it was reused without rerunning because review changed no code. The focused geometry probe is the additional review check. Rendered first-launch/restart layout, real keyboard/mouse input and played-game acceptance remain pending; real-engine gameplay was not exercised by this review.
+- Disposition: reopen on `UI-018`; no merge, ledger entry, PR or push. Stage 2 must repair only the ❌ item and provide fresh gate evidence after the code change; stage 3 must review that repair independently.
+
+Disclosure: pending | integration | .scratch/v010/issues/64-UI-018-your-name-and-humancolor.md#resolution-2026-10-31--stage-3-round-1 — criterion 1's overlapping first-launch prompt must be repaired and independently reviewed before session integration.
