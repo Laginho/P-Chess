@@ -207,14 +207,17 @@ func _input(_event: InputEvent) -> void:
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
-	if not event.is_pressed() or event.is_echo() or clock == null or _starting:
+	if not event.is_pressed() or event.is_echo():
+		return
+	if event.keycode == KEY_COMMA and event.ctrl_pressed:
+		if settings_screen.visible and not _covers_settings():
+			settings_screen.get_node("Panel").show()
+		return
+	if clock == null or _starting:
 		return
 	# Home and Custom game have no clock; game hotkeys apply only after a game starts.
 	var in_game: bool = clock != null and not board_view.game.is_over()
 	match event.keycode:
-		KEY_COMMA:
-			if event.ctrl_pressed and settings_screen.visible and not review.visible:
-				settings_screen.get_node("Panel").show()
 		KEY_F:
 			_set_flipped(not board_view.flipped)
 		KEY_SPACE:
@@ -224,6 +227,13 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			_resign()
 		KEY_F11:
 			_set_focus(not focus)
+
+
+# A screen drawn above Settings (review, history, searching, the name prompt) hides its Open
+# button, so Ctrl+, must not open the panel behind it.
+func _covers_settings() -> bool:
+	return get_children().slice(settings_screen.get_index() + 1).any(
+			func(screen): return (screen is Control or screen is Window) and screen.visible)
 
 
 func _resign() -> void:

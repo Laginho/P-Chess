@@ -730,6 +730,55 @@ func test_settings_shortcut_availability_and_mouse_close():
 	main.free()
 
 
+func test_home_settings_button_focuses_first_row():
+	var main = await _session(ManualWaits.new(), false)
+	await Engine.get_main_loop().process_frame
+	var viewport = main.get_viewport()
+	var panel = main.settings_screen.get_node("Panel")
+	var form = panel.get_node("Center/Box/Form")
+	main.get_node("Home/Center/Form/Settings").grab_focus()
+	_push_key(viewport, KEY_ENTER)
+	assert_true(panel.visible, "Home's Settings button opens Settings")
+	assert_eq(viewport.gui_get_focus_owner(), form.get_child(1), "first row receives focus")
+	_push_key(viewport, KEY_TAB)
+	assert_eq(viewport.gui_get_focus_owner(), form.get_child(3), "Tab stays inside the panel")
+	_push_key(viewport, KEY_COMMA, true)
+	assert_true(not panel.visible and viewport.gui_get_focus_owner() == null, "Ctrl+, closes and releases focus")
+	main.free()
+
+
+func test_settings_shortcut_only_where_open_is_on_top():
+	var main = await _session(ManualWaits.new(), false)
+	await Engine.get_main_loop().process_frame
+	var viewport = main.get_viewport()
+	var panel = main.settings_screen.get_node("Panel")
+	_push_key(viewport, KEY_COMMA, true)
+	assert_true(panel.visible, "shortcut opens on Home")
+	_push_key(viewport, KEY_ESCAPE)
+	main.get_node("Home")._show_profile()
+	_push_key(viewport, KEY_COMMA, true)
+	assert_true(panel.visible, "shortcut opens over Profile, which Settings covers")
+	_push_key(viewport, KEY_ESCAPE)
+	main._show_history()
+	_push_key(viewport, KEY_COMMA, true)
+	assert_true(not panel.visible, "shortcut disabled in history")
+	main._show_home()
+	main.name_dialog.popup_centered()
+	_push_key(viewport, KEY_COMMA, true)
+	assert_true(not panel.visible, "shortcut disabled behind the name prompt")
+	main.name_dialog.hide()
+	main.uci.hold_level = true
+	main._start(SETTINGS.duplicate())
+	assert_true(main.searching.visible, "searching screen is up")
+	_push_key(viewport, KEY_COMMA, true)
+	assert_true(not panel.visible, "shortcut disabled while searching")
+	main.uci.emit_signal("level_ready")
+	await _wait_start(main)
+	_push_key(viewport, KEY_COMMA, true)
+	assert_true(panel.visible, "shortcut opens once the game starts")
+	main.free()
+
+
 func test_searching_waits_for_the_net_before_starting_the_clock():
 	var main = await _session(ManualWaits.new(), false)
 	main.uci.hold_level = true
