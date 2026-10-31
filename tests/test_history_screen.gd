@@ -113,10 +113,10 @@ func test_black_player_and_cached_analysis_appear_on_card():
 	Engine.get_main_loop().root.add_child(screen)
 	screen.present(history, Settings.new(folder.path_join("settings.cfg")))
 	var card = screen.get_node("Margin/Content/Cards/List").get_child(0)
-	var text: String = card.get_node("Details/Text").text
-	assert_true(text.contains("You (Black) x Maia 1500 (White)"), "human name comes first with both colours")
-	assert_true(text.contains("1-0") or text.contains("0-1"), "the PGN result is visible")
-	assert_true(text.contains("White: 100.0%") and text.contains("Black: 100.0%"), "both cached accuracies are visible")
+	var text: String = card.get_node("Details/Info/Players").text
+	assert_true(text.contains("You") and text.contains("Maia 1500"), "human name comes first with both colours")
+	assert_true(card.get_node("Details/Info/Result").text.contains("Lost"), "the game outcome is visible")
+	assert_true(card.find_child("WhiteAccuracy", true, false).text == "100.0%" and card.find_child("BlackAccuracy", true, false).text == "100.0%", "both cached accuracies are visible")
 	screen.free()
 	DirAccess.remove_absolute(analysis_path)
 	DirAccess.remove_absolute(folder.path_join("analysis"))
@@ -198,9 +198,9 @@ func test_tabs_and_won_on_time_card():
 	var cards = screen.get_node("Margin/Content/Cards/List")
 	assert_eq(cards.get_child_count(), 1)
 	if cards.get_child_count() > 0:
-		var text: String = cards.get_child(0).get_node("Details/Text").text
+		var text: String = cards.get_child(0).get_node("Details/Info/Players").text
 		assert_true(text.contains("You") and text.contains("Maia 1500"))
-		assert_true(text.contains("Won on time"))
+		assert_true(cards.get_child(0).get_node("Details/Info/Result").text.contains("Won on time"))
 	tabs.current_tab = 2
 	assert_eq(cards.get_child_count(), 0, "3+2 filters out 1+0")
 	screen.free()

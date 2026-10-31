@@ -86,9 +86,9 @@ func test_history_shows_saved_names_and_renames_legacy_you_without_changing_pgn(
 			var card = main.history_screen.get_node("Margin/Content/Cards/List").get_child(0)
 			assert_eq(card.get_node("Details/Thumbnail").flipped, colour == "b", "thumbnail follows HumanColor")
 			var displayed := "Current name" if legacy else "Maia 1500"
-			var text: String = card.get_node("Details/Text").text
-			assert_true(text.contains(displayed + (" (White)" if colour == "w" else " (Black)")))
-			assert_true(text.contains("Won on time"), "result follows HumanColor")
+			var text: String = card.get_node("Details/Info/Players").text
+			assert_true(text.contains(displayed))
+			assert_true(card.get_node("Details/Info/Result").text.contains("Won on time"), "result follows HumanColor")
 			card.get_node("Details/HBoxContainer/Review").pressed.emit()
 			assert_eq(main.review.get_node("Margin/Content/ReviewBody/BoardView").flipped, colour == "b")
 			main.review.receive_position(0, {"pv": [{"cp": 0, "moves": ["e2e4"]}]})

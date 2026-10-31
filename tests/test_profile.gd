@@ -36,8 +36,8 @@ func test_home_profile_rename_and_back():
 	var screen = load("res://ui/history_screen.tscn").instantiate()
 	Engine.get_main_loop().root.add_child(screen)
 	screen.present(History.new(folder), settings)
-	var text: String = screen.get_node("Margin/Content/Cards/List").get_child(0).get_node("Details/Text").text
-	assert_true(text.contains("Bruno (White)"), "History immediately uses the new name for legacy games")
+	var text: String = screen.get_node("Margin/Content/Cards/List").get_child(0).get_node("Details/Info/Players").text
+	assert_true(text.contains("Bruno"), "History immediately uses the new name for legacy games")
 	assert_true(FileAccess.get_file_as_string(path).contains('[White "You"]'), "rename leaves saved PGN intact")
 	screen.free()
 	profile.find_child("Back", true, false).pressed.emit()
