@@ -149,7 +149,7 @@ func _add_move(line: HFlowContainer, key: String, moves: PackedStringArray, san:
 	trash.focus_exited.connect(func(): call_deferred("_hide_delete_if_idle", group, button, trash))
 
 
-func _hide_delete_if_idle(group: Control, button: Button, trash: Button) -> void:
+func _hide_delete_if_idle(group, button, trash) -> void:
 	if is_instance_valid(group) and is_instance_valid(button) and is_instance_valid(trash) and not button.has_focus() and not trash.has_focus() and not group.get_global_rect().has_point(group.get_global_mouse_position()):
 		trash.hide()
 
