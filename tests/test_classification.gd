@@ -68,8 +68,9 @@ func test_mate_rules_and_lenient_blunders():
 	var second := {"moves": ["d2d4"], "cp": 0}
 	for sample in [
 			[{"moves": ["e2e4"], "mate": 3}, {"moves": ["g1f3"], "mate": -2}, "Best"],
-			[{"moves": ["e2e4"], "mate": 3}, {"moves": ["g1f3"], "mate": -5}, "Excellent"],
-			[{"moves": ["e2e4"], "mate": 3}, {"moves": ["g1f3"], "mate": -6}, "Good"],
+			[{"moves": ["e2e4"], "mate": 3}, {"moves": ["g1f3"], "mate": -3}, "Excellent"],
+			[{"moves": ["e2e4"], "mate": 3}, {"moves": ["g1f3"], "mate": -4}, "Excellent"],
+			[{"moves": ["e2e4"], "mate": 3}, {"moves": ["g1f3"], "mate": -5}, "Good"],
 			[{"moves": ["e2e4"], "mate": 3}, {"moves": ["g1f3"], "cp": -800}, "Excellent"],
 			[{"moves": ["e2e4"], "mate": 3}, {"moves": ["g1f3"], "cp": -400}, "Good"],
 			[{"moves": ["e2e4"], "mate": 3}, {"moves": ["g1f3"], "cp": -200}, "Inaccuracy"],

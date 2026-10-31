@@ -19,8 +19,11 @@ static func evaluate(moves: PackedStringArray, analysis: Dictionary, catalog: Ar
 		var best: Dictionary = lines[0]
 		var after: Dictionary = positions[i + 1]
 		var played: Dictionary = after.pv[0].duplicate() if not after.pv.is_empty() else {"cp": after.terminal_score}
-		var key := "cp" if played.has("cp") else "mate"
-		played[key] = -int(played[key])
+		if played.has("cp"):
+			played.cp = -int(played.cp)
+		else:
+			# Mating the opponent in N after this move is mate in N + 1 before it; being mated keeps N.
+			played.mate = 1 - int(played.mate) if int(played.mate) < 0 else -int(played.mate)
 		for line: Dictionary in lines:
 			if line.moves[0] == moves[i]:
 				played = line
