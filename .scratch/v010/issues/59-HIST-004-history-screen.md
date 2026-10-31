@@ -1,5 +1,5 @@
 # HIST-004: The history screen
-Stage: to-review
+Stage: reviewing
 Blocked by: REV-004, REV-005, HIST-003
 Review: agent
 Difficulty: hard
@@ -61,3 +61,5 @@ Acceptance: pending | Open History with saved games, switch tabs, open a review 
 Disclosure: pending | release | Manual history screen, keyboard navigation and minimum-size layout acceptance remain outstanding (verification above).
 
 Gate evidence: C:\Users\bruno\AppData\Local\Temp\p-chess-hist004-gate-fixed.json
+
+- 2026-10-31 Stage 3 small fix: first-use History emitted Godot errors because `games` does not exist before the first save (criterion 8). Reviewer `/root` added regression `3904545`, red with two missing-directory errors (exit 1), then the two-line guard in `6c44c39`, green with zero failures (exit 0). Independent review and a new full gate are required before integration.
