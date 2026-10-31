@@ -1,5 +1,5 @@
 # CLEAN-010: Tests that write fixed file names in the shared user:// folder
-Stage: implementing
+Stage: to-review
 Status: needs-triage
 Blocked by: none
 Review: agent
@@ -32,3 +32,6 @@ Give each of these files a per-run name in the same pattern, removed when the te
 - 2026-10-30 Opened by the PR #26 review loop: the human asked to fix the fixed `user://` names in that PR's tests (done there) and ticket the rest. Not a runtime defect; it only bites concurrent gates.
 
 - Stage 2: the criterion 1 filename scan was red on all four named paths before the change. This ticket changes test infrastructure only and adds no test methods; the pre-change tree declares 344 test methods.
+
+- Verification: filename scan found no fixed direct user:// cfg/json/txt paths; 344 declared test methods before and after. Gate on 8e91384: 337 passed, 0 failed, exit 0; 6 of the reported passes were SKIPs because engine/lc0/lc0.exe is absent.
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\CLEAN-010-gate.json
