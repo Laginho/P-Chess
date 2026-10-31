@@ -1,5 +1,5 @@
 # UI-024: Game-over card to the design
-Stage: to-review
+Stage: done
 Blocked by: UI-021, UI-023
 Review: agent
 Difficulty: normal
@@ -95,3 +95,41 @@ No merge, push or ledger entry. UI-024 returns to `to-implement` on its retained
 - Acceptance: pending | Stage 3 must review the long-name correction and CLEAN-012 remains an integration condition. Real win/loss/draw, physical input, Lc0, audio and final visual acceptance remain pending as recorded above.
 
 Gate evidence: C:/Users/bruno/AppData/Local/Temp/pchess-ui024-long-name-gate.json
+
+#### Resolution (2026-10-31, long-name re-review)
+Verdict: Approve
+
+##### Standards
+
+Zero findings. Independent reviewer `/root/standards` examined all three changed files in `5eecbb6abd115a3ae9f31bdea5cce7ee4bd02aff...79b776186158663af002126ac133637ada35c1e3`: this ticket, `tests/test_session.gd` and `ui/game_over.tscn`. OCR delegation excluded all three as `unsupported_ext`; each was reviewed directly using the resolved rule group, for coverage 3/3 (100%), zero skipped. No documented-standard violations or actionable baseline smells were found. Test-only `7db35c9` precedes production-only `33244ba`; reopen/handoff commits contain tracker metadata. The added test and production correction stay within Primary files. No production changes were authored during this review.
+
+##### Spec
+
+- Previous criterion-5 P2 resolved: HumanName now uses `TextServer.OVERRUN_TRIM_ELLIPSIS` inside its existing 112 px width. Fresh graphical captures of the real session/result path show `Alexandria Cat...` at both 800x600 and 1280x800, rather than a silently clipped middle fragment. The full label value and saved preference remain unchanged; the short name `You` remains fully visible.
+- `test_game_over_long_player_name_is_visibly_truncated` exercises real card creation and checks the full label text, saved name and ellipsis mode. Stage 2 recorded the pre-fix failure (`expected 3, got 0`); the validated green gate records this regression passing. The commit order preserves the red-first handoff.
+- Independent reviewer `/root/spec` found no missing behavior, scope creep or new defect in the delta. Examined context includes `game_over.present()`, `main._show_result()`, screenshot-tool card construction, settings validation and existing ellipsis usage. Criteria 1-4 retain the previous review's approval; criterion 5's UI-024 long-name defect is now resolved. CLEAN-012 and final product acceptance remain separately scheduled below.
+
+Standards: 0 findings. Spec: 0 remaining UI-024 findings. The earlier complete five-file review and before/reference/after table remain the evidence for the unchanged redesign; this re-review covers all added changes and the previous P2.
+
+##### Graphical evidence
+
+Fresh isolated-data probe: `C:/Users/bruno/AppData/Local/Temp/pchess-ui024-rereview-8412bb1e-e3eb-47d2-bda9-c7937e8a3d86/probe.gd`, `probe.log` and `godot.log`. It checked long/short names at both window sizes, full-name preservation, ellipsis mode, the bounded label and card containment; all four cases passed, exit 0. The long-name images and the 800x600 short-name image were visually inspected. These captures use the real result route with the existing held-engine test fixture, not completed Lc0 gameplay.
+
+| Case | Before | Reference | After |
+|---|---|---|---|
+| Long name, 800x600 | [previous P2](C:/Users/bruno/AppData/Local/Temp/pchess-ui024-stage3-1793484465401/long-name-800.png) | [card reference](../../../docs/design/v0.1.0/png/GameOverCard.png) | [ellipsis](C:/Users/bruno/AppData/Local/Temp/pchess-ui024-rereview-8412bb1e-e3eb-47d2-bda9-c7937e8a3d86/long-800.png) |
+| Long name, 1280x800 | Prior full-screen table above | [card reference](../../../docs/design/v0.1.0/png/GameOverCard.png) | [ellipsis](C:/Users/bruno/AppData/Local/Temp/pchess-ui024-rereview-8412bb1e-e3eb-47d2-bda9-c7937e8a3d86/long-1280.png) |
+| Short name | Prior full-screen table above | [card reference](../../../docs/design/v0.1.0/png/GameOverCard.png) | [800x600](C:/Users/bruno/AppData/Local/Temp/pchess-ui024-rereview-8412bb1e-e3eb-47d2-bda9-c7937e8a3d86/short-800.png), [1280x800](C:/Users/bruno/AppData/Local/Temp/pchess-ui024-rereview-8412bb1e-e3eb-47d2-bda9-c7937e8a3d86/short-1280.png) |
+
+##### Verification and session delivery
+
+`Assert-GateEvidence` passed at reviewed HEAD, after the no-op rebase onto `sweatshop/ui-game/2026-10-31-1734`, and after the session merge. It verifies the bound command, exit 0, unchanged log SHA-256 and identical non-tracker code against tested commit `33244ba1329e24236552188e0c5a99b332800c59`. The log reports 423 passes, 0 failures, including seven skips (six Lc0-dependent tests and one graphical pixel test): 416 executed. Existing warnings include anchor sizing and deliberately malformed fixture data; no error or failed test was recorded. The gate was reused because code did not change. The focused graphical probe above supplements the headless evidence.
+
+The existing [UI-022 workflow decision](74-UI-022-home-name-dialog-searching.md#resolution-2026-10-31-long-name-re-review), with verified proxy receipt `C:/Users/bruno/AppData/Local/Temp/sweatshop-proxy/20261031-181515-UI-022-7181c6.json`, permits session consolidation while CLEAN-012 holds integration of the session PR into `main`. No contract change or product waiver was made here.
+
+Merged without squashing into `sweatshop/ui-game/2026-10-31-1734` as `a6ba31e4f476b9eeb9fc6d2e55e8cbce2a12f836`. This closure changes only the ticket and ledger. The driver owns pushing and opening the session PR.
+
+Acceptance: pending | Final visual comparison after CLEAN-012, real win/loss/draw gameplay, physical input, Lc0 and audio remain pending. The previous review's real-clipboard and synthetic Close evidence remains recorded above.
+Disclosure: decision | none | The previous UI-024 criterion-5 P2 is resolved by this re-review and session merge; all other implementation approvals stand. The previously recorded icon/shadow differences remain documented, with final visual acceptance pending.
+Disclosure: pending | integration | [CLEAN-012](../../ui-base/issues/74-CLEAN-012-font-variation-axes.md) must be completed and reviewed before this session PR lands on `main` and before final visual acceptance. The existing UI-022 workflow decision permits consolidation into this session only.
+Disclosure: pending | release | Complete real win/loss/draw gameplay, physical input, Lc0, audio and final human visual QA. This re-review adds graphical name-overflow checks, not physical-input or end-to-end gameplay acceptance.
