@@ -35,15 +35,18 @@ func refresh(history, analysis_dir := "") -> void:
 	for title in ["Level", "Time", "W", "D", "L", "Flag wins", "Flag losses"]:
 		_cell(table, title)
 	var rows := 0
+	var games := 0
 	for level in Setup.LEVELS:
 		for control in ["1+0", "3+2", "5+0"]:
 			var counts: Dictionary = history.stats(level, control)
+			games += counts.wins + counts.draws + counts.losses
 			if counts.wins + counts.draws + counts.losses == 0:
 				continue
 			rows += 1
 			for value in [level.replace("maia-", "Maia "), control, counts.wins, counts.draws,
 					counts.losses, counts.flag_wins, counts.flag_losses]:
 				_cell(table, str(value))
+	$Margin/Content/GamesValue.text = str(games)
 	$Margin/Content/Scroll/Body/NoResults.visible = rows == 0
 	var series := []
 	for record in history.games():

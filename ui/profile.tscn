@@ -63,6 +63,9 @@ visible = false
 layout_mode = 2
 text = "Please enter a name."
 
+[node name="GamesValue" type="Label" parent="Margin/Content"]
+layout_mode = 2
+
 [node name="Scroll" type="ScrollContainer" parent="Margin/Content"]
 layout_mode = 2
 size_flags_vertical = 3
