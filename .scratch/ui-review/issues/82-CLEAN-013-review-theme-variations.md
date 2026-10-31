@@ -1,6 +1,6 @@
 # CLEAN-013: Move Review palette styles into shared Theme variations
-Stage: blocked
-Status: needs-triage
+Stage: to-review
+Status: ready-for-agent
 Blocked by: none
 Review: human
 Difficulty: normal
@@ -15,5 +15,7 @@ Stage 1 must approve the shared-theme scope and visual verification seam before 
 
 - 2026-10-31 Opened by UI-026 stage-3 re-review to retain the existing documented-standard finding after UI-026 closes. This is a non-blocking maintainability follow-up; it does not change UI-026's numbered criteria or waive its pending product QA. Blocked pending stage-1 specification of Primary files and acceptance criteria.
 
-Acceptance: unknown
-Disclosure: pending | none | Stage 1 must specify this cleanup before implementation; UI-026 integration and Bruno's release QA are independent.
+Acceptance: pending | PR #35 review rounds, then Bruno merges (Review: human).
+Disclosure: decision | none | Triaged and approved by the parent session on 2026-10-31, as part of the PR #35 fidelity pass; additive theme changes only, so PR #36 can merge alongside.
+
+- 2026-10-31 Triaged by the parent session: approved, done inside the PR #35 fidelity pass. Implemented in 5c1593a: `ui/theme/p_chess.tres` gains five type variations, additive only (no existing entry edited, so PR #36's theme changes merge alongside): `AccuracyCardLight` / `AccuracyCardDark` (PanelContainer; light #ece9e4, dark #141412 with a 1 px #6b675f border, radius 6), `AccuracyValueLight` / `AccuracyValueDark` (Label; 22 px, weight 800, ink or text colour) and `EmptyAnalysisCard` (Panel; ground #1f1e1c, 1 px border, radius 10). `ui/review.gd` sets only `theme_type_variation` on the accuracy cards, their values and the empty-analysis card (`NoticeCard`). Verification seam: `test_review_cards_use_theme_variations` asserts the variations and the absence of inline stylebox, colour and size overrides (red before the change, green after). Appearance: the after captures listed in [UI-026](78-UI-026-review-screen.md).
