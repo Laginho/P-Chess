@@ -84,7 +84,7 @@ func test_history_shows_saved_names_and_renames_legacy_you_without_changing_pgn(
 			Engine.get_main_loop().root.add_child(main)
 			main.get_node("Home/Center/Form/History").pressed.emit()
 			var card = main.history_screen.get_node("Margin/Content/Cards/List").get_child(0)
-			assert_eq(card.get_child(0).flipped, colour == "b", "thumbnail follows HumanColor")
+			assert_eq(card.get_node("Details/Thumbnail").flipped, colour == "b", "thumbnail follows HumanColor")
 			var displayed := "Current name" if legacy else "Maia 1500"
 			var text: String = card.get_node("Details/Text").text
 			assert_true(text.contains(displayed + (" (White)" if colour == "w" else " (Black)")))
@@ -142,7 +142,7 @@ class HeldAnalysis extends RefCounted:
 func test_confirm_delete_cancels_active_analysis_before_its_final_reply():
 	var fixture := _queued_history()
 	var path: String = fixture.paths[0]
-	fixture.cards[path].get_child(1).button_pressed = true
+	fixture.cards[path].get_node("Details/Select").button_pressed = true
 	fixture.cards[path].get_node("Details/HBoxContainer/Delete").pressed.emit()
 	fixture.cards[path].get_node("Details/DeleteInline/Confirm").pressed.emit()
 	assert_true(not FileAccess.file_exists(path))
