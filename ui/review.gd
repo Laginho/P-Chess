@@ -129,13 +129,18 @@ func _ready() -> void:
 		analyze.hide()
 		open_analysis(_analysis_path, _history_draw))
 	$Margin/Content/ReviewBody/Side.add_child(analyze)
+	$Margin/Content/ReviewBody/Side.move_child(analyze, $Margin/Content/ReviewBody/Side/Moves.get_index())
 	analyze.hide()
 
 
 func _resize_classes() -> void:
 	var compact := size.x <= 800
-	$Margin/Content/ReviewBody/Side/ClassToggle.visible = compact
-	$Margin/Content/ReviewBody/Side/Counts.visible = not compact
+	var unanalysed: bool = $Margin/Content/ReviewBody/Side/UnanalysedNotice.visible
+	$Margin/Content/ReviewBody/Side/ClassToggle.visible = compact and not unanalysed
+	$Margin/Content/ReviewBody/Side/Counts.visible = not compact and not unanalysed
+	$Margin/Content/ReviewBody/Side/ClassHelp.visible = not unanalysed
+	$Margin/Content/ReviewBody/Side/AccuracyHelp.visible = not unanalysed
+	_graph.visible = not unanalysed
 
 
 func _class_help() -> String:
@@ -169,6 +174,9 @@ func _wrap_help(text: String) -> String:
 
 func open_analysis(path: String, draw_at_end: bool) -> void:
 	show()
+	$Margin/Content/ReviewBody/Side/UnanalysedNotice.hide()
+	$Margin/Content/ReviewBody/Side/Analyze.hide()
+	_resize_classes()
 	var cached := Analyser.read_analysis(path, "Stockfish 19", Tunables.ANALYSIS_NODES)
 	var positions = cached.get("data", {}).get("positions", [])
 	var current_cache: bool = cached.state == "analysed" and positions is Array and positions.size() == _positions.size()
@@ -381,6 +389,8 @@ func _update_eval_bar() -> void:
 func present(game, clocks: Array, settings: Dictionary, result_text: String,
 		catalog: Array = [], repertoire: Array = [], check_repertoire := false) -> void:
 	_from_history = false
+	$Margin/Content/ReviewBody/Side/UnanalysedNotice.hide()
+	_resize_classes()
 	$Margin/Content/Actions/Rematch.show()
 	$Margin/Content/Actions/Setup.show()
 	$Margin/Content/Actions/BackHistory.hide()
@@ -449,6 +459,8 @@ func present_history(path: String, analysis_path: String, draw_at_end: bool) -> 
 			receive_position(i, positions[i])
 	else:
 		$Margin/Content/ReviewBody/Side/Analyze.show()
+		$Margin/Content/ReviewBody/Side/UnanalysedNotice.show()
+		_resize_classes()
 	if analysis_queue != null and path in analysis_queue.pending():
 		$Margin/Content/ReviewBody/Side/Analyze.hide()
 		open_analysis(analysis_path, draw_at_end)

@@ -114,6 +114,14 @@ visible = false
 layout_mode = 2
 text = "Move classes"
 
+[node name="UnanalysedNotice" type="Label" parent="Margin/Content/ReviewBody/Side"]
+visible = false
+layout_mode = 2
+theme_type_variation = &"BoldText"
+text = "This game hasn’t been analysed yet"
+horizontal_alignment = 1
+autowrap_mode = 3
+
 [node name="Moves" type="Tree" parent="Margin/Content/ReviewBody/Side"]
 layout_mode = 2
 size_flags_vertical = 3
