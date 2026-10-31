@@ -188,11 +188,11 @@ func _ready() -> void:
 		var side: Control = $Margin/Content/ReviewBody/Side
 		var expanded: bool = not side.get_node("Counts").visible
 		side.get_node("Counts").visible = expanded
-		side.get_node("Summary").visible = not expanded
 		side.get_node("AccuracyHelp").visible = not expanded
 		side.get_node("EvalGraph").visible = not expanded
 		side.get_node("Moves").visible = not expanded
-		side.get_node("RepertoireExit").visible = not expanded and not side.get_node("RepertoireExit").text.is_empty())
+		side.get_node("RepertoireExit").visible = not expanded and not side.get_node("RepertoireExit").text.is_empty()
+		_update_summary())
 	resized.connect(_resize_classes)
 	_resize_classes()
 	visibility_changed.connect(func():
@@ -274,10 +274,10 @@ func _resize_classes() -> void:
 	$Margin/Content/ReviewBody/Side/Counts.visible = not compact and not unanalysed
 	$Margin/Content/ReviewBody/Side/ClassHelp.visible = not unanalysed
 	$Margin/Content/ReviewBody/Side/AccuracyHelp.visible = not unanalysed
-	$Margin/Content/ReviewBody/Side/Summary.visible = not unanalysed
 	_moves.visible = true
 	$Margin/Content/ReviewBody/Side/RepertoireExit.visible = not $Margin/Content/ReviewBody/Side/RepertoireExit.text.is_empty()
 	_graph.visible = not unanalysed
+	_update_summary()
 
 
 func _class_help() -> String:
@@ -489,12 +489,14 @@ func _update_summary() -> void:
 			value.text = str(counts[label][side])
 			value.modulate = Color("8a857c") if counts[label][side] == 0 else Color("ece9e4")
 	var summary: Label = $Margin/Content/ReviewBody/Side/Summary
-	var analysed := []
+	if _positions.is_empty():
+		summary.hide()
+		return
 	for position in _positions:
 		if not position.has("pv"):
-			break
-		analysed.append(position)
-	var accuracy: Dictionary = Accuracy.evaluate({"positions": analysed})
+			summary.hide()
+			return
+	var accuracy: Dictionary = Accuracy.evaluate({"positions": _positions})
 	var white := "–" if accuracy.white == null else "%.1f%%" % accuracy.white
 	var black := "–" if accuracy.black == null else "%.1f%%" % accuracy.black
 	summary.text = "White: %s  %s\nBlack: %s  %s" % [_player_names[0], white, _player_names[1], black]
