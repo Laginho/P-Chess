@@ -44,7 +44,6 @@ func _ready() -> void:
 		$Margin/Content/Tabs.add_tab(tab)
 	$Margin/Content/Tabs.tab_changed.connect(func(_index): _refresh())
 	$Margin/Content/Back.pressed.connect(func(): back_requested.emit())
-	$DeleteConfirmation.confirmed.connect(_confirm_delete)
 
 
 func present(store, settings) -> void:
@@ -68,8 +67,16 @@ func _refresh() -> void:
 	for child in list.get_children():
 		list.remove_child(child)
 		child.queue_free()
+	var records: Array = history.games()
+	var counts := [records.size(), 0, 0, 0]
+	for record in records:
+		var index := TABS.find(CONTROLS.get(record.game.headers.get("TimeControl", ""), ""))
+		if index > 0:
+			counts[index] += 1
+	for index in TABS.size():
+		$Margin/Content/Tabs.set_tab_title(index, "%s %d" % [TABS[index], counts[index]])
 	var selected: String = TABS[$Margin/Content/Tabs.current_tab]
-	for record in history.games():
+	for record in records:
 		var game: Dictionary = record.game
 		var control: String = CONTROLS.get(game.headers.get("TimeControl", ""), "")
 		if selected != "All" and selected != control:
@@ -131,6 +138,8 @@ func _add_card(list: Node, record: Dictionary) -> void:
 		analyze.name = "Analyze"
 		analyze.text = "Re-analyze" if _analysis_text(record.path) == "Stale" else "Analyze"
 		analyze.disabled = record.path in analysis_queue.pending()
+		if analyze.disabled:
+			analyze.text = "Analysing?" if analysis_queue.current() == record.path else "Queued"
 		analyze.pressed.connect(func(): analysis_queue.enqueue(record.path))
 		actions.add_child(analyze)
 	var copy := Button.new()
@@ -145,8 +154,29 @@ func _add_card(list: Node, record: Dictionary) -> void:
 	delete.text = "Delete"
 	delete.pressed.connect(func():
 		_delete_path = record.path
-		$DeleteConfirmation.popup_centered())
+		actions.hide()
+		details.get_node("DeleteInline").show())
 	actions.add_child(delete)
+	var confirm := HBoxContainer.new()
+	confirm.name = "DeleteInline"
+	confirm.visible = false
+	details.add_child(confirm)
+	var question := Label.new()
+	question.text = "Delete this game?"
+	confirm.add_child(question)
+	var yes := Button.new()
+	yes.name = "Confirm"
+	yes.text = "Delete"
+	yes.pressed.connect(_confirm_delete)
+	confirm.add_child(yes)
+	var cancel := Button.new()
+	cancel.name = "Cancel"
+	cancel.text = "Cancel"
+	cancel.pressed.connect(func():
+		_delete_path = ""
+		confirm.hide()
+		actions.show())
+	confirm.add_child(cancel)
 
 
 func _confirm_delete() -> void:
