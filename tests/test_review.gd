@@ -695,6 +695,11 @@ func test_move_classes_collapse_in_small_review():
 	if toggle != null:
 		toggle.pressed.emit()
 		assert_true(side.get_node("Counts").visible, "toggle opens class table")
+		await Engine.get_main_loop().process_frame
+		var actions: Control = main.review.get_node("Margin/Content/Actions")
+		assert_true(actions.global_position.y + actions.size.y <= 600, "expanded classes leave actions inside the window")
+		toggle.pressed.emit()
+		assert_true(side.get_node("Moves").visible, "collapsing returns to the moves")
 	main.free()
 	root.size = old_size
 
