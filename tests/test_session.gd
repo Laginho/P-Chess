@@ -603,6 +603,23 @@ func test_escape_closes_settings_from_spinbox():
 	main.free()
 
 
+func test_shortcut_closes_settings_with_choice_popup_open():
+	var main = _session(ManualWaits.new())
+	await Engine.get_main_loop().process_frame
+	await Engine.get_main_loop().process_frame
+	var viewport = main.get_viewport()
+	var panel = main.settings_screen.get_node("Panel")
+	var popup = panel.get_node("Center/Box/Form").get_child(1).get_popup()
+	_push_key(viewport, KEY_COMMA, true)
+	_push_key(viewport, KEY_SPACE)
+	await Engine.get_main_loop().process_frame
+	assert_true(popup.visible, "choice popup is open")
+	_push_key(viewport, KEY_COMMA, true)
+	assert_true(not panel.visible and not popup.visible, "shortcut closes popup and Settings")
+	assert_true(viewport.gui_get_focus_owner() == null, "closing releases focus")
+	main.free()
+
+
 func test_keyboard_settings_focus_and_post_game_input():
 	var main = _session(ManualWaits.new())
 	await Engine.get_main_loop().process_frame
