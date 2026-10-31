@@ -1,5 +1,5 @@
 # UI-026: Review screen to the design
-Stage: blocked
+Stage: to-implement
 Blocked by: UI-021
 Review: human
 Difficulty: hard
@@ -40,3 +40,7 @@ Restyle the review to chess.com's layout as drawn in `docs/design/v0.1.0/png/Rev
 - 2026-10-31 Attempt 1 failed: exit 0. Log tail: O UI-026 **ainda não está concluído**. Na branch local `UI-026-review-screen`, implementei partes da navegação, dos ícones de jogadas, da legenda e do recolhimento da tabela. O [ticket](C:/Users/bruno/Desktop/Pastinha/Programas/Projects/P-Chess/.artifacts-build/lanes/ui-review/.scratch/ui-review/issues/78-UI-026-review-screen.md) permanece em `Stage: implementing`. /  / Os testes focados de review passaram: **27 passaram, 0 falharam**. A captura gráfica mostrou que a tela ainda difere bastante da referência; falta concluir a composição visual e os demais critérios antes de encaminhá-la para revisão. /  / Não executei o gate completo nem a aceitação manual; a alteração ainda não está pronta para integração. /  /
 
 - 2026-10-31 Stage stopped (incomplete handoff): Stage left uncommitted work; saved for recovery. See C:\Users\bruno\Desktop\Pastinha\Programas\Projects\P-Chess\.artifacts-build\lanes\ui-review\.scratch\run-log\UI-026-implement-20261031-182333.txt.runtime.json and run-log/recovery.txt; inspect the saved work before retrying.
+
+- Proxy decided (opus-5.5 xhigh): (a), resume once on the same lineup - both attempts were green, cheap ($0.77, 10.5 of 240 min) and stopped on their own with no error; the ticket is clear, so splitting it would only work around how the model behaved, and a lineup change isn't mine to make. (receipt C:\Users\bruno\AppData\Local\Temp\sweatshop-proxy\20261031-182950-UI-026-4b70fe.json)
+
+- 2026-10-31 Resume: continue from `UI-026-review-screen` at efc1d4b; its commits are the work so far. The recovery ref `refs/sweatshop-recovery/aa946201260b4eccbb7d7b7834b86b5d` is cleanup only (an untracked copy of `tests/test_review.gd`), ignore it. Put scratch copies and captures under `%TEMP%`, never inside the repo, so no untracked file is left. The stage has 240 min: do not end the turn at `implementing` with partial work. Either finish criteria 1-8 (what remains is the list in the efc1d4b comment), record the visual comparison against `docs/design/v0.1.0/png/Review*.png` and one gate log with its exit code, then hand off at `to-review`; or end `blocked` on a specific question.
