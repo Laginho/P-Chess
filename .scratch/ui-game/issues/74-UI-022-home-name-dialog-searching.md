@@ -1,5 +1,5 @@
 # UI-022: Home, name dialog and searching screen to the design
-Stage: to-review
+Stage: done
 Blocked by: UI-021
 Review: agent
 Difficulty: normal
@@ -99,3 +99,34 @@ No merge or ledger closure: UI-022 returns to `to-implement` on its existing bra
 The regression test was committed red: the player label overflowed the card and lacked ellipsis. The production scene now clips and ellipsizes the displayed name without changing the stored value. The graphical 800x600 probe measured the label at x=564..764 inside the card at x=500..780; the capture is `C:/Users/bruno/AppData/Local/Temp/ui022-long-name-e3e66035-b361-46c6-a776-89f65437b9d9/Searching-long-name-800.png`.
 
 Gate on `4da5475`: exit 0, 419 reported passed including 6 Lc0 SKIPs (413 executed), 0 failed. Existing foundation and human acceptance disclosures remain open.
+
+- Proxy decided (opus-5.5 xhigh): Approve UI-022 and close it the normal way: merge into the session branch, add the ledger line, set `Stage: done`, and keep the CLEAN-012 disclosure at `pending | integration` — integration means the session PR landing on `main`, and merging into the session branch is not that. (receipt C:\Users\bruno\AppData\Local\Temp\sweatshop-proxy\20261031-181515-UI-022-7181c6.json)
+
+#### Resolution (2026-10-31, long-name re-review)
+Verdict: Approve
+
+##### Standards
+
+Zero findings. Independent reviewer `/root/standards` examined all five files in `6eb3eca...575183d`, including the three tracker Markdown files, `tests/test_home.gd` and `ui/searching.tscn` that OCR excludes as `unsupported_ext`. Direct review coverage is 5/5 (100%), zero skipped. The new test and scene correction stay within Primary files; the UI-021 history note and CLEAN-012 follow-up preserve the destination of the foundation finding. Test-only `12aca3c` precedes production-only `4da5475`; `575183d` is tracker-only. No actionable baseline smells or new production changes were authored in this pass.
+
+##### Spec
+
+- ✅ Prior criterion-4 P2 resolved: the Player label clips and uses ellipsis inside its assigned width. The existing 800x600 graphical capture shows the long name inside the card; the log measures Player x=564..764 and Card x=500..780. The full name remains stored unchanged. Evidence: `C:/Users/bruno/AppData/Local/Temp/ui022-long-name-e3e66035-b361-46c6-a776-89f65437b9d9/Searching-long-name-800.png` and `godot.log` in that directory.
+- ✅ The regression test instantiates the real Main scene, presents Searching at 800x600, and checks card containment, ellipsis and preservation of the complete saved name. The retained test-only commit precedes the two-property production fix; the valid gate records this test passing.
+- ✅ Criteria 1–3 retain the previous review's approval. The only new production diff is the Player label's two overflow properties; startup statuses, readiness, error routes and name validation are unchanged. Independent reviewer `/root/spec` examined the delta, Searching layout, startup caller, name validation and test harness: zero new findings or scope creep.
+- The separate shared-font defect is still present and scheduled in [CLEAN-012](../../ui-base/issues/74-CLEAN-012-font-variation-axes.md). It remains a condition before the session PR lands on `main` and before final visual acceptance.
+
+Standards: 0 findings. Spec: 0 remaining UI-022 findings; the previous P2 is resolved. The earlier review's before/reference/after screenshot paths remain valid; the corrected long-name capture above supplements them.
+
+##### Verification and session delivery
+
+`Assert-GateEvidence` passed at pinned `575183d` and again after the no-op rebase onto `sweatshop/ui-game/2026-10-31-1734`. The receipt validates command, exit 0, log SHA-256 and code equality against tested `4da5475`. The log reports 419 passed, including six explicitly skipped Lc0 checks (413 executed), zero failed. The existing gate was reused because production code did not change. Existing graphical evidence was inspected; no fresh runtime or screenshot run was needed for the unchanged correction.
+
+The recorded `Proxy decided (opus-5.5 xhigh)` permits consolidation into the session while preserving CLEAN-012's integration condition on the session PR. Its cited [HIST-001 precedent](../../core/issues/21-HIST-001-history-stats.md) was verified in the repository. No numbered criterion or product requirement changed. CLEAN-012 lives under `ui-base`, so it needs its own stage-2/stage-3 dispatch or a run covering that tracker directory; the `ui-game` lane alone does not complete it.
+
+Merged without squashing into `sweatshop/ui-game/2026-10-31-1734` as `7fc814caa649fc1b3a4d93a476b7db17605f3c4b`. The driver owns pushing and the session PR. This handoff changes only the ticket and feature ledger. No merge into `main` or push was performed.
+
+Acceptance: pending | Human visual comparison after CLEAN-012, and first-launch/quick-play with an installed Lc0, remain.
+Disclosure: decision | none | [Workflow decision](#resolution-2026-10-31-long-name-re-review) - the proxy-approved session merge preserves the integration hold on the session PR; it does not waive the font repair or change the numbered criteria.
+Disclosure: pending | integration | [CLEAN-012](../../ui-base/issues/74-CLEAN-012-font-variation-axes.md) must be completed and reviewed before this session PR lands on `main`, and before UI-022's visual acceptance. UI-022's criterion-4 long-name finding is resolved by this approval and session merge.
+Disclosure: pending | release | Perform first-launch and a real quick-play with Lc0 installed. Physical input, audio and Bruno's final release QA were not performed in this re-review.
