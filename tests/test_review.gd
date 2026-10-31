@@ -688,6 +688,7 @@ func test_move_classes_collapse_in_small_review():
 	var toggle = side.get_node_or_null("ClassToggle")
 	assert_true(toggle != null and toggle.visible, "small review offers a move classes toggle")
 	assert_true(not side.get_node("Counts").visible, "class table starts collapsed")
+	assert_eq(side.get_node("Summary/AccuracyCards").columns, 2, "accuracy cards stack at the minimum width")
 	if toggle != null:
 		toggle.pressed.emit()
 		assert_true(side.get_node("Counts").visible, "toggle opens class table")
