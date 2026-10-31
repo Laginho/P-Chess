@@ -785,3 +785,20 @@ func test_graph_receives_classifications_as_analysis_arrives():
 	assert_eq(graph.classes[0].class, "Best")
 	assert_eq(graph.classes[1].class, "Best")
 	main.free()
+
+
+func test_analysis_progress_counts_settled_moves():
+	var main = await _session(FakeTime.new())
+	var game = Game.new()
+	game.play("e2e4")
+	game.play("e7e5")
+	var review = main.get_node("Review")
+	review.present(game, [180000, 180000], SETTINGS, "")
+	var fixture: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/analysis/rev003-opening.json"))
+	review.receive_position(0, fixture.positions[0])
+	review.receive_position(1, fixture.positions[1])
+	var progress = review.get_node_or_null("Margin/Content/ProgressText")
+	assert_true(progress != null, "analysis progress includes a move count")
+	if progress != null:
+		assert_eq(progress.text, "1 of 2 moves")
+	main.free()
