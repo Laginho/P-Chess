@@ -159,3 +159,7 @@
 | 2026-10-30 20:08 | REV-004 | review | gpt-6.1-sol xhigh | 1 | merged | sweatshop/analysis/2026-10-30-1831 | 4m | 2.3M in (94% cached), 13k out | $0.850 | 1.558 |
 | 2026-10-30 20:32 | CLEAN-009 | implement | gpt-6.1-terra high | 1 | to-review | sweatshop/analysis/2026-10-30-1831 | 4m | 1.6M in (97% cached), 6k out | $0.157 | 1.040 |
 | 2026-10-30 20:36 | CLEAN-009 | review | gpt-6.1-sol xhigh | 1 | merged | sweatshop/analysis/2026-10-30-1831 | 4m | 2.0M in (94% cached), 12k out | $0.550 | 1.827 |
+| 2026-10-30 23:06 | REV-005 | implement | gpt-6.1-terra high | 1 | asked, blocked | sweatshop/v010/2026-10-30-2302 | 3m | 1.7M in (97% cached), 7k out | $0.172 | 1.312 |
+| 2026-10-30 23:12 | REV-005 | implement | gpt-6.1-terra high | 1 | failed (exit 0), will retry | sweatshop/v010/2026-10-30-2302 | 3m | 1.5M in (96% cached), 4k out | $0.158 | 1.299 |
+| 2026-10-30 23:13 | REV-005 | implement | gpt-6.1-terra high | 2 | failed (exit 0), blocked | sweatshop/v010/2026-10-30-2302 | 1m | 292k in (86% cached), 2k out | $0.063 | 1.836 |
+| 2026-10-30 23:22 | REV-005 | implement | gpt-6.1-terra high | 3 | failed (exit 0), blocked | sweatshop/v010/2026-10-30-2302 | 4m | 2.3M in (96% cached), 8k out | $0.239 | 1.579 |
