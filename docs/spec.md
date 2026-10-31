@@ -188,7 +188,7 @@ For each legal move `m` that keeps the game on a checked line:
 - Highlights for the last move and for a king in check.
 - Legal-move dots (setting, on by default).
 - Coordinates on the board.
-- A material-difference counter.
+- The game screen has no material-difference counter.
 
 ### 8.5 Sounds
 
@@ -212,7 +212,7 @@ All attributions go in `docs/THIRD_PARTY.md`.
 
 - The window is resizable; the default size is 1280×800 and the minimum 800×600. The board scales with the window.
 - Board resize: a grip on the board's bottom-right corner lets you drag the board bigger or smaller (`nwse-resize` cursor). The side panel takes the remaining width, the board stays square, and it never drops below the minimum size or goes past what the window fits. The chosen size is saved in settings and restored on the next launch. Double-clicking the grip resets to the default fit-to-window.
-- The side panel shows Maia's clock, the move list (SAN), your clock and buttons.
+- The side panel shows Maia, both clocks, the move list (SAN), your name and colour, and the draw and resign controls. The running clock has a light background.
 - `F11` toggles focus mode: only the board and the clocks.
 
 ## 9. Game flow, review, history
@@ -231,12 +231,12 @@ All attributions go in `docs/THIRD_PARTY.md`.
 | `F` | Flip the board |
 | `Esc` | Resign (press twice) |
 | `F11` | Focus mode |
-| `Ctrl+,` | Settings (open/close) |
+| `Ctrl+,` | Settings (open/close); there is no in-game Settings button |
 
 ### 9.3 Review
 
 After a game, a panel over the final board shows the result and reason, with Review,
-Rematch, New game and close actions. Closing it leaves a Review button in the side panel.
+Rematch, New game and close actions. After closing it, open the game from History to review it.
 The review screen opens on request:
 - The result and the reason for it.
 - The move list with these badges:
