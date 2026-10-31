@@ -68,13 +68,13 @@ text = "Custom game"
 layout_mode = 2
 text = "History"
 
-[node name="Settings" type="Button" parent="Center/Form"]
-layout_mode = 2
-text = "Settings"
-
 [node name="Profile" type="Button" parent="Center/Form"]
 layout_mode = 2
 text = "Profile"
+
+[node name="Settings" type="Button" parent="Center/Form"]
+layout_mode = 2
+text = "Settings"
 
 [node name="Quit" type="Button" parent="Center/Form"]
 layout_mode = 2

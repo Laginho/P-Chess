@@ -1,6 +1,7 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://ui/profile.gd" id="1"]
+[ext_resource type="Script" path="res://ui/accuracy_chart.gd" id="2"]
 
 [node name="Profile" type="Control"]
 layout_mode = 3
@@ -84,6 +85,19 @@ theme_override_constants/h_separation = 16
 [node name="NoResults" type="Label" parent="Margin/Content/Scroll/Body"]
 layout_mode = 2
 text = "No games played yet."
+
+[node name="AccuracyTitle" type="Label" parent="Margin/Content/Scroll/Body"]
+layout_mode = 2
+text = "Your accuracy over time"
+
+[node name="AccuracyChart" type="Control" parent="Margin/Content/Scroll/Body"]
+custom_minimum_size = Vector2(0, 200)
+layout_mode = 2
+script = ExtResource("2")
+
+[node name="NoAccuracy" type="Label" parent="Margin/Content/Scroll/Body"]
+layout_mode = 2
+text = "No analysed games with moves by you yet."
 
 [node name="Back" type="Button" parent="Margin/Content"]
 layout_mode = 2
