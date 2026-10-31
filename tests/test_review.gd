@@ -268,7 +268,7 @@ func test_export_buttons_send_finished_pgn_and_lichess_url():
 	assert_eq(parsed.games.size(), 1)
 	if parsed.games.size() == 1:
 		assert_eq(parsed.games[0].headers, {"White": "You", "Black": "Maia 1500", "TimeControl": "180+2",
-				"Result": "0-1", "Termination": "Normal", "Reason": "checkmate"})
+				"Result": "0-1", "Termination": "Normal", "Reason": "checkmate", "HumanColor": "w"})
 		assert_eq(parsed.games[0].moves.map(func(move): return move.uci), ["f2f3", "e7e5", "g2g4", "d8h4"])
 		assert_eq(parsed.games[0].moves.map(func(move): return move.clock_ms), [180000, 180000, 181750, 181000])
 		assert_eq(parsed.games[0].result, "0-1")
