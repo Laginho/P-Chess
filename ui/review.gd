@@ -13,6 +13,7 @@ const Uci = preload("res://engine/uci.gd")
 const Analyser = preload("res://engine/analyser.gd")
 const Tunables = preload("res://core/tunables.gd")
 const Classification = preload("res://core/classification.gd")
+const Accuracy = preload("res://core/accuracy.gd")
 const Badges = preload("res://bot/badges.gd")
 
 # System boundaries stay replaceable for headless tests.
@@ -37,6 +38,8 @@ var _catalog := []
 var _repertoire := []
 var _colour := "w"
 var _check_repertoire := false
+var _player_names := ["White", "Black"]
+const CLASS_NAMES := ["Brilliant", "Great", "Best", "Excellent", "Good", "Book", "Repertoire", "Forced", "Inaccuracy", "Mistake", "Miss", "Blunder"]
 
 @onready var _eval_bar = $Margin/Content/ReviewBody/EvalBar
 @onready var _board_view = $Margin/Content/ReviewBody/BoardView
@@ -172,8 +175,32 @@ func receive_position(index: int, position: Dictionary) -> void:
 		return
 	_positions[index].merge(position, true)
 	_refresh_classes()
+	_update_summary()
 	_update_board_annotations()
 	_update_eval_bar()
+
+
+func _update_summary() -> void:
+	var counts := {}
+	for label in CLASS_NAMES:
+		counts[label] = [0, 0]
+	for i in _classes.size():
+		if _classes[i] != null:
+			counts[_classes[i].class][i % 2] += 1
+	var lines := PackedStringArray(["Class             White   Black"])
+	for label in CLASS_NAMES:
+		lines.append("%s:  %d   %d" % [label, counts[label][0], counts[label][1]])
+	$Margin/Content/ReviewBody/Side/Counts.text = "\n".join(lines)
+	var summary: Label = $Margin/Content/ReviewBody/Side/Summary
+	for position in _positions:
+		if not position.has("pv"):
+			summary.hide()
+			return
+	var accuracy: Dictionary = Accuracy.evaluate({"positions": _positions})
+	var white := "–" if accuracy.white == null else "%.1f%%" % accuracy.white
+	var black := "–" if accuracy.black == null else "%.1f%%" % accuracy.black
+	summary.text = "White: %s  %s\nBlack: %s  %s" % [_player_names[0], white, _player_names[1], black]
+	summary.show()
 
 
 func _refresh_classes() -> void:
@@ -230,6 +257,8 @@ func present(game, clocks: Array, settings: Dictionary, result_text: String,
 	_catalog = catalog
 	_repertoire = repertoire
 	_colour = settings.colour
+	var headers: Dictionary = Pgn.finished_game(game, clocks, settings).headers
+	_player_names = [headers.White, headers.Black]
 	_check_repertoire = check_repertoire
 	_positions = []
 	var position = Game.new()
@@ -261,6 +290,7 @@ func present(game, clocks: Array, settings: Dictionary, result_text: String,
 	# Keep expected moves readable even when a badge column is narrow.
 	$Margin/Content/ReviewBody/Side/RepertoireExit.text = exit_text
 	$Margin/Content/ReviewBody/Side/RepertoireExit.visible = not exit_text.is_empty()
+	_update_summary()
 	_pgn = Pgn.write(Pgn.finished_game(game, clocks, settings))
 	_url = lichess_url(game)
 	show()
