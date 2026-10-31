@@ -30,7 +30,10 @@ func _layout_home() -> void:
 	form.size = Vector2(size.x - form.position.x - margin, size.y - margin * 2)
 	var width := form.size.x
 	var row := (width - 12) / 2
+	var missing: Label = form.get_node("Missing")
 	var large := minf(160, (form.size.y - 270) / 2)
+	if missing.visible:
+		large = minf(large, maxf(36, (form.size.y - 412) / 2))
 	form.get_node("Title").position = Vector2(0, 0)
 	form.get_node("Title").size = Vector2(width, 65)
 	form.get_node("QuickLabel").position = Vector2(0, 88)
@@ -51,9 +54,8 @@ func _layout_home() -> void:
 		var button: Button = form.get_node(["History", "Profile", "Settings", "Quit"][i])
 		button.position = Vector2((i % 2) * (row + 12), form.size.y - 106 + (i / 2) * 58)
 		button.size = Vector2(row, 48)
-	var missing: Label = form.get_node("Missing")
 	missing.position = Vector2(0, 144 + large * 2 + 20)
-	missing.size = Vector2(width, maxf(0, form.size.y - 270 - large * 2))
+	missing.size = Vector2(width, maxf(0, form.size.y - 114 - missing.position.y))
 
 
 func configure(preferences) -> void:
@@ -100,6 +102,7 @@ func _show_profile() -> void:
 func show_missing(message: String) -> void:
 	$Center/Form/Missing.text = message + "\n\npowershell -NoProfile -File scripts/fetch-engine.ps1"
 	$Center/Form/Missing.show()
+	_layout_home()
 	for button in $Center/Form/Quick.get_children():
 		button.disabled = true
 
