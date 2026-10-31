@@ -1,5 +1,5 @@
 # UI-029: Visible labels on fields that only have placeholders
-Stage: done
+Stage: blocked
 Status: ready-for-agent
 Blocked by: UI-021, UI-028
 Review: agent
@@ -56,3 +56,5 @@ Verdict: Approve
 - The `Proxy decided (opus-5.5 xhigh)` decision authorizes instantiated-scene label checks and manual screenshots; its scope and receipt remain recorded above. Search takes precedence over the prior picker design reference.
 - Stage 2 recorded six expected failures before the implementation and passing focused tests after it. Gate evidence for `15ba376`: exit 0, 435 reported passed including 6 Lc0 SKIPs (429 executed); log and hash verified. Rebase and integration changed only ticket metadata relative to the tested code.
 - Human visual and physical-input acceptance remains pending; CLEAN-012 font correction remains a release condition. Picker screenshots show the catalog loading state.
+
+- 2026-10-31 Attempt 2 failed: exit 0; blocked after two attempts. Log tail: **UI-029 concluído e integrado** à sessão `ui-screens`, com revisão aprovada e ticket em `Stage: done`. A branch preservada foi renomeada para que o driver a reconheça. /  / O gate existente foi verificado para o código integrado: **429 testes executados, 6 pulados** por ausência do Lc0. As capturas mostram os rótulos sem cortes visíveis. /  / Permanecem pendentes a aceitação visual e de entrada física e a correção de fonte CLEAN-012; as capturas do seletor mostram o catálogo carregando. /  /
