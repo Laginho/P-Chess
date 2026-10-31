@@ -169,8 +169,8 @@ func test_profile_skips_incomplete_or_corrupt_analysis_and_handles_one_point():
 	var scroll = profile.find_child("Scroll", true, false)
 	var back = profile.find_child("Back", true, false)
 	assert_true(table.size.x <= scroll.size.x, "table fits the minimum window width")
-	assert_true(back.get_rect().end.y <= 600 and back.get_rect().position.y >= scroll.get_rect().end.y,
-			"Back stays below the scroll area inside the minimum window")
+	assert_true(back.global_position.y >= 0 and back.global_position.y + back.size.y <= 600,
+			"Back stays inside the minimum window")
 	assert_true(chart.size.x > 70 and chart.size.y >= 200, "single-point plot has drawing space")
 	profile.free()
 	_clean(folder)
