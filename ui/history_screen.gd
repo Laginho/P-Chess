@@ -49,8 +49,11 @@ func present(store, settings) -> void:
 	history = store
 	preferences = settings
 	$Margin/Content/Tabs.current_tab = TABS.find(settings.get_value("history_tab"))
-	_refresh()
 	show()
+	if analysis_queue != null:
+		_queue_changed()
+	else:
+		_refresh()
 
 
 func _refresh() -> void:
@@ -164,6 +167,6 @@ func _analyze_all() -> void:
 func _queue_changed() -> void:
 	var count: int = analysis_queue.pending().size()
 	var status: Label = $Margin/Content/BatchActions/Status
-	status.text = ("Analysing · %d queued · %s" % [count, preferences.get_value("analysis_threads")]) if count and preferences != null else ""
+	status.text = ("Analysing %d of %d · %s" % [analysis_queue.batch_done + 1, analysis_queue.batch_total, preferences.get_value("analysis_threads")]) if count and preferences != null else ""
 	if visible:
 		_refresh()
