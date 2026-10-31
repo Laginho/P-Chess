@@ -1,9 +1,11 @@
-﻿extends PopupPanel
+extends PopupPanel
 
 signal saved(name: String)
 
 const Game = preload("res://core/game.gd")
 const Repertoire = preload("res://bot/repertoire.gd")
+const Board = preload("res://core/board.gd")
+const TRASH = preload("res://ui/icons/trash.svg")
 
 # Analysis positions accept legal moves even after an automatic draw.
 class EditorGame extends Game:
@@ -15,18 +17,18 @@ var saved_name := ""
 var edited := {}
 var root_key := ""
 var path := PackedStringArray()
+var _move_buttons: Array[Button] = []
 
 @onready var board = $Margin/Form/Content/Board
-@onready var tree: Tree = $Margin/Form/Content/Tree
-@onready var status: Label = $Margin/Form/Status
+@onready var tree: ScrollContainer = $Margin/Form/Content/Card/Panel/Tree
+@onready var rows: VBoxContainer = $Margin/Form/Content/Card/Panel/Tree/Rows
+@onready var status: Label = $Margin/Form/Content/Card/Panel/Status
 
 
 func _ready() -> void:
 	board.move_played.connect(_played)
-	tree.item_selected.connect(_selected)
-	tree.item_mouse_selected.connect(_mouse_selected)
-	$Margin/Form/Buttons/Save.pressed.connect(save)
-	$Margin/Form/Buttons/Cancel.pressed.connect(hide)
+	$Margin/Form/Content/Card/Panel/Buttons/Save.pressed.connect(save)
+	$Margin/Form/Content/Card/Panel/Buttons/Cancel.pressed.connect(hide)
 
 
 func present(source, name: String, line: int = -1) -> void:
@@ -36,9 +38,13 @@ func present(source, name: String, line: int = -1) -> void:
 	root_key = source.lines[line].positions[0] if line >= 0 else edited.keys()[0]
 	path = source.lines[line].moves.duplicate() if line >= 0 else PackedStringArray()
 	board.flipped = source.colour == "b"
+	$Margin/Form/Content/Card/Panel/HeadingRow/Heading.text = ("● " if source.colour == "w" else "○ ") + name
+	$Margin/Form/Content/Card/Panel/HeadingRow/Heading.tooltip_text = name
 	status.text = ""
 	_refresh()
-	popup_centered(Vector2i(760, 520))
+	popup_centered(get_tree().root.size - Vector2i(64, 64))
+	if get_tree().root.gui_embed_subwindows:
+		size = get_tree().root.size - Vector2i(64, 64)
 
 
 func _node() -> Dictionary:
@@ -64,51 +70,104 @@ func _played(_san: String) -> void:
 
 
 func _refresh() -> void:
-	tree.clear()
-	var invisible := tree.create_item()
+	$Margin/Form/Content/Card/Panel/HeadingRow/Unsaved.visible = edited != repertoire.tree
+	_move_buttons.clear()
+	for row in rows.get_children():
+		row.free()
 	for key in edited:
-		var item := tree.create_item(invisible)
-		item.set_text(0, "Start position")
-		item.set_metadata(0, {"root": key, "path": PackedStringArray()})
-		_populate(item, edited[key], key, PackedStringArray())
-		if key == root_key and path.is_empty():
-			item.select(0)
+		var root_button := Button.new()
+		root_button.text = "Start position"
+		root_button.flat = true
+		root_button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		root_button.pressed.connect(func(): _select_move(key, PackedStringArray()))
+		rows.add_child(root_button)
+		_populate(edited[key], key, PackedStringArray(), 0)
 	_show_position()
 
 
-func _populate(parent: TreeItem, node: Dictionary, key: String, prefix: PackedStringArray) -> void:
+func _populate(node: Dictionary, key: String, prefix: PackedStringArray, depth: int) -> void:
 	for move in node.children:
 		var moves := prefix.duplicate()
-		moves.append(move)
-		var item := tree.create_item(parent)
-		item.set_text(0, move)
-		item.set_metadata(0, {"root": key, "path": moves})
-		if key == root_key and moves == path:
-			item.select(0)
-		_populate(item, node.children[move], key, moves)
+		var margin := MarginContainer.new()
+		margin.add_theme_constant_override("margin_left", depth * 20)
+		rows.add_child(margin)
+		var line := HFlowContainer.new()
+		line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		line.add_theme_constant_override("h_separation", 6)
+		margin.add_child(line)
+		var current: Dictionary = node
+		var next_move: String = move
+		var first_in_row := true
+		while true:
+			var at = Board.from_fen(current.position + " 0 1")
+			moves.append(next_move)
+			var san: String = at.san(next_move)
+			var ply := moves.size() - 1 + (1 if key.split(" ")[1] == "b" else 0)
+			if at.side_to_move == "w":
+				san = "%d.%s" % [ply / 2 + 1, san]
+			elif first_in_row:
+				san = "%d...%s" % [ply / 2 + 1, san]
+			_add_move(line, key, moves.duplicate(), san)
+			first_in_row = false
+			current = current.children[next_move]
+			if current.children.size() != 1:
+				break
+			next_move = current.children.keys()[0]
+		_populate(current, key, moves, depth + 1)
 
 
-func _selected() -> void:
-	var item := tree.get_selected()
-	if item == null:
-		return
-	var data: Dictionary = item.get_metadata(0)
-	root_key = data.root
-	path = data.path.duplicate()
+func _add_move(line: HFlowContainer, key: String, moves: PackedStringArray, san: String) -> void:
+	var group := HBoxContainer.new()
+	line.add_child(group)
+	var button := Button.new()
+	button.text = san
+	button.toggle_mode = true
+	button.button_pressed = key == root_key and moves == path
+	button.set_meta("move_path", moves)
+	button.set_meta("move_root", key)
+	button.pressed.connect(func(): _select_move(key, moves))
+	button.gui_input.connect(func(event):
+		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.pressed:
+			_delete_path(key, moves)
+	)
+	group.add_child(button)
+	var selected_style := button.get_theme_stylebox("normal", "PrimaryButton")
+	var normal_style := StyleBoxEmpty.new()
+	for side in [SIDE_LEFT, SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM]:
+		normal_style.set_content_margin(side, selected_style.get_content_margin(side))
+	button.add_theme_stylebox_override("normal", normal_style)
+	button.add_theme_stylebox_override("pressed", selected_style)
+	button.add_theme_color_override("font_pressed_color", Color("141412"))
+	_move_buttons.append(button)
+	var trash := Button.new()
+	trash.icon = TRASH
+	trash.tooltip_text = "Delete branch"
+	trash.hide()
+	trash.pressed.connect(func(): _delete_path(key, moves))
+	group.add_child(trash)
+	group.mouse_entered.connect(trash.show)
+	group.mouse_exited.connect(func(): call_deferred("_hide_delete_if_idle", group, button, trash))
+	button.focus_entered.connect(trash.show)
+	button.focus_exited.connect(func(): call_deferred("_hide_delete_if_idle", group, button, trash))
+	trash.focus_exited.connect(func(): call_deferred("_hide_delete_if_idle", group, button, trash))
+
+
+func _hide_delete_if_idle(group, button, trash) -> void:
+	if is_instance_valid(group) and is_instance_valid(button) and is_instance_valid(trash) and not button.has_focus() and not trash.has_focus() and not group.get_global_rect().has_point(group.get_global_mouse_position()):
+		trash.hide()
+
+
+func _select_move(key: String, moves: PackedStringArray) -> void:
+	root_key = key
+	path = moves.duplicate()
+	for button in _move_buttons:
+		button.button_pressed = button.get_meta("move_root") == key and button.get_meta("move_path") == moves
 	_show_position()
 
 
-func _mouse_selected(position: Vector2, button: int) -> void:
-	if button != MOUSE_BUTTON_RIGHT:
-		return
-	var item := tree.get_item_at_position(position)
-	if item == null:
-		return
-	var data: Dictionary = item.get_metadata(0)
-	if data.path.is_empty():
-		return
-	root_key = data.root
-	path = data.path.duplicate()
+func _delete_path(key: String, moves: PackedStringArray) -> void:
+	root_key = key
+	path = moves.duplicate()
 	var move: String = path[path.size() - 1]
 	path.remove_at(path.size() - 1)
 	_node().children.erase(move)
@@ -119,5 +178,6 @@ func save() -> void:
 	var error: String = repertoire.save_edited(edited, saved_name)
 	status.text = error
 	if error.is_empty():
+		$Margin/Form/Content/Card/Panel/HeadingRow/Unsaved.hide()
 		hide()
 		saved.emit(saved_name)

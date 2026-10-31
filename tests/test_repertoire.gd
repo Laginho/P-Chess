@@ -15,13 +15,16 @@ func test_viewer_shows_black_line_and_steps_without_allowing_moves():
 	screen.present()
 	var list: ItemList = screen.get_node("Margin/Form/List")
 	list.item_selected.emit(0)
-	var lines: ItemList = screen.get_node_or_null("Margin/Form/Viewer/Lines")
-	var board = screen.get_node_or_null("Margin/Form/Viewer/Board")
+	var lines = screen.find_child("LineRows", true, false)
+	var board = screen.find_child("Board", true, false)
 	assert_true(lines != null and board != null, "viewer provides lines and a board")
 	if lines != null and board != null:
 		assert_true(board.flipped, "Black is at the bottom")
-		assert_eq(lines.item_count, 1)
-		lines.item_selected.emit(0)
+		assert_eq(lines.get_child_count(), 1)
+		var row: Button = lines.get_child(0)
+		assert_eq(row.find_child("Name", true, false).text, "Line 1", "an unnamed line has a readable fallback")
+		assert_true(row.button_pressed, "the displayed line is selected")
+		row.pressed.emit()
 		assert_eq(board.game.board.position_key(), "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq -")
 		assert_eq(board.game.moves[-1], "g1f3", "last move is highlighted")
 		var key := InputEventKey.new()
@@ -33,6 +36,189 @@ func test_viewer_shows_black_line_and_steps_without_allowing_moves():
 		screen._unhandled_key_input(key)
 		assert_eq(board.game.moves.size(), 3)
 		assert_eq(board.mouse_filter, Control.MOUSE_FILTER_IGNORE, "board ignores user moves")
+	setup.free()
+	_clean(folder)
+
+
+func test_viewer_numbers_and_highlights_a_line_starting_with_black():
+	var setup = load("res://ui/setup.tscn").instantiate()
+	var folder := _folder()
+	setup.repertoire.storage_dir = folder
+	var pgn := "[SetUp \"1\"]\n[FEN \"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1\"]\n1... e5 2. e4 *"
+	assert_eq(setup.repertoire.import_pgn(pgn, "b", "Study"), "")
+	Engine.get_main_loop().root.add_child(setup)
+	var screen = setup.get_node("RepertoireScreen")
+	screen.present()
+	screen.get_node("Margin/Form/List").item_selected.emit(0)
+	var row = screen.find_child("LineRows", true, false).get_child(0)
+	assert_eq(row.find_child("Moves", true, false).text, "1...e5 2.e4")
+	assert_eq(row.accessibility_description, "1...e5 2.e4")
+	var navigation = screen.find_child("Navigation", true, false)
+	var moves = navigation.get_node("Moves")
+	assert_eq(moves.text, "1...e5 [bgcolor=#45423d]2.e4[/bgcolor]")
+	navigation.get_node("Previous").pressed.emit()
+	assert_eq(moves.text, "[bgcolor=#45423d]1...e5[/bgcolor] 2.e4")
+	setup.free()
+	_clean(folder)
+
+
+func test_repertoire_selection_shows_its_name_colour_and_line_count():
+	var setup = load("res://ui/setup.tscn").instantiate()
+	var folder := _folder()
+	setup.repertoire.storage_dir = folder
+	assert_eq(setup.repertoire.import_pgn("1. e4 e5 *", "b", "Study"), "")
+	Engine.get_main_loop().root.add_child(setup)
+	var screen = setup.get_node("RepertoireScreen")
+	screen.present()
+	screen.get_node("Margin/Form/List").item_selected.emit(0)
+	var heading = screen.find_child("LineHeading", true, false)
+	var detail = screen.find_child("LineDetail", true, false)
+	assert_true(heading != null and detail != null, "selected repertoire has a lines header")
+	if heading != null and detail != null:
+		assert_eq(heading.text, "Study")
+		assert_eq(detail.text, "As Black · 1 line")
+	setup.free()
+	_clean(folder)
+
+
+func test_editor_places_its_controls_in_a_card():
+	var editor = load("res://ui/repertoire_editor.tscn").instantiate()
+	var card = editor.find_child("Card", true, false)
+	assert_true(card is PanelContainer, "editor controls have a card background")
+	if card != null:
+		assert_true(card.is_ancestor_of(editor.find_child("Tree", true, false)))
+	editor.free()
+
+
+func test_repertoire_navigation_is_below_its_board():
+	var screen = load("res://ui/repertoire_screen.tscn").instantiate()
+	var board = screen.find_child("Board", true, false)
+	var navigation = screen.find_child("Navigation", true, false)
+	assert_true(board != null and navigation != null and board.get_parent() == navigation.get_parent(), "navigation shares the board column")
+	screen.free()
+
+
+func _find_move(item: Node, moves: PackedStringArray) -> Button:
+	if item is Button and item.has_meta("move_path") and item.get_meta("move_path") == moves:
+		return item
+	for child in item.get_children():
+		var found := _find_move(child, moves)
+		if found != null:
+			return found
+	return null
+
+
+func test_editor_keeps_a_linear_line_at_one_indentation():
+	var repertoire = _repertoire()
+	var folder := _folder()
+	repertoire.storage_dir = folder
+	assert_eq(repertoire.import_pgn("1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 *", "w", "Study"), "")
+	var editor = load("res://ui/repertoire_editor.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(editor)
+	editor.present(repertoire, "Study", 0)
+	var tree = editor.find_child("Tree", true, false)
+	var first := _find_move(tree, PackedStringArray(["e2e4"]))
+	var last := _find_move(tree, PackedStringArray(["e2e4", "e7e5", "g1f3", "b8c6", "f1b5", "a7a6"]))
+	assert_true(first != null and last != null, "every move remains selectable")
+	if first != null and last != null:
+		assert_eq(first.get_parent().get_parent(), last.get_parent().get_parent(), "a linear sequence shares one row")
+		assert_eq(first.text, "1.e4")
+		var third := _find_move(tree, PackedStringArray(["e2e4", "e7e5", "g1f3"]))
+		assert_eq(third.text, "2.Nf3")
+	editor.free()
+	_clean(folder)
+
+
+func test_editor_numbers_a_line_that_starts_with_black():
+	var repertoire = _repertoire()
+	var folder := _folder()
+	repertoire.storage_dir = folder
+	var pgn := "[SetUp \"1\"]\n[FEN \"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1\"]\n1... e5 2. e4 *"
+	assert_eq(repertoire.import_pgn(pgn, "b", "Study"), "")
+	var editor = load("res://ui/repertoire_editor.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(editor)
+	editor.present(repertoire, "Study", 0)
+	var first := _find_move(editor.find_child("Tree", true, false), PackedStringArray(["e7e5"]))
+	assert_true(first != null)
+	if first != null:
+		assert_eq(first.text, "1...e5")
+	editor.free()
+	_clean(folder)
+
+
+func test_editor_numbers_a_black_variation_at_the_start_of_its_row():
+	var repertoire = _repertoire()
+	var folder := _folder()
+	repertoire.storage_dir = folder
+	assert_eq(repertoire.import_pgn("1. e4 e5 (1... c5) 2. Nf3 *", "w", "Study"), "")
+	var editor = load("res://ui/repertoire_editor.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(editor)
+	editor.present(repertoire, "Study", 0)
+	var variation := _find_move(editor.find_child("Tree", true, false), PackedStringArray(["e2e4", "c7c5"]))
+	assert_true(variation != null)
+	if variation != null:
+		assert_eq(variation.text, "1...c5")
+	editor.free()
+	_clean(folder)
+
+
+func test_editor_delete_button_remains_available_to_keyboard_focus():
+	var repertoire = _repertoire()
+	var folder := _folder()
+	repertoire.storage_dir = folder
+	assert_eq(repertoire.import_pgn("1. e4 e5 *", "w", "Study"), "")
+	var editor = load("res://ui/repertoire_editor.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(editor)
+	editor.present(repertoire, "Study", 0)
+	var move := _find_move(editor.find_child("Tree", true, false), PackedStringArray(["e2e4"]))
+	var trash: Button = move.get_parent().get_child(1)
+	move.grab_focus()
+	await Engine.get_main_loop().process_frame
+	assert_true(trash.visible, "delete appears when a move has keyboard focus")
+	trash.grab_focus()
+	await Engine.get_main_loop().process_frame
+	assert_true(trash.visible and trash.has_focus(), "delete stays available while focused")
+	trash.pressed.emit()
+	await Engine.get_main_loop().process_frame
+	await Engine.get_main_loop().process_frame
+	assert_true(_find_move(editor.find_child("Tree", true, false), PackedStringArray(["e2e4"])) == null, "focused delete removes the branch")
+	editor.free()
+	await Engine.get_main_loop().process_frame
+	_clean(folder)
+
+
+func test_selected_editor_move_keeps_enough_width_for_its_text():
+	var repertoire = _repertoire()
+	var folder := _folder()
+	repertoire.storage_dir = folder
+	assert_eq(repertoire.import_pgn("1. e4 e5 *", "w", "Study"), "")
+	var editor = load("res://ui/repertoire_editor.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(editor)
+	editor.present(repertoire, "Study", 0)
+	var move := _find_move(editor.find_child("Tree", true, false), PackedStringArray(["e2e4"]))
+	move.pressed.emit()
+	await Engine.get_main_loop().process_frame
+	await Engine.get_main_loop().process_frame
+	var text_width := move.get_theme_font("font").get_string_size(move.text, HORIZONTAL_ALIGNMENT_LEFT, -1, move.get_theme_font_size("font_size")).x
+	var needed := text_width + move.get_theme_stylebox("pressed").get_minimum_size().x
+	assert_true(move.size.x >= needed, "selected move text fits")
+	editor.free()
+	_clean(folder)
+
+
+func test_viewer_displays_opening_name_and_moves_on_separate_lines():
+	var setup = load("res://ui/setup.tscn").instantiate()
+	var folder := _folder()
+	setup.repertoire.storage_dir = folder
+	assert_eq(setup.repertoire.import_pgn("1. e4 e5 *", "w", "Study"), "")
+	var screen = setup.get_node("RepertoireScreen")
+	screen.get_node("OpeningPicker").book.load_tsv("eco\tname\tpgn\nC20\tKing's Pawn Game\t1. e4 e5\n")
+	Engine.get_main_loop().root.add_child(setup)
+	screen.present()
+	screen.get_node("Margin/Form/List").item_selected.emit(0)
+	var row = screen.find_child("LineRows", true, false).get_child(0)
+	assert_eq(row.find_child("Name", true, false).text, "King's Pawn Game")
+	assert_eq(row.find_child("Moves", true, false).text, "1.e4 e5")
 	setup.free()
 	_clean(folder)
 
@@ -429,6 +615,53 @@ func test_catalog_selection_saves_repertoire_and_book_uses_it():
 	assert_true(book.weights(board, 0).e2e4 > 1.0, "My repertoire follows the selected lines")
 	_clean(folder)
 
+func test_repertoire_source_survives_reload_and_edits_and_legacy_has_no_source():
+	var folder := _folder()
+	var repertoire = _repertoire()
+	repertoire.storage_dir = folder
+	assert_eq(repertoire.import_pgn("1. e4 e5 *", "w", "PGN"), "")
+	var book = load("res://bot/book.gd").new()
+	book.load_tsv("eco\tname\tpgn\nC20\tKing's Pawn Game\t1. e4 e5\n")
+	book.set_checked("King's Pawn Game", true)
+	assert_eq(repertoire.save_openings(book, "b", "Opening"), "")
+	for pair in [["PGN", "pgn"], ["Opening", "openings"]]:
+		var loaded = _repertoire()
+		loaded.storage_dir = folder
+		assert_eq(loaded.load_saved(pair[0]), "")
+		assert_eq(loaded.get("source"), pair[1], "source survives reload")
+		assert_eq(loaded.save_edited(loaded.tree, pair[0]), "")
+		assert_eq(loaded.load_saved(pair[0]), "")
+		assert_eq(loaded.get("source"), pair[1], "source survives editing")
+	var file := FileAccess.open(folder.path_join("Legacy.json"), FileAccess.WRITE)
+	file.store_string('{"version":1,"colour":"w","pgn":"1. e4 *"}')
+	file.close()
+	assert_eq(repertoire.load_saved("Legacy"), "")
+	assert_eq(repertoire.get("source"), "", "legacy origin is unknown")
+	_clean(folder)
+
+
+func test_editor_shows_unsaved_changes_only_after_a_change():
+	var repertoire = _repertoire()
+	var folder := _folder()
+	repertoire.storage_dir = folder
+	assert_eq(repertoire.import_pgn("1. e4 e5 *", "w", "Study"), "")
+	var editor = load("res://ui/repertoire_editor.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(editor)
+	editor.present(repertoire, "Study", 0)
+	var marker = editor.find_child("Unsaved", true, false)
+	assert_true(marker != null, "editor has an unsaved changes marker")
+	if marker != null:
+		assert_true(not marker.visible, "opening a repertoire is clean")
+	assert_true(editor.board.play("g1f3"))
+	if marker != null:
+		assert_true(marker.visible, "a new move marks the repertoire dirty")
+	editor.save()
+	if marker != null:
+		assert_true(not marker.visible, "saving clears the marker")
+	editor.free()
+	_clean(folder)
+
+
 func test_editor_extends_a_selected_line_and_saves_it():
 	var path := "res://ui/repertoire_editor.tscn"
 	assert_true(ResourceLoader.exists(path), "editor scene exists")
@@ -485,12 +718,11 @@ func test_editor_opens_from_screen_branches_and_cancel_discards():
 	if button != null:
 		button.pressed.emit()
 		var editor = screen.get_node("RepertoireEditor")
-		var tree: Tree = editor.get_node("Margin/Form/Content/Tree")
-		var first = tree.get_root().get_first_child().get_first_child()
-		first.select(0)
-		tree.item_selected.emit()
+		var tree = editor.find_child("Tree", true, false)
+		var first = _find_move(tree, PackedStringArray(["e2e4"]))
+		first.pressed.emit()
 		assert_true(editor.get_node("Margin/Form/Content/Board").play("c7c5"))
-		editor.get_node("Margin/Form/Buttons/Cancel").pressed.emit()
+		editor.find_child("Cancel", true, false).pressed.emit()
 		assert_eq(FileAccess.get_file_as_string(folder.path_join("Study.json")), original)
 	setup.free()
 	_clean(folder)
@@ -503,15 +735,16 @@ func test_editor_saves_a_branch_and_deletes_a_subtree():
 	var editor = load("res://ui/repertoire_editor.tscn").instantiate()
 	Engine.get_main_loop().root.add_child(editor)
 	editor.present(repertoire, "Study")
-	var tree: Tree = editor.get_node("Margin/Form/Content/Tree")
-	var e4 = tree.get_root().get_first_child().get_first_child()
-	e4.select(0)
-	tree.item_selected.emit()
+	var tree = editor.find_child("Tree", true, false)
+	var e4 = _find_move(tree, PackedStringArray(["e2e4"]))
+	e4.pressed.emit()
 	assert_true(editor.get_node("Margin/Form/Content/Board").play("c7c5"))
 	await Engine.get_main_loop().process_frame
-	var e5 = tree.get_root().get_first_child().get_first_child().get_first_child()
-	var point: Vector2 = tree.get_item_area_rect(e5).get_center()
-	tree.item_mouse_selected.emit(point, MOUSE_BUTTON_RIGHT)
+	var e5 = _find_move(tree, PackedStringArray(["e2e4", "e7e5"]))
+	var click := InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_RIGHT
+	click.pressed = true
+	e5.gui_input.emit(click)
 	editor.save()
 	var loaded = _repertoire()
 	loaded.storage_dir = folder
@@ -520,6 +753,67 @@ func test_editor_saves_a_branch_and_deletes_a_subtree():
 	assert_eq(" ".join(loaded.lines[0].moves), "e2e4 c7c5")
 	editor.free()
 	_clean(folder)
+
+func test_each_repertoire_card_opens_its_own_editor():
+	var setup = load("res://ui/setup.tscn").instantiate()
+	var folder := _folder()
+	setup.repertoire.storage_dir = folder
+	assert_eq(setup.repertoire.import_pgn("1. e4 e5 *", "w", "Alpha"), "")
+	assert_eq(setup.repertoire.import_pgn("1. d4 d5 *", "b", "Beta"), "")
+	Engine.get_main_loop().root.add_child(setup)
+	var screen = setup.get_node("RepertoireScreen")
+	screen.present()
+	var cards = screen.find_child("Cards", true, false)
+	assert_true(cards != null, "repertoire cards exist")
+	if cards != null:
+		assert_eq(cards.get_child_count(), 2)
+		for i in range(cards.get_child_count()):
+			var edit = cards.get_child(i).find_child("Edit", true, false)
+			assert_true(edit != null, "each card has an edit button")
+			if edit != null:
+				edit.pressed.emit()
+				var editor = screen.get_node("RepertoireEditor")
+				assert_true(editor.visible)
+				assert_eq(editor.saved_name, ["Alpha", "Beta"][i])
+				editor.hide()
+	setup.free()
+	_clean(folder)
+
+
+func test_selected_repertoire_card_has_an_accent_outline():
+	var setup = load("res://ui/setup.tscn").instantiate()
+	var folder := _folder()
+	setup.repertoire.storage_dir = folder
+	assert_eq(setup.repertoire.import_pgn("1. e4 e5 *", "w", "Study"), "")
+	Engine.get_main_loop().root.add_child(setup)
+	var screen = setup.get_node("RepertoireScreen")
+	screen.present()
+	var select: Button = screen.find_child("Cards", true, false).get_child(0).get_child(0)
+	select.pressed.emit()
+	var style: StyleBoxFlat = select.get_theme_stylebox("pressed")
+	assert_eq(style.border_color, Color("7fa650"), "selection has the green outline")
+	setup.free()
+	_clean(folder)
+
+
+func test_repertoire_card_shows_readable_name_and_origin():
+	var setup = load("res://ui/setup.tscn").instantiate()
+	var folder := _folder()
+	setup.repertoire.storage_dir = folder
+	assert_eq(setup.repertoire.import_pgn("1. e4 e5 *", "w", "Study"), "")
+	Engine.get_main_loop().root.add_child(setup)
+	var screen = setup.get_node("RepertoireScreen")
+	screen.present()
+	var card = screen.find_child("Cards", true, false).get_child(0)
+	var title = card.find_child("CardTitle", true, false)
+	var detail = card.find_child("CardDetail", true, false)
+	assert_true(title != null and detail != null, "name and origin are separate labels")
+	if title != null and detail != null:
+		assert_eq(title.text, "Study")
+		assert_eq(detail.text, "1 line · imported PGN")
+	setup.free()
+	_clean(folder)
+
 
 func test_editor_button_tracks_repertoire_selection():
 	var setup = load("res://ui/setup.tscn").instantiate()
@@ -621,6 +915,65 @@ func test_repertoire_screen_fits_the_smallest_window():
 	setup.free()
 	_clean(folder)
 
+
+func test_long_repertoire_name_keeps_viewer_and_editor_inside_minimum_window():
+	var root: Window = Engine.get_main_loop().root
+	var old_embed := root.gui_embed_subwindows
+	var old_size := root.size
+	root.gui_embed_subwindows = true
+	root.size = Vector2i(800, 600)
+	var setup = load("res://ui/setup.tscn").instantiate()
+	var folder := _folder()
+	setup.repertoire.storage_dir = folder
+	var name := "My favourite repertoire for studying the Caro-Kann Defense and its classical and advance variations"
+	assert_eq(setup.repertoire.import_pgn("1. e4 e5 *", "w", name), "")
+	root.add_child(setup)
+	var screen = setup.get_node("RepertoireScreen")
+	screen.present()
+	screen.get_node("Margin/Form/List").item_selected.emit(0)
+	await Engine.get_main_loop().process_frame
+	await Engine.get_main_loop().process_frame
+	var heading = screen.find_child("LineHeading", true, false)
+	assert_true(screen.size.x <= 768 and screen.size.y <= 568, "viewer fits the minimum viewport")
+	assert_eq(heading.text, name)
+	assert_eq(heading.tooltip_text, name, "full name remains available")
+	var editor = screen.get_node("RepertoireEditor")
+	editor.present(setup.repertoire, name, 0)
+	await Engine.get_main_loop().process_frame
+	await Engine.get_main_loop().process_frame
+	var editor_heading = editor.find_child("Heading", true, false)
+	assert_true(editor.size.x <= 736 and editor.size.y <= 536, "editor fits the minimum viewport")
+	assert_true(editor_heading.text.ends_with(name))
+	assert_eq(editor_heading.tooltip_text, name, "full name remains available")
+	setup.free()
+	root.gui_embed_subwindows = old_embed
+	root.size = old_size
+	_clean(folder)
+
+
+func test_embedded_repertoire_windows_fill_the_available_viewport():
+	var root: Window = Engine.get_main_loop().root
+	var old_embed := root.gui_embed_subwindows
+	var old_size := root.size
+	root.gui_embed_subwindows = true
+	root.size = Vector2i(1280, 800)
+	var setup = load("res://ui/setup.tscn").instantiate()
+	var folder := _folder()
+	setup.repertoire.storage_dir = folder
+	assert_eq(setup.repertoire.import_pgn("1. e4 e5 *", "w", "Study"), "")
+	root.add_child(setup)
+	var screen = setup.get_node("RepertoireScreen")
+	screen.present()
+	assert_eq(screen.size, Vector2i(1248, 768), "screen uses the embedded viewport")
+	var editor = screen.get_node("RepertoireEditor")
+	editor.present(setup.repertoire, "Study", 0)
+	assert_eq(editor.size, Vector2i(1216, 736), "editor uses the embedded viewport")
+	setup.free()
+	root.gui_embed_subwindows = old_embed
+	root.size = old_size
+	_clean(folder)
+
+
 func _editor_mouse(window: Window, point: Vector2, button: int, pressed: bool) -> void:
 	var motion := InputEventMouseMotion.new()
 	motion.position = point + Vector2(window.position)
@@ -648,15 +1001,15 @@ func test_editor_right_click_refreshes_tree_and_board():
 	editor.present(repertoire, "Study", 0)
 	editor.size = Vector2i(760, 520)
 	await Engine.get_main_loop().process_frame
-	var tree: Tree = editor.tree
-	var e5 = tree.get_root().get_first_child().get_first_child().get_first_child()
-	var point: Vector2 = tree.global_position + Vector2(100, tree.get_item_area_rect(e5).get_center().y)
+	var tree = editor.find_child("Tree", true, false)
+	var e5 = _find_move(tree, PackedStringArray(["e2e4", "e7e5"]))
+	var point: Vector2 = e5.global_position + e5.size / 2
 	_editor_mouse(editor, point, MOUSE_BUTTON_RIGHT, true)
 	_editor_mouse(editor, point, MOUSE_BUTTON_RIGHT, false)
 	await Engine.get_main_loop().process_frame
 	# The deletion refreshes the tree deferred, which can land after the frame the click arrived in.
 	await Engine.get_main_loop().process_frame
-	assert_eq(tree.get_root().get_first_child().get_first_child().get_child_count(), 0, "deleted subtree disappears")
+	assert_true(_find_move(tree, PackedStringArray(["e2e4", "e7e5"])) == null, "deleted subtree disappears")
 	assert_eq(editor.board.game.board.position_key(), editor._node().position, "board returns to parent")
 	assert_eq(editor.path, PackedStringArray(["e2e4"]))
 	editor.free()

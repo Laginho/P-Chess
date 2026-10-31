@@ -6,6 +6,50 @@ const E4_KEY := "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq -"
 const E5_KEY := "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq -"
 
 
+func test_repertoire_picker_identifies_name_and_colour_fields():
+	var picker = load("res://ui/opening_picker.tscn").instantiate()
+	picker.book = _sample()
+	Engine.get_main_loop().root.add_child(picker)
+	picker.present_repertoire(load("res://bot/repertoire.gd").new())
+	var labels = picker.get_node_or_null("Margin/Form/FieldLabels")
+	assert_true(labels != null and labels.visible, "name and colour labels are visible")
+	if labels != null:
+		assert_eq(labels.get_node("Name").text, "Name")
+		assert_eq(labels.get_node("Colour").text, "Colour")
+	picker.free()
+
+
+func test_repertoire_picker_uses_the_available_height():
+	var root: Window = Engine.get_main_loop().root
+	var old_embed := root.gui_embed_subwindows
+	var old_size := root.size
+	root.gui_embed_subwindows = true
+	root.size = Vector2i(1280, 800)
+	var picker = load("res://ui/opening_picker.tscn").instantiate()
+	picker.book = _sample()
+	root.add_child(picker)
+	picker.present_repertoire(load("res://bot/repertoire.gd").new())
+	assert_eq(picker.size, Vector2i(640, 700))
+	picker.hide()
+	root.size = Vector2i(800, 600)
+	picker.present_repertoire(load("res://bot/repertoire.gd").new())
+	assert_eq(picker.size, Vector2i(640, 560))
+	picker.free()
+	root.gui_embed_subwindows = old_embed
+	root.size = old_size
+
+
+func test_opening_tree_uses_visible_checkboxes():
+	var picker = load("res://ui/opening_picker.tscn").instantiate()
+	picker.book = _sample()
+	Engine.get_main_loop().root.add_child(picker)
+	var tree: Tree = picker.get_node("Margin/Form/Tree")
+	assert_eq(tree.get_theme_icon("checked"), tree.get_theme_icon("checked", "CheckBox"))
+	assert_eq(tree.get_theme_icon("unchecked"), tree.get_theme_icon("unchecked", "CheckBox"))
+	assert_true(tree.has_theme_icon_override("indeterminate"), "partial selections have a distinct icon")
+	picker.free()
+
+
 func test_every_committed_lichess_row_loads_with_san_moves_and_position_keys():
 	var book = Book.new()
 	book.load_catalog()
@@ -205,7 +249,7 @@ func test_picker_search_checks_partial_parents_and_save_load_buttons_use_the_cat
 	var names: Array = []
 	picker.saved.connect(func(name): names.append(name))
 	picker.get_node("Margin/Form/SaveRow/Name").text = "Najdorf"
-	picker.get_node("Margin/Form/SaveRow/Save").pressed.emit()
+	picker.get_node("Margin/Form/Footer/Save").pressed.emit()
 	assert_eq(names, ["Najdorf"])
 	assert_eq(picker.book.selection_names(), ["Najdorf"])
 	# Checking a filtered family still selects its hidden descendants.
@@ -218,7 +262,7 @@ func test_picker_search_checks_partial_parents_and_save_load_buttons_use_the_cat
 	search.text_changed.emit("")
 	assert_true(_find_item(tree.get_root(), "King's Pawn Game") != null)
 	assert_true(_find_item(tree.get_root(), english).is_checked(0))
-	picker.get_node("Margin/Form/Done").pressed.emit()
+	picker.get_node("Margin/Form/Footer/Done").pressed.emit()
 	assert_true(not picker.visible)
 	picker.free()
 	_remove_folder(folder)
@@ -253,7 +297,7 @@ func test_setup_lists_saved_selections_and_emits_catalog_choice_while_free_stays
 	var picker = setup.get_node("OpeningPicker")
 	assert_true(picker.visible)
 	picker.get_node("Margin/Form/SaveRow/Name").text = "New practice"
-	picker.get_node("Margin/Form/SaveRow/Save").pressed.emit()
+	picker.get_node("Margin/Form/Footer/Save").pressed.emit()
 	assert_eq(selections.item_count, 2)
 	assert_eq(selections.get_item_text(selections.selected), "New practice")
 	setup.free()

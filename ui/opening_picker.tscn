@@ -1,6 +1,8 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://ui/opening_picker.gd" id="1"]
+
+[sub_resource type="StyleBoxEmpty" id="TreePanel"]
 
 [node name="OpeningPicker" type="PopupPanel"]
 title = "Opening catalog"
@@ -24,23 +26,25 @@ theme_override_constants/separation = 10
 
 [node name="Title" type="Label" parent="Margin/Form"]
 layout_mode = 2
+theme_type_variation = &"ExtraBoldText"
 theme_override_font_sizes/font_size = 24
 text = "Opening catalog"
 
-[node name="Search" type="LineEdit" parent="Margin/Form"]
+[node name="FieldLabels" type="HBoxContainer" parent="Margin/Form"]
+visible = false
 layout_mode = 2
-placeholder_text = "Search openings (e.g. Sicilian or Najdorf)"
-clear_button_enabled = true
 
-[node name="Tree" type="Tree" parent="Margin/Form"]
-custom_minimum_size = Vector2(0, 300)
+[node name="Name" type="Label" parent="Margin/Form/FieldLabels"]
 layout_mode = 2
-size_flags_vertical = 3
-hide_root = true
+size_flags_horizontal = 3
+theme_type_variation = &"MutedText"
+text = "Name"
 
-[node name="Status" type="Label" parent="Margin/Form"]
+[node name="Colour" type="Label" parent="Margin/Form/FieldLabels"]
+custom_minimum_size = Vector2(180, 0)
 layout_mode = 2
-autowrap_mode = 3
+theme_type_variation = &"MutedText"
+text = "Colour"
 
 [node name="SaveRow" type="HBoxContainer" parent="Margin/Form"]
 layout_mode = 2
@@ -61,9 +65,35 @@ size_flags_horizontal = 3
 placeholder_text = "Selection name"
 max_length = 100
 
-[node name="Save" type="Button" parent="Margin/Form/SaveRow"]
+[node name="White" type="Button" parent="Margin/Form/SaveRow"]
+visible = false
+custom_minimum_size = Vector2(88, 44)
 layout_mode = 2
-text = "Save selection"
+toggle_mode = true
+button_pressed = true
+text = "● White"
+
+[node name="Black" type="Button" parent="Margin/Form/SaveRow"]
+visible = false
+custom_minimum_size = Vector2(88, 44)
+layout_mode = 2
+toggle_mode = true
+text = "○ Black"
+
+[node name="Search" type="LineEdit" parent="Margin/Form"]
+layout_mode = 2
+placeholder_text = "Search openings (e.g. Sicilian or Najdorf)"
+clear_button_enabled = true
+
+[node name="Tree" type="Tree" parent="Margin/Form"]
+custom_minimum_size = Vector2(0, 300)
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_colors/font_color = Color(0.92549, 0.913725, 0.894118, 1)
+theme_override_constants/draw_guides = 0
+theme_override_constants/draw_relationship_lines = 0
+theme_override_styles/panel = SubResource("TreePanel")
+hide_root = true
 
 [node name="LoadRow" type="HBoxContainer" parent="Margin/Form"]
 layout_mode = 2
@@ -76,6 +106,22 @@ size_flags_horizontal = 3
 layout_mode = 2
 text = "Load selection"
 
-[node name="Done" type="Button" parent="Margin/Form"]
+[node name="Footer" type="HBoxContainer" parent="Margin/Form"]
 layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Status" type="Label" parent="Margin/Form/Footer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Done" type="Button" parent="Margin/Form/Footer"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 44)
 text = "Done"
+
+[node name="Save" type="Button" parent="Margin/Form/Footer"]
+layout_mode = 2
+theme_type_variation = &"PrimaryButton"
+custom_minimum_size = Vector2(0, 44)
+text = "Save selection"
+
