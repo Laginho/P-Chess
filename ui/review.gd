@@ -615,6 +615,7 @@ func present(game, clocks: Array, settings: Dictionary, result_text: String,
 			exit_text = "%d. %s: %s" % [i / 2 + 1, "White" if i % 2 == 0 else "Black", text]
 			var exit_row := _moves.create_item(root)
 			exit_row.set_text(1, text)
+			exit_row.set_expand_right(1, true)
 			exit_row.set_icon(1, _class_icon("Repertoire"))
 			exit_row.set_icon_max_width(1, 16)
 			exit_row.set_custom_color(1, Color("4ca9f0"))
