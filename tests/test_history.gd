@@ -10,6 +10,47 @@ const HistoryStorage = preload("res://tests/history_storage.gd")
 const SETTINGS := {"colour": "w", "level": "maia-1500", "control": "3+2", "opening": "Free"}
 
 
+func test_delete_removes_files_and_reverses_targeted_flag_win():
+	var folder := _folder()
+	var history = History.new(folder)
+	var game = Game.new()
+	game.flag("b")
+	var path: String = history.save(game, [], SETTINGS, "", "line-1")
+	var snapshot := path.trim_suffix(".pgn") + ".repertoire.json"
+	var file := FileAccess.open(snapshot, FileAccess.WRITE)
+	file.store_string("{}")
+	file.close()
+	DirAccess.make_dir_recursive_absolute("user://analysis")
+	var analysis := "user://analysis".path_join(path.get_file() + ".json")
+	file = FileAccess.open(analysis, FileAccess.WRITE)
+	file.store_string("{}")
+	file.close()
+	assert_true(history.delete(path))
+	assert_true(not FileAccess.file_exists(path) and not FileAccess.file_exists(snapshot) and not FileAccess.file_exists(analysis))
+	assert_eq(History.new(folder).stats("maia-1500", "3+2"), {"wins": 0, "draws": 0, "losses": 0, "flag_wins": 0, "flag_losses": 0})
+	assert_eq(History.new(folder).practice_counts().get("line-1"), 0)
+	HistoryStorage.clean(folder)
+
+
+func test_delete_legacy_and_failure_preserve_practice_and_never_go_negative():
+	var folder := _folder()
+	var history = History.new(folder)
+	var game = Game.new()
+	game.resign("w")
+	var path: String = history.save(game, [], SETTINGS, "", "line-1")
+	var legacy: String = history.save(game, [], SETTINGS)
+	assert_true(not history.delete(folder.path_join("missing.pgn")))
+	assert_true(not history.error.is_empty())
+	assert_eq(history.stats("maia-1500", "3+2").losses, 2)
+	assert_true(history.delete(legacy))
+	assert_eq(history.practice_counts().get("line-1"), 1)
+	assert_true(history.delete(path))
+	assert_true(not history.delete(path))
+	assert_eq(history.stats("maia-1500", "3+2").losses, 0)
+	assert_eq(history.practice_counts().get("line-1"), 0)
+	HistoryStorage.clean(folder)
+
+
 func test_games_is_empty_before_the_first_save():
 	var folder := _folder()
 	assert_eq(History.new(folder).games(), [])
