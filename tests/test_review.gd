@@ -959,3 +959,30 @@ func test_long_review_keeps_selected_move_visible():
 	assert_true(rect.position.y >= 0 and rect.end.y <= list.size.y, "graph jump scrolls to last move")
 	main.free()
 	root.size = old_size
+
+func test_move_class_legend_is_anchored_and_contained():
+	var root = Engine.get_main_loop().root
+	var old_size: Vector2i = root.size
+	var old_embed: bool = root.gui_embed_subwindows
+	root.gui_embed_subwindows = true
+	for window_size in [Vector2i(1280, 800), Vector2i(800, 600)]:
+		root.size = window_size
+		var main = await _session(FakeTime.new())
+		var review = main.review
+		review.present(Game.new(), [180000, 180000], SETTINGS, "")
+		await root.get_tree().process_frame
+		await root.get_tree().process_frame
+		var help: Button = review.get_node("Margin/Content/ReviewBody/Side/ClassHelp")
+		help.pressed.emit()
+		await root.get_tree().process_frame
+		await root.get_tree().process_frame
+		var legend = review.get_node("ClassLegend")
+		var rect := Rect2i(legend.position, legend.size)
+		assert_true(rect.position.x >= 0 and rect.position.y >= 0 and rect.end.x <= window_size.x and rect.end.y <= window_size.y, "legend fits inside window")
+		assert_true(absf(rect.end.x - help.global_position.x) <= 24, "legend sits beside the Moves help")
+		assert_true(legend.get_ok_button().text == "Close", "legend offers a close action")
+		legend.get_ok_button().pressed.emit()
+		assert_true(not legend.visible, "close dismisses legend")
+		main.free()
+	root.gui_embed_subwindows = old_embed
+	root.size = old_size
