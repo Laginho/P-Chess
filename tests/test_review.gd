@@ -540,3 +540,45 @@ func test_review_fits_an_800_by_600_window():
 		assert_true(rect.size.x > 0 and rect.size.y > 0, path + " is visible")
 	main.free()
 	root.size = old_size
+
+
+func test_review_help_popups_fit_minimum_window():
+	var tree = Engine.get_main_loop()
+	var root = tree.root
+	var old_size: Vector2i = root.size
+	root.size = Vector2i(800, 600)
+	var main = _session(FakeTime.new())
+	var game = Game.new()
+	game.play("e2e4")
+	main.review.present(game, [180000, 180000], SETTINGS, "")
+	main.review.receive_position(1, {"pv": [{"cp": 0, "moves": ["e7e5"]}]})
+	main.review.receive_position(0, {"pv": [{"cp": 0, "moves": ["e2e4"]}], "best_move": "e2e4"})
+	await tree.process_frame
+	await tree.process_frame
+	for help_name in ["AccuracyHelp", "ClassHelp"]:
+		var help = main.review.get_node("Margin/Content/ReviewBody/Side/" + help_name)
+		var event := InputEventMouseMotion.new()
+		event.position = help.get_global_rect().get_center()
+		root.push_input(event)
+		await tree.create_timer(1.0).timeout
+		var popup = _visible_tooltip(root)
+		assert_true(popup != null, help_name + " opens a tooltip")
+		if popup != null:
+			assert_true(popup.position.x >= 0 and popup.position.y >= 0 and popup.position.x + popup.size.x <= 800 and popup.position.y + popup.size.y <= 600, help_name + " tooltip fits")
+			var label = popup.get_child(0)
+			assert_true(label is Label and label.text == help.tooltip_text, help_name + " displays the full explanation")
+	var classes: String = main.review.get_node("Margin/Content/ReviewBody/Side/ClassHelp").tooltip_text
+	assert_true(classes.contains("up to %s moves slower" % Tunables.CLASSIFICATION_MATE_SLOWER))
+	assert_true(classes.contains("moves made while in check"))
+	main.free()
+	root.size = old_size
+
+
+func _visible_tooltip(node: Node):
+	if node is PopupPanel and node.visible:
+		return node
+	for child in node.get_children(true):
+		var found = _visible_tooltip(child)
+		if found != null:
+			return found
+	return null
