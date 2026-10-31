@@ -2,6 +2,7 @@ extends RefCounted
 
 # Finished games and per-level/control results (§9.4). A different root isolates tests.
 const Pgn = preload("res://core/pgn.gd")
+const Game = preload("res://core/game.gd")
 
 var error := ""
 # Shared loaded catalog; recognition applies in every mode, independently of its checks.
@@ -100,6 +101,61 @@ func read_repertoire(path: String) -> Dictionary:
 		line.moves = PackedStringArray(line.moves)
 		line.positions = PackedStringArray(line.positions)
 	return data
+
+
+func games() -> Array:
+	var folder := _root.path_join("games")
+	var result := []
+	if not DirAccess.dir_exists_absolute(folder):
+		return result
+	for file in DirAccess.get_files_at(folder):
+		if not file.ends_with(".pgn"):
+			continue
+		var path := folder.path_join(file)
+		var parsed := Pgn.parse(FileAccess.get_file_as_string(path))
+		if parsed.error.is_empty() and parsed.games.size() == 1:
+			result.append({"path": path, "game": parsed.games[0], "modified": FileAccess.get_modified_time(path)})
+	result.sort_custom(func(a, b): return a.modified > b.modified if a.modified != b.modified else a.path > b.path)
+	return result
+
+
+func thumbnail(moves: PackedStringArray) -> Dictionary:
+	var endings := {}
+	var positions := {}
+	if book != null:
+		for entry in book.entries:
+			for key in entry.positions:
+				positions[key] = true
+			endings[entry.positions[-1]] = entry.name
+	var game = Game.new()
+	var match_ply := 0
+	var opening := ""
+	for i in moves.size():
+		if not game.play(moves[i]):
+			break
+		var key: String = game.board.position_key()
+		if positions.has(key):
+			match_ply = i + 1
+		if endings.has(key):
+			opening = endings[key]
+	return {"ply": match_ply if match_ply > 0 else mini(10, moves.size()), "opening": opening}
+
+
+func reason(game: Dictionary) -> String:
+	var headers: Dictionary = game.headers
+	if not headers.get("Reason", "").is_empty():
+		return headers.Reason
+	if headers.get("Termination", "") == "Time forfeit":
+		return "time"
+	var replay = Game.new(headers.get("FEN", Pgn.START))
+	for move in game.moves:
+		if not replay.play(move.uci):
+			break
+	if replay.reason in ["checkmate", "stalemate", "insufficient material", "50-move"]:
+		return replay.reason
+	if game.result in ["1-0", "0-1"] and headers.get("Termination", "") == "Normal":
+		return "resignation"
+	return ""
 
 
 # Counters are from the human's perspective; flag results are subsets of wins/losses.

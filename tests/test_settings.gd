@@ -170,3 +170,11 @@ func test_maia_reads_tau_temperature_and_panic():
 	maia.tau = 0.0
 	maia.temperature = 0.01
 	assert_eq(_played(maia), ["e2e4"], "a cold temperature always plays the top move")
+
+func test_history_tab_defaults_and_accepts_only_supported_tabs():
+	var settings = Settings.new(_fresh())
+	assert_eq(settings.get_value("history_tab"), "All")
+	for tab in ["All", "1+0", "3+2", "5+0"]:
+		assert_true(settings.set_value("history_tab", tab))
+		assert_eq(Settings.new(PATH).get_value("history_tab"), tab)
+	assert_true(not settings.set_value("history_tab", "other"))
