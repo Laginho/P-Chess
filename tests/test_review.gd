@@ -22,6 +22,8 @@ func test_unanalysed_history_explains_state_and_hides_analysis_summary():
 	var notice = side.get_node_or_null("UnanalysedNotice")
 	assert_true(notice != null and notice.visible and notice.text.contains("hasn’t been analysed yet"), "unanalysed explanation is visible")
 	assert_true(side.get_node("Analyze").visible, "analysis can be started")
+	var description = notice.get_node_or_null("AnalysisDescription") if notice != null else null
+	assert_true(description != null and description.text.contains("Stockfish"), "the card explains what analysis adds")
 	assert_true(not side.get_node("Counts").visible and not side.get_node("EvalGraph").visible, "empty analysis summary is hidden")
 	main.free()
 
