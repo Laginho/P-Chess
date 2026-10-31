@@ -1,5 +1,5 @@
-﻿# UI-026: Review screen to the design
-Stage: implementing
+# UI-026: Review screen to the design
+Stage: to-review
 Blocked by: UI-021
 Review: human
 Difficulty: hard
@@ -57,7 +57,7 @@ Acceptance: pending | Exercise a finished game with live analysis, open an unana
 Disclosure: pending | integration | Stage-3 Resolution below records four P2 findings (F1-F4); resolve them before integration. The original visual differences remain recorded above.
 Disclosure: pending | release | `.scratch/ui-redo/spec.md` requires Bruno's v0.1.0 QA before the release tag.
 
-Gate evidence: C:/Users/bruno/AppData/Local/Temp/pchess-ui026-gate-566792a.json
+Gate evidence: C:/Users/bruno/AppData/Local/Temp/pchess-ui026-reopen-final-gate.json
 
 #### Resolution (2026-10-31)
 Verdict: Reopen — criteria 2, 3, 5, 6 and 8 are partial: incorrect History time control, overlapping post-game progress, offscreen current move, and a centred legend instead of the required popover.
@@ -111,3 +111,17 @@ Acceptance: pending | F1-F4 remain open on UI-026; live analysis and Bruno's v0.
 Disclosure: decision | none | Existing proxy receipt preserved above: retry on the same lineup, with no contract waiver.
 Disclosure: pending | integration | F1-F4 in this Resolution must be repaired and independently reviewed before merging the ticket into the lane.
 Disclosure: pending | release | `.scratch/ui-redo/spec.md` still requires Bruno's v0.1.0 QA before the release tag.
+
+#### Stage 2 reopen handoff (2026-10-31)
+
+- F1: History review reads the saved PGN time control through `present_history`, retaining the existing fallback for legacy or unsupported controls. A History-entry regression covers `180+2` and the missing-header fallback.
+- F2: The review summary removes only the rematch shortcut, retains History save/corruption warnings, and places analysis progress below the full result. Tests cover the actual post-game caller and a multiline save failure. The first full gate exposed two existing error-reporting tests broken by removing all subsequent lines; the final repair preserves them.
+- F3: Selection scrolls into view after initial presentation, navigation and graph jumps; the regression uses a seeded 80-ply legal game.
+- F4: The ordered class legend is a popover anchored beside Moves help, bounded at 1280x800 and 800x600, with an explicit close control and keyboard dismissal. Existing legend tests now inspect the popover rows instead of `AcceptDialog.dialog_text`; their order and threshold assertions remain. Captures at `C:/Users/bruno/AppData/Local/Temp/pchess-ui026-reopen-visual/Legend.png` and `LegendSmall.png` show the new popup; they were taken at `76418c3`, before the final History-warning fix, which did not change the popup. The previous ticket's other visual differences and fixture limitations remain for independent review.
+- Test-only commits precede their production fixes. Red/green logs for F1-F4 and the warning are `C:/Users/bruno/AppData/Local/Temp/pchess-ui026-f1-red.log` / `-f1-green.log`, `-f2-red.log` / `-f2-green.log`, `-f3-red.log` / `-f3-green.log`, `-f4-red.log` / `-f4-green.log`, and `-warning-red.log` / `-warning-green.log` with the same `pchess-ui026` prefix. F1's first harness used the wrong History field and did not initialize the History screen; F3 initially omitted clock snapshots. These harness errors were corrected in separate test-only commits before the recorded red runs.
+- Focused review suite before the final warning change: 42 passed, 0 failed; subsequent keyboard and warning tests also passed individually. The first full gate at `C:/Users/bruno/AppData/Local/Temp/pchess-ui026-reopen-gate.log` failed in two tests because the first F2 fix hid History warnings. After the correction, the final gate on `5796130c4a5cc246db257ef9c52b3f0b36eb5871` reported 440 passed, 0 failed, exit 0; six Lc0 tests were skipped, so 434 executed. Log `C:/Users/bruno/AppData/Local/Temp/pchess-ui026-reopen-final-gate.log`.
+- The branch remains divergent from the lane in tracker metadata; stage 3 must reconcile the lane's recovery comments when rebasing and preserve the prior proxy receipt, review findings and this handoff. The prior F1-F4 findings have fixes and tests but require independent stage-3 review.
+
+Acceptance: pending | Live analysis of a finished game, unanalysed History, physical keyboard/mouse interaction and Bruno's v0.1.0 QA remain to be verified; the fixture captures and automated input are not product acceptance.
+Disclosure: pending | integration | Stage 3 must independently review the F1-F4 repairs and reconcile lane metadata before integration.
+Disclosure: pending | release | `.scratch/ui-redo/spec.md` requires Bruno's v0.1.0 QA before the release tag.
