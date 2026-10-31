@@ -477,7 +477,7 @@ chess.com's CAPS2 is not published.
 - **Home screen:** the app opens on it.
   - Quick-play buttons for 1+0, 3+2 and 5+0 reuse your last level, colour and opening mode. The first time they use Maia 1500, a random colour and Free mode. A small level selector sits next to them.
   - Also: Custom game (today's setup screen), History, Profile, Settings and Quit.
-- **Searching screen:** shown between the click and the game for at least 0.5 s. Its message follows the real work: pausing the analysis, loading the Maia net, preparing the game.
+- **Searching screen:** Quick play, Custom game and rematch show the time control and Maia level between the click and the game for at least 0.5 s, and until startup work finishes. Its status follows the real work in order: "Pausing analysis…" only when analysis is active, "Loading Maia 1500…" (with the selected level) until that net's `readyok`, then "Preparing game…" while loading the catalog, repertoire and opening selection. The new game and clock start only after it closes. Startup errors close it and use the existing Custom game or Home error message.
 - **Your name:**
   - On first launch, a dialog asks for it, prefilled with "You". It has only OK, no skip.
   - The name changes in the Profile.
