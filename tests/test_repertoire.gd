@@ -76,18 +76,13 @@ func test_repertoire_navigation_is_below_its_board():
 	screen.free()
 
 
-func _find_move(item: TreeItem, moves: PackedStringArray) -> TreeItem:
-	if item == null:
-		return null
-	var data = item.get_metadata(0)
-	if data is Dictionary and data.get("path", PackedStringArray()) == moves:
+func _find_move(item: Node, moves: PackedStringArray) -> Button:
+	if item is Button and item.has_meta("move_path") and item.get_meta("move_path") == moves:
 		return item
-	var child := item.get_first_child()
-	while child != null:
+	for child in item.get_children():
 		var found := _find_move(child, moves)
 		if found != null:
 			return found
-		child = child.get_next()
 	return null
 
 
@@ -99,12 +94,12 @@ func test_editor_keeps_a_linear_line_at_one_indentation():
 	var editor = load("res://ui/repertoire_editor.tscn").instantiate()
 	Engine.get_main_loop().root.add_child(editor)
 	editor.present(repertoire, "Study", 0)
-	var tree: Tree = editor.tree
-	var first := _find_move(tree.get_root(), PackedStringArray(["e2e4"]))
-	var last := _find_move(tree.get_root(), PackedStringArray(["e2e4", "e7e5", "g1f3", "b8c6", "f1b5", "a7a6"]))
+	var tree = editor.find_child("Tree", true, false)
+	var first := _find_move(tree, PackedStringArray(["e2e4"]))
+	var last := _find_move(tree, PackedStringArray(["e2e4", "e7e5", "g1f3", "b8c6", "f1b5", "a7a6"]))
 	assert_true(first != null and last != null, "every move remains selectable")
 	if first != null and last != null:
-		assert_eq(first.get_parent(), last.get_parent(), "only branches increase indentation")
+		assert_eq(first.get_parent().get_parent(), last.get_parent().get_parent(), "a linear sequence shares one row")
 	editor.free()
 	_clean(folder)
 
@@ -621,10 +616,9 @@ func test_editor_opens_from_screen_branches_and_cancel_discards():
 	if button != null:
 		button.pressed.emit()
 		var editor = screen.get_node("RepertoireEditor")
-		var tree: Tree = editor.find_child("Tree", true, false)
-		var first = _find_move(tree.get_root(), PackedStringArray(["e2e4"]))
-		first.select(0)
-		tree.item_selected.emit()
+		var tree = editor.find_child("Tree", true, false)
+		var first = _find_move(tree, PackedStringArray(["e2e4"]))
+		first.pressed.emit()
 		assert_true(editor.get_node("Margin/Form/Content/Board").play("c7c5"))
 		editor.find_child("Cancel", true, false).pressed.emit()
 		assert_eq(FileAccess.get_file_as_string(folder.path_join("Study.json")), original)
@@ -639,15 +633,16 @@ func test_editor_saves_a_branch_and_deletes_a_subtree():
 	var editor = load("res://ui/repertoire_editor.tscn").instantiate()
 	Engine.get_main_loop().root.add_child(editor)
 	editor.present(repertoire, "Study")
-	var tree: Tree = editor.find_child("Tree", true, false)
-	var e4 = _find_move(tree.get_root(), PackedStringArray(["e2e4"]))
-	e4.select(0)
-	tree.item_selected.emit()
+	var tree = editor.find_child("Tree", true, false)
+	var e4 = _find_move(tree, PackedStringArray(["e2e4"]))
+	e4.pressed.emit()
 	assert_true(editor.get_node("Margin/Form/Content/Board").play("c7c5"))
 	await Engine.get_main_loop().process_frame
-	var e5 = _find_move(tree.get_root(), PackedStringArray(["e2e4", "e7e5"]))
-	var point: Vector2 = tree.get_item_area_rect(e5).get_center()
-	tree.item_mouse_selected.emit(point, MOUSE_BUTTON_RIGHT)
+	var e5 = _find_move(tree, PackedStringArray(["e2e4", "e7e5"]))
+	var click := InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_RIGHT
+	click.pressed = true
+	e5.gui_input.emit(click)
 	editor.save()
 	var loaded = _repertoire()
 	loaded.storage_dir = folder
@@ -869,15 +864,15 @@ func test_editor_right_click_refreshes_tree_and_board():
 	editor.present(repertoire, "Study", 0)
 	editor.size = Vector2i(760, 520)
 	await Engine.get_main_loop().process_frame
-	var tree: Tree = editor.tree
-	var e5 = _find_move(tree.get_root(), PackedStringArray(["e2e4", "e7e5"]))
-	var point: Vector2 = tree.global_position + Vector2(100, tree.get_item_area_rect(e5).get_center().y)
+	var tree = editor.find_child("Tree", true, false)
+	var e5 = _find_move(tree, PackedStringArray(["e2e4", "e7e5"]))
+	var point: Vector2 = e5.global_position + e5.size / 2
 	_editor_mouse(editor, point, MOUSE_BUTTON_RIGHT, true)
 	_editor_mouse(editor, point, MOUSE_BUTTON_RIGHT, false)
 	await Engine.get_main_loop().process_frame
 	# The deletion refreshes the tree deferred, which can land after the frame the click arrived in.
 	await Engine.get_main_loop().process_frame
-	assert_true(_find_move(tree.get_root(), PackedStringArray(["e2e4", "e7e5"])) == null, "deleted subtree disappears")
+	assert_true(_find_move(tree, PackedStringArray(["e2e4", "e7e5"])) == null, "deleted subtree disappears")
 	assert_eq(editor.board.game.board.position_key(), editor._node().position, "board returns to parent")
 	assert_eq(editor.path, PackedStringArray(["e2e4"]))
 	editor.free()
