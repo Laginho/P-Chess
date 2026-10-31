@@ -19,6 +19,26 @@ func test_repertoire_picker_identifies_name_and_colour_fields():
 	picker.free()
 
 
+func test_repertoire_picker_uses_the_available_height():
+	var root: Window = Engine.get_main_loop().root
+	var old_embed := root.gui_embed_subwindows
+	var old_size := root.size
+	root.gui_embed_subwindows = true
+	root.size = Vector2i(1280, 800)
+	var picker = load("res://ui/opening_picker.tscn").instantiate()
+	picker.book = _sample()
+	root.add_child(picker)
+	picker.present_repertoire(load("res://bot/repertoire.gd").new())
+	assert_eq(picker.size, Vector2i(640, 700))
+	picker.hide()
+	root.size = Vector2i(800, 600)
+	picker.present_repertoire(load("res://bot/repertoire.gd").new())
+	assert_eq(picker.size, Vector2i(640, 560))
+	picker.free()
+	root.gui_embed_subwindows = old_embed
+	root.size = old_size
+
+
 func test_opening_tree_uses_visible_checkboxes():
 	var picker = load("res://ui/opening_picker.tscn").instantiate()
 	picker.book = _sample()
