@@ -293,7 +293,7 @@ func test_batch_status_advances_and_appears_after_restoring_queue():
 	assert_eq(status.text, "Analysing 2 of 3 · Background", "status advances after a game finishes")
 	runner.finished.emit(false, "Stockfish crashed")
 	assert_eq(status.text, "Analysis failed: Stockfish crashed · Analyze all to retry", "a failure says why the batch stopped")
-	screen.get_node("Margin/Content/BatchActions").get_child(1).pressed.emit()
+	screen.get_node("Margin/Content/BatchActions/AnalyzeAll").pressed.emit()
 	assert_eq(status.text, "Analysing 2 of 3 · Background", "Analyze all retries the failed game")
 	screen.free()
 	queue.free()

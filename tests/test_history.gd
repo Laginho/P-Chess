@@ -155,7 +155,7 @@ func test_confirm_delete_cancels_active_analysis_before_its_final_reply():
 	assert_true(not FileAccess.file_exists(output), "the final reply cannot recreate deleted analysis")
 	fixture.queue._process(1.1)
 	assert_true(not FileAccess.file_exists(output), "no orphan survives the missing-file scan")
-	fixture.screen.get_node("Margin/Content/BatchActions").get_child(0).pressed.emit()
+	fixture.screen.get_node("Margin/Content/BatchActions/AnalyzeSelected").pressed.emit()
 	_assert_pending_history(fixture, [])
 	_clean_queued_history(fixture)
 
