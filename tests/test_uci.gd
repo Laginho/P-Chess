@@ -68,7 +68,8 @@ func test_engine_lookup_takes_the_first_folder_holding_lc0():
 	FileAccess.open(exe, FileAccess.WRITE).close()
 	assert_eq(UCI.engine_path(PackedStringArray([empty, full])), exe, "found in the second folder")
 	assert_eq(UCI.engine_path(PackedStringArray([empty])), "", "missing")
-	DirAccess.remove_absolute(exe)
+	for path in [exe, full.path_join("engine/lc0"), full.path_join("engine"), full, root]:
+		DirAccess.remove_absolute(path)
 
 
 func test_missing_engine_reports_unavailable_naming_the_fetch_script():

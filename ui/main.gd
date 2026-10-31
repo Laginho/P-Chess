@@ -165,8 +165,7 @@ func _ready() -> void:
 	$Layout/BoardView/ResizeGrip.size_requested.connect(_resize_board)
 	_fit_board()
 	if analysis_queue == null:
-		# Beside the history, so a test's isolated root never touches the player's queue.
-		analysis_queue = AnalysisQueue.new(null, history._root.path_join("analysis_queue.cfg"))
+		analysis_queue = AnalysisQueue.new(null, history.queue_file())
 	analysis_queue.maximum = preferences.get_value("analysis_threads") == "Max"
 	add_child(analysis_queue)
 	review.analysis_queue = analysis_queue
