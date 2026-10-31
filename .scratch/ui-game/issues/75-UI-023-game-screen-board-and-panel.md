@@ -1,5 +1,5 @@
 # UI-023: Game screen: board and side panel to the design
-Stage: to-review
+Stage: to-implement
 Blocked by: UI-021
 Review: human
 Difficulty: hard
@@ -57,3 +57,41 @@ Restyle the game screen to `docs/design/v0.1.0/png/Game.png`, `GameSidePanel.png
 - Acceptance: pending | Manual play, drag/premove, draw offer, Esc, finish, grip, F11 and Ctrl+, remain for human verification.
 - Disclosure: pending | release | UI-023 manual play and visual acceptance remain pending; screenshot fixtures do not exercise physical input or Lc0.
 Gate evidence: C:\Users\bruno\AppData\Local\Temp\pchess-ui023-gate-final.json
+
+#### Resolution (2026-10-31)
+Verdict: Reopen — criterion 6: preserve manual move-list scrolling and clear the saved draw notice between games.
+
+- Reviewed the complete 16-file diff `06cd54a6271fe3bcf12cc5e888d4633d8eed8ada...4a07735e7ddfec563bb2d066c2ba01f0a3e95c66` and all 13 ticket commits. Standards and Spec were independently reviewed in parallel. Standards: no documented violations or blocking smells; all commits separate tests from production. The two additional test files only update assertions of replaced behavior, as stage 2 permits.
+- Callers and interactions examined: both `GameOver.present` call sites, game-over Close/Review/Rematch/New game, all users of the removed controls/material helper, the game-only move list, shared boards in review/editor/history, clock start/stop, player colour/flip/rematch score, Settings shortcut and modal guards, F11 and notice lifetime, board-fit/resize, and the four screenshot fixtures. Failure paths examined include ending/restarting while in focus and adding a move while reading older moves. Physical input, sound, actual Lc0 play and clean-machine acceptance were not exercised in this review.
+
+**Standards:** 0 blocking findings. Existing red/green logs were inspected for controls (3 failures to 0), board colours (1 to 0), confirmation (5 to 0), focus after flip (2 to 0) and the draw-label mutant (1 to 0). Logs are `C:/Users/bruno/AppData/Local/Temp/ui023-{red,green,board-red,board-green,resign-red,resign-green,flip-red,flip-green,draw-mutant,draw-green}.log`.
+
+**Spec:** 2 P2 regressions, both owned by this reopened ticket:
+
+1. **P2 — `ui/move_list.gd:22`: new moves discard the user's reading position.** In a long game, scroll to the first moves, then add the next move. `_render()` calls `clear()` and rebuilds the table, resetting the manual pause in `scroll_following`; the list jumps to the latest move. With 100 plies at 800x600, the same production-widget probe kept scroll `0` on the base but jumped from `0` to `1513` on the reviewed HEAD (`max=1785`, `page=272`). Preserve the scroll/follow state through the rebuild. Stage 2 should add a regression test for adding a move while scrolled up and retain following when already at the bottom.
+2. **P2 — `ui/main.gd:543`: an old draw notice returns indefinitely in the next game.** Show "Maia declined", enter F11 focus, finish the game and start a rematch before the notice expires, then leave focus. `_start()` hides the notice and stops its timer (`:376-377`) without clearing `_notice_before_focus`; `_set_focus(false)` restores the previous game's notice with no timer left to hide it. The base probe reports `notice_visible=false`; HEAD reports `notice_visible=true`, `timer_stopped=true` in the new game. Reset the saved notice state with the per-game notice reset and cover focus/rematch/unfocus in `tests/test_session.gd`.
+
+Numbered criteria: **1 ✅** board colours/coordinates and grip implemented; **2 ✅** panel/player/action structure and running-clock styling implemented; **3 ✅** red confirmation/bar and notices implemented, with the cross-game notice regression above still open; **4 ✅** removed controls/material code and spec changes agree; **5 ✅** focus hides details and remains so after flip; **6 ❌** shared acceptance 3 forbids the two behavioral regressions above. Visual acceptance remains conditional on the already recorded differences and CLEAN-012, rather than being claimed complete.
+
+The graphical before/after probe is `C:/Users/bruno/AppData/Local/Temp/pchess-ui023-stage3/probe.gd`; results are in `before-probe/probe.log` and `after-probe/probe.log` under that directory. The after image `after-probe/rematch-notice-800.png` shows the stale notice in a fresh black-side rematch. The 800x600 confirmation hypothesis was disproved: the board occupies x=10..450 and the panel x=490..790; the full red button remains visible without clipping. Its image is `after-probe/confirm-800.png`.
+
+Stage-3 1280x800 captures from the exact base and reviewed HEAD, beside their references:
+
+| Board | Reference | Before | After |
+|---|---|---|---|
+| Game | [reference](../../../docs/design/v0.1.0/png/Game.png) | [before](C:/Users/bruno/AppData/Local/Temp/pchess-ui023-stage3/Game-before.png) | [after](C:/Users/bruno/AppData/Local/Temp/pchess-ui023-stage3/Game-after.png) |
+| GameSidePanel | [reference](../../../docs/design/v0.1.0/png/GameSidePanel.png) | [before](C:/Users/bruno/AppData/Local/Temp/pchess-ui023-stage3/GameSidePanel-before.png) | [after](C:/Users/bruno/AppData/Local/Temp/pchess-ui023-stage3/GameSidePanel-after.png) |
+| GamePanelStates | [reference](../../../docs/design/v0.1.0/png/GamePanelStates.png) | [before](C:/Users/bruno/AppData/Local/Temp/pchess-ui023-stage3/GamePanelStates-before.png) | [after](C:/Users/bruno/AppData/Local/Temp/pchess-ui023-stage3/GamePanelStates-after.png) |
+| Board | [reference](../../../docs/design/v0.1.0/png/Board.png) | [before](C:/Users/bruno/AppData/Local/Temp/pchess-ui023-stage3/Board-before.png) | [after](C:/Users/bruno/AppData/Local/Temp/pchess-ui023-stage3/Board-after.png) |
+
+The component fixtures capture the whole game screen; compare their board/panel regions with the component references. Stage 2's four `*-800.png` and `declined.png` in `C:/Users/bruno/AppData/Local/Temp/pchess-ui023-work/` were also visually inspected. Sample positions/names/times/scores differ intentionally. The previously listed panel inset and shared font-weight differences remain visible; the screenshot evidence does not replace manual acceptance.
+
+Both existing proxy decisions were examined and remain within their approved scope: `Proxy decided (opus-5.5 xhigh): Yes. Add ui/game_over.gd and scripts/screens.gd to Primary files` (receipt `C:/Users/bruno/AppData/Local/Temp/sweatshop-proxy/20261031-181943-UI-023-022105.json`) and `Proxy decided (opus-5.5 xhigh): Yes, widen the scripts/screens.gd scope for the four UI-023 boards` (receipt `C:/Users/bruno/AppData/Local/Temp/sweatshop-proxy/20261031-182516-UI-023-7773a8.json`). These identify the existing records above, not new proxy decisions.
+
+The existing gate receipt was validated against HEAD, including the log hash, exit status and identical non-tracker tree: tested `6948bd69f4d83b62b53605fdbfc743d271639158`, 418 printed passed, 0 failed, exit 0; 411 executed and 7 skips (6 Lc0, 1 graphical pixel test). No code changed in this review, so the gate was not rerun. No merge or ledger entry: stage 2 resumes the two findings on this branch.
+
+Acceptance: pending | Both P2 fixes, final visual acceptance and the existing manual play/input checks remain open.
+Disclosure: pending | integration | The two P2 regressions above must be fixed before integrating UI-023.
+Disclosure: pending | integration | [CLEAN-012](../../ui-base/issues/74-CLEAN-012-font-variation-axes.md) already requires corrected shared font weights before visual acceptance/integration of the screen redesigns; this existing condition remains in force.
+Disclosure: pending | release | The existing manual drag/premove, draw, Esc, finish, grip, F11, Ctrl+, and actual Lc0 acceptance remain pending.
+Disclosure: decision | none | The two existing proxy receipts above authorize only the GameOver wiring and four game-screen fixtures; no further contract change was made in review.
