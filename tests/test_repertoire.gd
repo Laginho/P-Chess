@@ -67,6 +67,39 @@ func test_editor_places_its_controls_in_a_card():
 	editor.free()
 
 
+func _find_move(item: TreeItem, moves: PackedStringArray) -> TreeItem:
+	if item == null:
+		return null
+	var data = item.get_metadata(0)
+	if data is Dictionary and data.get("path", PackedStringArray()) == moves:
+		return item
+	var child := item.get_first_child()
+	while child != null:
+		var found := _find_move(child, moves)
+		if found != null:
+			return found
+		child = child.get_next()
+	return null
+
+
+func test_editor_keeps_a_linear_line_at_one_indentation():
+	var repertoire = _repertoire()
+	var folder := _folder()
+	repertoire.storage_dir = folder
+	assert_eq(repertoire.import_pgn("1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 *", "w", "Study"), "")
+	var editor = load("res://ui/repertoire_editor.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(editor)
+	editor.present(repertoire, "Study", 0)
+	var tree: Tree = editor.tree
+	var first := _find_move(tree.get_root(), PackedStringArray(["e2e4"]))
+	var last := _find_move(tree.get_root(), PackedStringArray(["e2e4", "e7e5", "g1f3", "b8c6", "f1b5", "a7a6"]))
+	assert_true(first != null and last != null, "every move remains selectable")
+	if first != null and last != null:
+		assert_eq(first.get_parent(), last.get_parent(), "only branches increase indentation")
+	editor.free()
+	_clean(folder)
+
+
 func test_viewer_displays_opening_name_and_moves_on_separate_lines():
 	var setup = load("res://ui/setup.tscn").instantiate()
 	var folder := _folder()
@@ -579,7 +612,7 @@ func test_editor_opens_from_screen_branches_and_cancel_discards():
 		button.pressed.emit()
 		var editor = screen.get_node("RepertoireEditor")
 		var tree: Tree = editor.find_child("Tree", true, false)
-		var first = tree.get_root().get_first_child().get_first_child()
+		var first = _find_move(tree.get_root(), PackedStringArray(["e2e4"]))
 		first.select(0)
 		tree.item_selected.emit()
 		assert_true(editor.get_node("Margin/Form/Content/Board").play("c7c5"))
@@ -597,12 +630,12 @@ func test_editor_saves_a_branch_and_deletes_a_subtree():
 	Engine.get_main_loop().root.add_child(editor)
 	editor.present(repertoire, "Study")
 	var tree: Tree = editor.find_child("Tree", true, false)
-	var e4 = tree.get_root().get_first_child().get_first_child()
+	var e4 = _find_move(tree.get_root(), PackedStringArray(["e2e4"]))
 	e4.select(0)
 	tree.item_selected.emit()
 	assert_true(editor.get_node("Margin/Form/Content/Board").play("c7c5"))
 	await Engine.get_main_loop().process_frame
-	var e5 = tree.get_root().get_first_child().get_first_child().get_first_child()
+	var e5 = _find_move(tree.get_root(), PackedStringArray(["e2e4", "e7e5"]))
 	var point: Vector2 = tree.get_item_area_rect(e5).get_center()
 	tree.item_mouse_selected.emit(point, MOUSE_BUTTON_RIGHT)
 	editor.save()
@@ -803,14 +836,14 @@ func test_editor_right_click_refreshes_tree_and_board():
 	editor.size = Vector2i(760, 520)
 	await Engine.get_main_loop().process_frame
 	var tree: Tree = editor.tree
-	var e5 = tree.get_root().get_first_child().get_first_child().get_first_child()
+	var e5 = _find_move(tree.get_root(), PackedStringArray(["e2e4", "e7e5"]))
 	var point: Vector2 = tree.global_position + Vector2(100, tree.get_item_area_rect(e5).get_center().y)
 	_editor_mouse(editor, point, MOUSE_BUTTON_RIGHT, true)
 	_editor_mouse(editor, point, MOUSE_BUTTON_RIGHT, false)
 	await Engine.get_main_loop().process_frame
 	# The deletion refreshes the tree deferred, which can land after the frame the click arrived in.
 	await Engine.get_main_loop().process_frame
-	assert_eq(tree.get_root().get_first_child().get_first_child().get_child_count(), 0, "deleted subtree disappears")
+	assert_true(_find_move(tree.get_root(), PackedStringArray(["e2e4", "e7e5"])) == null, "deleted subtree disappears")
 	assert_eq(editor.board.game.board.position_key(), editor._node().position, "board returns to parent")
 	assert_eq(editor.path, PackedStringArray(["e2e4"]))
 	editor.free()
