@@ -39,15 +39,40 @@ func _ready() -> void:
 	_check("check_repertoire", "Check my moves against my repertoire")
 	_choice("history_tab", "History default tab", Settings.CHOICES.history_tab)
 	_choice("analysis_threads", "Batch analysis threads", Settings.CHOICES.analysis_threads)
+	var first: Control = _form.get_child(1)
+	var close: Control = $Panel/Center/Box/Close
+	first.focus_previous = first.get_path_to(close)
+	close.focus_next = close.get_path_to(first)
+	_panel.visibility_changed.connect(_focus_panel)
 	store.changed.connect(_follow)
+
+
+func _focus_panel() -> void:
+	if _panel.visible:
+		_form.get_child(1).grab_focus()
+	else:
+		var focused := get_viewport().gui_get_focus_owner()
+		if focused:
+			focused.release_focus()
+
+
+func _input(event: InputEvent) -> void:
+	if _panel.visible and event is InputEventKey and event.is_pressed() and not event.is_echo() and (event.keycode == KEY_ESCAPE or (event.ctrl_pressed and event.keycode == KEY_COMMA)):
+		_panel.hide()
+		get_viewport().set_input_as_handled()
+
+
+func _popup_input(event: InputEvent, popup: PopupMenu) -> void:
+	if event is InputEventKey and event.is_pressed() and not event.is_echo() and (event.keycode == KEY_ESCAPE or (event.ctrl_pressed and event.keycode == KEY_COMMA)):
+		popup.hide()
+		_panel.hide()
+		popup.set_input_as_handled()
 
 
 # While open, the screen keeps keys from the game: Esc closes it instead of resigning.
 func _unhandled_key_input(event: InputEvent) -> void:
 	if not _panel.visible:
 		return
-	if event.is_pressed() and event.keycode == KEY_ESCAPE:
-		_panel.hide()
 	get_viewport().set_input_as_handled()
 
 
@@ -87,6 +112,7 @@ func _choice(key: String, label: String, items: Array) -> void:
 		button.add_item(item)
 	button.selected = items.find(current)
 	button.item_selected.connect(func(index: int) -> void: store.set_value(key, button.get_item_text(index)))
+	button.get_popup().window_input.connect(_popup_input.bind(button.get_popup()))
 	_row(label, button)
 
 
