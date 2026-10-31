@@ -1,5 +1,5 @@
 # REV-005: The new review screen: board, eval bar and classified moves
-Stage: to-implement
+Stage: implementing
 Blocked by: REV-002, REV-003
 Review: human
 Difficulty: hard
