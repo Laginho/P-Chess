@@ -232,6 +232,19 @@ func test_game_over_copies_the_same_pgn_as_review():
 	main.free()
 
 
+func test_game_over_long_player_name_is_visibly_truncated():
+	var main = await _session(ManualWaits.new())
+	var player_name := "Alexandria Catherine Montgomery de Albuquerque"
+	main.preferences.set_value("player_name", player_name)
+	main.board_view.game.resign("b")
+	main._show_result()
+	var label: Label = main.board_view.get_node("GameOver/Panel/Content/HumanName")
+	assert_eq(label.text, player_name, "card retains the full name")
+	assert_eq(main.preferences.get_value("player_name"), player_name, "saved name stays intact")
+	assert_eq(label.text_overrun_behavior, TextServer.OVERRUN_TRIM_ELLIPSIS, "long names show an ellipsis")
+	main.free()
+
+
 func test_game_over_space_activates_the_focused_button():
 	var main = await _session(ManualWaits.new())
 	main.board_view.game.resign("b")
