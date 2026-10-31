@@ -199,14 +199,17 @@ func _ready() -> void:
 		rows.add_child(row)
 	var class_help: Button = $Margin/Content/ReviewBody/Side/ClassHelp
 	class_help.pressed.connect(func():
-		var popup_size := Vector2i(480, 540)
+		legend.popup(Rect2i(Vector2i.ZERO, Vector2i(480, 540)))
+		await get_tree().process_frame
+		if not legend.visible:
+			return
 		var bounds := Vector2i(get_viewport_rect().size)
 		var anchor := Vector2i(class_help.global_position)
-		var origin := Vector2i(clampi(anchor.x - popup_size.x - 8, 0, maxi(0, bounds.x - popup_size.x)),
-				clampi(anchor.y - 60, 0, maxi(0, bounds.y - popup_size.y)))
+		var origin := Vector2i(clampi(anchor.x - legend.size.x - 8, 0, maxi(0, bounds.x - legend.size.x)),
+				clampi(anchor.y - 60, 0, maxi(0, bounds.y - legend.size.y)))
 		if not get_window().gui_embed_subwindows:
 			origin += get_window().position
-		legend.popup(Rect2i(origin, popup_size))
+		legend.position = origin
 		close.grab_focus())
 	var toggle: Button = $Margin/Content/ReviewBody/Side/ClassToggle
 	toggle.pressed.connect(func():
