@@ -125,8 +125,9 @@ func _select_repertoire(index: int) -> void:
 
 func _show_names() -> void:
 	_line_list.clear()
-	for line in _lines:
-		var label: String = " ".join(line.moves)
+	for i in _lines.size():
+		var line: Dictionary = _lines[i]
+		var label := "Line %d" % (i + 1)
 		for entry in _picker.book.entries:
 			if entry.moves == line.moves and entry.positions[0] == line.positions[0]:
 				label = entry.name
