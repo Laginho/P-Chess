@@ -188,7 +188,7 @@ func test_game_over_panel_actions():
 		var panel = main.board_view.get_node_or_null("GameOver")
 		assert_true(panel != null and panel.visible, "game-over panel appears")
 		if panel:
-			assert_eq(panel.get_node("Panel/Content/Headline").text, "Black won")
+			assert_eq(panel.get_node("Panel/Content/Headline").text, "You lost")
 			assert_eq(panel.get_node("Panel/Content/Reason").text, "by resignation")
 			if action == "Escape":
 				var event := InputEventKey.new()
@@ -209,6 +209,62 @@ func test_game_over_panel_actions():
 					assert_true(not panel.visible, "the final board remains visible")
 					assert_true(main.get_node_or_null("Layout/Side/ReviewButton") == null, "side Review is removed")
 		main.free()
+
+
+func test_game_over_copies_the_same_pgn_as_review():
+	var main = await _session(ManualWaits.new())
+	assert_true(main.board_view.play("e2e4"))
+	main.board_view.game.resign("b")
+	main._show_result()
+	var panel = main.board_view.get_node("GameOver")
+	assert_eq(panel.get_node("Panel/Content/Review").text, "Review")
+	var copied := [""]
+	main.review.copy_text = func(text): copied[0] = text
+	var copy = panel.get_node_or_null("Panel/Content/CopyPgn")
+	assert_true(copy != null, "Copy PGN exists on the card")
+	if copy:
+		copy.pressed.emit()
+		assert_true('[Result "1-0"]' in copied[0] and "1. e4" in copied[0], "copies the finished game")
+		var from_card: String = copied[0]
+		copied[0] = ""
+		main.review.get_node("Margin/Content/Actions/CopyPgn").pressed.emit()
+		assert_eq(copied[0], from_card, "card and review copy the same PGN")
+	main.free()
+
+
+func test_game_over_long_player_name_is_visibly_truncated():
+	var main = await _session(ManualWaits.new())
+	var player_name := "Alexandria Catherine Montgomery de Albuquerque"
+	main.preferences.set_value("player_name", player_name)
+	main.board_view.game.resign("b")
+	main._show_result()
+	var label: Label = main.board_view.get_node("GameOver/Panel/Content/HumanName")
+	assert_eq(label.text, player_name, "card retains the full name")
+	assert_eq(main.preferences.get_value("player_name"), player_name, "saved name stays intact")
+	assert_eq(label.text_overrun_behavior, TextServer.OVERRUN_TRIM_ELLIPSIS, "long names show an ellipsis")
+	main.free()
+
+
+func test_game_over_space_activates_the_focused_button():
+	var main = await _session(ManualWaits.new())
+	main.board_view.game.resign("b")
+	main._show_result()
+	var panel = main.board_view.get_node("GameOver")
+	var close = panel.get_node("Panel/Content/Close")
+	close.grab_focus()
+	assert_true(close.has_focus(), "Close receives keyboard focus")
+	var event := InputEventKey.new()
+	event.keycode = KEY_SPACE
+	event.pressed = true
+	main.get_viewport().push_input(event)
+	event = InputEventKey.new()
+	event.keycode = KEY_SPACE
+	event.pressed = false
+	main.get_viewport().push_input(event)
+	await Engine.get_main_loop().process_frame
+	assert_true(not panel.visible, "Space activates Close")
+	assert_true(not main._starting, "Space does not start a rematch")
+	main.free()
 
 
 func _resign_and_rematch(main) -> void:
@@ -532,7 +588,7 @@ func test_match_score_follows_players_and_resets():
 	var score = main.board_view.get_node_or_null("GameOver/Panel/Content/Score")
 	assert_true(score != null, "game-over score exists")
 	if score:
-		assert_eq(score.text, "You 1 – 0 Maia 1700")
+		assert_eq(score.text, "1 – 0")
 	_key(main, KEY_SPACE)
 	await _wait_start(main)
 	assert_true(white.visible and black.visible, "rematch shows boxes")
@@ -541,7 +597,7 @@ func test_match_score_follows_players_and_resets():
 	main.board_view.game.agree_draw()
 	main._show_result()
 	score = main.board_view.get_node("GameOver/Panel/Content/Score")
-	assert_eq(score.text, "You 1½ – ½ Maia 1700")
+	assert_eq(score.text, "1½ – ½")
 	assert_eq(black.text, "1½", "finished rematch updates human score")
 	assert_eq(white.text, "½", "finished rematch updates Maia score")
 	main.board_view.get_node("GameOver/Panel/Content/Close").pressed.emit()
