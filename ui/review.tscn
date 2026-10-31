@@ -221,7 +221,9 @@ layout_mode = 2
 
 [node name="Actions" type="HFlowContainer" parent="Margin/Content"]
 layout_mode = 2
-theme_override_constants/separation = 12
+theme_override_constants/h_separation = 4
+theme_override_constants/v_separation = 4
+theme_override_font_sizes/font_size = 10
 
 [node name="CopyPgn" type="Button" parent="Margin/Content/Actions"]
 layout_mode = 2
@@ -236,7 +238,8 @@ text = "Open in Lichess"
 [node name="Rematch" type="Button" parent="Margin/Content/Actions"]
 layout_mode = 2
 size_flags_horizontal = 3
-text = "Rematch (Space)"
+text = "Rematch"
+tooltip_text = "Rematch (Space)"
 
 [node name="Setup" type="Button" parent="Margin/Content/Actions"]
 layout_mode = 2

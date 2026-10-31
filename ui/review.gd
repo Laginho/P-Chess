@@ -256,6 +256,9 @@ func _layout_review() -> void:
 
 func _resize_classes() -> void:
 	var compact := size.x <= 800
+	var side: Control = $Margin/Content/ReviewBody/Side
+	side.custom_minimum_size.x = 190 if compact else 220
+	side.size_flags_stretch_ratio = 0.4 if compact else 0.72
 	$Margin/Content/ReviewBody/Side/Summary/AccuracyCards.columns = 2 if compact else 4
 	$Margin/Content/ReviewBody/Side/Summary.custom_minimum_size.y = 88 if compact else 44
 	var unanalysed: bool = $Margin/Content/ReviewBody/Side/UnanalysedNotice.visible
