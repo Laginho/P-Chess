@@ -1,5 +1,5 @@
 # UI-018: Your name, and the HumanColor header
-Stage: implementing
+Stage: to-review
 Blocked by: HIST-005, UI-016
 Review: agent
 Difficulty: normal
@@ -59,7 +59,7 @@ The player has a name (§15.8). It is asked once, written into new games, and sh
 - Regression proof: after fixture correction `502dc2b`, two rematch scenarios remained red because identity had entered the choices dictionary. `6cf6c50` restored that contract; all 13 focused interaction scenarios passed. External focused logs: `C:/Users/bruno/AppData/Local/Temp/ui018-settings-{red,green}.log`, `ui018-pgn-{red,green}.log`, `ui018-history-{red,green}.log`, `ui018-ui-{red,green}.log`, `ui018-rematch-red.log`, `ui018-interaction-green.log` in the same directory.
 - Final gate: `godot --headless -s tests/run.gd`, tested commit `6cf6c508bd05aa74bbffdb7891bff61dd4f55d96`; **395 passed, 0 failed**, exit 0. Log: `C:/Users/bruno/AppData/Local/Temp/UI-018-gate-final.log`. Scene checks exercise the real dialog, History and review in headless mode; they do not establish rendered layout or physical input acceptance.
 
-Gate evidence: C:/Users/bruno/AppData/Local/Temp/UI-018-gate-final.json
+Gate evidence: C:/Users/bruno/AppData/Local/Temp/UI-018-round2-gate.json
 Acceptance: pending | Rendered first-launch/restart check with isolated settings, keyboard/mouse confirmation and blank-name rejection, then a played game showing the chosen name in History and review; automated evidence is recorded in Resolution above.
 Disclosure: pending | release | .scratch/v010/issues/64-UI-018-your-name-and-humancolor.md#resolution--stage-2-2026-10-31 — rendered first-launch and physical-input product acceptance remain pending; the headless gate passed.
 
@@ -75,3 +75,12 @@ Verdict: Reopen — criterion 1 fails because the name field overlaps the first-
 - Disposition: reopen on `UI-018`; no merge, ledger entry, PR or push. Stage 2 must repair only the ❌ item and provide fresh gate evidence after the code change; stage 3 must review that repair independently.
 
 Disclosure: pending | integration | .scratch/v010/issues/64-UI-018-your-name-and-humancolor.md#resolution-2026-10-31--stage-3-round-1 — criterion 1's overlapping first-launch prompt must be repaired and independently reviewed before session integration.
+
+#### Resolution (2026-10-31) — stage 2, round 2
+
+- Repaired only round 1's criterion-1 finding: the question and name field now occupy separate rows in a `VBoxContainer`, with the built-in dialog message cleared. Updated the script's input paths; confirmation, focus, selection and persistence behavior are retained. `Main` is the only production caller of `present`; no caller changes are needed.
+- Test-only commit `e4e282f` adds a real-scene geometry regression in `tests/test_settings.gd`: after layout, the visible question has area, does not intersect the field and sits above it. The existing confirmation test locates the field recursively so it works before and after the container change. Red proof against unchanged production: **13 passed, 1 failed**, exit 1, specifically the overlap and vertical-order assertions. Log: `C:/Users/bruno/AppData/Local/Temp/ui018-round2-layout-red.log`.
+- Production-only commit `a0763c3` repairs the scene and script. The same focused settings suite is green: **14 passed, 0 failed**, exit 0. Log: `C:/Users/bruno/AppData/Local/Temp/ui018-round2-layout-green.log`.
+- Full gate ran once after the production commit: `godot --headless -s tests/run.gd`, tested commit `a0763c386bd3151e06e298dfa5a9d8e2a4d6b276`; **396 passed, 0 failed**, exit 0. Log: `C:/Users/bruno/AppData/Local/Temp/UI-018-round2-gate.log`; receipt is the `Gate evidence` line above. The headless geometry and interaction checks do not establish rendered layout, physical input or played-game acceptance.
+- Gate log inspection: 396 `PASS` entries, no `FAIL`, `SKIP` or error entries; 29 warnings from the premove geometry probe, invalid-theme fixtures and malformed time-model fixtures. No name-dialog warnings were reported.
+- Handoff: `to-review` on `UI-018`; independent stage-3 review of the repair is still required before integration. The existing release disclosure and pending product acceptance remain in force.
