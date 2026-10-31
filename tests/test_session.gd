@@ -972,6 +972,6 @@ func test_game_panel_identifies_players_and_actions():
 	if maia_name and player_name:
 		assert_eq(maia_name.text, "Maia")
 		assert_eq(player_name.text, "You")
-	assert_eq(main.draw_button.text, "?  Offer draw")
+	assert_eq(main.draw_button.text, String.chr(189) + "  Offer draw")
 	assert_eq(main.resign_button.text, "Resign")
 	main.free()
