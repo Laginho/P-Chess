@@ -95,7 +95,9 @@ func test_search_forwards_all_info_and_bestmove_to_the_request_callback():
 	uci.available = true
 	var child := _idle_child()
 	uci.pid = child.pid
-	uci._stdio = FileAccess.open("user://rev001-commands.txt", FileAccess.WRITE)
+	# Unique per run, so two gates sharing user:// cannot clobber each other's files.
+	var commands := "user://rev001-commands_%d.txt" % Time.get_ticks_usec()
+	uci._stdio = FileAccess.open(commands, FileAccess.WRITE)
 	var received := []
 	uci.request_search(["position startpos", "go depth 2"], func(line): received.append(line))
 	uci._lines.append_array(["info depth 1 multipv 1 score cp 20", "info depth 2 multipv 2 score cp 10", "bestmove e2e4"])
@@ -103,6 +105,7 @@ func test_search_forwards_all_info_and_bestmove_to_the_request_callback():
 	uci.poll()
 	assert_eq(received, ["info depth 1 multipv 1 score cp 20", "info depth 2 multipv 2 score cp 10", "bestmove e2e4"])
 	uci.free()
+	DirAccess.remove_absolute(commands)
 	child.stdio.close()
 	child.stderr.close()
 
@@ -112,7 +115,8 @@ func test_engine_id_and_in_search_stop_preserve_the_queue():
 	uci.available = true
 	var child := _idle_child()
 	uci.pid = child.pid
-	uci._stdio = FileAccess.open("user://rev002-commands.txt", FileAccess.WRITE_READ)
+	var commands := "user://rev002-commands_%d.txt" % Time.get_ticks_usec()
+	uci._stdio = FileAccess.open(commands, FileAccess.WRITE_READ)
 	uci._queue(["uci"], "uciok")
 	uci._lines.append_array(["id name Stockfish 19", "uciok"])
 	assert_true(OS.is_process_running(uci.pid), "idle child is running")
@@ -121,6 +125,7 @@ func test_engine_id_and_in_search_stop_preserve_the_queue():
 	if not uci.has_method("stop_search"):
 		assert_true(false, "stop_search is missing")
 		uci.free()
+		DirAccess.remove_absolute(commands)
 		child.stdio.close()
 		child.stderr.close()
 		return
@@ -136,6 +141,7 @@ func test_engine_id_and_in_search_stop_preserve_the_queue():
 	assert_eq(uci._stdio.get_as_text(), "uci\nposition startpos\ngo nodes 1\nstop\nposition startpos\ngo nodes 2\n")
 	assert_eq(received, ["bestmove e2e4"])
 	uci.free()
+	DirAccess.remove_absolute(commands)
 	child.stdio.close()
 	child.stderr.close()
 
@@ -143,12 +149,14 @@ func test_engine_id_and_in_search_stop_preserve_the_queue():
 func test_stockfish_does_not_send_maia_requests():
 	var uci = UCI.new("engine/stockfish/stockfish.exe", "Stockfish")
 	uci.available = true
-	uci._stdio = FileAccess.open("user://rev001-stockfish-commands.txt", FileAccess.WRITE)
+	var commands := "user://rev001-stockfish-commands_%d.txt" % Time.get_ticks_usec()
+	uci._stdio = FileAccess.open(commands, FileAccess.WRITE)
 	uci.set_level("weights.pb.gz")
 	uci.request_policy(START, PackedStringArray())
 	assert_eq(uci._stdio.get_position(), 0, "no Maia commands are sent")
 	assert_true(uci._steps.is_empty(), "no Maia commands are queued")
 	uci.free()
+	DirAccess.remove_absolute(commands)
 
 
 # Polls on this thread, as the game's _process does, until bestmove or a 30 s timeout.

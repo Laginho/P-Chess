@@ -30,7 +30,7 @@ func test_reverse_order_progress_persistence_and_staleness():
 	var landed := []
 	analyser.progress.connect(func(done, total): progress.append([done, total]))
 	analyser.position_ready.connect(func(index, position): landed.append([index, position.best_move]))
-	var path := "user://rev002-test.json"
+	var path := _path("rev002-test")
 	DirAccess.remove_absolute(path)
 	assert_true(analyser.analyse([START, AFTER], path, false))
 	assert_true("position fen " + AFTER in bridge.searches[0])
@@ -57,7 +57,7 @@ func test_reverse_order_progress_persistence_and_staleness():
 func test_invalid_fen_sends_nothing_and_cancellation_writes_nothing():
 	var bridge := FakeBridge.new()
 	var analyser = Analyser.new(bridge)
-	var path := "user://rev002-cancel.json"
+	var path := _path("rev002-cancel")
 	DirAccess.remove_absolute(path)
 	assert_true(not analyser.analyse([START, "invalid"], path, true))
 	assert_true(bridge.searches.is_empty())
@@ -74,7 +74,7 @@ func test_invalid_fen_sends_nothing_and_cancellation_writes_nothing():
 func test_recorded_stockfish_transcript_keeps_both_lines():
 	var bridge := FakeBridge.new()
 	var analyser = Analyser.new(bridge)
-	var path := "user://rev002-transcript.json"
+	var path := _path("rev002-transcript")
 	assert_true(analyser.analyse([START], path, false))
 	var lines := FileAccess.get_file_as_string("res://tests/fixtures/analysis/stockfish19-start.txt").split("\n", false)
 	for line in lines:
@@ -90,7 +90,7 @@ func test_recorded_stockfish_transcript_keeps_both_lines():
 func test_incomplete_depth_does_not_count_for_convergence():
 	var bridge := FakeBridge.new()
 	var analyser = Analyser.new(bridge)
-	assert_true(analyser.analyse([START], "user://rev002-depth.json", false))
+	assert_true(analyser.analyse([START], _path("rev002-depth"), false))
 	for depth in [10, 11, 12]:
 		bridge.callback.call("info depth %d multipv 1 score cp 30 pv e2e4" % depth)
 		if depth != 11:
@@ -104,7 +104,7 @@ func test_incomplete_depth_does_not_count_for_convergence():
 func test_cancelling_when_a_position_lands_does_not_stop_the_next_search():
 	var bridge := FakeBridge.new()
 	var analyser = Analyser.new(bridge)
-	var path := "user://rev002-cancel-landed.json"
+	var path := _path("rev002-cancel-landed")
 	DirAccess.remove_absolute(path)
 	analyser.position_ready.connect(func(_index, _position): analyser.cancel())
 	assert_true(analyser.analyse([START, AFTER], path, true))
@@ -119,7 +119,7 @@ func test_cancelling_when_a_position_lands_does_not_stop_the_next_search():
 func test_terminal_and_forced_positions_are_recorded():
 	var bridge := FakeBridge.new()
 	var analyser = Analyser.new(bridge)
-	var path := "user://rev002-terminal.json"
+	var path := _path("rev002-terminal")
 	DirAccess.remove_absolute(path)
 	var forced := "7k/8/6K1/8/8/8/8/7R b - - 0 1"
 	var mate := "7k/6Q1/6K1/8/8/8/8/8 b - - 0 1"
@@ -137,7 +137,7 @@ func test_terminal_and_forced_positions_are_recorded():
 func test_terminal_only_game_still_starts_one_engine_game():
 	var bridge := FakeBridge.new()
 	var analyser = Analyser.new(bridge)
-	var path := "user://rev002-terminal-only.json"
+	var path := _path("rev002-terminal-only")
 	assert_true(analyser.analyse(["7k/6Q1/6K1/8/8/8/8/8 b - - 0 1"], path, false))
 	assert_eq(bridge.new_games, 1)
 	assert_true(bridge.searches.is_empty())
@@ -148,7 +148,7 @@ func test_terminal_only_game_still_starts_one_engine_game():
 func test_drawn_game_has_terminal_zero_even_when_moves_remain():
 	var bridge := FakeBridge.new()
 	var analyser = Analyser.new(bridge)
-	var path := "user://rev002-draw.json"
+	var path := _path("rev002-draw")
 	assert_true(analyser.analyse([START], path, true, true))
 	assert_true(bridge.searches.is_empty())
 	var data: Dictionary = Analyser.read_analysis(path, "Stockfish 19", 3000000).data
@@ -161,7 +161,7 @@ func test_drawn_game_has_terminal_zero_even_when_moves_remain():
 func test_stop_waits_for_completed_multipv_depth_and_fires_once():
 	var bridge := FakeBridge.new()
 	var analyser = Analyser.new(bridge)
-	assert_true(analyser.analyse([START], "user://rev002-depth.json", false))
+	assert_true(analyser.analyse([START], _path("rev002-depth"), false))
 	for depth in [10, 11, 12]:
 		bridge.callback.call("info depth %d multipv 1 score cp 30 pv e2e4" % depth)
 		if depth == 12:
@@ -205,3 +205,8 @@ func test_convergence_requires_three_stable_completed_depths_at_depth_twelve():
 	changed = stable.duplicate(true)
 	changed[2].cp = 200
 	assert_true(not script.converged(changed), "expected points changed")
+
+
+# Unique per run, so two gates sharing user:// cannot clobber each other's files.
+func _path(name: String) -> String:
+	return "user://%s_%d.json" % [name, Time.get_ticks_usec()]
