@@ -1,5 +1,5 @@
 # UI-026: Review screen to the design
-Stage: to-implement
+Stage: blocked
 Blocked by: UI-021
 Review: human
 Difficulty: hard
@@ -38,3 +38,5 @@ Restyle the review to chess.com's layout as drawn in `docs/design/v0.1.0/png/Rev
 - 2026-10-31 Written from `.scratch/ui-redo/spec.md`. The canvas omits Rematch on the post-game review; the spec keeps it.
 
 - 2026-10-31 Attempt 1 failed: exit 0. Log tail: O UI-026 **ainda não está concluído**. Na branch local `UI-026-review-screen`, implementei partes da navegação, dos ícones de jogadas, da legenda e do recolhimento da tabela. O [ticket](C:/Users/bruno/Desktop/Pastinha/Programas/Projects/P-Chess/.artifacts-build/lanes/ui-review/.scratch/ui-review/issues/78-UI-026-review-screen.md) permanece em `Stage: implementing`. /  / Os testes focados de review passaram: **27 passaram, 0 falharam**. A captura gráfica mostrou que a tela ainda difere bastante da referência; falta concluir a composição visual e os demais critérios antes de encaminhá-la para revisão. /  / Não executei o gate completo nem a aceitação manual; a alteração ainda não está pronta para integração. /  /
+
+- 2026-10-31 Stage stopped (incomplete handoff): Stage left uncommitted work; saved for recovery. See C:\Users\bruno\Desktop\Pastinha\Programas\Projects\P-Chess\.artifacts-build\lanes\ui-review\.scratch\run-log\UI-026-implement-20261031-182333.txt.runtime.json and run-log/recovery.txt; inspect the saved work before retrying.
