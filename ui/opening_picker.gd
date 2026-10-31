@@ -131,6 +131,7 @@ func _rebuild() -> void:
 		var node: Dictionary = book.nodes[path]
 		var parent: TreeItem = root if node.parent.is_empty() else _items[node.parent]
 		var item := _tree.create_item(parent)
+		item.custom_minimum_height = 32
 		item.set_cell_mode(0, TreeItem.CELL_MODE_CHECK)
 		item.set_editable(0, true)
 		item.set_text(0, node.label)
