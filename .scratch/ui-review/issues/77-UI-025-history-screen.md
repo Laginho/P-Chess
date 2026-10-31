@@ -1,5 +1,5 @@
-﻿# UI-025: History screen to the design
-Stage: implementing
+# UI-025: History screen to the design
+Stage: to-review
 Blocked by: UI-021
 Review: agent
 Difficulty: normal
@@ -43,7 +43,7 @@ Acceptance: pending | Complete the two-selected-games check with a real Stockfis
 Disclosure: pending | integration | `C:/Users/bruno/AppData/Local/Temp/pchess-ui025-fixture.gd`: the required two-game analysis completion was not verified against a real Stockfish executable, absent in this worktree.
 Disclosure: pending | release | `.scratch/ui-redo/spec.md` requires Bruno's v0.1.0 QA before tagging.
 
-Gate evidence: C:/Users/bruno/AppData/Local/Temp/pchess-ui025-gate-2c2c710.json
+Gate evidence: C:/Users/bruno/AppData/Local/Temp/pchess-ui025-reopen-gate-9f798f6.json
 
 #### Resolution (2026-10-31)
 Verdict: Reopen — criterion 5 deletes the wrong game; criterion 6 fails the minimum-size error state and the required visual icon match.
@@ -90,4 +90,15 @@ Disclosure: pending | integration | This Resolution's P1: UI-025 must bind confi
 Disclosure: pending | integration | This Resolution's minimum-size P2: the stopped-engine state must preserve navigation and retry at 800x600 before integration.
 Disclosure: pending | integration | This Resolution's visual P2: restore the named reference icons/adornments or obtain an explicitly accepted visual deviation before integration.
 
-Returned to `Stage: implementing` on the preserved ticket branch. No merge, push or PR; the next stage 2 handles all findings together.
+Returned to `Stage: to-implement` on the preserved ticket branch. No merge, push or PR; the next stage 2 handles all findings together.
+
+#### Stage 2 rework (2026-10-31)
+
+- Criterion 5: opening a second confirmation closes the first; the confirmation also carries and checks its own game path. The regression exercises A → B, queue refresh, cancel, and confirming A; it failed before the fix and passes afterward. Red and green logs: `C:/Users/bruno/AppData/Local/Temp/pchess-ui025-delete-red.log` and `C:/Users/bruno/AppData/Local/Temp/pchess-ui025-delete-green.log`.
+- Criterion 6: the toolbar wraps a long engine error within 800×600, and the trend, queue clock/pill, warning and tab spacing follow the canvas. The layout test failed on all six control bounds and wrapping before the fix, then passed; the adornment checks failed on all three missing icons/states, then passed. Logs: `C:/Users/bruno/AppData/Local/Temp/pchess-ui025-layout-red.log`, `pchess-ui025-layout-green.log`, `pchess-ui025-visual-red.log` and `pchess-ui025-visual-green.log` in the same Temp directory. The layout test initially had untyped window variables that prevented parsing; commit `012e853` corrected the harness before the recorded red run.
+- Graphical fixture captures: [all states at 1280×800](C:/Users/bruno/AppData/Local/Temp/pchess-ui025-reopen-6da1b593-8bf2-4852-b99e-0daba394b78b/normal-1280.png) and [injected stopped-engine error at 800×600](C:/Users/bruno/AppData/Local/Temp/pchess-ui025-reopen-6da1b593-8bf2-4852-b99e-0daba394b78b/error-800.png). The error was injected, not a live engine crash. Stage 3 must independently review the fixes and compare the reference and captures.
+- Gate on `9f798f6ee9198e86bfa7f66629d9a6624cc09491`: 418 reported passed, including six Lc0-dependent SKIPs (412 executed), zero failed. Log: `C:/Users/bruno/AppData/Local/Temp/pchess-ui025-reopen-gate-9f798f6.log`.
+
+Acceptance: pending | Stage 3 review, two selected games completed with a real Stockfish installation, and Bruno's v0.1.0 QA.
+Disclosure: pending | integration | Real Stockfish completion of two selected games remains unverified; the earlier selection check used a fake runner.
+Disclosure: pending | release | Bruno's v0.1.0 QA remains required before tagging.
