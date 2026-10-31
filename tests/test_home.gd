@@ -42,9 +42,11 @@ func test_quick_play_uses_defaults():
 
 
 func test_custom_choices_survive_restart_and_new_game_returns_home():
-	var path := "user://test_home_last.cfg"
-	DirAccess.remove_absolute(path)
+	var folder := "user://test_home_last_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var path := folder.path_join("settings.cfg")
 	var main = MainScene.instantiate()
+	main.history = load("res://core/history.gd").new(folder)
 	main.get_node("Setup").book.load_tsv("eco\tname\tpgn\nA00\tFixture\t1. h3\n")
 	main.uci.free()
 	main.uci = Session.HeldBridge.new()
@@ -68,6 +70,7 @@ func test_custom_choices_survive_restart_and_new_game_returns_home():
 		assert_eq(home.get_node("Center/Form/Level").get_item_text(home.get_node("Center/Form/Level").selected), "Maia 1700", "selector follows custom game")
 	main.free()
 	var next = MainScene.instantiate()
+	next.history = load("res://core/history.gd").new(folder)
 	next.get_node("Setup").book.load_tsv("eco\tname\tpgn\nA00\tFixture\t1. h3\n")
 	next.uci.free()
 	next.uci = Session.HeldBridge.new()
@@ -82,7 +85,7 @@ func test_custom_choices_survive_restart_and_new_game_returns_home():
 		assert_eq(next.settings.get("opening"), "Free")
 		assert_eq(next.settings.get("control"), "1+0")
 	next.free()
-	DirAccess.remove_absolute(path)
+	Session.HistoryStorage.clean(folder)
 
 
 func test_missing_engine_disables_quick_play():
