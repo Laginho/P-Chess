@@ -1,5 +1,5 @@
 # HIST-006: The analysis queue
-Stage: to-review
+Stage: done
 Blocked by: REV-002, HIST-004
 Review: agent
 Difficulty: hard
@@ -77,8 +77,8 @@ Coverage: examined queue enqueue/priority/removal and success/cancel/start-failu
 
 Verification: validated the existing receipt `C:\Users\bruno\AppData\Local\Temp\hist006-final-gate.json`, its available tested commit `6f7d6f819b5b7fafd8a74366a3d43bef15c8e205`, unchanged non-tracker files, matching SHA256 and `ExitCode: 0`. Its log prints **365 passed, 0 failed**; the gate was reused, not rerun. Focused observational Godot 4.7 probes both exited 0 without script errors; their printed state demonstrates the two defects, rather than acceptance success. Probe/log pairs: `C:\Users\bruno\AppData\Local\Temp\hist006-stage3-review-probe.gd` / `.log` and `C:\Users\bruno\AppData\Local\Temp\hist006-stage3-base-cache-probe.gd` / `.log`. The latter loads the base Review script from an external temporary file. Each probe removed its isolated queue/cache/PGN fixtures.
 
-Disclosure: pending | integration | [Stage 3 review](#stage-3-review-2026-10-31): restore current-cache reuse for nonqueued post-game Review without undoing queued-game promotion.
-Disclosure: pending | integration | [Stage 3 review](#stage-3-review-2026-10-31): satisfy criterion 3's batch ordinal/total status, including presentation of a restored queue.
+Disclosure: decision | none | [Resolution](#resolution-2026-10-31): the current-cache regression is fixed and verified; queued-game promotion remains intact.
+Disclosure: decision | none | [Resolution](#resolution-2026-10-31): criterion 3's batch ordinal/total status is fixed and verified, including presentation of a restored queue.
 
 
 #### Stage 2 reopen handoff (2026-10-31)
@@ -86,3 +86,25 @@ Disclosure: pending | integration | [Stage 3 review](#stage-3-review-2026-10-31)
 - Post-game Review reuses a current saved analysis when the game is not queued; queued Review and explicit History Analyze still prioritize the game. The saved-PGN cache regression test failed before the fix and passed after it.
 - History displays the batch ordinal and total when opened, after each completion and after restoring a queue. The focused status test failed in all three cases before the fix and passed after it.
 - Gate at 42806de: 367 passed, 0 failed; exit 0. Manual batch pause/resume and restart with real Stockfish remain pending as stated above. The integration findings above await stage 3 verification.
+
+#### Resolution (2026-10-31)
+
+Verdict: Approve
+
+Standards: 0 findings. Independent Standards and Spec reviews examined all four changed files and all five commits in `26b13f2...8d59dc7a7bee96a3c071d0f88f043aa634e80297`: this ticket, `tests/test_history_screen.gd`, `ui/history_screen.gd` and `ui/review.gd`. No files were skipped. The two test-only commits precede their corresponding production-only fixes; the handoff changes only tracker metadata. The history test seam remains within the previously admitted test-only scope. No behavior was authored during stage 3.
+
+Spec: 0 findings. Both prior P2 findings are resolved:
+
+- Current-cache reuse: an ordinary nonqueued post-game Review with a corresponding saved PGN and current cache reaches the existing cache-loading path without starting the queue runner. Queued Review, including a game with cached analysis, and explicit History Analyze retain Max priority. The new regression exercises the actual saved-PGN/cache correspondence; the earlier queued-cache regression remains unchanged.
+- Criterion 3: History uses the persisted batch counters to display the ordinal and total, initializes the status when presented, advances after completion and retains progress after restoring the queue. The new regression checks all three states.
+
+Criterion verdicts: 1 ✅ card/batch actions and tab filtering; 2 ✅ serial execution and thread modes; 3 ✅ card states and batch ordinal/total, including initial/restored presentation; 4 ✅ Max promotion and batch resumption; 5 ✅ pause/resume without blocking gameplay; 6 ✅ persistent queue and restart from the beginning; 7 ✅ removal of deleted PGNs. The first review's unchanged criterion checks remain applicable.
+
+Coverage includes the changed cache guard and history status, Main and GameOver entry points, queued and explicit Review promotion, cache reading, queue completion and persisted counters. No new regression or scope expansion was substantiated. The first review's rendered-layout, physical-input, long-batch responsiveness and live-engine limits remain applicable.
+
+Red-green proof: stage 2 records that the saved-PGN cache regression failed before `41517a5` and passed afterwards, and that the initial/advanced/restored batch-status regression failed before `42806de` and passed afterwards. Stage 3 verified the separated commits and their production-path assertions; it did not independently rerun those red states.
+
+Verification: independently validated `C:\Users\bruno\AppData\Local\Temp\hist006-reopen-gate.json`, the bound command, available tested commit `42806de4c15749d76718d75d5b9bf049e50eeebd`, SHA256 of the complete log and `ExitCode: 0`. The log prints **367 passed, 0 failed**, with 367 PASS records and no standalone SKIP records, including both new regressions and queued-cache promotion. There are warnings, including malformed-input fixture warnings; no ERROR or SCRIPT ERROR records were found. The gate was reused, not rerun. Rebase onto `sweatshop/v010/2026-10-30-2302` was already up to date. Merge `0199b12ab37b4e0ae0e2d075cb6c9ef051a133cd` preserves exactly the reviewed tree; all non-tracker files still match the tested commit. This closing commit changes only this ticket and the feature ledger.
+
+Acceptance: pending | Manual batch pause/resume and app restart with real Stockfish, as specified in Verification. No interactive or live-engine acceptance is claimed.
+Disclosure: pending | release | [Manual verification](#verification): real Stockfish and interactive batch pause/resume/restart remain a release condition. Both earlier integration findings are resolved above.
