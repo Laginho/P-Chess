@@ -37,6 +37,25 @@ func test_viewer_shows_black_line_and_steps_without_allowing_moves():
 	_clean(folder)
 
 
+func test_repertoire_selection_shows_its_name_colour_and_line_count():
+	var setup = load("res://ui/setup.tscn").instantiate()
+	var folder := _folder()
+	setup.repertoire.storage_dir = folder
+	assert_eq(setup.repertoire.import_pgn("1. e4 e5 *", "b", "Study"), "")
+	Engine.get_main_loop().root.add_child(setup)
+	var screen = setup.get_node("RepertoireScreen")
+	screen.present()
+	screen.get_node("Margin/Form/List").item_selected.emit(0)
+	var heading = screen.find_child("LineHeading", true, false)
+	var detail = screen.find_child("LineDetail", true, false)
+	assert_true(heading != null and detail != null, "selected repertoire has a lines header")
+	if heading != null and detail != null:
+		assert_eq(heading.text, "Study")
+		assert_eq(detail.text, "As Black · 1 line")
+	setup.free()
+	_clean(folder)
+
+
 func _repertoire():
 	var path := "res://bot/repertoire.gd"
 	assert_true(ResourceLoader.exists(path), "the production repertoire importer exists")
