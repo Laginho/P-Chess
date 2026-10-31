@@ -1,10 +1,26 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://ui/repertoire_screen.gd" id="1"]
 [ext_resource type="PackedScene" path="res://ui/opening_picker.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://ui/board_view.tscn" id="3"]
 [ext_resource type="PackedScene" path="res://ui/repertoire_editor.tscn" id="4"]
 [ext_resource type="PackedScene" path="res://ui/repertoire_import.tscn" id="5"]
+
+[sub_resource type="StyleBoxFlat" id="LinesPanel"]
+content_margin_left = 8.0
+content_margin_top = 65.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
+bg_color = Color(0.168627, 0.164706, 0.152941, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.270588, 0.258824, 0.239216, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_left = 10
+corner_radius_bottom_right = 10
 
 [node name="RepertoireScreen" type="PopupPanel"]
 title = "Repertoires"
@@ -77,6 +93,24 @@ size_flags_horizontal = 3
 layout_mode = 2
 size_flags_horizontal = 3
 custom_minimum_size = Vector2(200, 0)
+theme_override_styles/panel = SubResource("LinesPanel")
+
+[node name="LineHeading" type="Label" parent="Margin/Form/Viewer/Lines"]
+offset_left = 15.0
+offset_top = 12.0
+offset_right = 190.0
+offset_bottom = 34.0
+theme_type_variation = &"ExtraBoldText"
+mouse_filter = 2
+
+[node name="LineDetail" type="Label" parent="Margin/Form/Viewer/Lines"]
+offset_left = 15.0
+offset_top = 34.0
+offset_right = 190.0
+offset_bottom = 54.0
+theme_type_variation = &"MutedText"
+theme_override_font_sizes/font_size = 12
+mouse_filter = 2
 
 [node name="Board" parent="Margin/Form/Viewer" instance=ExtResource("3")]
 custom_minimum_size = Vector2(280, 280)

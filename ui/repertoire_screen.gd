@@ -45,6 +45,8 @@ func _refresh() -> void:
 	for card in $Margin/Form/Viewer/CardScroll/Cards.get_children():
 		card.free()
 	_line_list.clear()
+	$Margin/Form/Viewer/Lines/LineHeading.text = ""
+	$Margin/Form/Viewer/Lines/LineDetail.text = ""
 	_lines.clear()
 	_selection = ""
 	$Margin/Form/Buttons/Edit.disabled = true
@@ -94,6 +96,8 @@ func _select_repertoire(index: int) -> void:
 	$Margin/Form/Buttons/Edit.disabled = true
 	var error: String = repertoire.load_saved(_selection)
 	_line_list.clear()
+	$Margin/Form/Viewer/Lines/LineHeading.text = ""
+	$Margin/Form/Viewer/Lines/LineDetail.text = ""
 	_lines.clear()
 	_line = -1
 	_board.game = null
@@ -103,6 +107,8 @@ func _select_repertoire(index: int) -> void:
 		return
 	$Margin/Form/Buttons/Edit.disabled = false
 	_lines = repertoire.lines.duplicate(true)
+	$Margin/Form/Viewer/Lines/LineHeading.text = _selection
+	$Margin/Form/Viewer/Lines/LineDetail.text = "As %s · %d %s" % ["White" if repertoire.colour == "w" else "Black", _lines.size(), "line" if _lines.size() == 1 else "lines"]
 	_board.flipped = repertoire.colour == "b"
 	_show_names()
 	if not _lines.is_empty():
