@@ -12,6 +12,28 @@ class HeldEngine extends "res://engine/uci.gd":
 		return true
 
 
+class FakeAnalysisBridge extends Node:
+	signal stopped
+	var engine_id := "Stockfish 19"
+	var error := ""
+	func start() -> bool:
+		return true
+
+
+class FakeAnalyser extends Node:
+	signal position_ready(index: int, position: Dictionary)
+	signal progress(done: int, total: int)
+	signal finished(success: bool, error: String)
+	var maximum := false
+	var called := false
+	func analyse(_fens: Array, _path: String, max_threads: bool, _draw: bool) -> bool:
+		called = true
+		maximum = max_threads
+		return true
+	func cancel() -> void:
+		pass
+
+
 func test_open_review_from_history_and_return_with_escape():
 	var folder := "user://history_review_%d" % Time.get_ticks_usec()
 	DirAccess.make_dir_recursive_absolute(folder)
@@ -26,6 +48,9 @@ func test_open_review_from_history_and_return_with_escape():
 	game.play("e2e4")
 	game.resign("b")
 	main.history.save(game, [60000], {"colour": "w", "level": "maia-1500", "control": "1+0"})
+	var fake := FakeAnalyser.new()
+	main.review.analysis_bridge_factory = func(): return FakeAnalysisBridge.new()
+	main.review.analyser_factory = func(_bridge): return fake
 	Engine.get_main_loop().root.add_child(main)
 	var history_button = main.get_node_or_null("Setup/Center/Form/History")
 	assert_true(history_button != null, "setup opens history")
@@ -41,6 +66,8 @@ func test_open_review_from_history_and_return_with_escape():
 		assert_true(not review.get_node("Margin/Content/Actions/Rematch").visible)
 		assert_true(review.get_node("Margin/Content/ReviewBody/Side/Analyze").visible)
 		assert_true(not review.get_node("Margin/Content/ReviewBody/Side/RepertoireExit").visible)
+		review.get_node("Margin/Content/ReviewBody/Side/Analyze").pressed.emit()
+		assert_true(fake.called and fake.maximum, "Analyze starts Max analysis")
 		var space := InputEventKey.new()
 		space.keycode = KEY_SPACE
 		space.pressed = true
