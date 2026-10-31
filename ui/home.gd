@@ -61,6 +61,9 @@ func _layout_home() -> void:
 
 func configure(preferences) -> void:
 	store = preferences
+	for key in ["board_theme", "piece_theme"]:
+		_apply_board_theme(key, store.get_value(key))
+	store.changed.connect(_apply_board_theme)
 	var level: OptionButton = $Center/Form/Level
 	for item in Setup.LEVELS:
 		level.add_item(item.replace("maia-", "Maia "))
@@ -118,3 +121,11 @@ func _sync_settings_button() -> void:
 	if open:
 		var searching = get_parent().get_node_or_null("Searching")
 		open.visible = (not visible or not $Center.visible) and (searching == null or not searching.visible)
+
+
+func _apply_board_theme(key: String, value) -> void:
+	var board = $Center/Board
+	if key == "board_theme" and board.board_theme != value:
+		board.set_board_theme(value)
+	elif key == "piece_theme" and board.piece_theme != value:
+		board.set_piece_theme(value)

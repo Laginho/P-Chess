@@ -16,6 +16,11 @@ func present(settings: Dictionary) -> void:
 	$Center/Content/ControlChip.text = settings.control + (" Bullet" if settings.control == "1+0" else " Blitz")
 	$Center/Content/LevelChip.text = "Maia " + settings.level.trim_prefix("maia-")
 	var preferences = get_parent().get("preferences")
+	if preferences:
+		for key in ["board_theme", "piece_theme"]:
+			_apply_board_theme(key, preferences.get_value(key))
+		if not preferences.changed.is_connected(_apply_board_theme):
+			preferences.changed.connect(_apply_board_theme)
 	$Player.text = preferences.get_value("player_name") if preferences else settings.get("player_name", "You")
 	$Avatar.text = $Player.text.left(1).to_upper()
 	show()
@@ -72,3 +77,11 @@ func _sync_settings_button() -> void:
 	if open:
 		var home = get_parent().get_node_or_null("Home")
 		open.visible = not visible and (home == null or not home.visible or not home.get_node("Center").visible)
+
+
+func _apply_board_theme(key: String, value) -> void:
+	var board = $Board
+	if key == "board_theme" and board.board_theme != value:
+		board.set_board_theme(value)
+	elif key == "piece_theme" and board.piece_theme != value:
+		board.set_piece_theme(value)
