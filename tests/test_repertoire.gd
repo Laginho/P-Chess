@@ -140,7 +140,12 @@ func test_editor_delete_button_remains_available_to_keyboard_focus():
 	trash.grab_focus()
 	await Engine.get_main_loop().process_frame
 	assert_true(trash.visible and trash.has_focus(), "delete stays available while focused")
+	trash.pressed.emit()
+	await Engine.get_main_loop().process_frame
+	await Engine.get_main_loop().process_frame
+	assert_true(_find_move(editor.find_child("Tree", true, false), PackedStringArray(["e2e4"])) == null, "focused delete removes the branch")
 	editor.free()
+	await Engine.get_main_loop().process_frame
 	_clean(folder)
 
 
