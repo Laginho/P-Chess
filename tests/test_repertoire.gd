@@ -56,6 +56,22 @@ func test_repertoire_selection_shows_its_name_colour_and_line_count():
 	_clean(folder)
 
 
+func test_viewer_displays_opening_name_and_moves_on_separate_lines():
+	var setup = load("res://ui/setup.tscn").instantiate()
+	var folder := _folder()
+	setup.repertoire.storage_dir = folder
+	assert_eq(setup.repertoire.import_pgn("1. e4 e5 *", "w", "Study"), "")
+	var screen = setup.get_node("RepertoireScreen")
+	screen.get_node("OpeningPicker").book.load_tsv("eco\tname\tpgn\nC20\tKing's Pawn Game\t1. e4 e5\n")
+	Engine.get_main_loop().root.add_child(setup)
+	screen.present()
+	screen.get_node("Margin/Form/List").item_selected.emit(0)
+	var lines: ItemList = screen.get_node("Margin/Form/Viewer/Lines")
+	assert_eq(lines.get_item_text(0), "King's Pawn Game\n1.e4 e5")
+	setup.free()
+	_clean(folder)
+
+
 func _repertoire():
 	var path := "res://bot/repertoire.gd"
 	assert_true(ResourceLoader.exists(path), "the production repertoire importer exists")
