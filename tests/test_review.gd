@@ -864,3 +864,20 @@ func test_legend_keyboard_does_not_activate_review_shortcuts():
 	await Engine.get_main_loop().process_frame
 	assert_true(not triggered[0], "Space in the legend must not start a rematch")
 	main.free()
+
+
+func test_compact_analysis_progress_does_not_cover_game_result():
+	var root = Engine.get_main_loop().root
+	var old_size: Vector2i = root.size
+	root.size = Vector2i(800, 600)
+	var main = await _session(FakeTime.new())
+	var review = main.get_node("Review")
+	review.present(Game.new(), [180000, 180000], SETTINGS, "White won by resignation")
+	var result: Control = review.get_node("Margin/Content/Result")
+	var progress: Control = review.get_node("Margin/Content/Progress")
+	progress.show()
+	await Engine.get_main_loop().process_frame
+	await Engine.get_main_loop().process_frame
+	assert_true(result.global_position.y + result.size.y <= progress.global_position.y, "progress starts below the result")
+	main.free()
+	root.size = old_size
