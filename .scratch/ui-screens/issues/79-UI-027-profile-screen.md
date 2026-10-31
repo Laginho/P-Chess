@@ -1,5 +1,5 @@
 # UI-027: Profile screen to the design
-Stage: implementing
+Stage: to-review
 Blocked by: UI-021
 Review: agent
 Difficulty: normal
@@ -42,7 +42,7 @@ Restyle the profile to `docs/design/v0.1.0/png/Profile.png`, with the layout Bru
 - Gate: 413 reported passed, 0 failed, including 6 Lc0 skips (407 executed); exit 0. Tested commit: b5a9d1fc8a558740ac2a3ab32aee476080ada9fa.
 - Screenshot checks: `C:\Users\bruno\AppData\Local\Temp\pchess-ui027-c881251d-7437-4691-8ad3-01a7acfb027c\profile-1280.png` (earlier iteration) and `C:\Users\bruno\AppData\Local\Temp\pchess-ui027-final-87105672-a105-47a1-bf74-c0b09c3b69bc\profile-800.png` (final). The 800px table headings are compact; the fixture has one row and no analysed games. The app-wide Settings control remains visible above the screen. Stage 3 must capture the final 1280px screen, compare a populated fixture to the reference and attach before/after images.
 - Acceptance: pending | Manual Profile rename and graphical comparison with populated history, including the 800×600 layout.
-Gate evidence: C:\Users\bruno\AppData\Local\Temp\pchess-ui027-gate.json
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\pchess-ui027-reopen-gate.json
 
 #### Resolution (2026-10-31)
 Verdict: Reopen — criterion 6: populated Profile does not yet match the design's table, card spacing and typography.
@@ -75,3 +75,13 @@ All fresh graphical captures use the same isolated fixture: nine result levels a
 
 Acceptance: pending | Criterion 6 visual correction and UI-030 font fix, then fresh populated comparisons at both sizes; Bruno's v0.1.0 QA remains pending per `.scratch/ui-redo/spec.md`.
 Disclosure: pending | integration | Criterion 6 above and UI-030 must be resolved before UI-027 integration. The branch and existing implementation are preserved; no session merge, ledger closure or push was performed.
+
+
+#### Stage 2 follow-up (2026-10-31)
+
+- Reworked table row typography, left alignment, dividers, flag colours, tile padding and result-card spacing. Compact two-line headings keep the populated table readable at 800x600; resizing and refresh restore the appropriate heading. The summary tiles use the shared extra-bold font variation; its shared axis fix remains UI-030.
+- Focused profile test: presentation assertions and compact-heading assertions were observed red before their respective fixes and green afterwards. Corrected a test-harness encoding error that had replaced the middle dot with `?`; the corrected assertion was observed red before fixing production.
+- Gate on `c51a2b04a36f3122fd94cea181a07177fe288cd6`: 413 reported passed, 0 failed, including 6 Lc0 skips (407 executed); exit 0. Log: `C:/Users/bruno/AppData/Local/Temp/pchess-ui027-reopen-gate.log`.
+- Populated fixture with nine levels and 30 analysed games: [1280x800](C:/Users/bruno/AppData/Local/Temp/pchess-ui027-reopen-committed/profile1280.png), [800x600](C:/Users/bruno/AppData/Local/Temp/pchess-ui027-reopen-committed/profile800.png), [800x600 chart after scrolling](C:/Users/bruno/AppData/Local/Temp/pchess-ui027-reopen-bottom/profile800-bottom.png). Reference and before image remain in the prior review above. The 1280 table card is 387 px high and the chart starts at y=487 as in the reference. The headings wrap at 800 px. The chart data and scale follow the agreed spec rather than the illustrative canvas.
+Acceptance: pending | Independent stage-3 comparison after UI-030, manual Profile rename and Bruno's v0.1.0 QA. No physical input or live Lc0 was exercised in this follow-up.
+Disclosure: pending | integration | UI-030 must fix the shared font axes before the final visual comparison and UI-027 integration.
