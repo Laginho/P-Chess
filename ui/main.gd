@@ -142,6 +142,10 @@ func _ready() -> void:
 	draw_button.pressed.connect(_offer_draw)
 	draw_notice_timer.timeout.connect(draw_notice.hide)
 	setup.started.connect(_start)
+	setup.get_node("OpeningPicker").catalog_ready.connect(func(_error):
+		if history_screen.visible:
+			history.book = setup.book
+			history_screen._refresh())
 	# The catalog takes seconds to parse: start it now so the first game does not wait for it.
 	setup.get_node("OpeningPicker").ensure_catalog()
 	$Layout.resized.connect(_fit_board)
@@ -321,7 +325,7 @@ func _show_setup() -> void:
 func _show_history() -> void:
 	review.hide()
 	setup.hide()
-	history.book = setup.book
+	history.book = setup.book if setup.get_node("OpeningPicker")._worker == null else null
 	history_screen.present(history, preferences)
 
 
