@@ -10,6 +10,30 @@ const HistoryStorage = preload("res://tests/history_storage.gd")
 const SETTINGS := {"colour": "w", "level": "maia-1500", "control": "3+2", "opening": "Free"}
 
 
+func test_thumbnail_uses_deepest_named_position_or_fallback():
+	var history = History.new(_folder())
+	var book = load("res://bot/book.gd").new()
+	book.load_tsv("eco\tname\tpgn\nC20\tKing's Pawn\t1. e4 e5\nC40\tKing's Knight\t1. e4 e5 2. Nf3 Nc6\n")
+	history.book = book
+	var known := PackedStringArray(["e2e4", "e7e5", "g1f3", "b8c6", "f1c4"])
+	assert_eq(history.thumbnail(known), {"ply": 4, "opening": "King's Knight"})
+	var unknown := PackedStringArray(["a2a3", "a7a6", "b2b3", "b7b6", "c2c3", "c7c6", "d2d3", "d7d6", "e2e3", "e7e6", "f2f3"])
+	assert_eq(history.thumbnail(unknown), {"ply": 10, "opening": ""})
+	assert_eq(history.thumbnail(unknown.slice(0, 6)), {"ply": 6, "opening": ""})
+	assert_eq(history.thumbnail(PackedStringArray()), {"ply": 0, "opening": ""})
+
+
+func test_reason_prefers_header_and_infers_legacy_ending():
+	var history = History.new(_folder())
+	assert_eq(history.reason({"headers": {"Reason": "agreement"}, "moves": [], "result": "1/2-1/2"}), "agreement")
+	var mate = Pgn.parse("1. f3 e5 2. g4 Qh4# 0-1").games[0]
+	assert_eq(history.reason(mate), "checkmate")
+	assert_eq(history.reason({"headers": {"Termination": "Normal"}, "moves": [], "result": "1-0"}), "resignation")
+	assert_eq(history.reason({"headers": {}, "moves": [], "result": "1/2-1/2"}), "")
+	for case in [["7k/5Q2/6K1/8/8/8/8/8 b - - 0 1", "stalemate"], ["7k/8/8/8/8/8/8/K7 w - - 0 1", "insufficient material"], ["7k/8/8/8/8/8/R7/K7 w - - 100 1", "50-move"]]:
+		assert_eq(history.reason({"headers": {"FEN": case[0]}, "moves": [], "result": "1/2-1/2"}), case[1])
+
+
 class FakeTime:
 	var now := 0
 
