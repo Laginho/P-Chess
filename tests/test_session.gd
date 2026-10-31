@@ -21,12 +21,14 @@ class FakeTime:
 # The engine boundary: policies are delivered explicitly, in UCI request order.
 class HeldBridge extends "res://engine/uci.gd":
 	var requests := []
+	var hold_level := false
 
 	func start(_dirs := PackedStringArray()) -> bool:
 		return true
 
 	func set_level(_net_path: String) -> void:
-		pass
+		if not hold_level and has_signal("level_ready"):
+			emit_signal("level_ready")
 
 	func request_policy(start_fen: String, moves: PackedStringArray) -> void:
 		requests.append([start_fen, moves.duplicate()])
@@ -145,7 +147,7 @@ func test_a_rematch_drops_the_piece_held_when_the_game_ended():
 	board.free()
 
 
-func _session(waits):
+func _session(waits, start_game := true):
 	var main = MainScene.instantiate()
 	main.get_node("Setup").book.load_tsv("eco\tname\tpgn\nA00\tFixture\t1. h3\n")
 	var folder := "user://test_session_history_%d" % Time.get_ticks_usec()
@@ -159,7 +161,8 @@ func _session(waits):
 	Engine.get_main_loop().root.add_child(main)
 	main.board_view.slide_seconds = 0
 	main.sound_player.select_theme("__ui004_silent__")
-	main._start(SETTINGS.duplicate())
+	if start_game:
+		main._start(SETTINGS.duplicate())
 	return main
 
 
@@ -575,4 +578,28 @@ func test_match_score_respects_focus_mode():
 	assert_true(not white.visible and not black.visible, "rematch started in focus hides boxes")
 	_key(main, KEY_F11)
 	assert_true(white.visible and black.visible, "leaving focus restores new rematch boxes")
+	main.free()
+
+
+func test_searching_waits_for_the_net_before_starting_the_clock():
+	var main = _session(ManualWaits.new(), false)
+	main.uci.hold_level = true
+	main._start(SETTINGS.duplicate())
+	var screen = main.get_node_or_null("Searching")
+	assert_true(screen != null and screen.visible, "searching screen is visible while the net loads")
+	assert_eq(main.clock, null, "the game clock waits for the net")
+	if screen == null:
+		main.free()
+		return
+	assert_eq(screen.get_node("Center/Content/Match").text, "3+2  ?  Maia 1700")
+	assert_eq(screen.get_node("Center/Content/Status").text, "Loading Maia 1700?")
+	await Engine.get_main_loop().create_timer(0.6).timeout
+	assert_true(screen.visible, "slow work outlasts the minimum display time")
+	assert_eq(main.clock, null, "no clock after 0.5 seconds if the net is still loading")
+	assert_eq(main.uci.requests.size(), 0, "no game policy before the net is ready")
+	main.uci.emit_signal("level_ready")
+	while main._starting:
+		await Engine.get_main_loop().process_frame
+	assert_true(not screen.visible, "readiness closes the screen")
+	assert_true(main.clock != null, "only now does the clock exist")
 	main.free()

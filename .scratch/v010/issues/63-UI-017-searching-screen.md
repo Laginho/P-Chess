@@ -1,5 +1,5 @@
 # UI-017: The searching screen
-Stage: to-implement
+Stage: implementing
 Blocked by: HIST-006, UI-016
 Review: agent
 Difficulty: normal
@@ -41,3 +41,5 @@ Between the click and the game, a screen like chess.com's "searching for opponen
 - 2026-10-31 Stage stopped (incomplete handoff): Stage left uncommitted work; saved for recovery. See C:\Users\bruno\Desktop\Pastinha\Programas\Projects\P-Chess\.artifacts-build\lanes\v010\.scratch\run-log\UI-017-implement-20261031-015246.txt.runtime.json and run-log/recovery.txt; inspect the saved work before retrying.
 
 - 2026-10-31 Foreman diagnosis (run 3): no code, contract or environment defect. Terra high started well (`6b28a10`, a red test for searching before Maia is ready), then ended its turn after 2 minutes with uncommitted work and a progress report: the same early stop it made on REV-005 (run 2) and HIST-004 (this run). Its report is useful: with the screen waiting for `readyok`, the new test passed but 14 existing tests failed because they expect the game to start immediately; those tests must follow the new flow. Its work is kept: branch `recovery/20261031-0155/UI-017` (`6b28a10`) and `stash@{0}` (uncommitted screen + `readyok` wait). Reuse the test if useful; start clean otherwise. Next: the rest of this run moves to the sol lineup (authorized fallback after the foreman's one diagnosis-and-restart was spent on HIST-004). Finish every criterion and the gate before ending the turn.
+
+- 2026-10-31 Retry: inspected recovery/20261031-0155/UI-017 and stash@{0}; both preserved. Rebuilt the recovered tracer test with isolated storage and explicit readyok completion. Callers traced: Home quick play, Custom game, game-over/review rematch and Space; all reach `_start`. Startup boundaries include pending catalog, failed repertoire/selection, engine stop, repeated starts and old finished-game clocks.
