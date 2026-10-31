@@ -1,5 +1,5 @@
 # UI-024: Game-over card to the design
-Stage: implementing
+Stage: to-review
 Blocked by: UI-021, UI-023
 Review: agent
 Difficulty: normal
@@ -41,7 +41,6 @@ Restyle the game-over panel to `docs/design/v0.1.0/png/GameOver.png`, `GameOverS
 - Disclosure: pending | integration | Review the recorded visual differences and long-name clipping against the design and usability criteria; see the screenshot evidence above.
 - Disclosure: pending | release | Manual win/loss/draw, real clipboard and close acceptance remains outstanding; see the ticket verification above.
 - Gate: `godot --headless -s tests/run.gd`: 422 reported passed, 0 failed; 7 reported passes were skipped (six Lc0-dependent tests and one graphical pixel test), so 415 executed. The first run failed only on the old review text expectations; these were updated before the successful run.
-Gate evidence: C:/Users/bruno/AppData/Local/Temp/pchess-ui024-final-gate.json
 
 #### Resolution (2026-10-31, stage-3 review)
 Verdict: Reopen — criterion 5: accepted long player names are silently clipped.
@@ -87,3 +86,12 @@ Disclosure: pending | integration | [CLEAN-012](../../ui-base/issues/74-CLEAN-01
 Disclosure: pending | release | Real win/loss/draw gameplay, physical input, Lc0, audio and final human visual QA remain. The focused real-clipboard/viewport-Close checks above supplement the previous evidence.
 
 No merge, push or ledger entry. UI-024 returns to `to-implement` on its retained branch.
+
+#### Stage 2 retry (2026-10-31)
+
+- Corrected the reopened criterion 5: the bounded player-name label now uses the same ellipsis behavior as other screens, retaining the full displayed value and saved preference.
+- `test_game_over_long_player_name_is_visibly_truncated` failed before the fix (`expected 3, got 0`) and passed after it. Test-only commit `7db35c9`; production-only commit `33244ba`.
+- Gate `godot --headless -s tests/run.gd`: exit 0, 423 reported passes, 0 failures, including 7 skips (six Lc0-dependent tests and one graphical pixel test), so 416 executed.
+- Acceptance: pending | Stage 3 must review the long-name correction and CLEAN-012 remains an integration condition. Real win/loss/draw, physical input, Lc0, audio and final visual acceptance remain pending as recorded above.
+
+Gate evidence: C:/Users/bruno/AppData/Local/Temp/pchess-ui024-long-name-gate.json
