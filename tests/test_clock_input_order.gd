@@ -22,7 +22,7 @@ class HeldEngine extends "res://engine/uci.gd":
 		return true
 
 	func set_level(_net_path: String) -> void:
-		pass
+		level_ready.emit()
 
 	func request_policy(_fen: String, moves: PackedStringArray) -> void:
 		requests.append(moves)
@@ -62,7 +62,7 @@ func _session(time: FakeTime, waits := HeldWaits.new(), moves := ["f2f3", "e7e5"
 	Engine.get_main_loop().root.add_child(main)
 	main.board_view.slide_seconds = 0
 	main.sound_player.select_theme("__clock002_silent__")
-	main._start(SETTINGS.duplicate())
+	await main._start(SETTINGS.duplicate())
 	main.clock = Clock.new(SETTINGS.control, time.ms)
 	main.clock.flagged.connect(main._on_flagged)
 	main.clock.low_time.connect(func(side: String):
@@ -92,7 +92,7 @@ func _mouse(main, pressed: bool, square: String) -> void:
 
 func test_a_mating_drop_at_zero_loses_on_time_before_the_move_is_played():
 	var time := FakeTime.new()
-	var main = _session(time)
+	var main = await _session(time)
 	var board = main.board_view
 	var before: String = main.move_list.get_parsed_text()
 	var played := []
@@ -120,7 +120,7 @@ func test_a_mating_drop_at_zero_loses_on_time_before_the_move_is_played():
 
 func test_a_drop_crossing_ten_seconds_warns_once_before_the_increment():
 	var time := FakeTime.new()
-	var main = _session(time)
+	var main = await _session(time)
 	time.now = 169999
 	_mouse(main, true, "d8")
 	assert_eq(main.sound_player.events, [], "no warning with 10.001 s left")
@@ -140,7 +140,7 @@ func test_a_drop_crossing_ten_seconds_warns_once_before_the_increment():
 
 func test_a_mating_drop_with_one_millisecond_left_still_plays():
 	var time := FakeTime.new()
-	var main = _session(time)
+	var main = await _session(time)
 	var played := []
 	main.board_view.move_played.connect(func(san): played.append(san))
 	_mouse(main, true, "d8")
@@ -157,7 +157,7 @@ func test_a_mating_drop_with_one_millisecond_left_still_plays():
 
 func test_input_before_start_and_untimed_first_moves_remain_available():
 	var time := FakeTime.new()
-	var main = _session(time)
+	var main = await _session(time)
 	main._show_setup()
 	_mouse(main, false, "e4")
 	assert_true(main.setup.visible, "input before a clock exists is harmless")
@@ -166,7 +166,7 @@ func test_input_before_start_and_untimed_first_moves_remain_available():
 	key.pressed = true
 	main._unhandled_key_input(key)
 	assert_true(main.clock == null, "Space before starting does not create a clock")
-	main._start(SETTINGS.duplicate())
+	await main._start(SETTINGS.duplicate())
 	main.clock = Clock.new(SETTINGS.control, time.ms)
 	main.maia.clock = main.clock
 	main.white_clock.clock = main.clock
@@ -186,7 +186,7 @@ const MAIA_MATES := ["e2e4", "f7f6", "d2d4", "g7g5"]
 
 
 func _maia_reply_scheduled(time: FakeTime, waits: HeldWaits):
-	var main = _session(time, waits, MAIA_MATES)
+	var main = await _session(time, waits, MAIA_MATES)
 	assert_eq(main.uci.requests[-1], PackedStringArray(MAIA_MATES), "Maia is asked about this position")
 	# Answer every queued request in FIFO order: only the current one reaches its think time.
 	for request in main.uci.requests:
@@ -198,7 +198,7 @@ func _maia_reply_scheduled(time: FakeTime, waits: HeldWaits):
 func test_a_mating_reply_arriving_at_zero_loses_on_time_before_the_move_is_played():
 	var time := FakeTime.new()
 	var waits := HeldWaits.new()
-	var main = _maia_reply_scheduled(time, waits)
+	var main = await _maia_reply_scheduled(time, waits)
 	var board = main.board_view
 	var before: String = main.move_list.get_parsed_text()
 	var snapshots: Array = main._move_clocks.duplicate()
@@ -226,7 +226,7 @@ func test_a_mating_reply_arriving_at_zero_loses_on_time_before_the_move_is_playe
 func test_a_mating_reply_with_one_millisecond_left_still_plays_once():
 	var time := FakeTime.new()
 	var waits := HeldWaits.new()
-	var main = _maia_reply_scheduled(time, waits)
+	var main = await _maia_reply_scheduled(time, waits)
 	var played := []
 	main.board_view.move_played.connect(func(san): played.append(san))
 	time.now = 181999
@@ -243,7 +243,7 @@ func test_a_mating_reply_with_one_millisecond_left_still_plays_once():
 func test_a_reply_after_a_processed_flag_is_ignored_without_a_repeated_result():
 	var time := FakeTime.new()
 	var waits := HeldWaits.new()
-	var main = _maia_reply_scheduled(time, waits)
+	var main = await _maia_reply_scheduled(time, waits)
 	time.now = 182000
 	main._process(0)
 	assert_eq([main.board_view.game.result, main.board_view.game.reason], ["0-1", "time"])

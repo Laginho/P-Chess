@@ -12,7 +12,7 @@ const SETTINGS := {"colour": "w", "level": "maia-1500", "control": "3+2", "openi
 
 
 func test_summary_waits_for_analysis_and_shows_accuracy_and_counts():
-	var main = _session(FakeTime.new())
+	var main = await _session(FakeTime.new())
 	var review = main.get_node("Review")
 	var game = Game.new()
 	game.play("e2e4")
@@ -34,7 +34,7 @@ func test_summary_waits_for_analysis_and_shows_accuracy_and_counts():
 
 
 func test_graph_click_navigates_and_tracks_orientation():
-	var main = _session(FakeTime.new())
+	var main = await _session(FakeTime.new())
 	var review = main.get_node("Review")
 	var game = Game.new()
 	game.play("e2e4")
@@ -60,7 +60,7 @@ func test_graph_click_navigates_and_tracks_orientation():
 
 
 func test_review_tooltips_explain_accuracy_and_class_thresholds():
-	var main = _session(FakeTime.new())
+	var main = await _session(FakeTime.new())
 	var review = main.get_node("Review")
 	var accuracy_help = review.get_node_or_null("Margin/Content/ReviewBody/Side/AccuracyHelp")
 	var class_help = review.get_node_or_null("Margin/Content/ReviewBody/Side/ClassHelp")
@@ -75,7 +75,7 @@ func test_review_tooltips_explain_accuracy_and_class_thresholds():
 
 
 func test_fixture_updates_counts_before_final_accuracy():
-	var main = _session(FakeTime.new())
+	var main = await _session(FakeTime.new())
 	var review = main.get_node("Review")
 	var game = Game.new()
 	game.play("e2e4")
@@ -106,7 +106,7 @@ class HeldEngine extends "res://engine/uci.gd":
 		return true
 
 	func set_level(_net_path: String) -> void:
-		pass
+		level_ready.emit()
 
 	func request_policy(_fen: String, _moves: PackedStringArray) -> void:
 		pass
@@ -125,7 +125,7 @@ func _session(time: FakeTime):
 	Engine.get_main_loop().root.add_child(main)
 	main.board_view.slide_seconds = 0
 	main.sound_player.select_theme("__review_silent__")
-	main._start(SETTINGS.duplicate())
+	await main._start(SETTINGS.duplicate())
 	main.clock = Clock.new(SETTINGS.control, time.ms)
 	main.clock.flagged.connect(main._on_flagged)
 	main.maia.clock = main.clock
@@ -174,7 +174,7 @@ func test_lichess_url_encodes_san_moves_and_mate():
 
 func test_checkmate_opens_review_with_result_and_both_sides_moves():
 	var time := FakeTime.new()
-	var main = _session(time)
+	var main = await _session(time)
 	var review = main.get_node_or_null("Review")
 	assert_true(review != null, "Main includes the review screen")
 	if review == null:
@@ -211,7 +211,7 @@ func test_checkmate_opens_review_with_result_and_both_sides_moves():
 func test_review_opens_for_no_move_resignation_flag_and_claimed_draw():
 	for ending in ["resignation", "time", "repetition"]:
 		var time := FakeTime.new()
-		var main = _session(time)
+		var main = await _session(time)
 		if ending == "resignation":
 			_key(main, KEY_ESCAPE)
 			_key(main, KEY_ESCAPE)
@@ -243,7 +243,7 @@ func test_review_opens_for_no_move_resignation_flag_and_claimed_draw():
 
 func test_export_buttons_send_finished_pgn_and_lichess_url():
 	var time := FakeTime.new()
-	var main = _session(time)
+	var main = await _session(time)
 	main.board_view.play("f2f3")
 	main._on_maia_move("e7e5")
 	time.now = 250
@@ -278,7 +278,7 @@ func test_export_buttons_send_finished_pgn_and_lichess_url():
 
 func test_space_with_review_focused_rematches_and_replaces_the_previous_game():
 	var time := FakeTime.new()
-	var main = _session(time)
+	var main = await _session(time)
 	main.board_view.play("e2e4")
 	_key(main, KEY_ESCAPE)
 	_key(main, KEY_ESCAPE)
@@ -289,6 +289,7 @@ func test_space_with_review_focused_rematches_and_replaces_the_previous_game():
 	event.keycode = KEY_SPACE
 	event.pressed = true
 	Engine.get_main_loop().root.push_input(event)
+	await _wait_start(main)
 	assert_true(not review.visible, "Space works with the move list focused")
 	assert_true(not main.setup.visible)
 	assert_eq(main.settings, {"colour": "b", "level": "maia-1500", "control": "3+2", "opening": "Free"})
@@ -319,7 +320,7 @@ func test_space_with_review_focused_rematches_and_replaces_the_previous_game():
 
 func test_review_returns_to_setup_and_starts_a_fresh_game():
 	var time := FakeTime.new()
-	var main = _session(time)
+	var main = await _session(time)
 	_key(main, KEY_F11)
 	_key(main, KEY_ESCAPE)
 	_key(main, KEY_ESCAPE)
@@ -335,10 +336,12 @@ func test_review_returns_to_setup_and_starts_a_fresh_game():
 	assert_true(not review.visible)
 	assert_true(main.clock == null, "setup has no active game")
 	_key(main, KEY_SPACE)
+	await _wait_start(main)
 	assert_true(main.get_node("Home").visible, "Space on Home does not silently start a rematch")
 	var next := SETTINGS.duplicate()
 	next.control = "1+0"
 	main.setup.started.emit(next)
+	await _wait_start(main)
 	assert_true(not main.setup.visible and not review.visible)
 	assert_eq(main.clock.left("w"), 60000)
 	_key(main, KEY_ESCAPE)
@@ -350,7 +353,7 @@ func test_review_returns_to_setup_and_starts_a_fresh_game():
 
 func test_review_steps_through_game_with_arrow_keys():
 	var time := FakeTime.new()
-	var main = _session(time)
+	var main = await _session(time)
 	main.board_view.play("e2e4")
 	main._on_maia_move("e7e5")
 	_key(main, KEY_ESCAPE)
@@ -372,7 +375,7 @@ func test_review_steps_through_game_with_arrow_keys():
 
 func test_clicking_a_move_shows_its_position():
 	var time := FakeTime.new()
-	var main = _session(time)
+	var main = await _session(time)
 	main.board_view.play("e2e4")
 	main._on_maia_move("e7e5")
 	_key(main, KEY_ESCAPE)
@@ -389,7 +392,7 @@ func test_clicking_a_move_shows_its_position():
 
 
 func test_eval_bar_tracks_current_position_and_board_orientation():
-	var main = _session(FakeTime.new())
+	var main = await _session(FakeTime.new())
 	main.board_view.play("e2e4")
 	_key(main, KEY_ESCAPE)
 	_key(main, KEY_ESCAPE)
@@ -408,7 +411,7 @@ func test_eval_bar_tracks_current_position_and_board_orientation():
 
 
 func test_analysis_landing_shows_class_icon_and_best_move_on_board():
-	var main = _session(FakeTime.new())
+	var main = await _session(FakeTime.new())
 	main.board_view.play("e2e4")
 	_key(main, KEY_ESCAPE)
 	_key(main, KEY_ESCAPE)
@@ -453,7 +456,7 @@ class FakeReviewAnalyser extends Node:
 
 
 func test_open_review_starts_max_analysis_and_tracks_progress():
-	var main = _session(FakeTime.new())
+	var main = await _session(FakeTime.new())
 	var fake = FakeReviewAnalyser.new()
 	main.review.analysis_bridge_factory = func(): return FakeAnalysisBridge.new()
 	main.review.analyser_factory = func(_bridge): return fake
@@ -474,7 +477,7 @@ func test_open_review_starts_max_analysis_and_tracks_progress():
 
 
 func test_review_places_move_list_beside_board():
-	var main = _session(FakeTime.new())
+	var main = await _session(FakeTime.new())
 	main.board_view.play("e2e4")
 	_key(main, KEY_ESCAPE)
 	_key(main, KEY_ESCAPE)
@@ -488,7 +491,7 @@ func test_review_places_move_list_beside_board():
 
 func test_review_reuses_current_analysis_and_reanalyses_stale_file():
 	for version in ["Stockfish 19", "Stockfish 18"]:
-		var main = _session(FakeTime.new())
+		var main = await _session(FakeTime.new())
 		var fake = FakeReviewAnalyser.new()
 		main.review.analysis_bridge_factory = func(): return FakeAnalysisBridge.new()
 		main.review.analyser_factory = func(_bridge): return fake
@@ -515,6 +518,7 @@ func test_review_reuses_current_analysis_and_reanalyses_stale_file():
 				event.keycode = KEY_F
 				event.pressed = true
 				Engine.get_main_loop().root.push_input(event)
+				await _wait_start(main)
 				assert_eq(board.flipped, flipped, "F flips the visible review board")
 				assert_eq(bar.flipped, flipped, "evaluation bar follows immediately")
 				assert_true(not main.board_view.flipped, "hidden game board is unchanged")
@@ -527,7 +531,7 @@ func test_review_fits_an_800_by_600_window():
 	var root = Engine.get_main_loop().root
 	var old_size: Vector2i = root.size
 	root.size = Vector2i(800, 600)
-	var main = _session(FakeTime.new())
+	var main = await _session(FakeTime.new())
 	main.board_view.play("e2e4")
 	_key(main, KEY_ESCAPE)
 	_key(main, KEY_ESCAPE)
@@ -547,7 +551,7 @@ func test_review_help_popups_fit_minimum_window():
 	var root = tree.root
 	var old_size: Vector2i = root.size
 	root.size = Vector2i(800, 600)
-	var main = _session(FakeTime.new())
+	var main = await _session(FakeTime.new())
 	var game = Game.new()
 	game.play("e2e4")
 	main.review.present(game, [180000, 180000], SETTINGS, "")
@@ -582,3 +586,9 @@ func _visible_tooltip(node: Node):
 		if found != null:
 			return found
 	return null
+
+
+# Starts now cross a real asynchronous searching screen.
+func _wait_start(main) -> void:
+	while main._starting:
+		await Engine.get_main_loop().process_frame

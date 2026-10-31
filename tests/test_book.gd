@@ -296,7 +296,7 @@ class HeldEngine extends "res://engine/uci.gd":
 
 
 	func set_level(_net_path: String) -> void:
-		pass
+		level_ready.emit()
 
 
 	func request_policy(_fen: String, moves: PackedStringArray) -> void:
@@ -342,6 +342,7 @@ func test_main_uses_named_selection_counts_once_rematches_and_recognizes_free_op
 	var settings := SETTINGS.duplicate()
 	settings.selection = "Practice"
 	main.setup.started.emit(settings)
+	await _wait_start(main)
 	assert_eq(main.maia.target_id, book.entries[0].id, "load the saved name, not residual picker checks")
 	assert_true(main.maia.book == book, "one shared catalog")
 	assert_true(main.preferences.set_value("book_intensity", "strong"))
@@ -357,7 +358,7 @@ func test_main_uses_named_selection_counts_once_rematches_and_recognizes_free_op
 	assert_eq(games[0].headers.get("Opening"), "Target")
 	book.set_checked("Other", true)
 	assert_eq(book.save_selection("Practice"), "")
-	main._start(main.rematch(main.settings))
+	await main._start(main.rematch(main.settings))
 	assert_eq(main.human, "b")
 	assert_eq(main.maia.target_id, book.entries[1].id, "rematch uses persisted least-practiced target")
 	assert_eq(main.uci.requests[-1], PackedStringArray(), "Maia now plays White first")
@@ -366,7 +367,7 @@ func test_main_uses_named_selection_counts_once_rematches_and_recognizes_free_op
 	var counts: Dictionary = History.new(folder).practice_counts()
 	assert_eq(counts, {book.entries[0].id: 1, book.entries[1].id: 1})
 	settings.opening = "Free"
-	main._start(settings)
+	await main._start(settings)
 	assert_eq(main.maia.target_id, "", "Free clears the previous target")
 	for move in ["g1f3", "g8f6", "g2g3", "g7g6", "f1g2", "f8g7"]:
 		assert_true(main.board_view.play(move))
@@ -400,6 +401,7 @@ func test_main_reports_corrupt_practice_in_catalog_and_free_without_duplicate_sa
 		settings.opening = mode
 		settings.selection = "Practice"
 		main.setup.started.emit(settings)
+		await _wait_start(main)
 		assert_true(main.clock != null, "corrupt practice does not prevent starting " + mode)
 		assert_eq(main.maia.target_id, target if mode == "Catalog" else "")
 		main.board_view.game.resign("w")
@@ -463,7 +465,7 @@ func test_cold_main_and_picker_share_one_loader_and_wait_responsively_before_sta
 	assert_eq(main.clock, null, "no clock during loading")
 	assert_eq(main.uci.requests.size(), 0, "no engine request during loading")
 	assert_eq(main.board_view.mouse_filter, Control.MOUSE_FILTER_IGNORE, "the waiting board cannot play before a clock exists")
-	assert_true(main.starting.visible, "visible loading status")
+	assert_true(main.searching.visible, "visible loading status")
 	assert_true(not picker.visible, "starting a game doesn't open the picker")
 	var ready := []
 	_watch_catalog(picker, ready)
@@ -476,6 +478,7 @@ func test_cold_main_and_picker_share_one_loader_and_wait_responsively_before_sta
 	while ready.size() < 2 and Time.get_ticks_msec() < deadline:
 		picker._process(0)
 		OS.delay_msec(1)
+	await _wait_start(main)
 	assert_eq(ready, ["", ""], "all waiters resume after joining one worker")
 	assert_eq(book.loads, 1)
 	assert_true(main.clock != null)
@@ -514,6 +517,7 @@ func test_main_joins_a_picker_load_without_applying_its_old_selection_and_reject
 	while ready.is_empty() and Time.get_ticks_msec() < deadline:
 		picker._process(0)
 		OS.delay_msec(1)
+	await _wait_start(main)
 	assert_eq(ready, [""])
 	assert_eq(book.loads, 1)
 	assert_eq(main.maia.target_id, book.entries[0].id, "Main loads its own saved selection after joining")
@@ -524,6 +528,7 @@ func test_main_joins_a_picker_load_without_applying_its_old_selection_and_reject
 	settings.selection = "missing"
 	var requests: int = main.uci.requests.size()
 	main.setup.started.emit(settings)
+	await _wait_start(main)
 	assert_true(main.setup.visible, "invalid saved selection returns to setup")
 	assert_eq(main.uci.requests.size(), requests)
 	assert_true(main.board_view.game.is_over(), "failed Catalog start doesn't create a free game")
@@ -539,6 +544,7 @@ func test_loader_startup_failure_reports_an_error_without_a_game_and_allows_retr
 	settings.opening = "Free"
 	settings.colour = "b"
 	main.setup.started.emit(settings)
+	await _wait_start(main)
 	assert_eq(main.clock, null)
 	assert_eq(main.uci.requests.size(), 0)
 	assert_true(main.setup.visible, "setup remains available to retry")
@@ -546,8 +552,15 @@ func test_loader_startup_failure_reports_an_error_without_a_game_and_allows_retr
 	assert_true(status.visible and status.text.contains("Cannot start catalog loading"))
 	book.load_tsv(CATALOG)
 	main.setup.started.emit(settings)
+	await _wait_start(main)
 	assert_true(main.clock != null, "a corrected retry starts")
 	assert_eq(main.uci.requests.size(), 1)
 	assert_eq(main.maia.target_id, "", "Free mode stays free after a load error")
 	main.free()
 	_clean(folder)
+
+
+# Starts now cross a real asynchronous searching screen.
+func _wait_start(main) -> void:
+	while main._starting:
+		await Engine.get_main_loop().process_frame

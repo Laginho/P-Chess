@@ -102,7 +102,7 @@ const BLACK_GLYPHS := {"q": "♛", "r": "♜", "b": "♝", "n": "♞", "p": "♟
 @onready var draw_notice: Label = $Layout/Side/DrawNotice
 @onready var draw_notice_timer: Timer = $Layout/Side/DrawNoticeTimer
 @onready var claim_draw: Button = $Layout/Side/ClaimDraw
-@onready var starting: Control = $Layout/BoardView/Starting
+@onready var searching = $Searching
 
 
 # The same settings with the colours swapped.
@@ -202,7 +202,7 @@ func _input(_event: InputEvent) -> void:
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
-	if not event.is_pressed() or event.is_echo() or clock == null:
+	if not event.is_pressed() or event.is_echo() or clock == null or _starting:
 		return
 	# Home and Custom game have no clock; game hotkeys apply only after a game starts.
 	var in_game: bool = clock != null and not board_view.game.is_over()
@@ -236,14 +236,45 @@ func _start(new_settings: Dictionary) -> void:
 	if _starting or not uci.error.is_empty():
 		return
 	_starting = true
+	var started_at := Time.get_ticks_msec()
+	searching.present(new_settings)
+	searching.move_to_front()
+	searching.grab_focus()
+	if clock:
+		clock.stop()
 	$Home.hide()
+	if not analysis_queue.current().is_empty():
+		searching.status("Pausing analysis…")
+		await get_tree().process_frame
 	analysis_queue.pause()
 	setup.hide()
 	setup.get_node("OpeningPicker").hide()
 	setup.get_node("RepertoireScreen/RepertoireImport").hide()
 	review.hide()
+	history_screen.hide()
 	board_view.mouse_filter = MOUSE_FILTER_IGNORE
-	starting.show()
+	while not analysis_queue.current().is_empty() and uci.error.is_empty():
+		await get_tree().process_frame
+	if not uci.error.is_empty():
+		_starting = false
+		searching.hide()
+		analysis_queue.resume()
+		return
+	searching.status("Loading Maia %s…" % new_settings.level.trim_prefix("maia-"))
+	var ready := [false]
+	var on_ready := func(): ready[0] = true
+	uci.level_ready.connect(on_ready, CONNECT_ONE_SHOT)
+	uci.set_level(MaiaPlayer.net_path(new_settings.level))
+	while not ready[0] and uci.error.is_empty():
+		await get_tree().process_frame
+	if uci.level_ready.is_connected(on_ready):
+		uci.level_ready.disconnect(on_ready)
+	if not uci.error.is_empty():
+		_starting = false
+		searching.hide()
+		analysis_queue.resume()
+		return
+	searching.status("Preparing game…")
 	var error := ""
 	var practice_book = setup.book
 	var review_repertoire: Array = []
@@ -269,8 +300,10 @@ func _start(new_settings: Dictionary) -> void:
 		error = repertoire_error
 	if error.is_empty() and new_settings.opening == "Catalog":
 		error = setup.book.load_selection(new_settings.get("selection", ""))
+	while error.is_empty() and uci.error.is_empty() and Time.get_ticks_msec() - started_at < 500:
+		await get_tree().process_frame
 	_starting = false
-	starting.hide()
+	searching.hide()
 	if not uci.error.is_empty():
 		analysis_queue.resume()
 		return
@@ -298,7 +331,6 @@ func _start(new_settings: Dictionary) -> void:
 	white_score.visible = _show_match_score and not focus
 	black_score.visible = _show_match_score and not focus
 	_update_score_text()
-	uci.set_level(MaiaPlayer.net_path(settings.level))
 	var game = Game.new()
 	maia.book = practice_book
 	history.book = setup.book
@@ -388,6 +420,7 @@ func _review_history_game(path: String, saved: Dictionary) -> void:
 
 # Abort without recording a chess result, and invalidate Maia's already scheduled moves.
 func _on_engine_stopped() -> void:
+	searching.hide()
 	if clock:
 		clock.stop()
 	maia.clock = null

@@ -33,6 +33,7 @@ func test_quick_play_uses_defaults():
 	assert_true(quick != null, "3+2 quick play exists")
 	if quick:
 		quick.pressed.emit()
+		await _wait_start(main)
 		assert_eq(main.settings.get("level"), "maia-1500")
 		assert_true(main.settings.get("colour") in ["w", "b"])
 		assert_eq(main.settings.get("opening"), "Free")
@@ -62,6 +63,7 @@ func test_custom_choices_survive_restart_and_new_game_returns_home():
 		main.setup.get_node("Center/Form/Colour").select(1)
 		main.setup.get_node("Center/Form/Level").select(6)
 		main.setup.get_node("Center/Form/Start").pressed.emit()
+		await _wait_start(main)
 		main.board_view.game.resign("w")
 		main._show_result()
 		main.board_view.get_node("GameOver/Panel/Content/NewGame").pressed.emit()
@@ -80,6 +82,7 @@ func test_custom_choices_survive_restart_and_new_game_returns_home():
 	var quick = next.get_node_or_null("Home/Center/Form/Quick/OneZero")
 	if custom and quick:
 		quick.pressed.emit()
+		await _wait_start(next)
 		assert_eq(next.settings.get("level"), "maia-1700")
 		assert_eq(next.settings.get("colour"), "b")
 		assert_eq(next.settings.get("opening"), "Free")
@@ -140,6 +143,7 @@ func test_custom_catalog_mode_is_reused_after_restart():
 	opening.select(1)
 	opening.item_selected.emit(1)
 	main.setup.get_node("Center/Form/Start").pressed.emit()
+	await _wait_start(main)
 	assert_eq(main.settings.get("opening"), "Catalog")
 	main.free()
 	var next = MainScene.instantiate()
@@ -152,8 +156,15 @@ func test_custom_catalog_mode_is_reused_after_restart():
 	next.history = load("res://core/history.gd").new(folder)
 	Engine.get_main_loop().root.add_child(next)
 	next.get_node("Home/Center/Form/Quick/FiveZero").pressed.emit()
+	await _wait_start(next)
 	assert_eq(next.settings.get("opening"), "Catalog")
 	assert_eq(next.settings.get("selection"), "Practice")
 	assert_eq(next.settings.get("control"), "5+0")
 	next.free()
 	Session.HistoryStorage.clean(folder)
+
+
+# Starts now cross a real asynchronous searching screen.
+func _wait_start(main) -> void:
+	while main._starting:
+		await Engine.get_main_loop().process_frame

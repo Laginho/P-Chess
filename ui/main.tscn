@@ -7,6 +7,7 @@
 [ext_resource type="PackedScene" path="res://ui/clock.tscn" id="5"]
 [ext_resource type="Script" path="res://ui/resize_grip.gd" id="6"]
 [ext_resource type="PackedScene" path="res://ui/home.tscn" id="7"]
+[ext_resource type="PackedScene" path="res://ui/searching.tscn" id="8"]
 
 [sub_resource type="StyleBoxFlat" id="ScoreBox"]
 bg_color = Color(0.2, 0.2, 0.2, 1)
@@ -47,23 +48,6 @@ layout_mode = 0
 offset_right = 20.0
 offset_bottom = 20.0
 script = ExtResource("6")
-
-[node name="Starting" type="PanelContainer" parent="Layout/BoardView"]
-visible = false
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="Label" type="Label" parent="Layout/BoardView/Starting"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 24
-text = "Getting the game ready…"
-horizontal_alignment = 1
 
 [node name="Side" type="VBoxContainer" parent="Layout"]
 custom_minimum_size = Vector2(240, 0)
@@ -155,4 +139,7 @@ visible = false
 layout_mode = 1
 
 [node name="Home" parent="." instance=ExtResource("7")]
+layout_mode = 1
+
+[node name="Searching" parent="." instance=ExtResource("8")]
 layout_mode = 1
