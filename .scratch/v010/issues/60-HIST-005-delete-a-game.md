@@ -1,5 +1,5 @@
 # HIST-005: Delete a game, and the PracticeTarget header
-Stage: to-implement
+Stage: blocked
 Blocked by: HIST-004
 Review: agent
 Difficulty: normal
@@ -68,3 +68,5 @@ Each history card gets Delete, with confirmation (§15.7). Deleting removes the 
   > **Next for the caller:** record this under `## Comments`, set `Stage:` back to `implementing`, and rerun stage 2 on `recovery/asked/20261031-005421/HIST-005`. That branch is where `c7b3e60` lives; `HIST-005-delete-a-game`, the branch named in the question, isn't in the repository.
   > 
   > I didn't run anything, so I haven't confirmed that a read-only file makes the delete fail on Godot 4.7; stage 2's red run will settle that. The read-only trick only works on Windows (and maybe macOS, not Linux); the gate runs on Windows.
+
+- 2026-10-31 Stage stopped (incomplete handoff): Invalid committed handoff: A parameter cannot be found that matches parameter name 'Raw'. See C:\Users\bruno\Desktop\Pastinha\Programas\Projects\P-Chess\.artifacts-build\lanes\v010\.scratch\run-log\HIST-005-implement-20261031-005749.txt.runtime.json and run-log/recovery.txt; inspect the saved work before retrying.
