@@ -29,6 +29,7 @@ func _ready() -> void:
 			call_deferred("_refresh"))
 	var actions := HBoxContainer.new()
 	actions.name = "BatchActions"
+	actions.custom_minimum_size.y = 44
 	$Margin/Content.add_child(actions)
 	$Margin/Content.move_child(actions, 1)
 	var selected := Button.new()
@@ -243,7 +244,7 @@ func _add_card(list: Node, record: Dictionary) -> void:
 
 	var status := VBoxContainer.new()
 	status.name = "AnalysisStatus"
-	status.custom_minimum_size.x = 105 if _compact else 150
+	status.custom_minimum_size.x = 105 if _compact else 232
 	status.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	details.add_child(status)
 	var cached := _cached_accuracy(record.path, moves.size() + 1)
@@ -310,6 +311,8 @@ func _add_card(list: Node, record: Dictionary) -> void:
 		status.add_child(label)
 	var actions := HBoxContainer.new()
 	actions.name = "HBoxContainer"
+	actions.alignment = BoxContainer.ALIGNMENT_END
+	actions.custom_minimum_size.x = 0 if _compact else 300
 	actions.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	details.add_child(actions)
 	var review := Button.new()
