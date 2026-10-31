@@ -827,7 +827,7 @@ func test_repertoire_exit_is_a_move_list_row():
 	for move in ["e2e4", "e7e5", "d2d4"]:
 		game.play(move)
 	var review = main.get_node("Review")
-	review.present(game, [180000, 180000], SETTINGS, "", [], repertoire.lines, true)
+	review.present(game, [180000, 180000, 180000], SETTINGS, "", [], repertoire.lines, true)
 	var rows = review.get_node("Margin/Content/ReviewBody/Side/Moves").get_root().get_children()
 	var found := false
 	for row in rows:
