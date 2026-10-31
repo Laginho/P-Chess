@@ -27,7 +27,7 @@ func _ready() -> void:
 		if compact != _compact:
 			_compact = compact
 			call_deferred("_refresh"))
-	var actions := HBoxContainer.new()
+	var actions := HFlowContainer.new()
 	actions.name = "BatchActions"
 	actions.custom_minimum_size.y = 44
 	$Margin/Content.add_child(actions)
@@ -50,6 +50,9 @@ func _ready() -> void:
 	actions.add_child(all)
 	var status := Label.new()
 	status.name = "Status"
+	status.custom_minimum_size.x = 200
+	status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	actions.add_child(status)
 	var select_all := CheckBox.new()
 	select_all.name = "SelectAll"
