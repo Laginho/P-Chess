@@ -15,6 +15,9 @@ func _ready() -> void:
 	%Back.pressed.connect(func(): back_requested.emit())
 	%SaveName.pressed.connect(_save_name)
 	%PlayerName.text_submitted.connect(func(_text): _save_name())
+	%Results.resized.connect(_fit_headers)
+	for label in [%WdlValue, %FlagValue]:
+		label.add_theme_font_override("normal_font", get_theme_font("font", "ExtraBoldText"))
 
 
 func present(settings) -> void:
@@ -55,6 +58,8 @@ func refresh(history, analysis_dir := "") -> void:
 		rows += 1
 		for value in [level.replace("maia-", "Maia "), values[0], values[1], values[2], flags[0], flags[1]]:
 			_cell(table, str(value))
+	if table.size.x > 0:
+		_fit_headers()
 	%GamesValue.text = str(totals.wins + totals.draws + totals.losses)
 	%WdlValue.text = "[color=#8fbc5a]%d[/color] / [color=#a8a49c]%d[/color] / [color=#ee7a72]%d[/color]" % [totals.wins, totals.draws, totals.losses]
 	%FlagValue.text = "[color=#8fbc5a]%d[/color] / [color=#ee7a72]%d[/color]" % [totals.flag_wins, totals.flag_losses]
@@ -126,12 +131,44 @@ func _complete_analysis(positions, count: int) -> bool:
 	return fields.size() >= 2 and fields[1] in ["w", "b"]
 
 
+func _fit_headers() -> void:
+	var table: GridContainer = %Results
+	if table.get_child_count() < 6:
+		return
+	var narrow := table.size.x < 500
+	var titles := ["Level", "1+0 · W D L", "3+2 · W D L", "5+0 · W D L", "Flag wins", "Flag losses"]
+	var compact := ["Level", "1+0\nW D L", "3+2\nW D L", "5+0\nW D L", "Flag\nwins", "Flag\nlosses"]
+	for i in 6:
+		var label: Label = table.get_child(i)
+		label.text = compact[i] if narrow else titles[i]
+		label.custom_minimum_size.y = 42 if narrow else 30
+
+
 func _cell(table: GridContainer, value: String) -> void:
+	var index := table.get_child_count()
+	var header := index < 6
+	var column := index % 6
 	var label := Label.new()
 	label.text = value
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	label.add_theme_font_size_override("font_size", 11)
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.custom_minimum_size.y = 30 if header else 34
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT if column == 0 else HORIZONTAL_ALIGNMENT_CENTER
+	label.theme_type_variation = "BoldText" if header else ("SemiboldText" if column == 0 else "")
+	label.add_theme_font_size_override("font_size", 12 if header else 14)
+	if header:
+		label.add_theme_color_override("font_color", Color("a8a49c"))
+	elif column == 4:
+		label.add_theme_color_override("font_color", Color("8fbc5a") if value != "0" else Color("8a857c"))
+	elif column == 5:
+		label.add_theme_color_override("font_color", Color("ee7a72") if value != "0" else Color("8a857c"))
+	var line := StyleBoxFlat.new()
+	line.draw_center = false
+	line.content_margin_left = 8 if column == 0 else 0
+	if not header:
+		line.border_width_top = 1
+		line.border_color = Color("3a3834")
+	label.add_theme_stylebox_override("normal", line)
 	table.add_child(label)
 
 
