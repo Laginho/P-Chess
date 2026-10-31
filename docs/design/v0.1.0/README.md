@@ -2,7 +2,9 @@
 
 The visual reference for the v0.1.0 screens. Each `.dc.html` file is one board of the design canvas: plain HTML with inline styles, so exact sizes, colours, spacing and copy can be read straight from the source. `{{name}}` bindings and `<sc-if>` / `<sc-for>` blocks are filled by the small `renderVals()` script at the bottom of each file; `<dc-import name="X">` embeds `X.dc.html`.
 
-The files don't render standalone (they need the canvas runtime). The live canvas is the Claude artifact https://claude.ai/code/artifact/977e2ff4-7862-4e2b-b49b-4c84e232a5f5. Piece images (`/_blob/...` in `Board.dc.html`) are the repo's own theme pieces.
+**`png/<Board>.png` is the reference image of each board**, at its canvas size: compare the running app against these. `support.js` is a small stand-in for the canvas runtime, so the boards also render in a browser when served over http from the repo root (`python -m http.server`, then open `/docs/design/v0.1.0/<Board>.dc.html`). After editing a board, regenerate the PNGs with `node docs/design/v0.1.0/render-png.js` (needs Microsoft Edge).
+
+The live canvas is the Claude artifact https://claude.ai/code/artifact/977e2ff4-7862-4e2b-b49b-4c84e232a5f5. Piece images (`/_blob/...` in `Board.dc.html`) are the repo's own theme pieces.
 
 Behaviour lives in `docs/spec.md`; `docs/design-brief-v0.1.0.md` is the brief the canvas was built from. Where the canvas and the spec disagree, the spec wins.
 
