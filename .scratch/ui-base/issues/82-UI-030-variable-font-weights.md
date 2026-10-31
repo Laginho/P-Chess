@@ -1,5 +1,5 @@
 # UI-030: Apply the shared theme's variable font weights
-Stage: to-implement
+Stage: done
 Status: ready-for-agent
 Blocked by: UI-021
 Review: agent
@@ -33,3 +33,5 @@ Make the existing shared font variations render their declared Noto Sans weights
 - 2026-10-31 Confirmed on Godot 4.7 during UI-027 review: `theme.get_font("font", "ExtraBoldText").variation_opentype` is `{"wght":800}`, but its RID returns `{}` from `font_get_variation_coordinates`. A duplicate using `{TextServerManager.get_primary_interface().name_to_tag("wght"):800}` resolves to `{2003265652:800}`. Correct the common axis declarations once rather than adding per-screen font workarounds.
 - Evidence: `C:/Users/bruno/AppData/Local/Temp/pchess-ui027-review-07aff169-9b64-487b-bd92-56c0ce4ad4d8/font-probe.gd` and `font-coords.log`. The original theme and Profile remain unchanged by this review.
 - Integration impact: UI-027's criterion 6 cannot pass while the shared title/name/tile weights are ignored. Resolve this alongside UI-027's independent table/card spacing repairs.
+
+- 2026-10-31 Foreman: superseded by CLEAN-012, merged to main as PR #37 (f0789db). Not to be implemented.

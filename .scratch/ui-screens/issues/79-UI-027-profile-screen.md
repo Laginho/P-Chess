@@ -1,5 +1,5 @@
 # UI-027: Profile screen to the design
-Stage: blocked
+Stage: to-review
 Blocked by: UI-021, UI-030
 Review: agent
 Difficulty: normal
