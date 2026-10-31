@@ -10,6 +10,28 @@ const Pgn = preload("res://core/pgn.gd")
 const SETTINGS := {"colour": "w", "level": "maia-1500", "control": "3+2", "opening": "Free"}
 
 
+func test_summary_waits_for_analysis_and_shows_accuracy_and_counts():
+	var main = _session(FakeTime.new())
+	var review = main.get_node("Review")
+	var game = Game.new()
+	game.play("e2e4")
+	review.present(game, [180000, 180000, 180000], SETTINGS, "")
+	var summary = review.get_node_or_null("Margin/Content/ReviewBody/Side/Summary")
+	assert_true(summary != null, "summary exists")
+	if summary != null:
+		assert_true(not summary.visible, "accuracy waits for complete analysis")
+		review.receive_position(1, {"pv": [{"cp": 0, "moves": ["e7e5"]}]})
+		review.receive_position(0, {"pv": [{"cp": 0, "moves": ["e2e4"]}], "best_move": "e2e4"})
+		assert_true(summary.visible)
+		assert_true(summary.text.contains("100.0%"), "white accuracy")
+		assert_true(summary.text.contains("–"), "black has no moves")
+	var counts = review.get_node_or_null("Margin/Content/ReviewBody/Side/Counts")
+	assert_true(counts != null, "class table exists")
+	if counts != null:
+		assert_true(counts.text.contains("Best") and counts.text.contains("1"))
+	main.free()
+
+
 class FakeTime:
 	var now := 0
 
