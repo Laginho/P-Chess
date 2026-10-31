@@ -1,5 +1,5 @@
 # UI-027: Profile screen to the design
-Stage: to-review
+Stage: done
 Blocked by: UI-021, UI-030
 Review: agent
 Difficulty: normal
@@ -42,7 +42,7 @@ Restyle the profile to `docs/design/v0.1.0/png/Profile.png`, with the layout Bru
 - Gate: 413 reported passed, 0 failed, including 6 Lc0 skips (407 executed); exit 0. Tested commit: b5a9d1fc8a558740ac2a3ab32aee476080ada9fa.
 - Screenshot checks: `C:\Users\bruno\AppData\Local\Temp\pchess-ui027-c881251d-7437-4691-8ad3-01a7acfb027c\profile-1280.png` (earlier iteration) and `C:\Users\bruno\AppData\Local\Temp\pchess-ui027-final-87105672-a105-47a1-bf74-c0b09c3b69bc\profile-800.png` (final). The 800px table headings are compact; the fixture has one row and no analysed games. The app-wide Settings control remains visible above the screen. Stage 3 must capture the final 1280px screen, compare a populated fixture to the reference and attach before/after images.
 - Acceptance: pending | Manual Profile rename and graphical comparison with populated history, including the 800×600 layout.
-Gate evidence: C:\Users\bruno\AppData\Local\Temp\pchess-ui027-reopen-gate.json
+Gate evidence: C:/Users/bruno/AppData/Local/Temp/pchess-ui027-final-review-a99540ed-4bc3-4f46-aceb-f7c208ceafe0/gate.json
 
 #### Resolution (2026-10-31)
 Verdict: Reopen — criterion 6: populated Profile does not yet match the design's table, card spacing and typography.
@@ -126,3 +126,37 @@ Disclosure: pending | integration | UI-030 is required before UI-027 integration
 - Resume after that sync: rebase `ui-027` onto `sweatshop/ui-screens/2026-10-31-1731`; if UI-030's ticket conflicts with this branch's original addition, retain the session's reviewed copy. Clear `blocked` in both the session ticket (if parked by the driver) and the branch ticket, returning to `to-review`; there is no remaining local stage-2 repair.
 - The resumed review must run the gate for the new production tree and recapture populated 1280×800 and 800×600 screens, verifying actual resolved font weights before integration. Do not reuse the current pre-UI-030 gate receipt for changed production.
 - No session merge, ledger closure, push or edits to another ticket were performed. Related screens also use the shared acceptance; the parent can add UI-030 dependency edges before restarting their lanes.
+
+#### Resolution (2026-10-31, final review after PR #37)
+Verdict: Approve
+
+Reviewed pinned `d416b0b1db37b5611a7bf5ccfa37fd799af4484e...713785073e52483cab5d85dc3d95e74fc16f9ff9` after rebasing onto `sweatshop/ui-screens/2026-10-31-1731`, which contains the owner's shared font correction `f0789db` (PR #37). Independent Standards and Spec agents reviewed all seven changed files: both tickets, `docs/spec.md`, `tests/test_profile.gd`, `ui/profile.gd`, `ui/profile.tscn` and `ui/accuracy_chart.gd`. Coverage: 7/7, 100%, zero skipped. OCR excluded all seven as unsupported extensions; each was reviewed directly. The five implementation/specification files are identical to the last reviewed `3d5e0ce`; the resumed review concentrated on the prior font blocker and integration. Rebase conflicts were confined to this ticket's Stage/comments; the owner/foreman resumption note and prior review evidence were retained.
+
+##### Standards
+
+0 documented-standard violations and 0 actionable baseline smells. All 18 rebased commits preserve test-only/production-only separation and production stays within Primary files. Stage 2's recorded red/green evidence remains above; no new production was authored during this review.
+
+##### Spec
+
+- Criteria 1–5: pass. Rechecked Home opening/Back, Profile present/refresh and table reconstruction/resize, name validation/persistence and legacy human identity, stats save/delete interactions, totals and per-level flag sums, date fallback, accuracy averaging/order, missing/stale/incomplete/corrupt analysis and empty/single/full series. No new regression identified.
+- Criterion 6 and the prior shared-font P2: pass. The parent and independent Spec reviewer inspected the reference and all three fresh populated captures. At 1280×800, ResultsCard is `(380,84), 876×387` and ChartCard starts at y=487; typography, dividers, colours, tile padding and card spacing retain the accepted local repairs. At 800×600, the compact table headers, tiles and Name/Save remain legible without overlap; vertical scrolling reaches the whole chart and both dates.
+- Actual TextServer RID coordinates are `{2003265652:800}` for Title, DisplayName, GamesValue, AccuracyValue, WdlValue and FlagValue in all three captures. Both RichTextLabels reuse the shared ExtraBoldText font. This resolves the remaining blocker without a Profile font workaround.
+- The existing `Proxy escalated (opus-5.5 xhigh)` prerequisite is resolved by the owner's PR #37 and sync `9ad4daf`, as documented by the foreman; UI-030 is superseded by CLEAN-012. No waiver or contract change was needed. The all-games/0–100 chart, illustrative data differences, initial name-field focus and app-wide Settings control retain their documented dispositions.
+
+##### Verification and evidence
+
+- Ran the bound gate once on committed, clean `713785073e52483cab5d85dc3d95e74fc16f9ff9`: exit 0, 436 reported passed, zero failed, including six Lc0-dependent SKIPs (430 executed). Validated receipt, log hash and tested production with `Assert-GateEvidence`. The log includes the existing premove-anchor warning and malformed-input fixture warnings; no test failure or script error. No gate rerun for metadata or merge paperwork.
+- Fresh graphical fixture: nine populated levels and 30 complete cached analyses, isolated from the player's data. All captures exited 0; `capture.gd` also asserts the resolved font weights. Scripts and logs are retained in the external evidence folder below.
+- Reused the existing graphical `Viewport.push_input` probe at 800×600 against the rebased production: typed rename, pointer Save, settings reload, blank-name refusal and Enter submission all passed (`input.log`, exit 0). This is synthetic input evidence, not physical-input acceptance.
+
+| Reference | Before, original session base | After, reviewed production |
+|---|---|---|
+| [Profile design](../../../docs/design/v0.1.0/png/Profile.png) | [Before 1280×800](C:/Users/bruno/AppData/Local/Temp/pchess-ui027-review-07aff169-9b64-487b-bd92-56c0ce4ad4d8/before-1280.png) | [After 1280×800](C:/Users/bruno/AppData/Local/Temp/pchess-ui027-final-review-a99540ed-4bc3-4f46-aceb-f7c208ceafe0/profile1280.png) |
+
+- Minimum window: [800×600 top](C:/Users/bruno/AppData/Local/Temp/pchess-ui027-final-review-a99540ed-4bc3-4f46-aceb-f7c208ceafe0/profile800-top.png), [800×600 chart end](C:/Users/bruno/AppData/Local/Temp/pchess-ui027-final-review-a99540ed-4bc3-4f46-aceb-f7c208ceafe0/profile800-bottom.png).
+- [Gate log](C:/Users/bruno/AppData/Local/Temp/pchess-ui027-final-review-a99540ed-4bc3-4f46-aceb-f7c208ceafe0/gate.log), [receipt](C:/Users/bruno/AppData/Local/Temp/pchess-ui027-final-review-a99540ed-4bc3-4f46-aceb-f7c208ceafe0/gate.json), [input log](C:/Users/bruno/AppData/Local/Temp/pchess-ui027-final-review-a99540ed-4bc3-4f46-aceb-f7c208ceafe0/input.log). The before image is retained from the original pre-redesign, pre-font-fix baseline; the after images are fresh for the tested production.
+- Integrated with merge `041ebfe1e5e53be451025e2147950bf1bc6ffaa6`. This resolution, Stage: done and ledger entry are committed together on the session. No push or separate PR; publication belongs to the driver.
+
+Acceptance: pending | Populated graphical comparison and synthetic rename checks pass. Physical input, audio, live Lc0 and Bruno's v0.1.0 QA were not exercised in this review.
+Disclosure: decision | none | Owner resolved the prior integration prerequisite through PR #37/CLEAN-012; UI-030 is superseded. Evidence and the prior proxy escalation are preserved above.
+Disclosure: pending | release | Bruno's visual/physical-input and v0.1.0 product QA remain required before tagging, per [the UI redo spec](../../ui-redo/spec.md); synthetic and headless evidence do not replace them.
