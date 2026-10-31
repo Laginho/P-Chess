@@ -160,8 +160,10 @@ func _session(waits, start_game := true, queue = null, catalog = null):
 	main.uci.free()
 	main.uci = HeldBridge.new()
 	main.maia = Main.MaiaPlayer.new(main.uci, waits.start)
-	# Ignore the person's preferences without saving or changing them.
+	# A returning player, isolated from the person's preferences.
+	DirAccess.make_dir_recursive_absolute(folder)
 	main.preferences = Main.Settings.new(folder.path_join("settings.cfg"))
+	main.preferences.set_value("player_name", "You")
 	Engine.get_main_loop().root.add_child(main)
 	main.board_view.slide_seconds = 0
 	main.sound_player.select_theme("__ui004_silent__")

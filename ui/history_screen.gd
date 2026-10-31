@@ -77,7 +77,7 @@ func _refresh() -> void:
 func _add_card(list: Node, record: Dictionary) -> void:
 	var game: Dictionary = record.game
 	var headers: Dictionary = game.headers
-	var colour := "w" if headers.get("White", "") == "You" else "b"
+	var colour: String = history.human_colour(headers)
 	var moves := PackedStringArray()
 	for move in game.moves:
 		moves.append(move.uci)
@@ -106,6 +106,8 @@ func _add_card(list: Node, record: Dictionary) -> void:
 	var date: String = headers.get("Date", record.path.get_file().left(10))
 	var opening: String = thumbnail.opening + "\n" if not thumbnail.opening.is_empty() else ""
 	var human: String = headers.get("White" if colour == "w" else "Black", "?")
+	if not headers.has("HumanColor") and human == "You":
+		human = preferences.get_value("player_name")
 	var opponent: String = headers.get("Black" if colour == "w" else "White", "?")
 	text.text = "%s%s  ·  %s (%s) x %s (%s)\n%s (%s)  ·  %d moves\n%s" % [opening, date, human, "White" if colour == "w" else "Black", opponent, "Black" if colour == "w" else "White", _result_text(game, colour), game.result, (moves.size() + 1) / 2, _analysis_text(record.path)]
 	details.add_child(text)

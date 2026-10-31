@@ -11,6 +11,7 @@ const ThemeLoader = preload("res://ui/theme_loader.gd")
 const SECTION := "settings"
 # The settings whose features exist; later tickets add their own rows.
 const DEFAULTS := {
+	"player_name": "You",
 	"premove_style": "Chess.com",
 	"click_click": false,
 	"auto_queen": "off",
@@ -64,12 +65,19 @@ func get_value(key: String):
 	return _values[key]
 
 
+func has_player_name() -> bool:
+	return _config.has_section_key(SECTION, "player_name") \
+			and valid("player_name", _config.get_value(SECTION, "player_name"))
+
+
 # False, with nothing changed, for an unknown key or a value out of range.
 func set_value(key: String, value) -> bool:
 	if not valid(key, value):
 		return false
 	_values[key] = type_convert(value, typeof(DEFAULTS[key]))
 	for k in _values:
+		if k == "player_name" and key != "player_name" and not has_player_name():
+			continue
 		_config.set_value(SECTION, k, _values[k])
 	_config.save(path)
 	changed.emit(key, _values[key])
@@ -96,6 +104,8 @@ static func valid(key: String, value) -> bool:
 		return typeof(value) in numbers and value >= RANGES[key][0] and value <= RANGES[key][1]
 	if typeof(value) != typeof(DEFAULTS[key]):
 		return false
+	if key == "player_name":
+		return not value.strip_edges().is_empty()
 	if CHOICES.has(key):
 		return value in CHOICES[key]
 	if THEMES.has(key):

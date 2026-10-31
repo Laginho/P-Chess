@@ -146,14 +146,16 @@ static func write(game: Dictionary) -> String:
 # termination and one clock per move, then the Opening header when one is named.
 static func finished_game(game, clocks: Array, settings: Dictionary, opening_name := "", target_id := "") -> Dictionary:
 	var maia_name: String = "Maia " + settings.level.trim_prefix("maia-")
+	var player_name: String = settings.get("player_name", "You")
 	var control: Array = Clock.CONTROLS[settings.control]
 	var headers := {
-		"White": "You" if settings.colour == "w" else maia_name,
-		"Black": maia_name if settings.colour == "w" else "You",
+		"White": player_name if settings.colour == "w" else maia_name,
+		"Black": maia_name if settings.colour == "w" else player_name,
 		"TimeControl": "%d+%d" % [control[0] / 1000, control[1] / 1000],
 		"Result": game.result,
 		"Termination": "Time forfeit" if game.reason == "time" else "Normal",
 		"Reason": game.reason,
+		"HumanColor": settings.colour,
 	}
 	if opening_name:
 		headers.Opening = opening_name

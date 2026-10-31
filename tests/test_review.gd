@@ -122,6 +122,8 @@ func _session(time: FakeTime):
 	main.uci = HeldEngine.new()
 	main.maia = main.MaiaPlayer.new(main.uci)
 	main.preferences = main.Settings.new(folder.path_join("settings.cfg"))
+	DirAccess.make_dir_recursive_absolute(folder)
+	main.preferences.set_value("player_name", "You")
 	Engine.get_main_loop().root.add_child(main)
 	main.board_view.slide_seconds = 0
 	main.sound_player.select_theme("__review_silent__")
@@ -268,7 +270,7 @@ func test_export_buttons_send_finished_pgn_and_lichess_url():
 	assert_eq(parsed.games.size(), 1)
 	if parsed.games.size() == 1:
 		assert_eq(parsed.games[0].headers, {"White": "You", "Black": "Maia 1500", "TimeControl": "180+2",
-				"Result": "0-1", "Termination": "Normal", "Reason": "checkmate"})
+				"Result": "0-1", "Termination": "Normal", "Reason": "checkmate", "HumanColor": "w"})
 		assert_eq(parsed.games[0].moves.map(func(move): return move.uci), ["f2f3", "e7e5", "g2g4", "d8h4"])
 		assert_eq(parsed.games[0].moves.map(func(move): return move.clock_ms), [180000, 180000, 181750, 181000])
 		assert_eq(parsed.games[0].result, "0-1")

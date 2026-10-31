@@ -10,6 +10,99 @@ const HistoryStorage = preload("res://tests/history_storage.gd")
 const SETTINGS := {"colour": "w", "level": "maia-1500", "control": "3+2", "opening": "Free"}
 
 
+func test_same_named_players_use_human_colour_for_stats_and_delete():
+	var folder := _folder()
+	var history = History.new(folder)
+	for colour in ["w", "b"]:
+		var settings := SETTINGS.duplicate()
+		settings.colour = colour
+		settings.player_name = "Maia 1500"
+		for outcome in ["win", "loss", "draw"]:
+			var game = Game.new()
+			if outcome == "draw":
+				game.agree_draw()
+			else:
+				game.flag(("b" if colour == "w" else "w") if outcome == "win" else colour)
+			var path: String = history.save(game, [], settings)
+			var counts := {"wins": 0, "draws": 0, "losses": 0, "flag_wins": 0, "flag_losses": 0}
+			counts[{"win": "wins", "loss": "losses", "draw": "draws"}[outcome]] = 1
+			if outcome != "draw":
+				counts["flag_wins" if outcome == "win" else "flag_losses"] = 1
+			assert_eq(History.new(folder).stats("maia-1500", "3+2"), counts)
+			assert_true(history.delete(path))
+			assert_eq(History.new(folder).stats("maia-1500", "3+2"),
+					{"wins": 0, "draws": 0, "losses": 0, "flag_wins": 0, "flag_losses": 0}, colour + " " + outcome)
+	HistoryStorage.clean(folder)
+
+
+func test_legacy_delete_falls_back_to_you_in_either_colour():
+	var folder := _folder()
+	var history = History.new(folder)
+	for colour in ["w", "b"]:
+		var settings := SETTINGS.duplicate()
+		settings.colour = colour
+		var game = Game.new()
+		game.flag("b" if colour == "w" else "w")
+		var path: String = history.save(game, [], settings)
+		var saved: Dictionary = Pgn.parse(FileAccess.get_file_as_string(path)).games[0]
+		saved.headers.erase("HumanColor")
+		var file := FileAccess.open(path, FileAccess.WRITE)
+		file.store_string(Pgn.write(saved))
+		file.close()
+		assert_true(history.delete(path))
+		assert_eq(History.new(folder).stats("maia-1500", "3+2"),
+				{"wins": 0, "draws": 0, "losses": 0, "flag_wins": 0, "flag_losses": 0})
+	HistoryStorage.clean(folder)
+
+
+func test_history_shows_saved_names_and_renames_legacy_you_without_changing_pgn():
+	for colour in ["w", "b"]:
+		for legacy in [false, true]:
+			var folder := _folder()
+			DirAccess.make_dir_recursive_absolute(folder)
+			var main = MainScene.instantiate()
+			main.history = History.new(folder)
+			main.preferences = main.Settings.new(folder.path_join("settings.cfg"))
+			main.preferences.set_value("player_name", "Current name")
+			main.get_node("Setup").book.load_tsv("eco\tname\tpgn\nA00\tFixture\t1. h3\n")
+			main.uci.free()
+			main.uci = HeldEngine.new()
+			main.maia = main.MaiaPlayer.new(main.uci)
+			var settings := SETTINGS.duplicate()
+			settings.colour = colour
+			settings.player_name = "You" if legacy else "Maia 1500"
+			var game = Game.new()
+			game.flag("b" if colour == "w" else "w")
+			var path: String = main.history.save(game, [], settings)
+			if legacy:
+				var saved: Dictionary = Pgn.parse(FileAccess.get_file_as_string(path)).games[0]
+				saved.headers.erase("HumanColor")
+				var file := FileAccess.open(path, FileAccess.WRITE)
+				file.store_string(Pgn.write(saved))
+				file.close()
+			var original := FileAccess.get_file_as_string(path)
+			Engine.get_main_loop().root.add_child(main)
+			main.get_node("Home/Center/Form/History").pressed.emit()
+			var card = main.history_screen.get_node("Margin/Content/Cards/List").get_child(0)
+			assert_eq(card.get_child(0).flipped, colour == "b", "thumbnail follows HumanColor")
+			var displayed := "Current name" if legacy else "Maia 1500"
+			var text: String = card.get_node("Details/Text").text
+			assert_true(text.contains(displayed + (" (White)" if colour == "w" else " (Black)")))
+			assert_true(text.contains("Won on time"), "result follows HumanColor")
+			card.get_node("Details/HBoxContainer/Review").pressed.emit()
+			assert_eq(main.review.get_node("Margin/Content/ReviewBody/BoardView").flipped, colour == "b")
+			main.review.receive_position(0, {"pv": [{"cp": 0, "moves": ["e2e4"]}]})
+			var summary: String = main.review.get_node("Margin/Content/ReviewBody/Side/Summary").text
+			assert_true(summary.contains(("White: " if colour == "w" else "Black: ") + displayed))
+			var copied := []
+			main.review.copy_text = func(value): copied.append(value)
+			main.review.get_node("Margin/Content/Actions/CopyPgn").pressed.emit()
+			assert_eq(copied, [original], "export keeps the saved names too")
+			assert_eq(FileAccess.get_file_as_string(path), original)
+			main.free()
+			HistoryStorage.clean(folder)
+
+
 # Hold the external UCI reply while the real analyser, queue and screen run.
 class HeldAnalysisBridge extends RefCounted:
 	var engine_id := "Stockfish 19"
@@ -492,7 +585,7 @@ func test_finished_game_saves_one_pgn_with_headers_moves_and_exact_clocks():
 	if parsed.games.size() == 1:
 		var saved: Dictionary = parsed.games[0]
 		assert_eq(saved.headers, {"White": "You", "Black": "Maia 1500", "TimeControl": "180+2",
-				"Result": "0-1", "Termination": "Normal", "Reason": "checkmate"})
+				"Result": "0-1", "Termination": "Normal", "Reason": "checkmate", "HumanColor": "w"})
 		assert_eq(saved.result, "0-1")
 		assert_eq(saved.moves.map(func(move): return move.uci), ["f2f3", "e7e5", "g2g4", "d8h4"])
 		assert_eq(saved.moves.map(func(move): return move.clock_ms), [180000, 180000, 179534, 181001])
@@ -578,7 +671,7 @@ func test_headers_use_actual_level_colour_control_and_only_a_known_opening():
 		assert_eq(parsed.error, "")
 		assert_eq(parsed.games[0].headers, {"White": "Maia 1900", "Black": "You",
 				"TimeControl": {"1+0": "60+0", "3+2": "180+2", "5+0": "300+0"}[control],
-				"Result": "0-1", "Termination": "Normal", "Reason": "resignation", "Opening": "Bird Opening"})
+				"Result": "0-1", "Termination": "Normal", "Reason": "resignation", "HumanColor": "b", "Opening": "Bird Opening"})
 	HistoryStorage.clean(folder)
 
 

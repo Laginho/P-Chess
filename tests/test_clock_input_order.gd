@@ -57,7 +57,9 @@ func _session(time: FakeTime, waits := HeldWaits.new(), moves := ["f2f3", "e7e5"
 	main.maia = main.MaiaPlayer.new(main.uci, waits.start)
 	main.sound_player.free()
 	main.sound_player = RecordingSounds.new()
-	main.preferences = main.Settings.new("res://tests/fixtures/no_session_settings.cfg")
+	DirAccess.make_dir_recursive_absolute(folder)
+	main.preferences = main.Settings.new(folder.path_join("settings.cfg"))
+	main.preferences.set_value("player_name", "You")
 	# The runner is already deferred: add_child readies Main synchronously, as in test_session.
 	Engine.get_main_loop().root.add_child(main)
 	main.board_view.slide_seconds = 0
