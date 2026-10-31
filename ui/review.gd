@@ -8,6 +8,7 @@ const Clock = preload("res://core/clock.gd")
 const Pgn = preload("res://core/pgn.gd")
 const Board = preload("res://core/board.gd")
 const Game = preload("res://core/game.gd")
+const Classification = preload("res://core/classification.gd")
 const Badges = preload("res://bot/badges.gd")
 
 # System boundaries stay replaceable for headless tests.
@@ -18,6 +19,12 @@ var _url := ""
 var _game_moves := PackedStringArray()
 var _ply := 0
 var _positions := []
+var _classes := []
+var _move_rows := []
+var _catalog := []
+var _repertoire := []
+var _colour := "w"
+var _check_repertoire := false
 
 @onready var _eval_bar = $Margin/Content/ReviewBody/EvalBar
 @onready var _board_view = $Margin/Content/ReviewBody/BoardView
@@ -64,6 +71,7 @@ func _show_ply(ply: int) -> void:
 	for i in _ply:
 		position.play(_game_moves[i])
 	_board_view.game = position
+	_update_board_annotations()
 	_board_view.queue_redraw()
 	_update_eval_bar()
 
@@ -72,7 +80,36 @@ func receive_position(index: int, position: Dictionary) -> void:
 	if index < 0 or index >= _positions.size():
 		return
 	_positions[index].merge(position, true)
+	_refresh_classes()
+	_update_board_annotations()
 	_update_eval_bar()
+
+
+func _refresh_classes() -> void:
+	# ponytail: reevaluate all plies as positions land; incremental classification if long games stutter.
+	_classes = Classification.evaluate(_game_moves, {"positions": _positions}, _catalog, _repertoire, _colour, _check_repertoire)
+	for i in _classes.size():
+		var icon: Texture2D = null if _classes[i] == null else _class_icon(_classes[i].class)
+		_move_rows[i].set_icon(i % 2 + 1, icon)
+		if _classes[i] != null:
+			_move_rows[i].set_tooltip_text(i % 2 + 1, _classes[i].class)
+
+
+func _class_icon(label: String) -> Texture2D:
+	return load("res://ui/icons/classes/" + label.to_lower() + ".svg")
+
+
+func _update_board_annotations() -> void:
+	_board_view.review_square = ""
+	_board_view.review_arrow = ""
+	_board_view.review_icon = null
+	if _ply > 0:
+		var before: Dictionary = _positions[_ply - 1]
+		_board_view.review_arrow = before.get("best_move", "")
+		if _classes.size() >= _ply and _classes[_ply - 1] != null:
+			_board_view.review_square = _game_moves[_ply - 1].substr(2, 2)
+			_board_view.review_icon = _class_icon(_classes[_ply - 1].class)
+	_board_view.queue_redraw()
 
 
 func _update_eval_bar() -> void:
@@ -91,6 +128,12 @@ func _update_eval_bar() -> void:
 func present(game, clocks: Array, settings: Dictionary, result_text: String,
 		catalog: Array = [], repertoire: Array = [], check_repertoire := false) -> void:
 	_game_moves = game.moves.duplicate()
+	_classes = []
+	_move_rows = []
+	_catalog = catalog
+	_repertoire = repertoire
+	_colour = settings.colour
+	_check_repertoire = check_repertoire
 	_positions = []
 	var position = Game.new()
 	_positions.append({"fen": position.board.to_fen()})
@@ -113,6 +156,7 @@ func present(game, clocks: Array, settings: Dictionary, result_text: String,
 			row.set_text(0, "%d." % (i / 2 + 1))
 		row.set_text(i % 2 + 1, "%s (%.3f s)" % [board.san(game.moves[i]), times[i] / 1000.0])
 		row.set_metadata(i % 2 + 1, i + 1)
+		_move_rows.append(row)
 		var text := _badge_text(badges[i])
 		row.set_text(i % 2 + 3, text)
 		row.set_tooltip_text(i % 2 + 3, text)
