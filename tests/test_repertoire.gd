@@ -5,6 +5,18 @@ const Book = preload("res://bot/book.gd")
 const STUDY := "res://tests/fixtures/pgn/repertoire_study.pgn"
 
 
+func test_import_fields_keep_visible_labels_after_typing():
+	var importer = load("res://ui/repertoire_import.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(importer)
+	importer.present()
+	importer.get_node("Margin/Form/FileRow/Path").text = "study.pgn"
+	importer.get_node("Margin/Form/Name").text = "Study"
+	for item in [["PathLabel", "PGN file"], ["NameLabel", "Repertoire name"]]:
+		var label = importer.get_node_or_null("Margin/Form/" + item[0])
+		assert_true(label != null and label.visible and label.text == item[1], item[1] + " label is visible")
+	importer.free()
+
+
 func test_viewer_shows_black_line_and_steps_without_allowing_moves():
 	var setup = load("res://ui/setup.tscn").instantiate()
 	var folder := _folder()
