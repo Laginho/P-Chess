@@ -1,5 +1,5 @@
 # REV-005: The new review screen: board, eval bar and classified moves
-Stage: implementing
+Stage: to-review
 Blocked by: REV-002, REV-003
 Review: human
 Difficulty: hard
@@ -110,7 +110,7 @@ The review becomes a chess.com-style game review (§15.6). The post-game panel's
 - Focused tests: 29 passed, 0 failed, including a cache-reuse mutant that failed when cache loading was disabled and a headless 800x600 geometry check. The gate printed 346 passed, 0 failed; exit 0.
 - Acceptance: pending | Manually finish a game with Stockfish installed, open Review, watch incremental icons and progress, navigate with keyboard and mouse, inspect the actual rendered 800x600 layout, check flipped orientation and long-game responsiveness. Stockfish was absent in this worktree; headless geometry and the fake analyser do not establish those checks.
 - Disclosure: pending | release | Manual acceptance above, including visual layout, real Stockfish integration and long-game stutter check.
-Gate evidence: C:\Users\bruno\AppData\Local\Temp\rev005-gate-05860d8.json
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\rev005-flip-6436144.json
 
 #### Resolution (2026-10-30)
 Verdict: Reopen — criterion 2: the review board cannot be flipped with the existing F hotkey, and its eval bar does not update immediately when its orientation changes.
@@ -134,8 +134,12 @@ Criterion verdicts:
 
 Coverage includes post-game entry, rematch/setup and analysis cancellation, BoardView input/drawing, UCI startup/queue/stop, analyser/cache, partial classification/Badges and History/Book callers; REV-006 summary/graph and HIST-004 history entry remain outside this ticket. No rendered GUI, physical-input, live Stockfish or long-game responsiveness acceptance was performed. The planned Forced/Book/Repertoire/Best tests with an unanalysed predecessor are absent; static inspection finds the priority exceptions present, so this is a coverage limitation rather than a second confirmed behavior defect.
 
-Verification: the gate receipt above was validated against HEAD, including log hash, exit marker and unchanged tested code. Its existing log prints **346 passed, 0 failed; ExitCode: 0**. The gate was reused, not rerun. The focused observational probe used Godot 4.7 and fake engine/clock fixtures, with real viewport dispatch: `AFTER_F game_flipped=true review_flipped=false eval_flipped=false`; after a direct board flip, `review_flipped=true eval_flipped=false`. Script and log: `C:\Users\bruno\AppData\Local\Temp\rev005-stage3-input-probe.gd` and `C:\Users\bruno\AppData\Local\Temp\rev005-stage3-input-probe.log` (probe exit 0 means it completed; the orientation mismatch is the finding). Durable reproduction and expected behavior are recorded above.
+Verification: the then-current gate receipt `C:\Users\bruno\AppData\Local\Temp\rev005-gate-05860d8.json` was validated against the reviewed HEAD, including log hash, exit marker and unchanged tested code. Its existing log prints **346 passed, 0 failed; ExitCode: 0**. The gate was reused, not rerun. The focused observational probe used Godot 4.7 and fake engine/clock fixtures, with real viewport dispatch: `AFTER_F game_flipped=true review_flipped=false eval_flipped=false`; after a direct board flip, `review_flipped=true eval_flipped=false`. Script and log: `C:\Users\bruno\AppData\Local\Temp\rev005-stage3-input-probe.gd` and `C:\Users\bruno\AppData\Local\Temp\rev005-stage3-input-probe.log` (probe exit 0 means it completed; the orientation mismatch is the finding). Durable reproduction and expected behavior are recorded above.
 
 Acceptance: pending | Existing manual checks above plus the criterion-2 correction and its viewport regression test.
 Disclosure: pending | integration | Criterion 2 must be repaired before integrating REV-005; stage returned to to-implement on its existing branch.
 Disclosure: pending | release | Existing real Stockfish, rendered 800×600, orientation and long-game responsiveness acceptance remains open.
+
+
+- 2026-10-31 Stage 2 reopen: review handles F before the focused move list or hidden game board; the visible board and evaluation bar flip together immediately. The regression uses viewport input with the move list focused and a completed cached analysis, and verifies both directions and the hidden board. Before the production fix, the focused suite reported 16 passed, 1 failed with the expected board, bar and hidden-board mismatches; after it, 17 passed, 0 failed.
+- Full gate on commit `643614493cd923b2a1318609557004a546b14ab4`: 346 passed, 0 failed; exit 0. The prior integration disclosure for criterion 2 is addressed by the fix and awaits stage 3 review. Existing manual acceptance and release disclosure remain pending.
