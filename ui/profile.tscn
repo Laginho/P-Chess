@@ -62,6 +62,29 @@ visible = false
 layout_mode = 2
 text = "Please enter a name."
 
+[node name="Scroll" type="ScrollContainer" parent="Margin/Content"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="Body" type="VBoxContainer" parent="Margin/Content/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
+
+[node name="ResultsTitle" type="Label" parent="Margin/Content/Scroll/Body"]
+layout_mode = 2
+text = "Results by level and time control"
+
+[node name="Results" type="GridContainer" parent="Margin/Content/Scroll/Body"]
+layout_mode = 2
+columns = 7
+theme_override_constants/h_separation = 16
+
+[node name="NoResults" type="Label" parent="Margin/Content/Scroll/Body"]
+layout_mode = 2
+text = "No games played yet."
+
 [node name="Back" type="Button" parent="Margin/Content"]
 layout_mode = 2
 text = "Back"
