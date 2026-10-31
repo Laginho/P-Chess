@@ -205,3 +205,5 @@
 | 2026-10-31 04:04 | UI-020 | review | gpt-6.1-sol xhigh | 1 | merged | sweatshop/core/2026-10-31-0338 | 5m | 2.2M in (94% cached), 13k out | $0.627 | 1.314 |
 | 2026-10-31 04:33 | CLEAN-011 | implement | gpt-6.1-terra high | 1 | to-review | sweatshop/side/2026-10-31-0418 | 13m | 11.2M in (99% cached), 13k out | $0.713 | 1.046 |
 | 2026-10-31 04:38 | CLEAN-011 | review | gpt-6.1-sol xhigh | 1 | merged | sweatshop/side/2026-10-31-0418 | 5m | 3.2M in (92% cached), 21k out | $1.003 | 1.052 |
+| 2026-10-31 16:20 | UI-021 | implement | gpt-6.1-terra xhigh | 1 | to-review | sweatshop/ui-base/2026-10-31-1604 | 15m | 17.5M in (99% cached), 34k out | $1.183 | 1.304 |
+| 2026-10-31 16:28 | UI-021 | review | gpt-6.1-sol xhigh | 1 | merged | sweatshop/ui-base/2026-10-31-1604 | 8m | 6.0M in (96% cached), 22k out | $1.294 | 1.307 |
