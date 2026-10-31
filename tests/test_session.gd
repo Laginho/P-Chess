@@ -155,7 +155,9 @@ func _session(waits):
 	main.uci = HeldBridge.new()
 	main.maia = Main.MaiaPlayer.new(main.uci, waits.start)
 	# Ignore the person's preferences without saving or changing them.
-	main.preferences = Main.Settings.new("res://tests/fixtures/no_session_settings.cfg")
+	var preferences_path := "user://test_session_settings_%d.cfg" % Time.get_ticks_usec()
+	main.preferences = Main.Settings.new(preferences_path)
+	main.tree_exiting.connect(func(): DirAccess.remove_absolute(ProjectSettings.globalize_path(preferences_path)))
 	Engine.get_main_loop().root.add_child(main)
 	main.board_view.slide_seconds = 0
 	main.sound_player.select_theme("__ui004_silent__")
