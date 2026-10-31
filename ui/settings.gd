@@ -52,7 +52,7 @@ func _focus_panel() -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if _panel.visible and event is InputEventKey and event.is_pressed() and not event.is_echo() and event.ctrl_pressed and event.keycode == KEY_COMMA:
+	if _panel.visible and event is InputEventKey and event.is_pressed() and not event.is_echo() and (event.keycode == KEY_ESCAPE or (event.ctrl_pressed and event.keycode == KEY_COMMA)):
 		_panel.hide()
 		get_viewport().set_input_as_handled()
 
@@ -61,8 +61,6 @@ func _input(event: InputEvent) -> void:
 func _unhandled_key_input(event: InputEvent) -> void:
 	if not _panel.visible:
 		return
-	if event.is_pressed() and event.keycode == KEY_ESCAPE:
-		_panel.hide()
 	get_viewport().set_input_as_handled()
 
 
