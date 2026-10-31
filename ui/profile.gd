@@ -12,41 +12,75 @@ var preferences
 
 
 func _ready() -> void:
-	$Margin/Content/Back.pressed.connect(func(): back_requested.emit())
-	$Margin/Content/NameRow/SaveName.pressed.connect(_save_name)
-	$Margin/Content/NameRow/PlayerName.text_submitted.connect(func(_text): _save_name())
+	%Back.pressed.connect(func(): back_requested.emit())
+	%SaveName.pressed.connect(_save_name)
+	%PlayerName.text_submitted.connect(func(_text): _save_name())
+	%Results.resized.connect(_fit_headers)
+	for label in [%WdlValue, %FlagValue]:
+		label.add_theme_font_override("normal_font", get_theme_font("font", "ExtraBoldText"))
 
 
 func present(settings) -> void:
 	preferences = settings
-	$Margin/Content/NameRow/PlayerName.text = preferences.get_value("player_name")
+	%PlayerName.text = preferences.get_value("player_name")
+	_show_name(%PlayerName.text)
 	refresh(History.new())
 	show()
-	$Margin/Content/NameRow/PlayerName.grab_focus()
+	%PlayerName.grab_focus()
 
 
 func refresh(history, analysis_dir := "") -> void:
 	if analysis_dir.is_empty():
 		analysis_dir = history.analysis_folder()
-	var table: GridContainer = $Margin/Content/Scroll/Body/Results
+	var table: GridContainer = %Results
 	for child in table.get_children():
 		table.remove_child(child)
 		child.queue_free()
-	for title in ["Level", "Time", "W", "D", "L", "Flag wins", "Flag losses"]:
+	for title in ["Level", "1+0 · W D L", "3+2 · W D L", "5+0 · W D L", "Flag wins", "Flag losses"]:
 		_cell(table, title)
 	var rows := 0
+	var totals := {"wins": 0, "draws": 0, "losses": 0, "flag_wins": 0, "flag_losses": 0}
 	for level in Setup.LEVELS:
+		var values := []
+		var flags := [0, 0]
+		var played := 0
 		for control in ["1+0", "3+2", "5+0"]:
 			var counts: Dictionary = history.stats(level, control)
-			if counts.wins + counts.draws + counts.losses == 0:
-				continue
-			rows += 1
-			for value in [level.replace("maia-", "Maia "), control, counts.wins, counts.draws,
-					counts.losses, counts.flag_wins, counts.flag_losses]:
-				_cell(table, str(value))
-	$Margin/Content/Scroll/Body/NoResults.visible = rows == 0
+			for key in totals:
+				totals[key] += counts[key]
+			var count: int = counts.wins + counts.draws + counts.losses
+			played += count
+			flags[0] += counts.flag_wins
+			flags[1] += counts.flag_losses
+			values.append("%d  %d  %d" % [counts.wins, counts.draws, counts.losses] if count else "–")
+		if played == 0:
+			continue
+		rows += 1
+		for value in [level.replace("maia-", "Maia "), values[0], values[1], values[2], flags[0], flags[1]]:
+			_cell(table, str(value))
+	if table.size.x > 0:
+		_fit_headers()
+	%GamesValue.text = str(totals.wins + totals.draws + totals.losses)
+	%WdlValue.text = "[color=#8fbc5a]%d[/color] / [color=#a8a49c]%d[/color] / [color=#ee7a72]%d[/color]" % [totals.wins, totals.draws, totals.losses]
+	%FlagValue.text = "[color=#8fbc5a]%d[/color] / [color=#ee7a72]%d[/color]" % [totals.flag_wins, totals.flag_losses]
+	%NoResults.visible = rows == 0
+	var records: Array = history.games()
+	var first_date := ""
+	for record in records:
+		var date: String = record.game.headers.get("Date", record.path.get_file().left(10))
+		var fields := date.replace("-", ".").split(".")
+		if fields.size() >= 2 and fields[0].is_valid_int() and fields[1].is_valid_int() and int(fields[1]) in range(1, 13):
+			date = "%s.%02d" % [fields[0], int(fields[1])]
+			if first_date.is_empty() or date < first_date:
+				first_date = date
+	%PlayingSince.visible = not first_date.is_empty()
+	if not first_date.is_empty():
+		var fields := first_date.split(".")
+		var months := ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+		%PlayingSince.text = "Playing since %s %s" % [months[int(fields[1]) - 1], fields[0]]
+
 	var series := []
-	for record in history.games():
+	for record in records:
 		var game: Dictionary = record.game
 		if game.moves.is_empty():
 			continue
@@ -67,8 +101,12 @@ func refresh(history, analysis_dir := "") -> void:
 		var first: String = a.date.replace(".", "-")
 		var second: String = b.date.replace(".", "-")
 		return first < second if first != second else a.path < b.path)
-	$Margin/Content/Scroll/Body/AccuracyChart.set_series(series)
-	$Margin/Content/Scroll/Body/NoAccuracy.visible = series.is_empty()
+	%AccuracyChart.set_series(series)
+	%NoAccuracy.visible = series.is_empty()
+	var total_accuracy := 0.0
+	for sample in series:
+		total_accuracy += sample.accuracy
+	%AccuracyValue.text = "–" if series.is_empty() else "%.1f" % (total_accuracy / series.size())
 
 
 # Cache metadata alone does not guarantee that every scored position was written.
@@ -93,18 +131,58 @@ func _complete_analysis(positions, count: int) -> bool:
 	return fields.size() >= 2 and fields[1] in ["w", "b"]
 
 
+func _fit_headers() -> void:
+	var table: GridContainer = %Results
+	if table.get_child_count() < 6:
+		return
+	var narrow := table.size.x < 500
+	var titles := ["Level", "1+0 · W D L", "3+2 · W D L", "5+0 · W D L", "Flag wins", "Flag losses"]
+	var compact := ["Level", "1+0\nW D L", "3+2\nW D L", "5+0\nW D L", "Flag\nwins", "Flag\nlosses"]
+	for i in 6:
+		var label: Label = table.get_child(i)
+		label.text = compact[i] if narrow else titles[i]
+		label.custom_minimum_size.y = 42 if narrow else 30
+
+
 func _cell(table: GridContainer, value: String) -> void:
+	var index := table.get_child_count()
+	var header := index < 6
+	var column := index % 6
 	var label := Label.new()
 	label.text = value
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	label.custom_minimum_size.y = 30 if header else 34
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT if column == 0 else HORIZONTAL_ALIGNMENT_CENTER
+	label.theme_type_variation = "BoldText" if header else ("SemiboldText" if column == 0 else "")
+	label.add_theme_font_size_override("font_size", 12 if header else 14)
+	if header:
+		label.add_theme_color_override("font_color", Color("a8a49c"))
+	elif column == 4:
+		label.add_theme_color_override("font_color", Color("8fbc5a") if value != "0" else Color("8a857c"))
+	elif column == 5:
+		label.add_theme_color_override("font_color", Color("ee7a72") if value != "0" else Color("8a857c"))
+	var line := StyleBoxFlat.new()
+	line.draw_center = false
+	line.content_margin_left = 8 if column == 0 else 0
+	if not header:
+		line.border_width_top = 1
+		line.border_color = Color("3a3834")
+	label.add_theme_stylebox_override("normal", line)
 	table.add_child(label)
 
 
 func _save_name() -> void:
-	var input: LineEdit = $Margin/Content/NameRow/PlayerName
+	var input: LineEdit = %PlayerName
 	var value := input.text.strip_edges()
 	if preferences.set_value("player_name", value):
 		input.text = value
-		$Margin/Content/NameError.hide()
+		_show_name(value)
+		%NameError.hide()
 	else:
-		$Margin/Content/NameError.show()
+		%NameError.show()
+
+
+func _show_name(value: String) -> void:
+	%DisplayName.text = value
+	%Avatar.text = value.left(1).to_upper()

@@ -2,6 +2,30 @@
 
 [ext_resource type="Script" path="res://ui/profile.gd" id="1"]
 [ext_resource type="Script" path="res://ui/accuracy_chart.gd" id="2"]
+[ext_resource type="Texture2D" path="res://ui/icons/back.svg" id="3"]
+
+[sub_resource type="StyleBoxFlat" id="AvatarStyle"]
+bg_color = Color(0.498039, 0.65098, 0.313725, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="TileStyle"]
+content_margin_left = 16.0
+content_margin_top = 16.0
+content_margin_right = 16.0
+content_margin_bottom = 16.0
+bg_color = Color(0.168627, 0.164706, 0.152941, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.270588, 0.258824, 0.239216, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
 
 [node name="Profile" type="Control"]
 layout_mode = 3
@@ -19,7 +43,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.08, 0.09, 0.11, 1)
+color = Color(0.121569, 0.117647, 0.109804, 1)
 
 [node name="Margin" type="MarginContainer" parent="."]
 layout_mode = 1
@@ -28,77 +52,292 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 20
-theme_override_constants/margin_top = 12
-theme_override_constants/margin_right = 20
-theme_override_constants/margin_bottom = 12
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 20
 
 [node name="Content" type="VBoxContainer" parent="Margin"]
 layout_mode = 2
-theme_override_constants/separation = 12
+theme_override_constants/separation = 20
 
-[node name="Title" type="Label" parent="Margin/Content"]
+[node name="Header" type="HBoxContainer" parent="Margin/Content"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 28
+theme_override_constants/separation = 16
+
+[node name="Back" type="Button" parent="Margin/Content/Header"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(44, 44)
+layout_mode = 2
+icon = ExtResource("3")
+tooltip_text = "Back to home"
+accessibility_name = "Back to home"
+
+[node name="Title" type="Label" parent="Margin/Content/Header"]
+layout_mode = 2
+theme_type_variation = &"ExtraBoldText"
+theme_override_font_sizes/font_size = 26
 text = "Profile"
-
-[node name="NameRow" type="HBoxContainer" parent="Margin/Content"]
-layout_mode = 2
-
-[node name="NameLabel" type="Label" parent="Margin/Content/NameRow"]
-layout_mode = 2
-text = "Your name"
-
-[node name="PlayerName" type="LineEdit" parent="Margin/Content/NameRow"]
-layout_mode = 2
-size_flags_horizontal = 3
-placeholder_text = "Your name"
-
-[node name="SaveName" type="Button" parent="Margin/Content/NameRow"]
-layout_mode = 2
-text = "Save name"
-
-[node name="NameError" type="Label" parent="Margin/Content"]
-visible = false
-layout_mode = 2
-text = "Please enter a name."
+vertical_alignment = 1
 
 [node name="Scroll" type="ScrollContainer" parent="Margin/Content"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 
-[node name="Body" type="VBoxContainer" parent="Margin/Content/Scroll"]
+[node name="Body" type="HBoxContainer" parent="Margin/Content/Scroll"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 12
+size_flags_vertical = 3
+theme_override_constants/separation = 16
 
-[node name="ResultsTitle" type="Label" parent="Margin/Content/Scroll/Body"]
+[node name="Left" type="VBoxContainer" parent="Margin/Content/Scroll/Body"]
+custom_minimum_size = Vector2(340, 0)
 layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="NameCard" type="PanelContainer" parent="Margin/Content/Scroll/Body/Left"]
+layout_mode = 2
+theme_type_variation = &"CardPanel"
+
+[node name="Pad" type="MarginContainer" parent="Margin/Content/Scroll/Body/Left/NameCard"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="Stack" type="VBoxContainer" parent="Margin/Content/Scroll/Body/Left/NameCard/Pad"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Identity" type="HBoxContainer" parent="Margin/Content/Scroll/Body/Left/NameCard/Pad/Stack"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="AvatarPanel" type="PanelContainer" parent="Margin/Content/Scroll/Body/Left/NameCard/Pad/Stack/Identity"]
+custom_minimum_size = Vector2(56, 56)
+layout_mode = 2
+theme_override_styles/panel = SubResource("AvatarStyle")
+
+[node name="Avatar" type="Label" parent="Margin/Content/Scroll/Body/Left/NameCard/Pad/Stack/Identity/AvatarPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"ExtraBoldText"
+theme_override_font_sizes/font_size = 26
+theme_override_colors/font_color = Color(0.078, 0.078, 0.071, 1)
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Who" type="VBoxContainer" parent="Margin/Content/Scroll/Body/Left/NameCard/Pad/Stack/Identity"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="DisplayName" type="Label" parent="Margin/Content/Scroll/Body/Left/NameCard/Pad/Stack/Identity/Who"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"ExtraBoldText"
+theme_override_font_sizes/font_size = 20
+text_overrun_behavior = 3
+
+[node name="PlayingSince" type="Label" parent="Margin/Content/Scroll/Body/Left/NameCard/Pad/Stack/Identity/Who"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"MutedText"
+theme_override_font_sizes/font_size = 13
+
+[node name="NameLabel" type="Label" parent="Margin/Content/Scroll/Body/Left/NameCard/Pad/Stack"]
+layout_mode = 2
+theme_type_variation = &"SectionLabel"
+text = "Name"
+
+[node name="NameRow" type="HBoxContainer" parent="Margin/Content/Scroll/Body/Left/NameCard/Pad/Stack"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="PlayerName" type="LineEdit" parent="Margin/Content/Scroll/Body/Left/NameCard/Pad/Stack/NameRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "Your name"
+accessibility_name = "Name"
+
+[node name="SaveName" type="Button" parent="Margin/Content/Scroll/Body/Left/NameCard/Pad/Stack/NameRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+theme_type_variation = &"RaisedButton"
+text = "Save"
+
+[node name="NameError" type="Label" parent="Margin/Content/Scroll/Body/Left/NameCard/Pad/Stack"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+text = "Please enter a name."
+
+[node name="Tiles" type="GridContainer" parent="Margin/Content/Scroll/Body/Left"]
+layout_mode = 2
+columns = 2
+theme_override_constants/h_separation = 12
+theme_override_constants/v_separation = 12
+
+[node name="GamesCard" type="PanelContainer" parent="Margin/Content/Scroll/Body/Left/Tiles"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"CardPanel"
+theme_override_styles/panel = SubResource("TileStyle")
+
+[node name="Stack" type="VBoxContainer" parent="Margin/Content/Scroll/Body/Left/Tiles/GamesCard"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="Title" type="Label" parent="Margin/Content/Scroll/Body/Left/Tiles/GamesCard/Stack"]
+layout_mode = 2
+theme_type_variation = &"MutedText"
+theme_override_font_sizes/font_size = 13
+text = "Games"
+
+[node name="GamesValue" type="Label" parent="Margin/Content/Scroll/Body/Left/Tiles/GamesCard/Stack"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"ExtraBoldText"
+theme_override_font_sizes/font_size = 26
+
+[node name="AccuracyCard" type="PanelContainer" parent="Margin/Content/Scroll/Body/Left/Tiles"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"CardPanel"
+theme_override_styles/panel = SubResource("TileStyle")
+
+[node name="Stack" type="VBoxContainer" parent="Margin/Content/Scroll/Body/Left/Tiles/AccuracyCard"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="Title" type="Label" parent="Margin/Content/Scroll/Body/Left/Tiles/AccuracyCard/Stack"]
+layout_mode = 2
+theme_type_variation = &"MutedText"
+theme_override_font_sizes/font_size = 13
+text = "Avg. accuracy"
+
+[node name="AccuracyValue" type="Label" parent="Margin/Content/Scroll/Body/Left/Tiles/AccuracyCard/Stack"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"ExtraBoldText"
+theme_override_font_sizes/font_size = 26
+
+[node name="WdlCard" type="PanelContainer" parent="Margin/Content/Scroll/Body/Left/Tiles"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"CardPanel"
+theme_override_styles/panel = SubResource("TileStyle")
+
+[node name="Stack" type="VBoxContainer" parent="Margin/Content/Scroll/Body/Left/Tiles/WdlCard"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="Title" type="Label" parent="Margin/Content/Scroll/Body/Left/Tiles/WdlCard/Stack"]
+layout_mode = 2
+theme_type_variation = &"MutedText"
+theme_override_font_sizes/font_size = 13
+text = "W / D / L"
+
+[node name="WdlValue" type="RichTextLabel" parent="Margin/Content/Scroll/Body/Left/Tiles/WdlCard/Stack"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 35)
+layout_mode = 2
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
+theme_override_font_sizes/normal_font_size = 22
+
+[node name="FlagCard" type="PanelContainer" parent="Margin/Content/Scroll/Body/Left/Tiles"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"CardPanel"
+theme_override_styles/panel = SubResource("TileStyle")
+
+[node name="Stack" type="VBoxContainer" parent="Margin/Content/Scroll/Body/Left/Tiles/FlagCard"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="Title" type="Label" parent="Margin/Content/Scroll/Body/Left/Tiles/FlagCard/Stack"]
+layout_mode = 2
+theme_type_variation = &"MutedText"
+theme_override_font_sizes/font_size = 13
+text = "Flag W / L"
+
+[node name="FlagValue" type="RichTextLabel" parent="Margin/Content/Scroll/Body/Left/Tiles/FlagCard/Stack"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 35)
+layout_mode = 2
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
+theme_override_font_sizes/normal_font_size = 22
+
+[node name="Right" type="VBoxContainer" parent="Margin/Content/Scroll/Body"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 16
+
+[node name="ResultsCard" type="PanelContainer" parent="Margin/Content/Scroll/Body/Right"]
+layout_mode = 2
+theme_type_variation = &"CardPanel"
+
+[node name="Stack" type="VBoxContainer" parent="Margin/Content/Scroll/Body/Right/ResultsCard"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="TitlePad" type="MarginContainer" parent="Margin/Content/Scroll/Body/Right/ResultsCard/Stack"]
+layout_mode = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_bottom = 3
+
+[node name="ResultsTitle" type="Label" parent="Margin/Content/Scroll/Body/Right/ResultsCard/Stack/TitlePad"]
+layout_mode = 2
+theme_type_variation = &"ExtraBoldText"
+theme_override_font_sizes/font_size = 15
 text = "Results by level and time control"
 
-[node name="Results" type="GridContainer" parent="Margin/Content/Scroll/Body"]
+[node name="Results" type="GridContainer" parent="Margin/Content/Scroll/Body/Right/ResultsCard/Stack"]
+unique_name_in_owner = true
 layout_mode = 2
-columns = 7
-theme_override_constants/h_separation = 16
+columns = 6
+theme_override_constants/h_separation = 0
+theme_override_constants/v_separation = 0
 
-[node name="NoResults" type="Label" parent="Margin/Content/Scroll/Body"]
+[node name="NoResults" type="Label" parent="Margin/Content/Scroll/Body/Right/ResultsCard/Stack"]
+unique_name_in_owner = true
 layout_mode = 2
 text = "No games played yet."
 
-[node name="AccuracyTitle" type="Label" parent="Margin/Content/Scroll/Body"]
+[node name="ChartCard" type="PanelContainer" parent="Margin/Content/Scroll/Body/Right"]
 layout_mode = 2
-text = "Your accuracy over time"
+size_flags_vertical = 3
+theme_type_variation = &"CardPanel"
 
-[node name="AccuracyChart" type="Control" parent="Margin/Content/Scroll/Body"]
+[node name="Stack" type="VBoxContainer" parent="Margin/Content/Scroll/Body/Right/ChartCard"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="AccuracyTitle" type="Label" parent="Margin/Content/Scroll/Body/Right/ChartCard/Stack"]
+layout_mode = 2
+theme_type_variation = &"ExtraBoldText"
+theme_override_font_sizes/font_size = 15
+text = "Accuracy over time"
+
+[node name="AccuracyChart" type="Control" parent="Margin/Content/Scroll/Body/Right/ChartCard/Stack"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 200)
 layout_mode = 2
+size_flags_vertical = 3
 script = ExtResource("2")
 
-[node name="NoAccuracy" type="Label" parent="Margin/Content/Scroll/Body"]
+[node name="NoAccuracy" type="Label" parent="Margin/Content/Scroll/Body/Right/ChartCard/Stack"]
+unique_name_in_owner = true
 layout_mode = 2
 text = "No analysed games with moves by you yet."
-
-[node name="Back" type="Button" parent="Margin/Content"]
-layout_mode = 2
-text = "Back"
+autowrap_mode = 3
