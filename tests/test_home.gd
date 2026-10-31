@@ -263,3 +263,28 @@ func test_home_restores_quick_play_size_when_engine_warning_is_hidden():
 	home.get_node("Center/Form/Missing").hide()
 	assert_true(quick.size.y > compact_height, "quick play grows after the warning is hidden")
 	home.free()
+
+
+func test_searching_keeps_long_player_name_inside_card_at_minimum_window():
+	var main = MainScene.instantiate()
+	var folder := "user://test_home_long_name_%d" % Time.get_ticks_usec()
+	main.history = load("res://core/history.gd").new(folder)
+	main.uci.free()
+	main.uci = Session.HeldBridge.new()
+	main.maia = main.MaiaPlayer.new(main.uci)
+	main.preferences = main.Settings.new(folder.path_join("settings.cfg"))
+	var name := "Alexandria Catherine Montgomery de Albuquerque"
+	main.preferences.set_value("player_name", name)
+	Engine.get_main_loop().root.add_child(main)
+	var screen: Control = main.searching
+	screen.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	screen.size = Vector2(800, 600)
+	screen.present({"control": "3+2", "level": "maia-1500"})
+	await Engine.get_main_loop().process_frame
+	var player: Label = screen.get_node("Player")
+	var card: Control = screen.get_node("Card")
+	assert_true(player.get_global_rect().end.x <= card.get_global_rect().end.x, "player name stays inside the card")
+	assert_eq(player.text_overrun_behavior, TextServer.OVERRUN_TRIM_ELLIPSIS, "long names are visibly truncated")
+	assert_eq(main.preferences.get_value("player_name"), name, "the full name remains saved")
+	main.free()
+	Session.HistoryStorage.clean(folder)

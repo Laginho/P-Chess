@@ -1,5 +1,5 @@
 # UI-022: Home, name dialog and searching screen to the design
-Stage: to-implement
+Stage: implementing
 Blocked by: UI-021
 Review: agent
 Difficulty: normal
