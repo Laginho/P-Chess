@@ -14,6 +14,7 @@ func _ready() -> void:
 	$Center/Board.game = preload("res://core/game.gd").new()
 	visibility_changed.connect(_sync_settings_button)
 	$Center.visibility_changed.connect(_sync_settings_button)
+	$Center/Form/Missing.visibility_changed.connect(_layout_home)
 	call_deferred("_sync_settings_button")
 	resized.connect(_layout_home)
 	_layout_home()
@@ -106,7 +107,6 @@ func _show_profile() -> void:
 func show_missing(message: String) -> void:
 	$Center/Form/Missing.text = message + "\n\npowershell -NoProfile -File scripts/fetch-engine.ps1"
 	$Center/Form/Missing.show()
-	_layout_home()
 	for button in $Center/Form/Quick.get_children():
 		button.disabled = true
 
