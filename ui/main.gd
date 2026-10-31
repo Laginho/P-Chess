@@ -375,6 +375,7 @@ func _start(new_settings: Dictionary) -> void:
 	draw_button.disabled = false
 	draw_notice.hide()
 	draw_notice_timer.stop()
+	_notice_before_focus = false
 	maia.clock = clock
 	maia.control = settings.control
 	maia.level = settings.level

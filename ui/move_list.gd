@@ -19,6 +19,10 @@ func add(san: String) -> void:
 
 
 func _render() -> void:
+	var scroll := get_v_scroll_bar()
+	var position := scroll.value
+	var following := position >= scroll.max_value - scroll.page
+	scroll_following = false
 	clear()
 	push_table(3)
 	set_table_column_expand(1, true, 1, false)
@@ -28,6 +32,10 @@ func _render() -> void:
 		_cell(_moves[i] + ("   " if i + 1 < _moves.size() else ""), i, i == _moves.size() - 1, maxf(0, (size.x - 48) / 2 - 16))
 		_cell(_moves[i + 1] if i + 1 < _moves.size() else "", i, i + 1 == _moves.size() - 1, maxf(0, (size.x - 48) / 2 - 16))
 	pop()
+	if following:
+		scroll_following = true
+	else:
+		scroll.value = position
 
 
 func _cell(value: String, row: int, current: bool, width := 0) -> void:
