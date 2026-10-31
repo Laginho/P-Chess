@@ -228,6 +228,7 @@ func _ready() -> void:
 		if not visible:
 			_cancel_analysis())
 	_moves.select_mode = Tree.SELECT_SINGLE
+	_moves.resized.connect(func(): _moves.ensure_cursor_is_visible.call_deferred())
 	_moves.item_selected.connect(func():
 		var selected := _moves.get_selected()
 		if selected:
