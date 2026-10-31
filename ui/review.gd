@@ -176,7 +176,15 @@ func _ready() -> void:
 		legend.size = Vector2i(480, 430)
 		legend.move_to_center())
 	var toggle: Button = $Margin/Content/ReviewBody/Side/ClassToggle
-	toggle.pressed.connect(func(): $Margin/Content/ReviewBody/Side/Counts.visible = not $Margin/Content/ReviewBody/Side/Counts.visible)
+	toggle.pressed.connect(func():
+		var side: Control = $Margin/Content/ReviewBody/Side
+		var expanded: bool = not side.get_node("Counts").visible
+		side.get_node("Counts").visible = expanded
+		side.get_node("Summary").visible = not expanded
+		side.get_node("AccuracyHelp").visible = not expanded
+		side.get_node("EvalGraph").visible = not expanded
+		side.get_node("Moves").visible = not expanded
+		side.get_node("RepertoireExit").visible = not expanded and not side.get_node("RepertoireExit").text.is_empty())
 	resized.connect(_resize_classes)
 	_resize_classes()
 	visibility_changed.connect(func():
@@ -255,6 +263,9 @@ func _resize_classes() -> void:
 	$Margin/Content/ReviewBody/Side/Counts.visible = not compact and not unanalysed
 	$Margin/Content/ReviewBody/Side/ClassHelp.visible = not unanalysed
 	$Margin/Content/ReviewBody/Side/AccuracyHelp.visible = not unanalysed
+	$Margin/Content/ReviewBody/Side/Summary.visible = not unanalysed
+	_moves.visible = true
+	$Margin/Content/ReviewBody/Side/RepertoireExit.visible = not $Margin/Content/ReviewBody/Side/RepertoireExit.text.is_empty()
 	_graph.visible = not unanalysed
 
 
@@ -480,7 +491,7 @@ func _update_summary() -> void:
 		var index := 0 if side == "White" else 1
 		summary.get_node("AccuracyCards/" + side + "Score/Value").text = white if index == 0 else black
 		summary.get_node("AccuracyCards/" + side + "Name").text = _player_names[index]
-	summary.show()
+	summary.visible = not $Margin/Content/ReviewBody/Side/UnanalysedNotice.visible and not (size.x <= 800 and $Margin/Content/ReviewBody/Side/Counts.visible)
 
 
 func _refresh_classes() -> void:
