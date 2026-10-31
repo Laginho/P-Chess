@@ -553,7 +553,7 @@ func test_match_score_follows_players_and_resets():
 	var score = main.board_view.get_node_or_null("GameOver/Panel/Content/Score")
 	assert_true(score != null, "game-over score exists")
 	if score:
-		assert_eq(score.text, "You 1 – 0 Maia 1700")
+		assert_eq(score.text, "1 – 0")
 	_key(main, KEY_SPACE)
 	await _wait_start(main)
 	assert_true(white.visible and black.visible, "rematch shows boxes")
@@ -562,7 +562,7 @@ func test_match_score_follows_players_and_resets():
 	main.board_view.game.agree_draw()
 	main._show_result()
 	score = main.board_view.get_node("GameOver/Panel/Content/Score")
-	assert_eq(score.text, "You 1½ – ½ Maia 1700")
+	assert_eq(score.text, "1½ – ½")
 	assert_eq(black.text, "1½", "finished rematch updates human score")
 	assert_eq(white.text, "½", "finished rematch updates Maia score")
 	main.board_view.get_node("GameOver/Panel/Content/Close").pressed.emit()
