@@ -271,6 +271,7 @@ func test_rematch_checks_actual_black_moves_and_no_continuation_is_explicit():
 	await _wait_start(main)
 	_finish(main)
 	main.review.rematch_requested.emit()
+	await _wait_start(main)
 	assert_eq(main.human, "b")
 	for move in ["e2e4", "e7e5", "g1f3", "h7h6"]:
 		assert_true(main.board_view.play(move))
@@ -318,6 +319,7 @@ func test_expected_moves_are_visible_in_review_without_hovering_over_a_clipped_b
 		assert_true(details.is_visible_in_tree())
 		assert_eq(details.text, "2. White: Left repertoire — expected: Nc3, Nf3")
 	main.review.rematch_requested.emit()
+	await _wait_start(main)
 	_finish(main)
 	if details != null:
 		assert_true(not details.visible, "a fresh no-move review clears the previous exit details")
@@ -363,7 +365,6 @@ func test_enabling_checking_during_catalog_load_rejects_bad_repertoire_and_allow
 	main.setup.get_node("Center/Form/Colour").select(1)
 	assert_eq(main.preferences.get_value("check_repertoire"), false)
 	main.setup.get_node("Center/Form/Start").pressed.emit()
-	await _wait_start(main)
 	book.entered.wait()
 	assert_eq(main.clock, null, "no clock while catalog I/O is pending")
 	assert_eq(main.uci.requests.size(), 0)
@@ -386,6 +387,7 @@ func test_enabling_checking_during_catalog_load_rejects_bad_repertoire_and_allow
 	while ready.is_empty() and Time.get_ticks_msec() < deadline:
 		picker._process(0)
 		OS.delay_msec(1)
+	await _wait_start(main)
 	assert_eq(ready, [""], "the real catalog await completed successfully")
 	assert_eq(main.clock, null, "newly required corrupt repertoire prevents clock creation")
 	assert_eq(main.uci.requests.size(), 0, "no Maia request after the failed required load")

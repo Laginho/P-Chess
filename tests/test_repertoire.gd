@@ -301,6 +301,7 @@ func test_main_uses_repertoire_for_maia_catalog_for_history_and_preserves_rematc
 	opening.select(2)
 	opening.item_selected.emit(2)
 	setup.get_node("Center/Form/Start").pressed.emit()
+	await _wait_start(main)
 	assert_eq(main.settings.opening, "My repertoire")
 	assert_true(main.maia.book != setup.book, "practice book replaces the catalog")
 	assert_eq(main.maia.book.entries.size(), 4)
