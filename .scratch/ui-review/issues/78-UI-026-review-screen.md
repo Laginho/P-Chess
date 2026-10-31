@@ -1,5 +1,5 @@
 # UI-026: Review screen to the design
-Stage: to-review
+Stage: to-implement
 Blocked by: UI-021
 Review: human
 Difficulty: hard
@@ -54,7 +54,7 @@ Restyle the review to chess.com's layout as drawn in `docs/design/v0.1.0/png/Rev
 - The ticket branch diverges from `sweatshop/ui-review/2026-10-31-1734` only in the lane's subsequent attempt/recovery metadata. Stage 3 must reconcile those tracker comments when rebasing onto the current lane, preserving the proxy receipt and this handoff; the gate receipt applies to the production tree at `566792a`.
 
 Acceptance: pending | Exercise a finished game with live analysis, open an unanalysed History game, resize to 800x600, and operate the legend with mouse and keyboard; Bruno's v0.1.0 QA remains required by `.scratch/ui-redo/spec.md`.
-Disclosure: pending | integration | Stage-3 Resolution below records four P2 findings (F1-F4); resolve them before integration. The original visual differences remain recorded above.
+Disclosure: pending | integration | The latest stage-3 re-review below confirms F1, F2 and F4 resolved; F3 still hides the current move when opening cached analysis and must be repaired before integration. Original visual differences remain recorded above.
 Disclosure: pending | release | `.scratch/ui-redo/spec.md` requires Bruno's v0.1.0 QA before the release tag.
 
 Gate evidence: C:/Users/bruno/AppData/Local/Temp/pchess-ui026-reopen-final-gate.json
@@ -125,3 +125,60 @@ Disclosure: pending | release | `.scratch/ui-redo/spec.md` still requires Bruno'
 Acceptance: pending | Live analysis of a finished game, unanalysed History, physical keyboard/mouse interaction and Bruno's v0.1.0 QA remain to be verified; the fixture captures and automated input are not product acceptance.
 Disclosure: pending | integration | Stage 3 must independently review the F1-F4 repairs and reconcile lane metadata before integration.
 Disclosure: pending | release | `.scratch/ui-redo/spec.md` requires Bruno's v0.1.0 QA before the release tag.
+
+
+#### Resolution — re-review (2026-10-31)
+Verdict: Reopen — F3 remains partial: the current move is outside the visible list when a long game opens with cached analysis (criterion 3).
+
+- Reviewed HEAD: `bc0d840da0aef35d1b865f3c5d096d477fa77c0d`; fixed comparison: `git diff 73dacd85372e550c1977ca810b36e71c842255cb...bc0d840da0aef35d1b865f3c5d096d477fa77c0d`. The independent Standards and Spec axes examined all three files changed since the previous review (`ui/review.gd`, `tests/test_review.gd`, this ticket) and all 18 commits. The earlier full-diff coverage remains above. Rechecked History time-control parsing and legacy fallback, the real post-game result, retained History errors, initial selection/navigation/graph jumps, synchronous analysis-cache replay, result/progress layout, and legend anchoring, close action and viewport keyboard routing at both window sizes.
+- This is the second recorded reopen. Under `ticket-flow/stage3.md`, the unattended driver parks a second reopen for the foreman to diagnose before retrying. The remaining issue is an incomplete repair of the original F3, not a newly introduced requirement or a new finding in previously reviewed code.
+
+##### Standards
+
+- No new documented-standard breach or material baseline smell. Test and production changes remain separated, and source changes stay within Primary files. Existing S1 (P3: local palette/style overrides instead of shared theme variations) is unchanged and remains an open note on this ticket; it does not drive this reopen.
+
+##### Spec
+
+| Prior finding | Disposition |
+|---|---|
+| F1 — saved History time control | Resolved. The real History entry point displays saved `180+2` as `3+2`; the regression retains the missing-header fallback. |
+| F2 — post-game progress overlaps result | Resolved. The real result omits the rematch shortcut; multiline History warnings remain. At 1280x800 the result ends at y=82 and progress starts at y=86; at 800x600 the result ends at y=89 and progress starts at y=94. |
+| F3 — current move outside list | Still P2; criterion 3 fails. See reproduction below. |
+| F4 — centred legend instead of popover | Resolved for the reported defect. The legend is anchored beside Moves help, contained at 1280x800 and 800x600, and offers an explicit close action. Viewport Enter opens it; Esc and Space close it from History without returning to History or triggering rematch. Previously disclosed typography/spacing differences remain. |
+
+- **F3 — P2, criterion 3:** `ui/review.gd:515-517` queues a single scroll when selecting a move, before the layout resulting from cached analysis has settled. Open a finished 80-ply game with a complete, current analysis cache through `main._review_history_game` (`present_history` replays the cache at `ui/review.gd:729-733`). After ten frames the selected ply is 80, but its rectangle is `(274, 782, 210, 28)` inside a Tree only `498x224`; the screenshot displays moves 12-19 instead of the selected move 40. The earlier direct-present probe also leaves the final row outside the list, at y=224. Navigating to Last again produces a visible row at y=191. Keep the selected item visible after cache-driven layout/Tree resizing as well as navigation. Extend the long-game regression through a complete saved-analysis/History entry; the current test at `tests/test_review.gd:944-949` supplies no analysis and leaves the accuracy summary hidden, so it misses this state. A resize-triggered scroll is a candidate small repair, but must be verified after the final layout rather than assumed sufficient.
+
+| Criterion | Re-review disposition |
+|---|---|
+| 1 | Previous pass retained: player labels/dots, orientation, eval score, destination icon and arrow. |
+| 2 | F1/F2 resolved; previous counts, accuracy and graph assessment retained. |
+| 3 | ❌ F3 persists when opening a long analysed History game; selection/navigation-only coverage is insufficient. |
+| 4 | Previous control/action pass retained; History legend dismissal does not activate Back to History. |
+| 5 | F2 resolved; pending icons/progress and unanalysed state retained. |
+| 6 | F4 resolved: anchored popover, twelve ordered class rows/thresholds, containment and dismissal. |
+| 7 | Compact structure and legend containment pass in rendered fixtures; full physical acceptance is pending. |
+| 8 | Six fresh reference comparisons are recorded below; F3 prevents acceptance. Bruno QA remains pending. |
+
+##### Verification and visual evidence
+
+- Reused the existing final gate without rerunning unchanged code. `Assert-GateEvidence` validated receipt contents, the log SHA256, `ExitCode: 0` marker, tested commit availability and equality of production with reviewed HEAD. Tested commit: `5796130c4a5cc246db257ef9c52b3f0b36eb5871`. **440 printed passed, six Lc0 SKIPs, 434 executed, 0 failed, exit 0.** Receipt/log: `C:/Users/bruno/AppData/Local/Temp/pchess-ui026-reopen-final-gate.json` and `pchess-ui026-reopen-final-gate.log`. Existing F1-F4/warning red and green logs were inspected; no production repair was authored during this review.
+- Current-code evidence root `E` is `C:/Users/bruno/AppData/Local/Temp/pchess-ui026-rereview-1793486870585/`. `manifest.json` pins reviewed HEAD, fixed point, before/after paths and receipt. The general graphical probe `E/probe.gd` / `E/probe.log` exits 0 without script errors, reproduces the real History header, verifies both post-game progress rectangles, captures long selection/navigation, repertoire/graph rendering and compact legend input. The targeted `E/cached_probe.gd` / `E/cached-probe-final.log` creates a legal seeded 80-ply finished game and current analysis cache in isolated data, opens the actual History caller, waits ten frames, captures `E/CachedHistoryLast.png`, and reports **`F3_CACHE_REGRESSION=FAIL`, exit 1** without script errors. That exit is the failed visibility condition, not a harness failure. Its initial draft omitted creation of the isolated analysis directory; `E/cached-probe.log` is superseded by the final log.
+- Before root `B` is `C:/Users/bruno/AppData/Local/Temp/pchess-ui026-review-4192169c-91d5-460e-951b-7ce997d87d42/before/`, the previously exported/imported `26bad347` tree. All six current screenshots below were regenerated with the repository's graphical screenshot tool, isolated data and exit 0; each was visually compared with its reference PNG and the previous review's recorded differences.
+
+| Board | Before | Current after | Reference |
+|---|---|---|---|
+| Review | `B/Review.png` | `E/after/Review.png` | `docs/design/v0.1.0/png/Review.png` |
+| ReviewAnalysing | `B/ReviewAnalysing.png` | `E/after/ReviewAnalysing.png` | `docs/design/v0.1.0/png/ReviewAnalysing.png` |
+| ReviewNotAnalysed | `B/ReviewNotAnalysed.png` | `E/after/ReviewNotAnalysed.png` | `docs/design/v0.1.0/png/ReviewNotAnalysed.png` |
+| ReviewSmall | `B/ReviewSmall.png` | `E/after/ReviewSmall.png` | `docs/design/v0.1.0/png/ReviewSmall.png` |
+| ReviewLegend | `B/ReviewLegend.png` | `E/after/ReviewLegend.png` | `docs/design/v0.1.0/png/ReviewLegend.png` |
+| ClassLegend | `B/ClassLegend.png` | `E/after/ClassLegend.png` | `docs/design/v0.1.0/png/ClassLegend.png` |
+
+- The general fixture still uses six plies, illustrative names/values and no repertoire; it does not demonstrate standalone ClassLegend (the tool aliases it to ReviewLegend). Supplemental `E/RepertoireAndGraphDots.png`, `E/RepertoireSmall.png` and `E/ClassesExpandedSmall.png` preserve the repertoire/graph/compact checks; graph classes and cached evaluations are synthetic rendering data, not live engine classification. The title/result lines, type sizes, spacing, absent chart glyph and compact expansion differences remain disclosed above with their original reasons. The centred-dialog difference is now resolved.
+- Existing proxy decision reviewed: `Proxy decided (opus-5.5 xhigh): (a), resume once on the same lineup`, receipt `C:/Users/bruno/AppData/Local/Temp/sweatshop-proxy/20261031-182950-UI-026-4b70fe.json`. Its complete original text remains above; it authorizes the retry and does not waive F3 or the visual/product contract.
+- Only ticket metadata changes in this reopen; the gate receipt remains valid. No rebase, merge, push or ledger entry was performed. The lane `sweatshop/ui-review/2026-10-31-1734` remains at `e67e0a9`; its recovery comments still need reconciliation when an approved branch is rebased for integration. No live Stockfish/Lc0 game, physical keyboard/mouse gameplay, audio, screen reader, clean-machine release test or Bruno QA was performed.
+
+Acceptance: pending | F3 remains open; the cached-History reproduction and six current screenshots are linked above. Live analysis and Bruno's v0.1.0 QA remain pending.
+Disclosure: decision | none | Existing proxy retry decision and receipt preserved; no contract waiver.
+Disclosure: pending | integration | Repair F3 on UI-026 and independently review the complete cached-analysis entry before lane integration; the second reopen requires the driver's foreman diagnosis before retrying.
+Disclosure: pending | release | Bruno's v0.1.0 QA remains required by `.scratch/ui-redo/spec.md`.
