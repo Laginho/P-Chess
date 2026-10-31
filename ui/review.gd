@@ -337,6 +337,10 @@ func _update_player_labels() -> void:
 
 func _show_ply(ply: int) -> void:
 	_ply = clampi(ply, 0, _game_moves.size())
+	if _ply > 0 and _ply <= _move_rows.size():
+		_move_rows[_ply - 1].select((_ply - 1) % 2 + 1)
+	elif _moves.get_selected() != null:
+		_moves.deselect_all()
 	var position = Game.new()
 	for i in _ply:
 		position.play(_game_moves[i])
@@ -496,6 +500,7 @@ func present(game, clocks: Array, settings: Dictionary, result_text: String,
 	$Margin/Content/ReviewBody/Side/RepertoireExit.text = exit_text
 	$Margin/Content/ReviewBody/Side/RepertoireExit.visible = not exit_text.is_empty()
 	_update_summary()
+	_show_ply(_game_moves.size())
 	_pgn = Pgn.write(Pgn.finished_game(game, clocks, settings))
 	_url = lichess_url(game)
 	show()
