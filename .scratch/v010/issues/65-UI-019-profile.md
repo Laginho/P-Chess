@@ -1,5 +1,5 @@
 # UI-019: The profile
-Stage: to-implement
+Stage: implementing
 Blocked by: REV-004, UI-018
 Review: agent
 Difficulty: normal
