@@ -1,5 +1,5 @@
-﻿# UI-028: Repertoires, opening picker and editor to the design
-Stage: implementing
+# UI-028: Repertoires, opening picker and editor to the design
+Stage: to-review
 Blocked by: UI-021
 Review: agent
 Difficulty: normal
@@ -98,3 +98,13 @@ Acceptance: pending | The two UI-028 regressions above and the shared font defec
 Disclosure: pending | integration | Correct the two UI-028 findings before integrating this ticket; preserve the branch's existing work and tests.
 Disclosure: pending | integration | CLEAN-012 tracks the shared font-weight defect required by this ticket's visual acceptance; no deferral has been accepted.
 
+
+
+- 2026-10-31 Reopen implementation: the viewer now numbers a Black-start line from its starting side, including the selected move and accessible description. Both scene headings use ellipsis and expose the full name in their tooltip. The existing full text remains on the label.
+- Red/green: `258286e` failed on all four Black-start text/highlight assertions before `60e4d77` passed the focused Black-start and White-start checks. The larger temporary focused runner was interrupted after the red failure because an unrelated asynchronous test did not finish; the two-test runner exited 0. `21269b1` failed on both minimum-window sizes and both tooltips before `42fa431` passed. The complete gate subsequently passed both new tests.
+- Graphical probe at `42fa431`: at 800x600 the viewer is 768x568 and editor 736x536; the board and Save remain visible with the 99-character name. Captures and output: `C:/Users/bruno/AppData/Local/Temp/ui028-reopen-probe/`. This is automated rendering, not physical-input or human acceptance.
+- Gate at `42fa431`: 433 reported passed, 0 failed, including six Lc0 SKIPs (427 executed). Log: `C:/Users/bruno/AppData/Local/Temp/ui028-reopen-gate.log`.
+
+Acceptance: pending | Human visual and physical-input acceptance remains; CLEAN-012 remains a shared visual defect.
+Disclosure: pending | integration | CLEAN-012 tracks the shared font-weight defect required by the visual acceptance; no deferral has been accepted.
+Gate evidence: C:/Users/bruno/AppData/Local/Temp/ui028-reopen-gate.json
