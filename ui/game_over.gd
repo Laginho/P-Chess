@@ -2,14 +2,11 @@ extends Control
 
 var main
 var game
-var review_button: Button
 
 
-func present(session, finished_game, side_review: Button) -> void:
+func present(session, finished_game) -> void:
 	main = session
 	game = finished_game
-	review_button = side_review
-	review_button.hide()
 	$Panel/Content/Headline.text = {"1-0": "White won", "0-1": "Black won", "1/2-1/2": "Draw"}[game.result]
 	$Panel/Content/Reason.text = "by " + game.reason
 	$Panel/Content/Score.text = main.match_score_text()
@@ -17,12 +14,10 @@ func present(session, finished_game, side_review: Button) -> void:
 	$Panel/Content/Rematch.pressed.connect(_rematch)
 	$Panel/Content/NewGame.pressed.connect(_new_game)
 	$Panel/Content/Close.pressed.connect(_close)
-	review_button.pressed.connect(_open_review)
 
 
 func _process(_delta: float) -> void:
 	if main and (main.board_view.game != game or main.clock == null):
-		review_button.hide()
 		queue_free()
 
 
@@ -40,22 +35,18 @@ func _input(event: InputEvent) -> void:
 
 func _close() -> void:
 	hide()
-	review_button.show()
 
 
 func _open_review() -> void:
 	hide()
-	review_button.hide()
 	main.review.open_analysis(main.review_analysis_path, game.result == "1/2-1/2")
 
 
 func _rematch() -> void:
 	hide()
-	review_button.hide()
 	main._start(main.rematch(main.settings))
 
 
 func _new_game() -> void:
 	hide()
-	review_button.hide()
 	main._show_home()

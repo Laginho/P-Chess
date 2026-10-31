@@ -135,7 +135,7 @@ func capture() -> void:
      game.result = "1/2-1/2"
     var card = load("res://ui/game_over.tscn").instantiate()
     main.board_view.add_child(card)
-    card.present(main, game, main.get_node("Layout/Side/ReviewButton"))
+    card.present(main, game)
  await process_frame
  await process_frame
  await RenderingServer.frame_post_draw

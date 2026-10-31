@@ -377,6 +377,7 @@ func _start(new_settings: Dictionary) -> void:
 	white_clock.clock = clock
 	black_clock.clock = clock
 	_set_flipped(human == "b")
+	settings_screen.get_node("Open").hide()
 	sound_player.play("game_start")
 	_next_turn()
 
@@ -619,7 +620,7 @@ func _show_result() -> void:
 		old_panel.free()
 	var panel = load("res://ui/game_over.tscn").instantiate()
 	board_view.add_child(panel)
-	panel.present(self, game, $Layout/Side/ReviewButton)
+	panel.present(self, game)
 	sound_player.play("game_end")
 	print("Maia: median %.1f ms from your move to Lc0's answer, over %d moves"
 			% [maia.median_ms(), maia.latencies_ms.size()])
