@@ -103,6 +103,59 @@ func read_repertoire(path: String) -> Dictionary:
 	return data
 
 
+func delete(path: String) -> bool:
+	error = ""
+	if _load_error not in [OK, ERR_FILE_NOT_FOUND] or not FileAccess.file_exists(path):
+		error = "Could not read game or history stats."
+		return false
+	var parsed := Pgn.parse(FileAccess.get_file_as_string(path))
+	if not parsed.error.is_empty() or parsed.games.size() != 1:
+		error = "Could not read game PGN."
+		return false
+	var game: Dictionary = parsed.games[0]
+	var headers: Dictionary = game.headers
+	var human := "w" if headers.get("White", "") == "You" else "b"
+	var opponent: String = headers.get("Black" if human == "w" else "White", "")
+	var level := "maia-" + opponent.trim_prefix("Maia ")
+	var controls := {"60+0": "1+0", "180+2": "3+2", "300+0": "5+0"}
+	var control: String = controls.get(headers.get("TimeControl", ""), "")
+	var counts := stats(level, control)
+	var previous := counts.duplicate()
+	var key := "draws" if game.result == "1/2-1/2" else ("wins" if (game.result == "1-0") == (human == "w") else "losses")
+	counts[key] = maxi(0, counts[key] - 1)
+	if key != "draws" and reason(game) == "time":
+		var flag := "flag_wins" if key == "wins" else "flag_losses"
+		counts[flag] = maxi(0, counts[flag] - 1)
+	var target: String = headers.get("PracticeTarget", "")
+	var practiced: int = practice_counts().get(target, 0)
+	var paths := [path, path.trim_suffix(".pgn") + ".repertoire.json", "user://analysis".path_join(path.get_file() + ".json")]
+	var moved := []
+	for source in paths:
+		if not FileAccess.file_exists(source):
+			continue
+		var backup: String = source + ".deleting"
+		if FileAccess.file_exists(backup) or DirAccess.rename_absolute(source, backup) != OK:
+			for item in moved:
+				DirAccess.rename_absolute(item + ".deleting", item)
+			error = "Could not delete game files."
+			return false
+		moved.append(source)
+	_results.set_value(level, control, counts)
+	if not target.is_empty():
+		_results.set_value("practice", target, maxi(0, practiced - 1))
+	if _results.save(_root.path_join("stats.cfg")) != OK:
+		_results.set_value(level, control, previous)
+		if not target.is_empty():
+			_results.set_value("practice", target, practiced)
+		for item in moved:
+			DirAccess.rename_absolute(item + ".deleting", item)
+		error = "Could not save history stats."
+		return false
+	for item in moved:
+		DirAccess.remove_absolute(item + ".deleting")
+	return true
+
+
 func games() -> Array:
 	var folder := _root.path_join("games")
 	var result := []
