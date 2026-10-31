@@ -1,5 +1,5 @@
 # UI-026: Review screen to the design
-Stage: to-review
+Stage: done
 Blocked by: UI-021
 Review: human
 Difficulty: hard
@@ -54,10 +54,10 @@ Restyle the review to chess.com's layout as drawn in `docs/design/v0.1.0/png/Rev
 - The ticket branch diverges from `sweatshop/ui-review/2026-10-31-1734` only in the lane's subsequent attempt/recovery metadata. Stage 3 must reconcile those tracker comments when rebasing onto the current lane, preserving the proxy receipt and this handoff; the gate receipt applies to the production tree at `566792a`.
 
 Acceptance: pending | Exercise a finished game with live analysis, open an unanalysed History game, resize to 800x600, and operate the legend with mouse and keyboard; Bruno's v0.1.0 QA remains required by `.scratch/ui-redo/spec.md`.
-Disclosure: pending | integration | F1, F2 and F4 were resolved in re-review; the subsequent F3 repair requires independent review before integration. Original visual differences remain recorded above.
+Disclosure: decision | none | F1-F4 are resolved in the final independent re-review and lane integration below. Original visual differences remain recorded for product QA.
 Disclosure: pending | release | `.scratch/ui-redo/spec.md` requires Bruno's v0.1.0 QA before the release tag.
 
-Gate evidence: C:/Users/bruno/AppData/Local/Temp/pchess-ui026-cache-gate.json
+Gate evidence: C:/Users/bruno/AppData/Local/Temp/pchess-ui026-final-review-1793488008122/gate.json
 
 #### Resolution (2026-10-31)
 Verdict: Reopen — criteria 2, 3, 5, 6 and 8 are partial: incorrect History time control, overlapping post-game progress, offscreen current move, and a centred legend instead of the required popover.
@@ -195,3 +195,48 @@ Disclosure: pending | release | Bruno's v0.1.0 QA remains required by `.scratch/
 - 2026-10-31 Stage stopped (incomplete handoff): Stage left uncommitted work; saved for recovery. See C:\Users\bruno\Desktop\Pastinha\Programas\Projects\P-Chess\.artifacts-build\lanes\ui-review\.scratch\run-log\UI-026-implement-20261031-182333.txt.runtime.json and run-log/recovery.txt; inspect the saved work before retrying.
 
 - 2026-10-31 Second reopen: foreman diagnosis required before retrying. Classify new defect, earlier review miss, contract gap, or review-induced churn; record cause and next action, then return to-implement only when ready.
+
+#### Resolution — final re-review (2026-10-31)
+Verdict: Approve
+
+- Independent reviewers: the stage-2 author wrote the one-line F3 repair; stage-3 reviewer `/root` reviewed it through independent agents `/root/standards` and `/root/spec` and independently reproduced the cached-History scenario graphically. Fixed incremental comparison: `git diff bc0d840da0aef35d1b865f3c5d096d477fa77c0d...966137e0f1f097065f9f4d936ca2b9453582c72c`. All five new commits were covered. The earlier full-diff review and F1/F2/F4 dispositions remain valid.
+- Rebased onto lane `sweatshop/ui-review/2026-10-31-1734` at `f79c4f3c2d2647d8effff13f891bb50ef8cdacb5`. The only conflict was this ticket's historical metadata; the lane's unique recovery/failure notes were restored above, with the original proxy receipt and every handoff/review retained. `git diff 966137e HEAD -- ui/review.gd ui/review.tscn ui/eval_graph.gd tests/test_review.gd` was empty after rebase. The lane also includes CLEAN-012's font-weight correction and regression, so the old gate receipt was superseded by a fresh integrated run.
+- Standards: no new documented-standard breach or material baseline smell. The test-only commit `d503fe2` (rebased `15fe14e`) precedes production-only `5c0c1b0` (rebased `2f3cc39`), within Primary files. The new signal connection follows the surrounding signal/deferred-call conventions. Existing S1 (P3, local palette/style overrides) remains unchanged and has an open destination: [CLEAN-013](82-CLEAN-013-review-theme-variations.md), pending stage-1 specification; it does not drive a reopen.
+- Spec: F3 is resolved. `ui/review.gd:231` scrolls the current selection after the Tree resizes, covering cache-driven layout shrinking; `_show_ply` still handles selection/navigation. The test at `tests/test_review.gd:962` opens a legal 80-ply finished game via the real History entry point with a complete current analysis cache, waits ten frames and checks selected-cell containment at both sizes. No scope creep or new defect was found. F1 (saved time control), F2 (progress/result and retained History errors) and F4 (anchored legend) remain resolved; their source is unchanged by this repair.
+
+| Criterion | Final disposition |
+|---|---|
+| 1 | Previous pass retained: player names/dots, orientation, left eval score, destination class icon and best-move arrow. |
+| 2 | F1/F2 resolved; counts/icons/accuracy/graph-marker assessment retained. |
+| 3 | F3 resolved independently for cached History entry, compact resizing, class expansion/collapse and return to wide layout; previous move/repertoire and navigation assessment retained. |
+| 4 | Previous controls/action visibility pass retained. |
+| 5 | Previous pending placeholders, analysis progress and empty-state pass retained; F2 remains resolved. |
+| 6 | Previous ordered twelve-class popover/threshold pass retained; Enter opens, Esc/Space dismiss without leaving History. |
+| 7 | 800x600 capture remains usable; final move visible and compact class expansion/collapse preserves it. |
+| 8 | Six final rendered comparisons below; the recorded visual differences and fixture limitations remain disclosed. Bruno's release QA is still pending. |
+
+- Independent graphical evidence root `E`: `C:/Users/bruno/AppData/Local/Temp/pchess-ui026-final-review-1793488008122/`. The extended previous review probe `E/cached_probe.gd` ran against the rebased code with isolated data. `E/cached-probe.log`: **F3_CACHE_REGRESSION=PASS, ExitCode: 0**, no script errors. The selected final row was y=191..219 in a 224px Tree at 1280x800; after resizing to 800x600 it was y=90..118 in a 123px Tree, remained there after class expansion/collapse, and was y=187..215 on returning to wide. Captures: `E/CachedHistoryLast.png`, `E/CachedHistorySmall.png`. Viewport Enter/Esc/Space also confirmed History legend input routing and compact containment.
+- Red/green evidence inspected: `C:/Users/bruno/AppData/Local/Temp/ui026-cached-red.log` fails exactly the selected-row bounds at both dimensions (exit 1); `ui026-cached-green.log` reports FAILURES=0, exit 0. No production repair was authored by this review.
+- Before root `B`: `C:/Users/bruno/AppData/Local/Temp/pchess-ui026-review-4192169c-91d5-460e-951b-7ce997d87d42/before/` (the prior exported/imported `26bad347` tree). Six final captures were regenerated with `scripts/screens.gd` using isolated data, all exit 0 without script errors, and visually compared to their reference PNGs. `E/manifest.json` pins the revisions and gate receipt.
+
+| Board | Before | Final after | Reference |
+|---|---|---|---|
+| Review | `B/Review.png` | `E/after/Review.png` | `docs/design/v0.1.0/png/Review.png` |
+| ReviewAnalysing | `B/ReviewAnalysing.png` | `E/after/ReviewAnalysing.png` | `docs/design/v0.1.0/png/ReviewAnalysing.png` |
+| ReviewNotAnalysed | `B/ReviewNotAnalysed.png` | `E/after/ReviewNotAnalysed.png` | `docs/design/v0.1.0/png/ReviewNotAnalysed.png` |
+| ReviewSmall | `B/ReviewSmall.png` | `E/after/ReviewSmall.png` | `docs/design/v0.1.0/png/ReviewSmall.png` |
+| ReviewLegend | `B/ReviewLegend.png` | `E/after/ReviewLegend.png` | `docs/design/v0.1.0/png/ReviewLegend.png` |
+| ClassLegend | `B/ClassLegend.png` | `E/after/ClassLegend.png` | `docs/design/v0.1.0/png/ClassLegend.png` |
+
+- Visual limits retained: the general fixture uses six plies and illustrative names/scores/counts, and has no repertoire. The screenshot tool aliases ClassLegend to ReviewLegend rather than demonstrating the standalone component. The previously documented title/result arrangement, type sizes, spacing, absent chart glyph and temporary hidden summary/move list during compact class expansion remain recorded with their original reasons. Rematch is retained under the behavioral contract. Synthetic cached evaluations verify rendering/layout, not live engine classification.
+- Existing decision reviewed: `Proxy decided (opus-5.5 xhigh): (a), resume once on the same lineup`, receipt `C:/Users/bruno/AppData/Local/Temp/sweatshop-proxy/20261031-182950-UI-026-4b70fe.json`. Its complete original text and receipt remain above; it authorizes the retry, without waiving product criteria. All four review findings are now resolved.
+
+- Final integrated gate ran once on `e033f7d305908fdf93693c4235992d7da49e6df8`: **442 printed passed, six Lc0 SKIPs, 436 executed, 0 failed, ExitCode: 0**. Complete log: `E/gate.log`; receipt: `E/gate.json`. `Assert-GateEvidence` validated command, log hash, exit marker, tested commit and production equality before integration, and is rechecked against the closure HEAD. The log contains an anchor-sizing warning; no script errors were reported. No repeat gate was run merely for filtering.
+- Integration merge: `06bfcd10b0f2f6cae917df710456a6b7d8dba852` into `sweatshop/ui-review/2026-10-31-1734`. This Resolution, the ledger entry and `Stage: done` are committed together on the lane. No PR or push from stage 3.
+- Limits: no live Stockfish/Lc0 game, physical keyboard/mouse gameplay, audio, screen reader, clean-machine release test or Bruno QA in this review. Product acceptance remains separate from implementation approval.
+
+Acceptance: pending | F1-F4 implementation findings are resolved. Live analysis/gameplay and Bruno's v0.1.0 product QA remain pending before release; synthetic cache/render/input probes are not full product acceptance.
+Disclosure: decision | none | The existing proxy retry decision/receipt is preserved above; no contract waiver.
+Disclosure: decision | none | All integration findings F1-F4 and the lane metadata reconciliation are resolved by this review and integration.
+Disclosure: pending | none | S1 remains open in [CLEAN-013](82-CLEAN-013-review-theme-variations.md) for stage-1 specification of shared Theme cleanup.
+Disclosure: pending | release | Bruno's v0.1.0 QA under `.scratch/ui-redo/spec.md` remains required before tagging, including live finished-game analysis and physical interaction.
