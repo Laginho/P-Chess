@@ -8,7 +8,7 @@ const Settings = preload("res://core/settings.gd")
 const Game = preload("res://core/game.gd")
 const MaiaPlayer = preload("res://bot/maia_player.gd")
 const ThemeLoader = preload("res://ui/theme_loader.gd")
-const PATH := "user://test_settings.cfg"
+var PATH := "user://test_settings_%d_%d.cfg" % [OS.get_process_id(), Time.get_ticks_usec()]
 
 
 func _fresh() -> String:
@@ -26,6 +26,7 @@ func test_board_size_defaults_round_trips_and_rejects_invalid_values():
 	file.set_value("settings", "board_size", -1)
 	file.save(PATH)
 	assert_eq(Settings.new(PATH).get_value("board_size"), 0)
+	DirAccess.remove_absolute(PATH)
 
 
 func test_a_missing_file_gives_the_spec_defaults():
@@ -40,6 +41,7 @@ func test_a_missing_file_gives_the_spec_defaults():
 	assert_eq(settings.get_value("temperature"), 1.0)
 	assert_eq(settings.get_value("panic"), "medium")
 	assert_eq(settings.get_value("auto_claim"), true)
+	DirAccess.remove_absolute(PATH)
 
 
 func test_a_change_is_saved_and_read_back_by_a_new_store():
@@ -58,6 +60,7 @@ func test_a_change_is_saved_and_read_back_by_a_new_store():
 	assert_eq(reloaded.get_value("panic"), "high")
 	assert_eq(reloaded.get_value("tau"), 0.05)
 	assert_eq(reloaded.get_value("volume"), 20, "untouched settings keep their default")
+	DirAccess.remove_absolute(PATH)
 
 
 func test_saved_volume_is_kept_across_its_range():
@@ -65,6 +68,7 @@ func test_saved_volume_is_kept_across_its_range():
 	for volume in [0, 50, 100]:
 		assert_true(settings.set_value("volume", volume))
 		assert_eq(Settings.new(PATH).get_value("volume"), volume)
+	DirAccess.remove_absolute(PATH)
 
 
 func test_an_out_of_range_change_is_refused():
@@ -77,6 +81,7 @@ func test_an_out_of_range_change_is_refused():
 	assert_eq(settings.get_value("animation_ms"), 120)
 	assert_eq(settings.get_value("panic"), "medium")
 	assert_eq(settings.get_value("legal_dots"), true)
+	DirAccess.remove_absolute(PATH)
 
 
 func test_a_bad_value_in_the_file_falls_back_to_its_default_and_keeps_the_rest():
@@ -95,6 +100,7 @@ func test_a_bad_value_in_the_file_falls_back_to_its_default_and_keeps_the_rest()
 	assert_eq(settings.get_value("animation_ms"), 120)
 	assert_eq(settings.get_value("board_theme"), "brown")
 	assert_eq(settings.get_value("tau"), 0.05, "the good value stays")
+	DirAccess.remove_absolute(PATH)
 
 
 # The bundled themes are tracked, so this does not hang on what a checkout happens to hold: a
@@ -115,6 +121,7 @@ func test_a_saved_theme_that_no_longer_exists_falls_back_to_its_default():
 	file.set_value("settings", "sound_theme", "piano")
 	file.save(PATH)
 	assert_eq(Settings.new(PATH).get_value("sound_theme"), "piano", "a theme that exists is kept")
+	DirAccess.remove_absolute(PATH)
 
 
 func test_a_corrupt_file_gives_the_defaults():
@@ -129,6 +136,7 @@ func test_a_corrupt_file_gives_the_defaults():
 	assert_eq(settings.get_value("panic"), "medium")
 	assert_true(settings.set_value("volume", 50), "and still saves over it")
 	assert_eq(Settings.new(PATH).get_value("volume"), 50)
+	DirAccess.remove_absolute(PATH)
 
 
 # Answers every request at once with the same policy, as uci.gd would.

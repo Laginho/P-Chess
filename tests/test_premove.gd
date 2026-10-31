@@ -7,7 +7,7 @@ const MainScene = preload("res://ui/main.tscn")
 const BoardScene = preload("res://ui/board_view.tscn")
 const Settings = preload("res://core/settings.gd")
 const HistoryStorage = preload("res://tests/history_storage.gd")
-const SETTINGS_PATH := "user://test_ui007_settings.cfg"
+var SETTINGS_PATH := "user://test_ui007_settings_%d_%d.cfg" % [OS.get_process_id(), Time.get_ticks_usec()]
 
 
 class FakeTime:
