@@ -30,15 +30,29 @@ func _ready() -> void:
 	_list.item_selected.connect(_select_repertoire)
 	$Margin/Form/Viewer/BoardArea/Navigation/Previous.pressed.connect(func(): _step(-1))
 	$Margin/Form/Viewer/BoardArea/Navigation/Next.pressed.connect(func(): _step(1))
+	for dialog in [_picker, importer]:
+		dialog.visibility_changed.connect(func(): $Dim.visible = _picker.visible or importer.visible)
+	$Margin/Form/Buttons/Import.add_theme_font_override("font", get_theme_font("font", "SemiboldText"))
+	for button in [$Margin/Form/Buttons/Import, $Margin/Form/Buttons/FromOpenings]:
+		_pad(button, 16)
+	$Margin/Form/Viewer/BoardArea/Navigation/Moves.add_theme_font_override("bold_font", get_theme_font("font", "BoldText"))
+
+
+func _pad(button: Button, side: float) -> void:
+	for state in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
+		var style: StyleBox = button.get_theme_stylebox(state).duplicate()
+		style.content_margin_left = side
+		style.content_margin_right = side
+		button.add_theme_stylebox_override(state, style)
 
 
 func present() -> void:
 	if not importer.saved.is_connected(_saved):
 		importer.saved.connect(_saved)
 	_refresh()
-	popup_centered(get_tree().root.size - Vector2i(32, 32))
+	popup_centered(get_tree().root.size)
 	if get_tree().root.gui_embed_subwindows:
-		size = get_tree().root.size - Vector2i(32, 32)
+		size = get_tree().root.size
 
 
 func _refresh() -> void:
@@ -80,30 +94,37 @@ func _refresh() -> void:
 		select.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		select.pressed.connect(func(): _select_repertoire(index))
 		card.add_child(select)
-		var selected_style: StyleBoxFlat = select.get_theme_stylebox("pressed").duplicate()
-		selected_style.border_color = Color("7fa650")
-		select.add_theme_stylebox_override("pressed", selected_style)
-		select.add_theme_stylebox_override("hover_pressed", selected_style)
+		for state in ["normal", "hover", "pressed", "hover_pressed"]:
+			var style: StyleBoxFlat = select.get_theme_stylebox(state).duplicate()
+			style.set_corner_radius_all(10)
+			if state.ends_with("pressed"):
+				style.bg_color = Color("363430")
+				style.border_color = Color("7fa650")
+			select.add_theme_stylebox_override(state, style)
 		var content := HBoxContainer.new()
 		select.add_child(content)
 		content.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		content.offset_left = 12
-		content.offset_right = -8
+		content.offset_left = 14
+		content.offset_right = -14
+		content.add_theme_constant_override("separation", 12)
 		content.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var dot := Label.new()
-		dot.text = "●" if saved.colour == "w" else "○"
+		var dot := Panel.new()
+		dot.custom_minimum_size = Vector2(16, 16)
+		dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		dot.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		dot.add_theme_stylebox_override("panel", _swatch(saved.colour, 16))
 		content.add_child(dot)
 		var labels := VBoxContainer.new()
 		labels.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		labels.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		labels.alignment = BoxContainer.ALIGNMENT_CENTER
+		labels.add_theme_constant_override("separation", 2)
 		content.add_child(labels)
 		var title := Label.new()
 		title.name = "CardTitle"
 		title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		title.theme_type_variation = "BoldText"
+		title.add_theme_font_size_override("font_size", 15)
 		title.text = name
 		title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		labels.add_child(title)
@@ -115,16 +136,36 @@ func _refresh() -> void:
 		subtitle.text = detail
 		subtitle.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		labels.add_child(subtitle)
+		# Inside the card, as drawn, but a separate button so it keeps its own focus.
 		var edit := Button.new()
 		edit.name = "Edit"
 		edit.icon = preload("res://ui/icons/pencil.svg")
+		edit.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		edit.custom_minimum_size = Vector2(36, 36)
+		edit.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		edit.tooltip_text = "Edit " + name
+		var outline := StyleBoxFlat.new()
+		outline.bg_color = Color(0, 0, 0, 0)
+		outline.border_color = Color("45423d")
+		outline.set_border_width_all(1)
+		outline.set_corner_radius_all(6)
+		edit.add_theme_stylebox_override("normal", outline)
 		edit.pressed.connect(func():
 			_select_repertoire(index)
 			if $Margin/Form/Buttons/Edit.disabled == false:
 				_editor.present(repertoire, _selection, _line)
 		)
-		card.add_child(edit)
+		content.add_child(edit)
+
+
+# The colour dot of a repertoire: light for White, dark for Black.
+static func _swatch(colour: String, diameter: int) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color("ece9e4") if colour == "w" else Color("141412")
+	style.border_color = Color("8c887f")
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(diameter / 2)
+	return style
 
 
 func _select_repertoire(index: int) -> void:
@@ -174,7 +215,7 @@ func _show_names() -> void:
 				label = entry.name
 				break
 		var row := Button.new()
-		row.custom_minimum_size.y = 54
+		row.custom_minimum_size.y = 52
 		row.toggle_mode = true
 		row.button_pressed = i == _line
 		row.accessibility_name = label
@@ -183,6 +224,9 @@ func _show_names() -> void:
 		_line_rows.add_child(row)
 		row.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
 		var selected_style: StyleBoxFlat = row.get_theme_stylebox("hover").duplicate()
+		selected_style.bg_color = Color("4a4741")
+		selected_style.border_color = Color("4a4741")
+		selected_style.set_corner_radius_all(6)
 		row.add_theme_stylebox_override("pressed", selected_style)
 		row.add_theme_stylebox_override("hover_pressed", selected_style)
 		var content := VBoxContainer.new()
@@ -196,6 +240,7 @@ func _show_names() -> void:
 		title.name = "Name"
 		title.text = label
 		title.theme_type_variation = "BoldText"
+		title.add_theme_font_size_override("font_size", 13)
 		title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		content.add_child(title)
@@ -236,7 +281,7 @@ func _move_text(line: Dictionary, highlight := false) -> String:
 		var ply: int = i + int(start_black)
 		var text := ("%d." % (ply / 2 + 1) if ply % 2 == 0 else "1..." if i == 0 else "") + san
 		if highlight and i == _ply - 1:
-			text = "[bgcolor=#45423d]" + text + "[/bgcolor]"
+			text = "[bgcolor=#4a4741][color=#ece9e4][b]" + text + "[/b][/color][/bgcolor]"
 		moves.append(text)
 		board.make_move(line.moves[i])
 	return " ".join(moves)

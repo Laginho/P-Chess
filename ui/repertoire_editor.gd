@@ -6,6 +6,7 @@ const Game = preload("res://core/game.gd")
 const Repertoire = preload("res://bot/repertoire.gd")
 const Board = preload("res://core/board.gd")
 const TRASH = preload("res://ui/icons/trash.svg")
+const RepertoireScreen = preload("res://ui/repertoire_screen.gd")
 
 # Analysis positions accept legal moves even after an automatic draw.
 class EditorGame extends Game:
@@ -29,6 +30,9 @@ func _ready() -> void:
 	board.move_played.connect(_played)
 	$Margin/Form/Content/Card/Panel/Buttons/Save.pressed.connect(save)
 	$Margin/Form/Content/Card/Panel/Buttons/Cancel.pressed.connect(hide)
+	$Margin/Form/Content/Card/Panel/Buttons/Cancel.add_theme_font_override("font", get_theme_font("font", "SemiboldText"))
+	$Margin/Form/Content/Card/Panel/Buttons/Save.add_theme_font_override("font", get_theme_font("font", "ExtraBoldText"))
+	$Margin/Form/Content/Card/Panel/HeadingRow/Unsaved.add_theme_font_override("font", get_theme_font("font", "BoldText"))
 
 
 func present(source, name: String, line: int = -1) -> void:
@@ -38,13 +42,15 @@ func present(source, name: String, line: int = -1) -> void:
 	root_key = source.lines[line].positions[0] if line >= 0 else edited.keys()[0]
 	path = source.lines[line].moves.duplicate() if line >= 0 else PackedStringArray()
 	board.flipped = source.colour == "b"
-	$Margin/Form/Content/Card/Panel/HeadingRow/Heading.text = ("● " if source.colour == "w" else "○ ") + name
+	$Margin/Form/Content/Card/Panel/HeadingRow/Dot.add_theme_stylebox_override("panel", RepertoireScreen._swatch(source.colour, 14))
+	$Margin/Form/Content/Card/Panel/HeadingRow/Heading.text = name
 	$Margin/Form/Content/Card/Panel/HeadingRow/Heading.tooltip_text = name
 	status.text = ""
 	_refresh()
-	popup_centered(get_tree().root.size - Vector2i(64, 64))
+	# A full screen in the design, over the Repertoires screen.
+	popup_centered(get_tree().root.size)
 	if get_tree().root.gui_embed_subwindows:
-		size = get_tree().root.size - Vector2i(64, 64)
+		size = get_tree().root.size
 
 
 func _node() -> Dictionary:
@@ -89,12 +95,23 @@ func _populate(node: Dictionary, key: String, prefix: PackedStringArray, depth: 
 	for move in node.children:
 		var moves := prefix.duplicate()
 		var margin := MarginContainer.new()
-		margin.add_theme_constant_override("margin_left", depth * 20)
+		margin.add_theme_constant_override("margin_left", depth * 20 + 4)
 		rows.add_child(margin)
+		# Branches hang off a vertical guide, as in the design.
+		var guide := PanelContainer.new()
+		var guide_style := StyleBoxFlat.new()
+		guide_style.draw_center = false
+		guide_style.border_color = Color("45423d")
+		guide_style.border_width_left = 2 if depth > 0 else 0
+		guide_style.content_margin_left = 6
+		guide_style.content_margin_top = 2
+		guide_style.content_margin_bottom = 2
+		guide.add_theme_stylebox_override("panel", guide_style)
+		margin.add_child(guide)
 		var line := HFlowContainer.new()
 		line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		line.add_theme_constant_override("h_separation", 6)
-		margin.add_child(line)
+		line.add_theme_constant_override("h_separation", 2)
+		guide.add_child(line)
 		var current: Dictionary = node
 		var next_move: String = move
 		var first_in_row := true
@@ -131,13 +148,26 @@ func _add_move(line: HFlowContainer, key: String, moves: PackedStringArray, san:
 			_delete_path(key, moves)
 	)
 	group.add_child(button)
-	var selected_style := button.get_theme_stylebox("normal", "PrimaryButton")
+	button.custom_minimum_size.y = 28
+	button.add_theme_font_override("font", get_theme_font("font", "SemiboldText"))
+	var selected_style: StyleBoxFlat = button.get_theme_stylebox("normal", "PrimaryButton").duplicate()
+	selected_style.content_margin_left = 6
+	selected_style.content_margin_right = 6
+	selected_style.set_corner_radius_all(4)
+	# The hovered move is boxed, as in the design.
+	var hover_style: StyleBoxFlat = selected_style.duplicate()
+	hover_style.bg_color = Color("4a4741")
+	hover_style.border_color = Color("8c887f")
+	hover_style.set_border_width_all(1)
 	var normal_style := StyleBoxEmpty.new()
 	for side in [SIDE_LEFT, SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM]:
 		normal_style.set_content_margin(side, selected_style.get_content_margin(side))
 	button.add_theme_stylebox_override("normal", normal_style)
+	button.add_theme_stylebox_override("hover", hover_style)
 	button.add_theme_stylebox_override("pressed", selected_style)
+	button.add_theme_stylebox_override("hover_pressed", selected_style)
 	button.add_theme_color_override("font_pressed_color", Color("141412"))
+	button.add_theme_color_override("font_hover_pressed_color", Color("141412"))
 	_move_buttons.append(button)
 	var trash := Button.new()
 	trash.icon = TRASH

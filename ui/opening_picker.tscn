@@ -1,8 +1,46 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://ui/opening_picker.gd" id="1"]
 
 [sub_resource type="StyleBoxEmpty" id="TreePanel"]
+
+[sub_resource type="StyleBoxFlat" id="SegmentTrack"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0.121569, 0.117647, 0.109804, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxEmpty" id="SegmentOff"]
+content_margin_left = 14.0
+content_margin_right = 14.0
+
+[sub_resource type="StyleBoxFlat" id="SegmentOn"]
+content_margin_left = 14.0
+content_margin_right = 14.0
+bg_color = Color(0.270588, 0.258824, 0.239216, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="NameField"]
+content_margin_left = 12.0
+content_margin_right = 12.0
+bg_color = Color(0.121569, 0.117647, 0.109804, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.270588, 0.258824, 0.239216, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
 
 [node name="OpeningPicker" type="PopupPanel"]
 title = "Opening catalog"
@@ -15,10 +53,10 @@ script = ExtResource("1")
 [node name="Margin" type="MarginContainer" parent="."]
 offset_right = 680.0
 offset_bottom = 540.0
-theme_override_constants/margin_left = 16
-theme_override_constants/margin_top = 16
-theme_override_constants/margin_right = 16
-theme_override_constants/margin_bottom = 16
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 14
 
 [node name="Form" type="VBoxContainer" parent="Margin"]
 layout_mode = 2
@@ -27,27 +65,31 @@ theme_override_constants/separation = 10
 [node name="Title" type="Label" parent="Margin/Form"]
 layout_mode = 2
 theme_type_variation = &"ExtraBoldText"
-theme_override_font_sizes/font_size = 24
+theme_override_font_sizes/font_size = 20
 text = "Opening catalog"
 
 [node name="FieldLabels" type="HBoxContainer" parent="Margin/Form"]
 layout_mode = 2
+theme_override_constants/separation = 16
 
 [node name="Name" type="Label" parent="Margin/Form/FieldLabels"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_type_variation = &"MutedText"
+theme_override_font_sizes/font_size = 13
 text = "Name"
 
 [node name="Colour" type="Label" parent="Margin/Form/FieldLabels"]
 visible = false
-custom_minimum_size = Vector2(180, 0)
+custom_minimum_size = Vector2(184, 0)
 layout_mode = 2
 theme_type_variation = &"MutedText"
+theme_override_font_sizes/font_size = 13
 text = "Colour"
 
 [node name="SaveRow" type="HBoxContainer" parent="Margin/Form"]
 layout_mode = 2
+theme_override_constants/separation = 16
 
 [node name="Colour" type="OptionButton" parent="Margin/Form/SaveRow"]
 visible = false
@@ -60,28 +102,53 @@ popup/item_1/text = "Black"
 popup/item_1/id = 1
 
 [node name="Name" type="LineEdit" parent="Margin/Form/SaveRow"]
+custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
 size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 15
+theme_override_styles/normal = SubResource("NameField")
 placeholder_text = "Selection name"
 max_length = 100
 
-[node name="White" type="Button" parent="Margin/Form/SaveRow"]
+[node name="Segment" type="PanelContainer" parent="Margin/Form/SaveRow"]
 visible = false
-custom_minimum_size = Vector2(88, 44)
+custom_minimum_size = Vector2(184, 44)
 layout_mode = 2
+theme_override_styles/panel = SubResource("SegmentTrack")
+
+[node name="Choices" type="HBoxContainer" parent="Margin/Form/SaveRow/Segment"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="White" type="Button" parent="Margin/Form/SaveRow/Segment/Choices"]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/h_separation = 8
+theme_override_styles/normal = SubResource("SegmentOff")
+theme_override_styles/hover = SubResource("SegmentOff")
+theme_override_styles/pressed = SubResource("SegmentOn")
+theme_override_styles/hover_pressed = SubResource("SegmentOn")
 toggle_mode = true
 button_pressed = true
-text = "● White"
+text = "White"
 
-[node name="Black" type="Button" parent="Margin/Form/SaveRow"]
-visible = false
-custom_minimum_size = Vector2(88, 44)
+[node name="Black" type="Button" parent="Margin/Form/SaveRow/Segment/Choices"]
+custom_minimum_size = Vector2(0, 36)
 layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/h_separation = 8
+theme_override_styles/normal = SubResource("SegmentOff")
+theme_override_styles/hover = SubResource("SegmentOff")
+theme_override_styles/pressed = SubResource("SegmentOn")
+theme_override_styles/hover_pressed = SubResource("SegmentOn")
 toggle_mode = true
-text = "○ Black"
+text = "Black"
 
 [node name="SearchLabel" type="Label" parent="Margin/Form"]
 layout_mode = 2
+theme_type_variation = &"MutedText"
+theme_override_font_sizes/font_size = 13
 text = "Search"
 
 [node name="Search" type="LineEdit" parent="Margin/Form"]
@@ -89,12 +156,29 @@ layout_mode = 2
 placeholder_text = "Search openings (e.g. Sicilian or Najdorf)"
 clear_button_enabled = true
 
+[node name="HeaderRule" type="Control" parent="Margin/Form"]
+custom_minimum_size = Vector2(0, 1)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Line" type="ColorRect" parent="Margin/Form/HeaderRule"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = -24.0
+offset_right = 24.0
+offset_bottom = 1.0
+mouse_filter = 2
+color = Color(0.270588, 0.258824, 0.239216, 1)
+
 [node name="Tree" type="Tree" parent="Margin/Form"]
 custom_minimum_size = Vector2(0, 260)
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_colors/font_color = Color(0.92549, 0.913725, 0.894118, 1)
 theme_override_constants/draw_guides = 0
+theme_override_constants/item_margin = 28
+theme_override_constants/v_separation = 0
 theme_override_constants/draw_relationship_lines = 0
 theme_override_styles/panel = SubResource("TreePanel")
 hide_root = true
@@ -110,6 +194,21 @@ size_flags_horizontal = 3
 layout_mode = 2
 text = "Load selection"
 
+[node name="FooterRule" type="Control" parent="Margin/Form"]
+custom_minimum_size = Vector2(0, 1)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Line" type="ColorRect" parent="Margin/Form/FooterRule"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = -24.0
+offset_right = 24.0
+offset_bottom = 1.0
+mouse_filter = 2
+color = Color(0.270588, 0.258824, 0.239216, 1)
+
 [node name="Footer" type="HBoxContainer" parent="Margin/Form"]
 layout_mode = 2
 theme_override_constants/separation = 10
@@ -117,15 +216,17 @@ theme_override_constants/separation = 10
 [node name="Status" type="Label" parent="Margin/Form/Footer"]
 layout_mode = 2
 size_flags_horizontal = 3
+theme_type_variation = &"MutedText"
 
 [node name="Done" type="Button" parent="Margin/Form/Footer"]
 layout_mode = 2
-custom_minimum_size = Vector2(0, 44)
+theme_type_variation = &"RaisedButton"
+custom_minimum_size = Vector2(82, 44)
 text = "Done"
 
 [node name="Save" type="Button" parent="Margin/Form/Footer"]
 layout_mode = 2
 theme_type_variation = &"PrimaryButton"
-custom_minimum_size = Vector2(0, 44)
+custom_minimum_size = Vector2(163, 44)
 text = "Save selection"
 

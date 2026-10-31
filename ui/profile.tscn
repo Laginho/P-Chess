@@ -166,7 +166,7 @@ accessibility_name = "Name"
 
 [node name="SaveName" type="Button" parent="Margin/Content/Scroll/Body/Left/NameCard/Pad/Stack/NameRow"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 44)
+custom_minimum_size = Vector2(66, 44)
 layout_mode = 2
 theme_type_variation = &"RaisedButton"
 text = "Save"
@@ -318,6 +318,7 @@ text = "No games played yet."
 layout_mode = 2
 size_flags_vertical = 3
 theme_type_variation = &"CardPanel"
+theme_override_styles/panel = SubResource("TileStyle")
 
 [node name="Stack" type="VBoxContainer" parent="Margin/Content/Scroll/Body/Right/ChartCard"]
 layout_mode = 2

@@ -34,8 +34,15 @@ func _ready() -> void:
 	_save.pressed.connect(_save_selection)
 	_load.pressed.connect(_load_selection)
 	$Margin/Form/Footer/Done.pressed.connect(hide)
-	$Margin/Form/SaveRow/White.pressed.connect(func(): _choose_colour(0))
-	$Margin/Form/SaveRow/Black.pressed.connect(func(): _choose_colour(1))
+	$Margin/Form/SaveRow/Segment/Choices/White.pressed.connect(func(): _choose_colour(0))
+	$Margin/Form/SaveRow/Segment/Choices/Black.pressed.connect(func(): _choose_colour(1))
+	for label in [$Margin/Form/FieldLabels/Name, $Margin/Form/FieldLabels/Colour, $Margin/Form/SearchLabel, $Margin/Form/Footer/Done]:
+		label.add_theme_font_override("font", get_theme_font("font", "SemiboldText"))
+	_save.add_theme_font_override("font", get_theme_font("font", "ExtraBoldText"))
+	for choice in [["White", "ece9e4"], ["Black", "141412"]]:
+		var dot := Image.new()
+		dot.load_svg_from_string('<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"><circle cx="6" cy="6" r="5.5" fill="#%s" stroke="#8c887f"/></svg>' % choice[1])
+		get_node("Margin/Form/SaveRow/Segment/Choices/" + choice[0]).icon = ImageTexture.create_from_image(dot)
 	_loaded = not book.entries.is_empty()
 	_refresh_names()
 	if _loaded:
@@ -47,8 +54,7 @@ func present_repertoire(target) -> void:
 	$Margin/Form/Title.text = "New repertoire from openings"
 	$Margin/Form/LoadRow.hide()
 	$Margin/Form/SaveRow/Colour.hide()
-	$Margin/Form/SaveRow/White.show()
-	$Margin/Form/SaveRow/Black.show()
+	$Margin/Form/SaveRow/Segment.show()
 	$Margin/Form/FieldLabels/Colour.show()
 	$Margin/Form/Footer/Done.text = "Cancel"
 	_name.placeholder_text = "Repertoire name"
@@ -58,8 +64,8 @@ func present_repertoire(target) -> void:
 
 func _choose_colour(index: int) -> void:
 	$Margin/Form/SaveRow/Colour.select(index)
-	$Margin/Form/SaveRow/White.button_pressed = index == 0
-	$Margin/Form/SaveRow/Black.button_pressed = index == 1
+	$Margin/Form/SaveRow/Segment/Choices/White.button_pressed = index == 0
+	$Margin/Form/SaveRow/Segment/Choices/Black.button_pressed = index == 1
 
 
 func present(selection := "") -> void:
@@ -134,7 +140,9 @@ func _rebuild() -> void:
 		var node: Dictionary = book.nodes[path]
 		var parent: TreeItem = root if node.parent.is_empty() else _items[node.parent]
 		var item := _tree.create_item(parent)
-		item.custom_minimum_height = 32
+		item.custom_minimum_height = 36
+		item.set_custom_font(0, _tree.get_theme_font("font", "BoldText" if node.parent.is_empty() else "MediumText"))
+		item.set_custom_font_size(0, 15 if node.parent.is_empty() else 14)
 		item.set_cell_mode(0, TreeItem.CELL_MODE_CHECK)
 		item.set_editable(0, true)
 		item.set_text(0, node.label)

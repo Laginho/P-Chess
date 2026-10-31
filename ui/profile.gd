@@ -16,6 +16,7 @@ func _ready() -> void:
 	%SaveName.pressed.connect(_save_name)
 	%PlayerName.text_submitted.connect(func(_text): _save_name())
 	%Results.resized.connect(_fit_headers)
+	%SaveName.add_theme_font_override("font", get_theme_font("font", "BoldText"))
 	for label in [%WdlValue, %FlagValue]:
 		label.add_theme_font_override("normal_font", get_theme_font("font", "ExtraBoldText"))
 
@@ -26,7 +27,8 @@ func present(settings) -> void:
 	_show_name(%PlayerName.text)
 	refresh(History.new())
 	show()
-	%PlayerName.grab_focus()
+	# Keyboard focus starts on Back without a ring; the design shows the name field idle on arrival.
+	%Back.grab_focus(true)
 
 
 func refresh(history, analysis_dir := "") -> void:

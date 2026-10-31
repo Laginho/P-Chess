@@ -22,7 +22,8 @@ theme_override_constants/separation = 12
 
 [node name="Title" type="Label" parent="Margin/Form"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 24
+theme_type_variation = &"ExtraBoldText"
+theme_override_font_sizes/font_size = 20
 text = "Import your repertoire"
 
 [node name="PathLabel" type="Label" parent="Margin/Form"]
