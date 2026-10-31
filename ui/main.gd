@@ -323,8 +323,6 @@ func _start(new_settings: Dictionary) -> void:
 		preferences.save_last_game(new_settings)
 		new_settings = new_settings.duplicate()
 		new_settings.erase("colour_choice")
-	new_settings = new_settings.duplicate()
-	new_settings.player_name = preferences.get_value("player_name")
 	_move_clocks.clear()
 	_history_saved = false
 	if settings.is_empty() or new_settings != rematch(settings) or not board_view.game.is_over():
@@ -578,6 +576,8 @@ func _show_result() -> void:
 	resign_button.disabled = true
 	resign_hint.hide()
 	var game = board_view.game
+	var named_settings := settings.duplicate()
+	named_settings.player_name = preferences.get_value("player_name")
 	board_view.cancel_premoves()
 	clock.stop()
 	claim_draw.disabled = true
@@ -593,12 +593,12 @@ func _show_result() -> void:
 			_maia_score += 2
 		_update_score_text()
 		_history_saved = true
-		var game_path: String = history.save(game, _move_clocks, settings, "", maia.target_id, _review_repertoire, _review_repertoire_colour)
+		var game_path: String = history.save(game, _move_clocks, named_settings, "", maia.target_id, _review_repertoire, _review_repertoire_colour)
 		var name := game_path.get_file() if not game_path.is_empty() else "unsaved-%d.pgn" % Time.get_ticks_usec()
 		review_analysis_path = "user://analysis".path_join(name + ".json")
 	if history.error:
 		result_label.text += "\nHistory: " + history.error
-	review.present(game, _move_clocks, settings, result_label.text,
+	review.present(game, _move_clocks, named_settings, result_label.text,
 			setup.book.entries, _review_repertoire, preferences.get_value("check_repertoire"))
 	review.hide()
 	var old_panel = board_view.get_node_or_null("GameOver")
