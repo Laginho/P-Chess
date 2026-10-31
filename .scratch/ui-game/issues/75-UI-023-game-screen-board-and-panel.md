@@ -1,5 +1,5 @@
 # UI-023: Game screen: board and side panel to the design
-Stage: implementing
+Stage: to-review
 Blocked by: UI-021
 Review: human
 Difficulty: hard
@@ -52,3 +52,8 @@ Restyle the game screen to `docs/design/v0.1.0/png/Game.png`, `GameSidePanel.png
 - Manual acceptance pending: play with drag and premove, offer a draw, press Esc once, finish a game, resize with the grip, F11 and Ctrl+,.
 
 - Stage 2 gate initially found the old half-only label assertion in `test_draw_offer_accepted_on_reply_without_playing_it`; updated it to the new labelled button while retaining the draw behavior assertions.
+
+- Stage 2 verification: gate on commit 6948bd6 printed 418 passed, 0 failed; seven are skips (six require Lc0 and one requires graphical rendering), so 411 executed in the headless run. The last-move pixel test separately passed with a graphical display. The unrelated Main screenshot was byte-identical before and after the fixture change. The four final 1280x800 and 800x600 captures and declined state are under `C:/Users/bruno/AppData/Local/Temp/pchess-ui023-work/`.
+- Acceptance: pending | Manual play, drag/premove, draw offer, Esc, finish, grip, F11 and Ctrl+, remain for human verification.
+- Disclosure: pending | release | UI-023 manual play and visual acceptance remain pending; screenshot fixtures do not exercise physical input or Lc0.
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\pchess-ui023-gate-final.json
