@@ -32,6 +32,32 @@ func test_summary_waits_for_analysis_and_shows_accuracy_and_counts():
 	main.free()
 
 
+func test_graph_click_navigates_and_tracks_orientation():
+	var main = _session(FakeTime.new())
+	var review = main.get_node("Review")
+	var game = Game.new()
+	game.play("e2e4")
+	game.play("e7e5")
+	review.present(game, [180000, 180000], SETTINGS, "")
+	var graph = review.get_node_or_null("Margin/Content/ReviewBody/Side/EvalGraph")
+	assert_true(graph != null, "eval graph exists")
+	if graph != null:
+		graph.size = Vector2(200, 100)
+		var click := InputEventMouseButton.new()
+		click.button_index = MOUSE_BUTTON_LEFT
+		click.pressed = true
+		click.position = Vector2(100, 50)
+		graph.gui_input.emit(click)
+		assert_eq(review.get_node("Margin/Content/ReviewBody/BoardView").game.moves.size(), 1)
+		assert_eq(graph.current_ply, 1)
+		var flip := InputEventKey.new()
+		flip.keycode = KEY_F
+		flip.pressed = true
+		review._input(flip)
+		assert_true(graph.flipped)
+	main.free()
+
+
 class FakeTime:
 	var now := 0
 
