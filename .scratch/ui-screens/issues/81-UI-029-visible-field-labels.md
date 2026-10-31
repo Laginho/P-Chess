@@ -1,5 +1,5 @@
 # UI-029: Visible labels on fields that only have placeholders
-Stage: to-review
+Stage: done
 Status: ready-for-agent
 Blocked by: UI-021, UI-028
 Review: agent
@@ -47,3 +47,12 @@ Capture RepertoireImport and OpeningPicker in repertoire mode at 1280×800 and 8
 Acceptance: pending | Human visual and physical-input acceptance; the picker captures show the loading state. Shared font correction and subsequent captures remain tracked by CLEAN-012.
 Disclosure: pending | release | Human acceptance and CLEAN-012 font correction remain release conditions; see UI-028 and CLEAN-012.
 Gate evidence: C:/Users/bruno/AppData/Local/Temp/ui029-check/gate.json
+
+#### Resolution (2026-10-31)
+Verdict: Approve
+
+- Standards: no documented violation found. Spec: criteria 1 and 2 pass; all six text fields have visible labels, and the six import and picker captures show labels without visible clipping.
+- Reviewed the full diff, test/production commit separation, existing Profile and name-dialog labels, picker callers in setup and repertoire screens, both picker modes, retained field paths, and catalog loading and import layouts. Physical input and a populated catalog were not examined.
+- The `Proxy decided (opus-5.5 xhigh)` decision authorizes instantiated-scene label checks and manual screenshots; its scope and receipt remain recorded above. Search takes precedence over the prior picker design reference.
+- Stage 2 recorded six expected failures before the implementation and passing focused tests after it. Gate evidence for `15ba376`: exit 0, 435 reported passed including 6 Lc0 SKIPs (429 executed); log and hash verified. Rebase and integration changed only ticket metadata relative to the tested code.
+- Human visual and physical-input acceptance remains pending; CLEAN-012 font correction remains a release condition. Picker screenshots show the catalog loading state.
