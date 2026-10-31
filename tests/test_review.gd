@@ -718,3 +718,23 @@ func test_unanalysed_history_keeps_book_icon():
 	assert_true(moves.get_root().get_first_child().get_icon(1) != null, "book move retains its icon without analysis")
 	DirAccess.remove_absolute(path)
 	main.free()
+
+
+func test_review_player_labels_follow_board_orientation():
+	var main = await _session(FakeTime.new())
+	var review = main.get_node("Review")
+	var settings := SETTINGS.duplicate()
+	settings["player_name"] = "Bruno"
+	review.present(Game.new(), [180000, 180000], settings, "")
+	var body = review.get_node("Margin/Content/ReviewBody")
+	var top = body.get_node_or_null("TopPlayer")
+	var bottom = body.get_node_or_null("BottomPlayer")
+	assert_true(top != null and bottom != null, "both players are labelled by the board")
+	if top != null and bottom != null:
+		assert_true(top.text.contains("Maia 1500") and bottom.text.contains("Bruno"))
+		var flip := InputEventKey.new()
+		flip.keycode = KEY_F
+		flip.pressed = true
+		review._input(flip)
+		assert_true(top.text.contains("Bruno") and bottom.text.contains("Maia 1500"), "labels follow the flipped board")
+	main.free()
