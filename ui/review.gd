@@ -425,6 +425,7 @@ func _update_board_annotations() -> void:
 
 func _update_eval_bar() -> void:
 	_graph.positions = _positions
+	_graph.classes = _classes
 	_graph.current_ply = _ply
 	_graph.flipped = _board_view.flipped
 	_graph.queue_redraw()

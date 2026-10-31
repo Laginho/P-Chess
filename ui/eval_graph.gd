@@ -6,6 +6,7 @@ const Board = preload("res://core/board.gd")
 const Tunables = preload("res://core/tunables.gd")
 
 var positions: Array = []
+var classes: Array = []
 var current_ply := 0
 var flipped := false
 
@@ -35,7 +36,12 @@ func _draw() -> void:
 		var point := Vector2(size.x * i / maxi(positions.size() - 1, 1), size.y * (1.0 - fraction))
 		if have_previous:
 			draw_line(previous, point, Color.WHITE, 2.0)
-		draw_circle(point, 2.5, Color.WHITE)
+		if i > 0 and i <= classes.size() and classes[i - 1] != null:
+			var colours := {"Inaccuracy": Color("f4bf44"), "Mistake": Color("e28c28"), "Miss": Color("ff7769"), "Blunder": Color("c93230")}
+			var label: String = classes[i - 1].class
+			if colours.has(label):
+				draw_circle(point, 4.0, Color("1f1e1c"))
+				draw_circle(point, 3.0, colours[label])
 		previous = point
 		have_previous = true
 	if not positions.is_empty():
