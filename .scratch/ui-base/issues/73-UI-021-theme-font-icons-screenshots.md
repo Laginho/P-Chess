@@ -1,5 +1,5 @@
 # UI-021: Shared theme, Noto Sans, icons and the screenshot tool
-Stage: to-review
+Stage: reviewing
 Blocked by: none
 Review: human
 Difficulty: hard

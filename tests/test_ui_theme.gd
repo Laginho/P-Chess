@@ -24,3 +24,8 @@ func test_class_icon_colours_match_canvas():
 	for icon in colours:
 		var svg := FileAccess.get_file_as_string("res://ui/icons/classes/%s.svg" % icon)
 		assert_true(colours[icon] in svg.to_lower(), "%s uses canvas colour %s" % [icon, colours[icon]])
+
+
+func test_trash_icon_uses_canvas_delete_glyph():
+	var svg := FileAccess.get_file_as_string("res://ui/icons/trash.svg")
+	assert_true('d="M4 7h16M10 7V4.5h4V7M6.5 7l1 13h9l1-13"' in svg, "Delete game glyph from History.dc.html")
