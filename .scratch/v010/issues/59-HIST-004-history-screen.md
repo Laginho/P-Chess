@@ -47,3 +47,5 @@ A screen lists every saved game as a card, in tabs, and opens any of them in the
 ## Comments
 
 - 2026-10-30 Written from spec §15.7 and the design brief (screen 5).
+
+- 2026-10-31 Attempt 1 failed: exit 0. Log tail: O HIST-004 **ainda não está concluído**. Na branch `hist-004`, registrei o primeiro ciclo: a configuração `history_tab`, com padrão `All` e as quatro opções previstas. /  / O teste falhou antes da implementação, como esperado, e depois passou no conjunto isolado: **10 testes, 0 falhas**. O ticket permanece em `Stage: implementing`; ainda faltam a tela de histórico, a integração com revisão e navegação, os demais testes e o gate final. /  / Commits: `1558ea2` e `2c6272b`. A árvore de trabalho está limpa. /  /
