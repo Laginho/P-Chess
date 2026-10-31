@@ -400,3 +400,48 @@ func test_review_places_move_list_beside_board():
 	if body.has_node("Side/Moves"):
 		assert_eq(body.get_node("Side/Moves").columns, 3)
 	main.free()
+
+
+func test_review_reuses_current_analysis_and_reanalyses_stale_file():
+	for version in ["Stockfish 19", "Stockfish 18"]:
+		var main = _session(FakeTime.new())
+		var fake = FakeReviewAnalyser.new()
+		main.review.analysis_bridge_factory = func(): return FakeAnalysisBridge.new()
+		main.review.analyser_factory = func(_bridge): return fake
+		main.board_view.play("e2e4")
+		_key(main, KEY_ESCAPE)
+		_key(main, KEY_ESCAPE)
+		var path := "user://rev005-cache-%d.json" % Time.get_ticks_usec()
+		var file := FileAccess.open(path, FileAccess.WRITE)
+		file.store_string(JSON.stringify({"engine_version": version, "node_budget": 3000000, "positions": [
+			{"fen": Pgn.START, "pv": [{"cp": 20, "moves": ["e2e4"]}], "best_move": "e2e4"},
+			{"fen": main.board_view.game.board.to_fen(), "pv": [{"cp": -20, "moves": ["e7e5"]}], "best_move": "e7e5"}]}))
+		file.close()
+		main.review_analysis_path = path
+		main.board_view.get_node("GameOver/Panel/Content/Review").pressed.emit()
+		assert_eq(fake.called, version != "Stockfish 19", "only stale analysis is rerun")
+		if version == "Stockfish 19":
+			var list: Tree = main.review.get_node("Margin/Content/ReviewBody/Side/Moves")
+			assert_true(list.get_root().get_first_child().get_icon(1) != null, "cached class is shown")
+			fake.free()
+		main.free()
+		DirAccess.remove_absolute(path)
+
+
+func test_review_fits_an_800_by_600_window():
+	var root = Engine.get_main_loop().root
+	var old_size: Vector2i = root.size
+	root.size = Vector2i(800, 600)
+	var main = _session(FakeTime.new())
+	main.board_view.play("e2e4")
+	_key(main, KEY_ESCAPE)
+	_key(main, KEY_ESCAPE)
+	main.board_view.get_node("GameOver/Panel/Content/Review").pressed.emit()
+	await Engine.get_main_loop().process_frame
+	await Engine.get_main_loop().process_frame
+	for path in ["Margin/Content/ReviewBody/BoardView", "Margin/Content/ReviewBody/Side/Moves", "Margin/Content/Actions/Setup"]:
+		var rect: Rect2 = main.review.get_node(path).get_global_rect()
+		assert_true(rect.position.x >= 0 and rect.position.y >= 0 and rect.end.x <= 800 and rect.end.y <= 600, path + " fits the window")
+		assert_true(rect.size.x > 0 and rect.size.y > 0, path + " is visible")
+	main.free()
+	root.size = old_size
