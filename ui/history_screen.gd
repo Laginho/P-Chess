@@ -74,7 +74,9 @@ func _add_card(list: Node, record: Dictionary) -> void:
 	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var date: String = headers.get("Date", record.path.get_file().left(10))
 	var opening: String = thumbnail.opening + "\n" if not thumbnail.opening.is_empty() else ""
-	text.text = "%s%s  ·  White: %s  x  Black: %s\n%s  ·  %d moves\n%s" % [opening, date, headers.get("White", "?"), headers.get("Black", "?"), _result_text(game, colour), (moves.size() + 1) / 2, _analysis_text(record.path)]
+	var human: String = headers.get("White" if colour == "w" else "Black", "?")
+	var opponent: String = headers.get("Black" if colour == "w" else "White", "?")
+	text.text = "%s%s  ·  %s (%s) x %s (%s)\n%s (%s)  ·  %d moves\n%s" % [opening, date, human, "White" if colour == "w" else "Black", opponent, "Black" if colour == "w" else "White", _result_text(game, colour), game.result, (moves.size() + 1) / 2, _analysis_text(record.path)]
 	details.add_child(text)
 	var actions := HBoxContainer.new()
 	actions.name = "HBoxContainer"
