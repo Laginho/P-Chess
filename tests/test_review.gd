@@ -959,6 +959,47 @@ func test_long_review_keeps_selected_move_visible():
 	main.free()
 	root.size = old_size
 
+func test_cached_history_keeps_final_move_visible_after_layout():
+	var root = Engine.get_main_loop().root
+	var old_size: Vector2i = root.size
+	for window_size in [Vector2i(1280, 800), Vector2i(800, 600)]:
+		root.size = window_size
+		var main = await _session(FakeTime.new())
+		var game = Game.new()
+		var rng := RandomNumberGenerator.new()
+		rng.seed = 260026
+		for i in 80:
+			if game.is_over():
+				break
+			var legal = game.board.legal_moves()
+			game.play(legal[rng.randi_range(0, legal.size() - 1)])
+		assert_eq(game.moves.size(), 80, "fixture has 80 plies")
+		game.resign(game.board.side_to_move)
+		var clocks := []
+		clocks.resize(game.moves.size())
+		clocks.fill(180000)
+		var path: String = main.history.save(game, clocks, SETTINGS)
+		var positions := []
+		for i in game.moves.size() + 1:
+			var best: String = game.moves[i] if i < game.moves.size() else ""
+			positions.append({"best_move": best, "pv": [{"cp": 0, "moves": [best] if not best.is_empty() else []}]})
+		DirAccess.make_dir_recursive_absolute(main.history.analysis_folder())
+		var cache := FileAccess.open(main.history.analysis_folder().path_join(path.get_file() + ".json"), FileAccess.WRITE)
+		cache.store_string(JSON.stringify({"engine_version": "Stockfish 19", "node_budget": Tunables.ANALYSIS_NODES, "positions": positions}))
+		cache.close()
+		main._show_history()
+		main._review_history_game(path, Pgn.parse(FileAccess.get_file_as_string(path)).games[0])
+		for i in 10:
+			await root.get_tree().process_frame
+		var list: Tree = main.review.get_node("Margin/Content/ReviewBody/Side/Moves")
+		assert_true(main.review.get_node("Margin/Content/ReviewBody/Side/Summary").visible, "cached analysis is complete")
+		assert_eq(main.review._ply, 80, "last move is selected")
+		var rect := list.get_item_area_rect(list.get_selected(), list.get_selected_column())
+		assert_true(rect.position.y >= 0 and rect.end.y <= list.size.y, "cached final move visible at %s: %s in %s" % [window_size, rect, list.size])
+		main.free()
+	root.size = old_size
+
+
 func test_move_class_legend_is_anchored_and_contained():
 	var root = Engine.get_main_loop().root
 	var old_size: Vector2i = root.size
