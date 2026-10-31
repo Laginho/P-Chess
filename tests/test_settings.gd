@@ -11,6 +11,29 @@ const ThemeLoader = preload("res://ui/theme_loader.gd")
 const PATH := "user://test_settings.cfg"
 
 
+func test_player_name_is_chosen_once_and_survives_restart():
+	var store = Settings.new(_fresh())
+	assert_eq(store.get_value("player_name"), "You")
+	assert_true(not store.has_player_name())
+	# Saving a different preference must not silently accept the default name.
+	assert_true(store.set_value("volume", 50))
+	assert_true(not Settings.new(PATH).has_player_name())
+	for invalid in ["", "   ", "\t\n", 42]:
+		assert_true(not store.set_value("player_name", invalid))
+	assert_eq(store.get_value("player_name"), "You")
+	assert_true(store.set_value("player_name", "You"), "accepting the default is a choice too")
+	assert_true(Settings.new(PATH).has_player_name())
+	assert_true(store.set_value("player_name", "Bruno"))
+	assert_eq(Settings.new(PATH).get_value("player_name"), "Bruno")
+	assert_true(not store.set_value("player_name", ""))
+	assert_eq(Settings.new(PATH).get_value("player_name"), "Bruno")
+	var file := ConfigFile.new()
+	file.set_value("settings", "player_name", "  ")
+	file.save(PATH)
+	assert_eq(Settings.new(PATH).get_value("player_name"), "You")
+	assert_true(not Settings.new(PATH).has_player_name())
+
+
 func _fresh() -> String:
 	DirAccess.remove_absolute(PATH)
 	return PATH

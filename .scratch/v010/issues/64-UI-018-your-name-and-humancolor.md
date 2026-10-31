@@ -1,5 +1,5 @@
 # UI-018: Your name, and the HumanColor header
-Stage: to-implement
+Stage: implementing
 Blocked by: HIST-005, UI-016
 Review: agent
 Difficulty: normal
