@@ -58,8 +58,8 @@ Restyle the repertoire screens to `docs/design/v0.1.0/png/Repertoire.png`, `Open
 - Captures of `bfb09c8`, at both 1280x800 and 800x600, are in `C:/Users/bruno/AppData/Local/Temp/pchess-ui028-handoff/`. The picker capture uses a temporary copy of the screenshot script that waits for catalog loading and selects a child to show the partial parent checkbox; its repertoire is shown behind the modal. The fixture uses different names and positions from the canvas. At 800x600 the controls and board remain visible. The picker retains its pre-existing search field, the editor retains a Start position control for returning to the root, and the edit button is a separately focusable button adjacent to the card; these are deliberate differences from the illustration to retain existing functionality and keyboard access.
 - Focused repertoire/catalog run: 49 passed, 0 failed before the header-only change. Full gate at `bfb09c8`: 431 reported passed, 0 failed, including 6 Lc0 SKIPs (425 executed); log `C:/Users/bruno/AppData/Local/Temp/ui028-gate-handoff.log`. Lc0 was not installed or downloaded.
 
-Acceptance: pending | Human visual and physical-input acceptance remains; the GUI flow above used injected input.
-Disclosure: pending | release | Human acceptance of the three screens and physical input remains before v0.1.0, as described in `.scratch/ui-redo/spec.md`.
+Superseded Acceptance: pending | Human visual and physical-input acceptance remains; the GUI flow above used injected input.
+Superseded Disclosure: pending | release | Human acceptance of the three screens and physical input remains before v0.1.0, as described in `.scratch/ui-redo/spec.md`.
 Superseded gate evidence: C:/Users/bruno/AppData/Local/Temp/ui028-gate-handoff.json
 
 #### Resolution (2026-10-31)
@@ -94,9 +94,9 @@ Screenshot comparison: before is the archived session base `72ad4c4`; after is t
 | RepertoireEditor 1280x800 | [PNG](../../../docs/design/v0.1.0/png/RepertoireEditor.png) | [PNG](C:/Users/bruno/AppData/Local/Temp/ui028-review-20261031/before-RepertoireEditor-1280x800.png) | [PNG](C:/Users/bruno/AppData/Local/Temp/pchess-ui028-handoff/RepertoireEditor-1280x800.png) |
 | RepertoireEditor 800x600 | [PNG](../../../docs/design/v0.1.0/png/RepertoireEditor.png) | [PNG](C:/Users/bruno/AppData/Local/Temp/ui028-review-20261031/before-RepertoireEditor-800x600.png) | [PNG](C:/Users/bruno/AppData/Local/Temp/pchess-ui028-handoff/RepertoireEditor-800x600.png) |
 
-Acceptance: pending | The two UI-028 regressions above and the shared font defect prevent implementation approval; the previously disclosed human visual and physical-input acceptance also remains.
-Disclosure: pending | integration | Correct the two UI-028 findings before integrating this ticket; preserve the branch's existing work and tests.
-Disclosure: pending | integration | CLEAN-012 tracks the shared font-weight defect required by this ticket's visual acceptance; no deferral has been accepted.
+Superseded Acceptance: pending | The two UI-028 regressions above and the shared font defect prevent implementation approval; the previously disclosed human visual and physical-input acceptance also remains.
+Superseded Disclosure: pending | integration | Correct the two UI-028 findings before integrating this ticket; preserve the branch's existing work and tests.
+Superseded Disclosure: pending | integration | CLEAN-012 tracks the shared font-weight defect required by this ticket's visual acceptance; no deferral has been accepted.
 
 
 
@@ -105,6 +105,13 @@ Disclosure: pending | integration | CLEAN-012 tracks the shared font-weight defe
 - Graphical probe at `42fa431`: at 800x600 the viewer is 768x568 and editor 736x536; the board and Save remain visible with the 99-character name. Captures and output: `C:/Users/bruno/AppData/Local/Temp/ui028-reopen-probe/`. This is automated rendering, not physical-input or human acceptance.
 - Gate at `42fa431`: 433 reported passed, 0 failed, including six Lc0 SKIPs (427 executed). Log: `C:/Users/bruno/AppData/Local/Temp/ui028-reopen-gate.log`.
 
-Acceptance: pending | Human visual and physical-input acceptance remains; CLEAN-012 remains a shared visual defect.
-Disclosure: pending | integration | CLEAN-012 tracks the shared font-weight defect required by the visual acceptance; no deferral has been accepted.
+Superseded Acceptance: pending | Human visual and physical-input acceptance remains; CLEAN-012 remains a shared visual defect.
+Superseded Disclosure: pending | integration | CLEAN-012 tracks the shared font-weight defect required by the visual acceptance; no deferral has been accepted.
 Gate evidence: C:/Users/bruno/AppData/Local/Temp/ui028-reopen-gate.json
+
+- Proxy decided (opus-5.5 xhigh): Accept a release-level deferral of the shared font weights to CLEAN-012, so UI-028 can merge into the session once the Spec re-review is clean. The defect already exists on `main` from UI-021, sits outside UI-028's Primary files and affects every v0.1.0 screen; shared acceptance 1 allows a remaining difference listed with a reason; and v0.1.0 is tagged only after Bruno's QA, so the fix stays a release condition. (receipt C:\Users\bruno\AppData\Local\Temp\sweatshop-proxy\20261031-191927-UI-028-561703.json)
+- 2026-10-31 Remaining difference (shared acceptance 1): headings and primary-button text render at the regular weight instead of the canvas's 600-800. Reason: `ui/theme/p_chess.tres`, outside this ticket's Primary files, declares its weights with string `"wght"` keys that Godot 4.7 ignores; the repair is CLEAN-012. The proxy accepts a release-level deferral for session integration; v0.1.0 waits for the shared correction and its post-correction captures.
+
+Acceptance: pending | Human visual and physical-input acceptance of the three screens remains, after CLEAN-012's post-correction captures.
+Disclosure: deferred | release | Shared font weights (criterion 4 via shared acceptance 1) deferred to CLEAN-012, accepted by the proxy for the owner (receipt in the comment above): pre-existing since UI-021, outside Primary files, inherited by every v0.1.0 screen. Session integration allowed; v0.1.0 waits for CLEAN-012 and its post-correction captures of Repertoire, OpeningPicker and RepertoireEditor at 1280x800 and 800x600, plus the 99-character name at 800x600 in viewer and editor.
+Disclosure: pending | release | Human acceptance of the three screens and physical input remains before v0.1.0, as described in `.scratch/ui-redo/spec.md`.
