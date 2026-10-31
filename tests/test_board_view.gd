@@ -269,3 +269,21 @@ func test_a_hold_survives_even_when_the_reply_leaves_no_legal_targets():
 		board._gui_input(_mouse(false, Vector2(450, 350)))
 		assert_eq(board.game.moves, PackedStringArray(["e7e5"]), "an illegal drop cannot play a stale geometric target")
 		board.free()
+
+
+func test_last_move_uses_the_two_design_colours():
+	if DisplayServer.get_name() == "headless":
+		print("SKIP last-move pixels: graphical display required")
+		return
+	var board = preload("res://ui/board_view.tscn").instantiate()
+	board.game = preload("res://core/game.gd").new()
+	board.game.play("e2e3")
+	Engine.get_main_loop().root.add_child(board)
+	board.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	board.size = Vector2(400, 400)
+	await Engine.get_main_loop().process_frame
+	await RenderingServer.frame_post_draw
+	var image = board.get_viewport().get_texture().get_image()
+	assert_eq(image.get_pixel(205, 305).to_html(false), "cdd26a", "light e2")
+	assert_eq(image.get_pixel(205, 255).to_html(false), "aaa23a", "dark e3")
+	board.free()

@@ -8,6 +8,8 @@
 [ext_resource type="Script" path="res://ui/resize_grip.gd" id="6"]
 [ext_resource type="PackedScene" path="res://ui/home.tscn" id="7"]
 [ext_resource type="PackedScene" path="res://ui/searching.tscn" id="8"]
+[ext_resource type="Texture2D" path="res://ui/icons/robot.svg" id="9"]
+[ext_resource type="Texture2D" path="res://ui/icons/flag.svg" id="10"]
 
 [sub_resource type="StyleBoxFlat" id="ScoreBox"]
 bg_color = Color(0.2, 0.2, 0.2, 1)
@@ -15,6 +17,43 @@ content_margin_left = 6.0
 content_margin_right = 6.0
 content_margin_top = 3.0
 content_margin_bottom = 3.0
+
+[sub_resource type="StyleBoxFlat" id="AvatarBox"]
+bg_color = Color(0.498, 0.651, 0.314, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="BotBox"]
+bg_color = Color(0.353, 0.337, 0.314, 1)
+content_margin_left = 7.0
+content_margin_top = 7.0
+content_margin_right = 7.0
+content_margin_bottom = 7.0
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="Shader" id="BotShader"]
+code = "shader_type canvas_item; void fragment() { COLOR = vec4(0.925, 0.914, 0.894, texture(TEXTURE, UV).a); }"
+
+[sub_resource type="ShaderMaterial" id="BotMaterial"]
+shader = SubResource("BotShader")
+
+[sub_resource type="StyleBoxFlat" id="NoticeBox"]
+bg_color = Color(0.212, 0.204, 0.188, 1)
+content_margin_left = 14.0
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="BarFill"]
+bg_color = Color(1, 1, 1, 0.55)
+
+[sub_resource type="StyleBoxEmpty" id="BarEmpty"]
 
 [node name="Main" type="Control"]
 layout_mode = 3
@@ -30,13 +69,13 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 16.0
-offset_top = 16.0
-offset_right = -16.0
-offset_bottom = -16.0
+offset_left = 40.0
+offset_top = 40.0
+offset_right = -40.0
+offset_bottom = -40.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 16
+theme_override_constants/separation = 40
 alignment = 1
 
 [node name="BoardView" parent="Layout" instance=ExtResource("2")]
@@ -53,13 +92,12 @@ script = ExtResource("6")
 custom_minimum_size = Vector2(240, 0)
 layout_mode = 2
 size_flags_horizontal = 3
+theme_override_constants/separation = 0
 
 [node name="BlackClockRow" type="HBoxContainer" parent="Layout/Side"]
+custom_minimum_size = Vector2(0, 72)
 layout_mode = 2
-
-[node name="BlackClock" parent="Layout/Side/BlackClockRow" instance=ExtResource("5")]
-layout_mode = 2
-side = "b"
+theme_override_constants/separation = 8
 
 [node name="Score" type="Label" parent="Layout/Side/BlackClockRow"]
 visible = false
@@ -67,72 +105,166 @@ layout_mode = 2
 size_flags_vertical = 4
 theme_override_styles/normal = SubResource("ScoreBox")
 
-[node name="BlackMaterial" type="Label" parent="Layout/Side"]
+[node name="Avatar" type="PanelContainer" parent="Layout/Side/BlackClockRow"]
+custom_minimum_size = Vector2(36, 36)
 layout_mode = 2
-theme_override_font_sizes/font_size = 20
+size_flags_vertical = 4
+theme_override_styles/panel = SubResource("BotBox")
+
+[node name="Icon" type="TextureRect" parent="Layout/Side/BlackClockRow/Avatar"]
+material = SubResource("BotMaterial")
+layout_mode = 2
+texture = ExtResource("9")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Initial" type="Label" parent="Layout/Side/BlackClockRow"]
+custom_minimum_size = Vector2(36, 36)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_colors/font_color = Color(0.078, 0.078, 0.071, 1)
+theme_override_styles/normal = SubResource("AvatarBox")
+horizontal_alignment = 1
+vertical_alignment = 1
+text = "Y"
+
+[node name="Name" type="Label" parent="Layout/Side/BlackClockRow"]
+layout_mode = 2
+theme_type_variation = &"SemiboldText"
+theme_override_font_sizes/font_size = 15
+size_flags_horizontal = 3
+size_flags_vertical = 4
+text = "Maia"
+text_overrun_behavior = 3
+
+[node name="Colour" type="Label" parent="Layout/Side/BlackClockRow/Name"]
+layout_mode = 0
+offset_top = 20.0
+theme_override_font_sizes/font_size = 11
+text = "White"
+mouse_filter = 2
+
+[node name="BlackClock" parent="Layout/Side/BlackClockRow" instance=ExtResource("5")]
+layout_mode = 2
+side = "b"
+
+[node name="MoveList" parent="Layout/Side" instance=ExtResource("3")]
+layout_mode = 2
 
 [node name="Result" type="Label" parent="Layout/Side"]
 layout_mode = 2
 autowrap_mode = 3
 
-[node name="ReviewButton" type="Button" parent="Layout/Side"]
+[node name="DrawNotice" type="Label" parent="Layout/Side"]
 visible = false
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
-focus_mode = 0
-text = "Review"
+theme_override_styles/normal = SubResource("NoticeBox")
+vertical_alignment = 1
 
 [node name="Actions" type="HBoxContainer" parent="Layout/Side"]
+custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
-
-[node name="ResignButton" type="Button" parent="Layout/Side/Actions"]
-layout_mode = 2
-disabled = true
-text = "⚑"
-tooltip_text = "Resign"
+theme_override_constants/separation = 8
 
 [node name="DrawButton" type="Button" parent="Layout/Side/Actions"]
 layout_mode = 2
+theme_type_variation = &"RaisedButton"
+theme_override_font_sizes/font_size = 15
 disabled = true
-text = "½"
+size_flags_horizontal = 3
+text = "½  Offer draw"
 tooltip_text = "Offer a draw"
 
-[node name="DrawNotice" type="Label" parent="Layout/Side"]
-visible = false
+[node name="ResignButton" type="Button" parent="Layout/Side/Actions"]
 layout_mode = 2
+theme_type_variation = &"RaisedButton"
+theme_override_font_sizes/font_size = 15
+icon = ExtResource("10")
+disabled = true
+size_flags_horizontal = 3
+text = "Resign"
+tooltip_text = "Resign"
+
+[node name="Bar" type="ProgressBar" parent="Layout/Side/Actions/ResignButton"]
+visible = false
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -4.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+max_value = 2000.0
+theme_override_styles/background = SubResource("BarEmpty")
+theme_override_styles/fill = SubResource("BarFill")
+show_percentage = false
 
 [node name="DrawNoticeTimer" type="Timer" parent="Layout/Side"]
 wait_time = 3.0
 one_shot = true
 
-[node name="ResignHint" type="Label" parent="Layout/Side"]
-visible = false
-layout_mode = 2
-text = "Click again to resign"
-
 [node name="ClaimDraw" type="Button" parent="Layout/Side"]
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 focus_mode = 0
 disabled = true
 text = "Claim draw"
 
-[node name="MoveList" parent="Layout/Side" instance=ExtResource("3")]
-layout_mode = 2
-
-[node name="WhiteMaterial" type="Label" parent="Layout/Side"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 20
-
 [node name="WhiteClockRow" type="HBoxContainer" parent="Layout/Side"]
+custom_minimum_size = Vector2(0, 72)
 layout_mode = 2
-
-[node name="WhiteClock" parent="Layout/Side/WhiteClockRow" instance=ExtResource("5")]
-layout_mode = 2
+theme_override_constants/separation = 8
 
 [node name="Score" type="Label" parent="Layout/Side/WhiteClockRow"]
 visible = false
 layout_mode = 2
 size_flags_vertical = 4
 theme_override_styles/normal = SubResource("ScoreBox")
+
+[node name="Avatar" type="PanelContainer" parent="Layout/Side/WhiteClockRow"]
+custom_minimum_size = Vector2(36, 36)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_styles/panel = SubResource("BotBox")
+
+[node name="Icon" type="TextureRect" parent="Layout/Side/WhiteClockRow/Avatar"]
+material = SubResource("BotMaterial")
+layout_mode = 2
+texture = ExtResource("9")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Initial" type="Label" parent="Layout/Side/WhiteClockRow"]
+custom_minimum_size = Vector2(36, 36)
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_colors/font_color = Color(0.078, 0.078, 0.071, 1)
+theme_override_styles/normal = SubResource("AvatarBox")
+horizontal_alignment = 1
+vertical_alignment = 1
+text = "Y"
+
+[node name="Name" type="Label" parent="Layout/Side/WhiteClockRow"]
+layout_mode = 2
+theme_type_variation = &"SemiboldText"
+theme_override_font_sizes/font_size = 15
+size_flags_horizontal = 3
+size_flags_vertical = 4
+text = "You"
+text_overrun_behavior = 3
+
+[node name="Colour" type="Label" parent="Layout/Side/WhiteClockRow/Name"]
+layout_mode = 0
+offset_top = 20.0
+theme_override_font_sizes/font_size = 11
+text = "White"
+mouse_filter = 2
+
+[node name="WhiteClock" parent="Layout/Side/WhiteClockRow" instance=ExtResource("5")]
+layout_mode = 2
 
 [node name="Setup" parent="." instance=ExtResource("4")]
 visible = false

@@ -59,6 +59,8 @@ var _human_score := 0
 var _maia_score := 0
 var _match_games := 0
 var _show_match_score := false
+var _resign_style := StyleBoxFlat.new()
+var _notice_before_focus := false
 
 
 # Esc resigns on a second press within 2 s of the first (§7). The time source returns milliseconds.
@@ -82,23 +84,14 @@ class ResignKey:
 	func armed() -> bool:
 		return _armed_at >= 0 and _now.call() - _armed_at <= WINDOW_MS
 
-# Lichess order and values (§8.4).
-const VALUES := {"q": 9, "r": 5, "b": 3, "n": 3, "p": 1}
-# Role -> glyph of a captured piece of each colour.
-const WHITE_GLYPHS := {"q": "♕", "r": "♖", "b": "♗", "n": "♘", "p": "♙"}
-const BLACK_GLYPHS := {"q": "♛", "r": "♜", "b": "♝", "n": "♞", "p": "♟"}
-
 @onready var board_view = $Layout/BoardView
 @onready var move_list = $Layout/Side/MoveList
 @onready var result_label: Label = $Layout/Side/Result
-@onready var white_material: Label = $Layout/Side/WhiteMaterial
-@onready var black_material: Label = $Layout/Side/BlackMaterial
 @onready var white_clock = $Layout/Side/WhiteClockRow/WhiteClock
 @onready var black_clock = $Layout/Side/BlackClockRow/BlackClock
 @onready var white_score: Label = $Layout/Side/WhiteClockRow/Score
 @onready var black_score: Label = $Layout/Side/BlackClockRow/Score
 @onready var setup = $Setup
-@onready var resign_hint: Label = $Layout/Side/ResignHint
 @onready var resign_button: Button = $Layout/Side/Actions/ResignButton
 @onready var draw_button: Button = $Layout/Side/Actions/DrawButton
 @onready var draw_notice: Label = $Layout/Side/DrawNotice
@@ -114,18 +107,18 @@ static func rematch(played: Dictionary) -> Dictionary:
 	return next
 
 
-# Per role, the side with more of it shows the surplus as captured: "w" and "b" hold those roles,
-# queen first. "diff" is white's points minus black's, so a promotion counts the new piece, not the pawn.
-static func material_balance(board) -> Dictionary:
-	var balance := {"diff": 0, "w": "", "b": ""}
-	for role in VALUES:
-		var surplus: int = board.squares.count(role.to_upper()) - board.squares.count(role)
-		balance.diff += surplus * VALUES[role]
-		balance["w" if surplus > 0 else "b"] += role.repeat(absi(surplus))
-	return balance
-
-
 func _ready() -> void:
+	_resign_style.bg_color = Color("#c93230")
+	_resign_style.set_corner_radius_all(8)
+	_resign_style.set_content_margin_all(8)
+	var side: Control = $Layout/Side
+	var card := StyleBoxFlat.new()
+	card.bg_color = Color("#2b2a27")
+	card.border_color = Color("#45423d")
+	card.set_border_width_all(1)
+	card.set_corner_radius_all(10)
+	side.draw.connect(func(): side.draw_style_box(card, Rect2(Vector2.ZERO, side.size)))
+	side.resized.connect(side.queue_redraw)
 	if history == null:
 		history = History.new()
 	get_window().min_size = Vector2i(800, 600)
@@ -144,7 +137,9 @@ func _ready() -> void:
 		_show_result())
 	resign_button.pressed.connect(_resign)
 	draw_button.pressed.connect(_offer_draw)
-	draw_notice_timer.timeout.connect(draw_notice.hide)
+	draw_notice_timer.timeout.connect(func():
+		draw_notice.hide()
+		_notice_before_focus = false)
 	setup.started.connect(func(choice):
 		var saved: Dictionary = choice.duplicate()
 		saved.colour_choice = ["w", "b", "random"][setup.get_node("Center/Form/Colour").selected]
@@ -192,10 +187,24 @@ func _ready() -> void:
 	name_dialog.present(preferences)
 
 
+func _draw() -> void:
+	draw_rect(Rect2(Vector2.ZERO, size), Color("#1f1e1c"))
+
+
 func _process(_delta: float) -> void:
 	if clock:
 		clock.tick()
-	resign_hint.visible = clock != null and not board_view.game.is_over() and resign_key.armed()
+	var confirming: bool = clock != null and not board_view.game.is_over() and resign_key.armed()
+	resign_button.text = "Click again to resign" if confirming else "Resign"
+	var bar: ProgressBar = resign_button.get_node("Bar")
+	bar.visible = confirming
+	if confirming:
+		bar.value = maxf(0, 2000 - (resign_key._now.call() - resign_key._armed_at))
+		resign_button.add_theme_stylebox_override("normal", _resign_style)
+		resign_button.add_theme_stylebox_override("hover", _resign_style)
+	else:
+		resign_button.remove_theme_stylebox_override("normal")
+		resign_button.remove_theme_stylebox_override("hover")
 
 
 # Global input runs before GUI input: a flag or low-time warning must precede the drop
@@ -357,8 +366,7 @@ func _start(new_settings: Dictionary) -> void:
 	board_view.game.auto_claim = preferences.get_value("auto_claim")
 	resign_key = ResignKey.new(Time.get_ticks_msec)
 	move_list.reset()
-	for label in [result_label, white_material, black_material]:
-		label.text = ""
+	result_label.text = ""
 	claim_draw.disabled = true
 	clock = Clock.new(settings.control, Time.get_ticks_msec)
 	resign_button.disabled = false
@@ -367,6 +375,7 @@ func _start(new_settings: Dictionary) -> void:
 	draw_button.disabled = false
 	draw_notice.hide()
 	draw_notice_timer.stop()
+	_notice_before_focus = false
 	maia.clock = clock
 	maia.control = settings.control
 	maia.level = settings.level
@@ -377,6 +386,7 @@ func _start(new_settings: Dictionary) -> void:
 	white_clock.clock = clock
 	black_clock.clock = clock
 	_set_flipped(human == "b")
+	settings_screen.get_node("Open").hide()
 	sound_player.play("game_start")
 	_next_turn()
 
@@ -390,7 +400,6 @@ func _show_setup() -> void:
 	draw_notice.hide()
 	draw_notice_timer.stop()
 	resign_button.disabled = true
-	resign_hint.hide()
 	review.hide()
 	history_screen.hide()
 	clock = null
@@ -499,7 +508,7 @@ func _fit_board() -> void:
 
 func _board_fit_size() -> float:
 	return maxf(0, minf($Layout.size.y,
-			$Layout.size.x - $Layout/Side.get_combined_minimum_size().x - 16))
+			$Layout.size.x - $Layout/Side.get_combined_minimum_size().x - 40))
 
 
 func _resize_board(side: int) -> void:
@@ -509,22 +518,36 @@ func _resize_board(side: int) -> void:
 
 func _set_flipped(flipped: bool) -> void:
 	board_view.flipped = flipped
-	# Each side's clock and material sit on that side's edge of the board, the clock outermost.
-	var top := [white_clock.get_parent(), white_material] if flipped else [black_clock.get_parent(), black_material]
-	var bottom := [black_material, black_clock.get_parent()] if flipped else [white_material, white_clock.get_parent()]
-	var side_panel := white_material.get_parent()
-	for i in top.size():
-		side_panel.move_child(top[i], i)
-	for node in bottom:
-		side_panel.move_child(node, -1)
+	var bot = white_clock.get_parent() if human == "b" else black_clock.get_parent()
+	var player = black_clock.get_parent() if human == "b" else white_clock.get_parent()
+	$Layout/Side.move_child(bot, 0)
+	$Layout/Side.move_child(player, -1)
+	$Layout/Side.move_child(claim_draw, -1)
+	bot.get_node("Name").text = "Maia"
+	bot.get_node("Name/Colour").hide()
+	bot.get_node("Avatar").show()
+	bot.get_node("Initial").hide()
+	player.get_node("Name").text = preferences.get_value("player_name")
+	player.get_node("Name/Colour").text = "White" if human == "w" else "Black"
+	player.get_node("Name/Colour").show()
+	player.get_node("Avatar").hide()
+	player.get_node("Initial").show()
+	player.get_node("Initial").text = preferences.get_value("player_name").left(1).to_upper()
+	if focus:
+		_set_focus(true)
 
 
 func _set_focus(on: bool) -> void:
+	if on and not focus:
+		_notice_before_focus = draw_notice.visible
 	focus = on
-	# The Esc hint and the result stay out of this list: criteria 4 and 2 show them when they apply,
-	# and the result is empty during play.
-	for node in [move_list, white_material, black_material, claim_draw, $Layout/Side/Actions, settings_screen]:
+	draw_notice.visible = not on and _notice_before_focus
+	for node in [move_list, result_label, claim_draw, $Layout/Side/Actions, settings_screen]:
 		node.visible = not on
+	for row in [white_clock.get_parent(), black_clock.get_parent()]:
+		row.get_node("Name").visible = not on
+		row.get_node("Avatar").visible = not on and row == (white_clock.get_parent() if human == "b" else black_clock.get_parent())
+		row.get_node("Initial").visible = not on and row == (black_clock.get_parent() if human == "b" else white_clock.get_parent())
 	white_score.visible = _show_match_score and not on
 	black_score.visible = _show_match_score and not on
 
@@ -541,7 +564,8 @@ func _on_maia_move(move: String) -> void:
 		var accepted := MaiaPlayer.accepts_draw(maia.evaluation, board_view.game.board,
 				clock.left(board_view.game.board.side_to_move), Clock.CONTROLS[settings.control][0])
 		draw_notice.text = "Draw agreed" if accepted else "Maia declined"
-		draw_notice.show()
+		draw_notice.visible = not focus
+		_notice_before_focus = focus
 		draw_notice_timer.start()
 		if accepted:
 			board_view.game.agree_draw()
@@ -567,9 +591,6 @@ func _on_move_played(san: String) -> void:
 	_recording_move = false
 	if game.is_over():
 		_show_result()
-	var balance := material_balance(board_view.game.board)
-	white_material.text = _captured(balance.w, BLACK_GLYPHS) + _lead(balance.diff)
-	black_material.text = _captured(balance.b, WHITE_GLYPHS) + _lead(-balance.diff)
 	_next_turn()
 
 
@@ -587,7 +608,6 @@ func _show_result() -> void:
 	draw_button.disabled = true
 	_draw_offered = false
 	resign_button.disabled = true
-	resign_hint.hide()
 	var game = board_view.game
 	var named_settings := settings.duplicate()
 	named_settings.player_name = preferences.get_value("player_name")
@@ -619,7 +639,7 @@ func _show_result() -> void:
 		old_panel.free()
 	var panel = load("res://ui/game_over.tscn").instantiate()
 	board_view.add_child(panel)
-	panel.present(self, game, $Layout/Side/ReviewButton)
+	panel.present(self, game)
 	sound_player.play("game_end")
 	print("Maia: median %.1f ms from your move to Lc0's answer, over %d moves"
 			% [maia.median_ms(), maia.latencies_ms.size()])
@@ -641,17 +661,6 @@ func _next_turn() -> void:
 				_playing_premove = true
 				board_view.play(move, true)
 				_playing_premove = false
-
-
-static func _captured(roles: String, glyphs: Dictionary) -> String:
-	var text := ""
-	for role in roles:
-		text += glyphs[role]
-	return text
-
-
-static func _lead(points: int) -> String:
-	return " +%d" % points if points > 0 else ""
 
 
 func _update_score_text() -> void:
