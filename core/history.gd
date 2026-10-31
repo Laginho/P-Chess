@@ -106,6 +106,8 @@ func read_repertoire(path: String) -> Dictionary:
 func games() -> Array:
 	var folder := _root.path_join("games")
 	var result := []
+	if not DirAccess.dir_exists_absolute(folder):
+		return result
 	for file in DirAccess.get_files_at(folder):
 		if not file.ends_with(".pgn"):
 			continue
