@@ -1,5 +1,5 @@
 # REV-005: The new review screen: board, eval bar and classified moves
-Stage: to-review
+Stage: done
 Blocked by: REV-002, REV-003
 Review: human
 Difficulty: hard
@@ -143,3 +143,23 @@ Disclosure: pending | release | Existing real Stockfish, rendered 800×600, orie
 
 - 2026-10-31 Stage 2 reopen: review handles F before the focused move list or hidden game board; the visible board and evaluation bar flip together immediately. The regression uses viewport input with the move list focused and a completed cached analysis, and verifies both directions and the hidden board. Before the production fix, the focused suite reported 16 passed, 1 failed with the expected board, bar and hidden-board mismatches; after it, 17 passed, 0 failed.
 - Full gate on commit `643614493cd923b2a1318609557004a546b14ab4`: 346 passed, 0 failed; exit 0. The prior integration disclosure for criterion 2 is addressed by the fix and awaits stage 3 review. Existing manual acceptance and release disclosure remain pending.
+
+#### Resolution (2026-10-30)
+Verdict: Approve
+
+Re-reviewed the failed criterion 2 and every change in `095ee9857f1629aab8ab995a4f1ea9ad10a81030...01db5be5d3e37fdfa18db0fbb085113bd59c458c`. Independent reviewers `/root/standards` and `/root/spec` examined the Standards and Spec axes respectively: both approved with zero findings. Stage 3 authored no production behavior.
+
+- Standards: Primary files and the test/production commit split are respected. `683633d` adds the regression and tracker metadata; `6436144` contains the production repair; `01db5be` is the tracker handoff. The repair reuses the board setter and `_update_eval_bar()`.
+- Spec: criterion 2 is now satisfied. F is consumed in review `_input`, flips the visible review board and updates the evaluation bar synchronously. The viewport regression exercises both directions with the move list focused and a completed cached analysis, verifies that the hidden game board stays unchanged, and needs neither navigation nor another analysis result.
+- Coverage: all 3 changed files reviewed, 0 skipped, 100% coverage: this ticket, `tests/test_review.gd`, `ui/review.gd`. Open Code Review delegation preview excluded all 3 as `unsupported_ext`; all were reviewed directly using its resolved default rules. Callers and interactions examined include main's fallback hotkeys, BoardView/eval-bar setters, post-game entry, cache completion and Settings layering. No new regression or scope expansion was substantiated. The first review's other criterion verdicts and coverage limits remain applicable.
+
+Criterion verdicts: 1 ✅ navigation; 2 ✅ PV1 evaluation and immediate orientation update; 3 ✅ incremental classes and repertoire exit; 4 ✅ board annotations; 5 ✅ twelve own SVGs; 6 ✅ Max analysis, progress and cache reuse; 7 ✅ exports, rematch/Space and New game; 8 ✅ headless 800×600 geometry. Rendered usability and live-engine behavior remain acceptance checks below.
+
+Verification: the stage-2 handoff records the regression's focused red/green proof as 16 passed / 1 failed before the repair, then 17 passed / 0 failed. Stage 3 independently validated `C:\Users\bruno\AppData\Local\Temp\rev005-flip-6436144.json`: the bound gate command, tested commit availability, SHA256 of the complete log and `ExitCode: 0` marker all match. The log prints **346 passed, 0 failed**, including the cached-analysis viewport regression. No standalone SKIP records were found. The existing gate was reused; it was not rerun. After rebase, `4e21203ab6ef7ee34299ed4621d723be1965e68c` has exactly the reviewed tree, and all non-tracker files still match the tested commit. Merge `3b36e9f88c262621c2172d4aaa0c293e83ed6bb3` into `sweatshop/v010/2026-10-30-2302` preserves that tree. This closing commit changes only this ticket and the feature ledger.
+
+The recorded `Proxy decided (opus-5.5 xhigh)` decision (receipt `C:\Users\bruno\AppData\Local\Temp\sweatshop-proxy\20261030-230639-REV-005-8bce35.json`) authorized partial classification without changing `evaluate`'s signature. Its contract changes are already reflected in Primary files, criterion 3, tests and `docs/spec.md` §15.4. The long-game responsiveness check it requested remains open.
+
+Acceptance: pending | Manually finish a game with real Stockfish, watch incremental icons and progress, navigate with keyboard and mouse, inspect rendered 800×600 usability and icon appearance, verify orientation with physical input, and check long-game responsiveness. Headless fixtures and geometry do not establish these checks. The previously recorded missing Forced/Book/Repertoire/Best partial-predecessor test cases remain a coverage limitation, with the priority exceptions verified statically in the first review.
+Disclosure: decision | none | The recorded proxy decision above permits partial analysis; the full-analysis contract and API signature remain unchanged.
+Disclosure: decision | none | This approval resolves the earlier integration disclosure for criterion 2. REV-005 is integrated into the session branch; Review: human remains relevant to the final session PR.
+Disclosure: pending | release | Manual real-Stockfish, rendered-layout, physical-input/orientation and long-game responsiveness acceptance above remains required before release.
