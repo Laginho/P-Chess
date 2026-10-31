@@ -2,6 +2,7 @@ extends Control
 
 signal rematch_requested
 signal setup_requested
+signal back_history_requested
 
 # Clock snapshots are the mover's remaining milliseconds after each move (HIST-001).
 const ThemeLoader = preload("res://ui/theme_loader.gd")
@@ -39,6 +40,8 @@ var _repertoire := []
 var _colour := "w"
 var _check_repertoire := false
 var _player_names := ["White", "Black"]
+var _from_history := false
+var _history_draw := false
 const CLASS_NAMES := ["Brilliant", "Great", "Best", "Excellent", "Good", "Book", "Repertoire", "Forced", "Inaccuracy", "Mistake", "Miss", "Blunder"]
 
 @onready var _eval_bar = $Margin/Content/ReviewBody/EvalBar
@@ -72,6 +75,20 @@ func _ready() -> void:
 	$Margin/Content/Actions/Lichess.pressed.connect(func(): open_browser.call(_url))
 	$Margin/Content/Actions/Rematch.pressed.connect(func(): rematch_requested.emit())
 	$Margin/Content/Actions/Setup.pressed.connect(func(): setup_requested.emit())
+	var back := Button.new()
+	back.name = "BackHistory"
+	back.text = "Back to History (Esc)"
+	back.pressed.connect(func(): back_history_requested.emit())
+	$Margin/Content/Actions.add_child(back)
+	back.hide()
+	var analyze := Button.new()
+	analyze.name = "Analyze"
+	analyze.text = "Analyze"
+	analyze.pressed.connect(func():
+		analyze.hide()
+		open_analysis(_analysis_path, _history_draw))
+	$Margin/Content/ReviewBody/Side.add_child(analyze)
+	analyze.hide()
 
 
 func _class_help() -> String:
@@ -182,7 +199,11 @@ func _input(event: InputEvent) -> void:
 	if visible and event is InputEventKey and event.is_pressed() and not event.is_echo() \
 			and event.keycode == KEY_SPACE:
 		get_viewport().set_input_as_handled()
-		rematch_requested.emit()
+		if not _from_history:
+			rematch_requested.emit()
+	elif visible and _from_history and event is InputEventKey and event.is_pressed() and not event.is_echo() and event.keycode == KEY_ESCAPE:
+		get_viewport().set_input_as_handled()
+		back_history_requested.emit()
 	elif visible and event is InputEventKey and event.is_pressed() and not event.is_echo() and event.keycode == KEY_F:
 		get_viewport().set_input_as_handled()
 		_board_view.flipped = not _board_view.flipped
@@ -287,6 +308,11 @@ func _update_eval_bar() -> void:
 
 func present(game, clocks: Array, settings: Dictionary, result_text: String,
 		catalog: Array = [], repertoire: Array = [], check_repertoire := false) -> void:
+	_from_history = false
+	$Margin/Content/Actions/Rematch.show()
+	$Margin/Content/Actions/Setup.show()
+	$Margin/Content/Actions/BackHistory.hide()
+	$Margin/Content/ReviewBody/Side/Analyze.hide()
 	$Margin/Content/AnalysisError.hide()
 	_game_moves = game.moves.duplicate()
 	_classes = []
@@ -331,6 +357,23 @@ func present(game, clocks: Array, settings: Dictionary, result_text: String,
 	_pgn = Pgn.write(Pgn.finished_game(game, clocks, settings))
 	_url = lichess_url(game)
 	show()
+
+
+func present_history(path: String, analysis_path: String, draw_at_end: bool) -> void:
+	_from_history = true
+	_analysis_path = analysis_path
+	_history_draw = draw_at_end
+	_pgn = FileAccess.get_file_as_string(path)
+	$Margin/Content/Actions/Rematch.hide()
+	$Margin/Content/Actions/Setup.hide()
+	$Margin/Content/Actions/BackHistory.show()
+	var cached := Analyser.read_analysis(analysis_path, "Stockfish 19", Tunables.ANALYSIS_NODES)
+	var positions = cached.get("data", {}).get("positions", [])
+	if cached.state == "analysed" and positions is Array and positions.size() == _positions.size():
+		for i in positions.size():
+			receive_position(i, positions[i])
+	else:
+		$Margin/Content/ReviewBody/Side/Analyze.show()
 
 
 static func _badge_text(mark: Dictionary) -> String:

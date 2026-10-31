@@ -15,6 +15,7 @@ const Settings = preload("res://core/settings.gd")
 const SettingsScreen = preload("res://ui/settings.tscn")
 const History = preload("res://core/history.gd")
 const ReviewScreen = preload("res://ui/review.tscn")
+const HistoryScreen = preload("res://ui/history_screen.tscn")
 
 const WINNERS := {"1-0": "White wins", "0-1": "Black wins", "1/2-1/2": "Draw"}
 const MIN_BOARD_SIZE := 320
@@ -33,6 +34,7 @@ var preferences := Settings.new()
 # Their screen, over everything else; hidden in focus mode.
 var settings_screen := SettingsScreen.instantiate()
 var review := ReviewScreen.instantiate()
+var history_screen := HistoryScreen.instantiate()
 var review_analysis_path := ""
 var resign_key := ResignKey.new(Time.get_ticks_msec)
 # Only the board and the clocks show (§8.7).
@@ -148,6 +150,11 @@ func _ready() -> void:
 	settings_screen.store = preferences
 	add_child(settings_screen)
 	add_child(review)
+	add_child(history_screen)
+	setup.get_node("Center/Form/History").pressed.connect(_show_history)
+	history_screen.back_requested.connect(_show_setup)
+	history_screen.review_requested.connect(_review_history_game)
+	review.back_history_requested.connect(_show_history)
 	review.rematch_requested.connect(func(): _start(rematch(settings)))
 	review.setup_requested.connect(_show_setup)
 	preferences.changed.connect(_apply)
@@ -304,10 +311,38 @@ func _show_setup() -> void:
 	resign_button.disabled = true
 	resign_hint.hide()
 	review.hide()
+	history_screen.hide()
 	clock = null
 	white_clock.clock = null
 	black_clock.clock = null
 	setup.show()
+
+
+func _show_history() -> void:
+	review.hide()
+	setup.hide()
+	history.book = setup.book
+	history_screen.present(history, preferences)
+
+
+func _review_history_game(path: String, saved: Dictionary) -> void:
+	var headers: Dictionary = saved.headers
+	var colour := "w" if headers.get("White", "") == "You" else "b"
+	var game = Game.new()
+	var clocks := []
+	for move in saved.moves:
+		game.play(move.uci)
+		clocks.append(move.clock_ms)
+	game.result = saved.result
+	game.reason = history.reason(saved)
+	var other: String = headers.get("Black" if colour == "w" else "White", "Maia 1500")
+	var review_settings := {"colour": colour, "level": "maia-" + other.trim_prefix("Maia "), "control": "1+0"}
+	var snapshot: Dictionary = history.read_repertoire(path)
+	review.present(game, clocks, review_settings, history_screen._result_text(saved, colour),
+			setup.book.entries, snapshot.lines, not snapshot.lines.is_empty())
+	history_screen.hide()
+	var analysis_path := "user://analysis".path_join(path.get_file() + ".json")
+	review.present_history(path, analysis_path, saved.result == "1/2-1/2")
 
 
 # Abort without recording a chess result, and invalidate Maia's already scheduled moves.

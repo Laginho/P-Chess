@@ -77,8 +77,10 @@ func _add_card(list: Node, record: Dictionary) -> void:
 	text.text = "%s%s  ·  White: %s  x  Black: %s\n%s  ·  %d moves\n%s" % [opening, date, headers.get("White", "?"), headers.get("Black", "?"), _result_text(game, colour), (moves.size() + 1) / 2, _analysis_text(record.path)]
 	details.add_child(text)
 	var actions := HBoxContainer.new()
+	actions.name = "HBoxContainer"
 	details.add_child(actions)
 	var review := Button.new()
+	review.name = "Review"
 	review.text = "Review"
 	review.pressed.connect(func(): review_requested.emit(record.path, game))
 	actions.add_child(review)
