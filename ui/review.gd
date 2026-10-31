@@ -489,6 +489,7 @@ func _show_ply(ply: int) -> void:
 	_ply = clampi(ply, 0, _game_moves.size())
 	if _ply > 0 and _ply <= _move_rows.size():
 		_move_rows[_ply - 1].select((_ply - 1) % 2 + 1)
+		_moves.ensure_cursor_is_visible.call_deferred()
 	elif _moves.get_selected() != null:
 		_moves.deselect_all()
 	var position = Game.new()
