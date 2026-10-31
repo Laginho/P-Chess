@@ -179,3 +179,15 @@ func test_custom_catalog_mode_is_reused_after_restart():
 func _wait_start(main) -> void:
 	while main._starting:
 		await Engine.get_main_loop().process_frame
+
+
+func test_home_shows_quick_play_and_navigation_icons():
+	var home = load("res://ui/home.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(home)
+	home.configure(load("res://core/settings.gd").new("res://tests/fixtures/no_session_settings.cfg"))
+	for name in ["OneZero", "ThreeTwo", "FiveZero", "Custom", "History", "Profile", "Settings", "Quit"]:
+		var button = home.find_child(name, true, false)
+		assert_true(button is Button and button.icon != null, "%s has an icon" % name)
+	var level: OptionButton = home.find_child("Level", true, false)
+	assert_eq(level.get_item_text(level.selected), "Maia 1500")
+	home.free()
