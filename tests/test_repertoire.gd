@@ -639,6 +639,22 @@ func test_each_repertoire_card_opens_its_own_editor():
 	_clean(folder)
 
 
+func test_selected_repertoire_card_has_an_accent_outline():
+	var setup = load("res://ui/setup.tscn").instantiate()
+	var folder := _folder()
+	setup.repertoire.storage_dir = folder
+	assert_eq(setup.repertoire.import_pgn("1. e4 e5 *", "w", "Study"), "")
+	Engine.get_main_loop().root.add_child(setup)
+	var screen = setup.get_node("RepertoireScreen")
+	screen.present()
+	var select: Button = screen.find_child("Cards", true, false).get_child(0).get_child(0)
+	select.pressed.emit()
+	var style: StyleBoxFlat = select.get_theme_stylebox("pressed")
+	assert_eq(style.border_color, Color("7fa650"), "selection has the green outline")
+	setup.free()
+	_clean(folder)
+
+
 func test_editor_button_tracks_repertoire_selection():
 	var setup = load("res://ui/setup.tscn").instantiate()
 	var folder := _folder()
