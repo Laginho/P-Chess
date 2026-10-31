@@ -5,6 +5,14 @@
 [ext_resource type="PackedScene" path="res://ui/move_list.tscn" id="3"]
 [ext_resource type="PackedScene" path="res://ui/setup.tscn" id="4"]
 [ext_resource type="PackedScene" path="res://ui/clock.tscn" id="5"]
+[ext_resource type="Script" path="res://ui/resize_grip.gd" id="6"]
+
+[sub_resource type="StyleBoxFlat" id="ScoreBox"]
+bg_color = Color(0.2, 0.2, 0.2, 1)
+content_margin_left = 6.0
+content_margin_right = 6.0
+content_margin_top = 3.0
+content_margin_bottom = 3.0
 
 [node name="Main" type="Control"]
 layout_mode = 3
@@ -33,6 +41,12 @@ alignment = 1
 layout_mode = 2
 size_flags_horizontal = 1
 
+[node name="ResizeGrip" type="Control" parent="Layout/BoardView"]
+layout_mode = 0
+offset_right = 20.0
+offset_bottom = 20.0
+script = ExtResource("6")
+
 [node name="Starting" type="PanelContainer" parent="Layout/BoardView"]
 visible = false
 layout_mode = 1
@@ -53,10 +67,20 @@ horizontal_alignment = 1
 [node name="Side" type="VBoxContainer" parent="Layout"]
 custom_minimum_size = Vector2(240, 0)
 layout_mode = 2
+size_flags_horizontal = 3
 
-[node name="BlackClock" parent="Layout/Side" instance=ExtResource("5")]
+[node name="BlackClockRow" type="HBoxContainer" parent="Layout/Side"]
+layout_mode = 2
+
+[node name="BlackClock" parent="Layout/Side/BlackClockRow" instance=ExtResource("5")]
 layout_mode = 2
 side = "b"
+
+[node name="Score" type="Label" parent="Layout/Side/BlackClockRow"]
+visible = false
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_styles/normal = SubResource("ScoreBox")
 
 [node name="BlackMaterial" type="Label" parent="Layout/Side"]
 layout_mode = 2
@@ -72,10 +96,33 @@ layout_mode = 2
 focus_mode = 0
 text = "Review"
 
+[node name="Actions" type="HBoxContainer" parent="Layout/Side"]
+layout_mode = 2
+
+[node name="ResignButton" type="Button" parent="Layout/Side/Actions"]
+layout_mode = 2
+disabled = true
+text = "⚑"
+tooltip_text = "Resign"
+
+[node name="DrawButton" type="Button" parent="Layout/Side/Actions"]
+layout_mode = 2
+disabled = true
+text = "½"
+tooltip_text = "Offer a draw"
+
+[node name="DrawNotice" type="Label" parent="Layout/Side"]
+visible = false
+layout_mode = 2
+
+[node name="DrawNoticeTimer" type="Timer" parent="Layout/Side"]
+wait_time = 3.0
+one_shot = true
+
 [node name="ResignHint" type="Label" parent="Layout/Side"]
 visible = false
 layout_mode = 2
-text = "Press Esc again to resign"
+text = "Click again to resign"
 
 [node name="ClaimDraw" type="Button" parent="Layout/Side"]
 layout_mode = 2
@@ -90,8 +137,17 @@ layout_mode = 2
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
 
-[node name="WhiteClock" parent="Layout/Side" instance=ExtResource("5")]
+[node name="WhiteClockRow" type="HBoxContainer" parent="Layout/Side"]
 layout_mode = 2
+
+[node name="WhiteClock" parent="Layout/Side/WhiteClockRow" instance=ExtResource("5")]
+layout_mode = 2
+
+[node name="Score" type="Label" parent="Layout/Side/WhiteClockRow"]
+visible = false
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_styles/normal = SubResource("ScoreBox")
 
 [node name="Setup" parent="." instance=ExtResource("4")]
 layout_mode = 1

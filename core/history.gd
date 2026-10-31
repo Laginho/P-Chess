@@ -19,7 +19,8 @@ func _init(root := "user://") -> void:
 # clocks contains the moving side's remaining milliseconds after each played move.
 # Returns the PGN path, or "" with a reportable error. An explicit Opening overrides recognition.
 # Main supplies the selected target only once, with its completed-game save.
-func save(game, clocks: Array, settings: Dictionary, opening_name := "", target_id := "") -> String:
+func save(game, clocks: Array, settings: Dictionary, opening_name := "", target_id := "",
+		repertoire: Array = [], repertoire_colour := "") -> String:
 	error = ""
 	if _load_error not in [OK, ERR_FILE_NOT_FOUND]:
 		error = "Could not read history stats (%s)." % error_string(_load_error)
@@ -51,6 +52,20 @@ func save(game, clocks: Array, settings: Dictionary, opening_name := "", target_
 	if status != OK:
 		error = "Could not write game PGN (%s)." % error_string(status)
 		return ""
+	if not repertoire.is_empty():
+		var snapshot := FileAccess.open(path.trim_suffix(".pgn") + ".repertoire.json", FileAccess.WRITE)
+		if snapshot == null:
+			error = "Could not save repertoire snapshot (%s)." % error_string(FileAccess.get_open_error())
+		else:
+			var lines := []
+			for line in repertoire:
+				lines.append({"id": line.id, "moves": Array(line.moves), "positions": Array(line.positions)})
+			snapshot.store_string(JSON.stringify({"colour": repertoire_colour, "lines": lines}))
+			snapshot.flush()
+			status = snapshot.get_error()
+			snapshot.close()
+			if status != OK:
+				error = "Could not write repertoire snapshot (%s)." % error_string(status)
 	var counts := stats(settings.level, settings.control)
 	if game.result == "1/2-1/2":
 		counts.draws += 1
@@ -67,9 +82,24 @@ func save(game, clocks: Array, settings: Dictionary, opening_name := "", target_
 	if status != OK:
 		if not target_id.is_empty():
 			_results.set_value("practice", target_id, practiced)
-		error = "Could not save history stats (%s)." % error_string(status)
+		error += ("\n" if not error.is_empty() else "") + "Could not save history stats (%s)." % error_string(status)
 		return ""
 	return path
+
+
+func read_repertoire(path: String) -> Dictionary:
+	var snapshot_path := path.trim_suffix(".pgn") + ".repertoire.json"
+	if not FileAccess.file_exists(snapshot_path):
+		return {"colour": "", "lines": []}
+	var data = JSON.parse_string(FileAccess.get_file_as_string(snapshot_path))
+	if not data is Dictionary or not data.get("lines") is Array or not data.get("colour") is String:
+		return {"colour": "", "lines": []}
+	for line in data.lines:
+		if not line is Dictionary or not line.get("moves") is Array or not line.get("positions") is Array:
+			return {"colour": "", "lines": []}
+		line.moves = PackedStringArray(line.moves)
+		line.positions = PackedStringArray(line.positions)
+	return data
 
 
 # Counters are from the human's perspective; flag results are subsets of wins/losses.

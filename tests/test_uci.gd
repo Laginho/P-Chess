@@ -79,6 +79,86 @@ func test_missing_engine_reports_unavailable_naming_the_fetch_script():
 	uci.free()
 
 
+func test_missing_stockfish_names_the_engine_and_path():
+	var uci = UCI.new("engine/stockfish/stockfish.exe", "Stockfish")
+	assert_eq(uci.start(PackedStringArray([OS.get_user_data_dir().path_join("test_uci/empty")])), false)
+	assert_eq(uci.error, "Stockfish is missing (engine/stockfish/stockfish.exe). Run scripts/fetch-engine.ps1 to download it.")
+	uci.free()
+
+
+func _idle_child() -> Dictionary:
+	return OS.execute_with_pipe(OS.get_executable_path(), ["--headless", "--path", ProjectSettings.globalize_path("res://"), "-s", "res://tests/fixtures/idle_child.gd"], false)
+
+
+func test_search_forwards_all_info_and_bestmove_to_the_request_callback():
+	var uci = UCI.new("engine/stockfish/stockfish.exe", "Stockfish")
+	uci.available = true
+	var child := _idle_child()
+	uci.pid = child.pid
+	# Unique per run, so two gates sharing user:// cannot clobber each other's files.
+	var commands := "user://rev001-commands_%d.txt" % Time.get_ticks_usec()
+	uci._stdio = FileAccess.open(commands, FileAccess.WRITE)
+	var received := []
+	uci.request_search(["position startpos", "go depth 2"], func(line): received.append(line))
+	uci._lines.append_array(["info depth 1 multipv 1 score cp 20", "info depth 2 multipv 2 score cp 10", "bestmove e2e4"])
+	assert_true(OS.is_process_running(uci.pid), "idle child is running")
+	uci.poll()
+	assert_eq(received, ["info depth 1 multipv 1 score cp 20", "info depth 2 multipv 2 score cp 10", "bestmove e2e4"])
+	uci.free()
+	DirAccess.remove_absolute(commands)
+	child.stdio.close()
+	child.stderr.close()
+
+
+func test_engine_id_and_in_search_stop_preserve_the_queue():
+	var uci = UCI.new("engine/stockfish/stockfish.exe", "Stockfish")
+	uci.available = true
+	var child := _idle_child()
+	uci.pid = child.pid
+	var commands := "user://rev002-commands_%d.txt" % Time.get_ticks_usec()
+	uci._stdio = FileAccess.open(commands, FileAccess.WRITE_READ)
+	uci._queue(["uci"], "uciok")
+	uci._lines.append_array(["id name Stockfish 19", "uciok"])
+	assert_true(OS.is_process_running(uci.pid), "idle child is running")
+	uci.poll()
+	assert_eq(uci.get("engine_id"), "Stockfish 19")
+	if not uci.has_method("stop_search"):
+		assert_true(false, "stop_search is missing")
+		uci.free()
+		DirAccess.remove_absolute(commands)
+		child.stdio.close()
+		child.stderr.close()
+		return
+	var received := []
+	uci.stop_search()
+	uci.request_search(["position startpos", "go nodes 1"], func(line): received.append(line))
+	uci.request_search(["position startpos", "go nodes 2"], func(line): received.append(line))
+	uci.stop_search()
+	uci._lines.append("bestmove e2e4")
+	uci.poll()
+	uci._stdio.flush()
+	uci._stdio.seek(0)
+	assert_eq(uci._stdio.get_as_text(), "uci\nposition startpos\ngo nodes 1\nstop\nposition startpos\ngo nodes 2\n")
+	assert_eq(received, ["bestmove e2e4"])
+	uci.free()
+	DirAccess.remove_absolute(commands)
+	child.stdio.close()
+	child.stderr.close()
+
+
+func test_stockfish_does_not_send_maia_requests():
+	var uci = UCI.new("engine/stockfish/stockfish.exe", "Stockfish")
+	uci.available = true
+	var commands := "user://rev001-stockfish-commands_%d.txt" % Time.get_ticks_usec()
+	uci._stdio = FileAccess.open(commands, FileAccess.WRITE)
+	uci.set_level("weights.pb.gz")
+	uci.request_policy(START, PackedStringArray())
+	assert_eq(uci._stdio.get_position(), 0, "no Maia commands are sent")
+	assert_true(uci._steps.is_empty(), "no Maia commands are queued")
+	uci.free()
+	DirAccess.remove_absolute(commands)
+
+
 # Polls on this thread, as the game's _process does, until bestmove or a 30 s timeout.
 func _policy(uci, moves: String) -> Dictionary:
 	var got := []
@@ -123,6 +203,24 @@ func _live_engine(test_name: String) -> String:
 	if exe == "":
 		print("SKIP test_uci.gd::%s: no engine/lc0/lc0.exe, run scripts/fetch-engine.ps1" % test_name)
 	return exe
+
+
+func test_stopping_one_bridge_leaves_the_other_running():
+	var exe := _live_engine("test_stopping_one_bridge_leaves_the_other_running")
+	if exe == "":
+		return
+	var first = UCI.new()
+	var second = UCI.new()
+	assert_true(first.start(), first.error)
+	assert_true(second.start(), second.error)
+	var second_pid: int = second.pid
+	assert_true(first.pid != second_pid, "separate engine processes")
+	first.stop()
+	assert_true(OS.is_process_running(second_pid), "second engine survives first stop")
+	second.set_level(exe.get_base_dir().get_base_dir().path_join("weights/maia-1100.pb.gz"))
+	assert_true(not _policy(second, ITALIAN).is_empty(), "second engine still answers")
+	first.free()
+	second.free()
 
 
 func _wait_for_stop(uci, stops: Array) -> void:
@@ -189,3 +287,26 @@ func test_missing_net_reports_stopped_instead_of_waiting_for_readyok():
 	assert_true(policies.is_empty(), "a failed net emits no policy")
 	uci.free()
 	assert_eq(stops.size(), 1, "freeing a failed bridge does not emit stopped again")
+
+
+func test_search_score_is_in_pawns_and_absent_without_cp():
+	var transcript := PackedStringArray([_line("e2e4", 12.0), "info depth 1 nodes 1 score cp 34 pv e2e4", "bestmove e2e4"])
+	assert_eq(UCI.parse_score(transcript), 0.34, "score belongs to the side to move")
+	assert_eq(UCI.parse_score(PackedStringArray([_line("e2e4", 12.0), "bestmove e2e4"])), null, "no score")
+	assert_eq(UCI.parse_score(PackedStringArray(["info depth 1 score cp -150 pv e2e4"])), -1.5, "negative score")
+
+
+func test_live_policy_exposes_the_score_of_that_search():
+	var exe := _live_engine("test_live_policy_exposes_the_score_of_that_search")
+	if exe == "":
+		return
+	var uci = UCI.new()
+	assert_true(uci.start(), uci.error)
+	uci.set_level(exe.get_base_dir().get_base_dir().path_join("weights/maia-1100.pb.gz"))
+	var observed := []
+	uci.policy_ready.connect(func(_policy): observed.append(uci.evaluation))
+	_policy(uci, "e2e4")
+	assert_eq(observed.size(), 1, "one score with the reply")
+	if observed.size() == 1:
+		assert_true(observed[0] is float, "live search supplies a cp score in pawns")
+	uci.free()

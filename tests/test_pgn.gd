@@ -104,7 +104,7 @@ func test_finished_game_builds_the_headers_and_clock_records_both_exports_share(
 	var built: Dictionary = Pgn.finished_game(game, [180000, 180000, 179534, 181001],
 			{"colour": "w", "level": "maia-1500", "control": "3+2"})
 	assert_eq(built.headers, {"White": "You", "Black": "Maia 1500", "TimeControl": "180+2",
-			"Result": "0-1", "Termination": "Normal"})
+			"Result": "0-1", "Termination": "Normal", "Reason": "checkmate"})
 	assert_eq(built.moves, [{"uci": "f2f3", "clock_ms": 180000}, {"uci": "e7e5", "clock_ms": 180000},
 			{"uci": "g2g4", "clock_ms": 179534}, {"uci": "d8h4", "clock_ms": 181001}])
 	assert_eq(built.result, "0-1")
@@ -118,7 +118,7 @@ func test_finished_game_names_a_flag_and_an_optional_opening_last():
 	var built: Dictionary = Pgn.finished_game(game, [60000, 59000],
 			{"colour": "b", "level": "maia-1900", "control": "1+0"}, "King's Pawn Game")
 	assert_eq(built.headers, {"White": "Maia 1900", "Black": "You", "TimeControl": "60+0",
-			"Result": "0-1", "Termination": "Time forfeit", "Opening": "King's Pawn Game"})
+			"Result": "0-1", "Termination": "Time forfeit", "Reason": "time", "Opening": "King's Pawn Game"})
 	assert_eq(str(built.headers.keys().back()), "Opening")
 	assert_eq(built.moves, [{"uci": "e2e4", "clock_ms": 60000}, {"uci": "e7e5", "clock_ms": 59000}])
 	assert_eq(built.result, "0-1")
@@ -155,3 +155,11 @@ func test_malformed_text_is_an_error_not_a_crash():
 		var parsed: Dictionary = Pgn.parse(text)
 		assert_true(parsed.error.begins_with("Game 1"), "%s gave %s" % [text, parsed.error])
 		assert_eq(parsed.games, [], text)
+
+
+func test_finished_game_records_resignation_reason():
+	var game = Game.new()
+	game.resign("w")
+	var built: Dictionary = Pgn.finished_game(game, [],
+			{"colour": "w", "level": "maia-1500", "control": "3+2"})
+	assert_eq(built.headers.Reason, "resignation")

@@ -31,6 +31,23 @@ class HeldEngine extends "res://engine/uci.gd":
 		pass
 
 
+func test_repertoire_snapshot_round_trip_and_missing_file():
+	var folder := _folder()
+	var history = History.new(folder)
+	var repertoire = load("res://bot/repertoire.gd").new()
+	assert_eq(repertoire.parse("1. e4 e5 2. Nf3 *", "b"), "")
+	var game = Game.new()
+	game.resign("w")
+	var path: String = history.save(game, [], SETTINGS, "", "", repertoire.lines, repertoire.colour)
+	assert_true(FileAccess.file_exists(path.trim_suffix(".pgn") + ".repertoire.json"))
+	var snapshot: Dictionary = history.read_repertoire(path)
+	assert_eq(snapshot.colour, "b")
+	assert_eq(snapshot.lines, repertoire.lines)
+	var plain: String = history.save(game, [], SETTINGS)
+	assert_true(not FileAccess.file_exists(plain.trim_suffix(".pgn") + ".repertoire.json"))
+	assert_eq(history.read_repertoire(plain).lines, [])
+	HistoryStorage.clean(folder)
+
 func _session(folder: String, time: FakeTime, settings := SETTINGS):
 	var main = MainScene.instantiate()
 	main.get_node("Setup").book.load_tsv("eco\tname\tpgn\nA00\tFixture\t1. h3\n")
@@ -169,7 +186,7 @@ func test_finished_game_saves_one_pgn_with_headers_moves_and_exact_clocks():
 	if parsed.games.size() == 1:
 		var saved: Dictionary = parsed.games[0]
 		assert_eq(saved.headers, {"White": "You", "Black": "Maia 1500", "TimeControl": "180+2",
-				"Result": "0-1", "Termination": "Normal"})
+				"Result": "0-1", "Termination": "Normal", "Reason": "checkmate"})
 		assert_eq(saved.result, "0-1")
 		assert_eq(saved.moves.map(func(move): return move.uci), ["f2f3", "e7e5", "g2g4", "d8h4"])
 		assert_eq(saved.moves.map(func(move): return move.clock_ms), [180000, 180000, 179534, 181001])
@@ -254,7 +271,7 @@ func test_headers_use_actual_level_colour_control_and_only_a_known_opening():
 		assert_eq(parsed.error, "")
 		assert_eq(parsed.games[0].headers, {"White": "Maia 1900", "Black": "You",
 				"TimeControl": {"1+0": "60+0", "3+2": "180+2", "5+0": "300+0"}[control],
-				"Result": "0-1", "Termination": "Normal", "Opening": "Bird Opening"})
+				"Result": "0-1", "Termination": "Normal", "Reason": "resignation", "Opening": "Bird Opening"})
 	HistoryStorage.clean(folder)
 
 

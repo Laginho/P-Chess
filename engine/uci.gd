@@ -12,19 +12,30 @@ const ENGINE := "engine/lc0/lc0.exe"
 # One VerboseMoveStats line per root move: "info string e2e4  (322 ) N: ... (P: 12.34%) ...".
 const MOVE_LINE := "^info string ([a-h][1-8][a-h][1-8][qrbn]?) .*\\(P: *([0-9.]+)%\\)"
 
+# The score of the search that just emitted policy_ready, in pawns; null if absent.
+var evaluation = null
 var available := false
 var error := ""
 var pid := -1
+var engine_id := ""
 
 var _stdio: FileAccess
 var _readers: Array[Thread] = []
 var _mutex := Mutex.new()
 var _lines := []
-# Each step: [command lines, the reply it waits for ("" for none), board for a policy request].
+# Each step: [command lines, reply to wait for ("" for none), policy board, search callback].
 var _steps := []
 var _awaiting := ""
 var _board
 var _info := PackedStringArray()
+var _callback := Callable()
+var _engine_path: String
+var _engine_name: String
+
+
+func _init(engine_path := ENGINE, engine_name := "Lc0") -> void:
+	_engine_path = engine_path
+	_engine_name = engine_name
 
 
 func _process(_delta: float) -> void:
@@ -45,10 +56,10 @@ static func search_dirs() -> PackedStringArray:
 	return dirs
 
 
-# The first dirs/engine/lc0/lc0.exe that exists, or "".
-static func engine_path(dirs: PackedStringArray) -> String:
+# The first engine path under dirs that exists, or ""; defaults to engine/lc0/lc0.exe.
+static func engine_path(dirs: PackedStringArray, engine := ENGINE) -> String:
 	for dir in dirs:
-		var path := dir.path_join(ENGINE)
+		var path := dir.path_join(engine)
 		if FileAccess.file_exists(path):
 			return path
 	return ""
@@ -75,12 +86,23 @@ static func parse_policy(lines: PackedStringArray, board) -> Dictionary:
 	return policy
 
 
+# UCI scores are from the side to move in the searched position.
+static func parse_score(lines: PackedStringArray):
+	var pattern := RegEx.create_from_string("^info .*\\bscore cp (-?[0-9]+)(?: |$)")
+	var score = null
+	for line in lines:
+		var found := pattern.search(line)
+		if found != null:
+			score = found.get_string(1).to_int() / 100.0
+	return score
+
+
 func start(dirs := search_dirs()) -> bool:
 	if available:
 		return true
-	var path := engine_path(dirs)
+	var path := engine_path(dirs, _engine_path)
 	if path == "":
-		error = "Lc0 is missing (%s). Run scripts/fetch-engine.ps1 to download it." % ENGINE
+		error = "%s is missing (%s). Run scripts/fetch-engine.ps1 to download it." % [_engine_name, _engine_path]
 		return false
 	var pipe := OS.execute_with_pipe(path, [])
 	if pipe.is_empty():
@@ -95,13 +117,15 @@ func start(dirs := search_dirs()) -> bool:
 	available = true
 	error = ""
 	_queue(["uci"], "uciok")
-	_queue(["setoption name VerboseMoveStats value true"], "")
+	if _engine_path == ENGINE:
+		_queue(["setoption name VerboseMoveStats value true"], "")
 	return true
 
 
 # Loads a Maia net (engine/weights/maia-<level>.pb.gz); later requests wait for readyok.
 func set_level(net_path: String) -> void:
-	_queue(["ucinewgame", "setoption name WeightsFile value " + net_path, "isready"], "readyok")
+	if _engine_path == ENGINE:
+		_queue(["ucinewgame", "setoption name WeightsFile value " + net_path, "isready"], "readyok")
 
 
 func new_game() -> void:
@@ -110,6 +134,8 @@ func new_game() -> void:
 
 # Emits policy_ready on the main thread once Lc0 answers bestmove.
 func request_policy(start_fen: String, moves: PackedStringArray) -> void:
+	if _engine_path != ENGINE:
+		return
 	var board = Board.from_fen(start_fen)
 	for move in moves:
 		board.make_move(move)
@@ -117,26 +143,40 @@ func request_policy(start_fen: String, moves: PackedStringArray) -> void:
 	_queue([position, "go nodes 1"], "bestmove", board)
 
 
+func request_search(commands: PackedStringArray, callback: Callable) -> void:
+	_queue(commands, "bestmove", null, callback)
+
+
+func stop_search() -> void:
+	if available and _awaiting == "bestmove":
+		_stdio.store_line("stop")
+
+
 func poll() -> void:
 	if not available:
 		return
 	if not OS.is_process_running(pid):
-		_report_stopped("Lc0 stopped. Restart the app to play again.")
+		_report_stopped(_engine_name + " stopped. Restart the app to play again. Run scripts/fetch-engine.ps1 if needed.")
 		return
 	_mutex.lock()
 	var lines := _lines.duplicate()
 	_lines.clear()
 	_mutex.unlock()
 	for line in lines:
+		if line.begins_with("id name "):
+			engine_id = line.trim_prefix("id name ")
 		# A failed WeightsFile can produce readyok, then error, then a fallback bestmove.
 		if line.begins_with("error "):
-			_report_stopped("Lc0 stopped: " + line.trim_prefix("error "))
+			_report_stopped(_engine_name + " stopped: " + line.trim_prefix("error ") + ". Run scripts/fetch-engine.ps1 if needed.")
 			return
-		if _awaiting == "bestmove" and line.begins_with("info string "):
+		if _awaiting == "bestmove" and _callback.is_valid() and (line.begins_with("info ") or line.begins_with("bestmove")):
+			_callback.call(line)
+		if _awaiting == "bestmove" and _board != null and line.begins_with("info "):
 			_info.append(line)
 		elif _awaiting != "" and line.begins_with(_awaiting):
 			_awaiting = ""
-			if line.begins_with("bestmove"):
+			if line.begins_with("bestmove") and _board != null:
+				evaluation = parse_score(_info)
 				policy_ready.emit(parse_policy(_info, _board))
 			_send()
 
@@ -157,19 +197,21 @@ func stop() -> void:
 	_stdio = null
 	pid = -1
 	available = false
+	engine_id = ""
 	_steps.clear()
 	_awaiting = ""
 	_board = null
+	_callback = Callable()
 	_info.clear()
 	_mutex.lock()
 	_lines.clear()
 	_mutex.unlock()
 
 
-func _queue(lines: PackedStringArray, reply: String, board = null) -> void:
+func _queue(lines: PackedStringArray, reply: String, board = null, callback := Callable()) -> void:
 	if not available:
 		return
-	_steps.append([lines, reply, board])
+	_steps.append([lines, reply, board, callback])
 	_send()
 
 
@@ -181,6 +223,7 @@ func _send() -> void:
 			_stdio.store_line(line)
 		_awaiting = step[1]
 		_board = step[2]
+		_callback = step[3]
 		_info.clear()
 
 
@@ -193,5 +236,5 @@ static func _read(stream: FileAccess, lines, mutex: Mutex) -> void:
 			return
 		if lines != null:
 			mutex.lock()
-			lines.append(line.strip_edges())
+			lines.append(line)
 			mutex.unlock()
