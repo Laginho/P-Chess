@@ -80,6 +80,64 @@ func test_profile_table_matches_stats_and_omits_empty_rows():
 	_clean(folder)
 
 
+func test_accuracy_chart_uses_dated_analysis_and_human_colour():
+	var folder := "user://test_profile_accuracy_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder.path_join("games"))
+	var analysis_dir := folder.path_join("analysis")
+	DirAccess.make_dir_recursive_absolute(analysis_dir)
+	# File names deliberately disagree with PGN dates; Black's one-move game is later.
+	_write_game(folder, "a-later", "2026.10.03", "b", "1. e4 e5", analysis_dir, [0, 0, 0])
+	_write_game(folder, "z-earlier", "2026.10.01", "w", "1. e4", analysis_dir, [0, 0])
+	_write_game(folder, "unanalysed", "2026.09.01", "w", "1. e4", analysis_dir, [])
+	_write_game(folder, "no-human-move", "2026.09.02", "b", "1. e4", analysis_dir, [0, 0])
+	_write_game(folder, "zero-moves", "2026.09.03", "w", "", analysis_dir, [0])
+	_write_game(folder, "stale", "2026.09.04", "w", "1. e4", analysis_dir, [0, 0])
+	var stale_path := analysis_dir.path_join("stale.pgn.json")
+	var stale: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(stale_path))
+	stale.engine_version = "Stockfish 18"
+	_write(stale_path, JSON.stringify(stale))
+	# In the middle, Black loses 50 Win% points; the human's accuracy is 9.5303, not White's 100.
+	_write_game(folder, "black-loss", "2026.10.02", "b", "1. e4 e5", analysis_dir, [0, 0, 1000])
+	var profile = load("res://ui/profile.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(profile)
+	profile.present(Settings.new(folder.path_join("settings.cfg")))
+	var chart = profile.find_child("AccuracyChart", true, false)
+	assert_true(chart != null, "Profile includes an accuracy chart")
+	if chart == null:
+		profile.free()
+		_clean(folder)
+		return
+	profile.refresh(History.new(folder), analysis_dir)
+	assert_eq(chart.series.size(), 3, "only analysed games where the human moved")
+	assert_eq(chart.series[0].date, "2026.10.01")
+	assert_eq(chart.series[1].date, "2026.10.02")
+	assert_eq(chart.series[2].date, "2026.10.03")
+	assert_eq(chart.series[0].accuracy, 100.0)
+	# EP at 1000 cp is about 97.54%, so Black's drop is about 47.54 percentage points.
+	assert_true(absf(chart.series[1].accuracy - 10.9646) < 0.01, "chart selects Black's accuracy")
+	assert_eq(chart.series[2].accuracy, 100.0)
+	assert_true(not profile.find_child("NoAccuracy", true, false).visible)
+	profile.refresh(History.new(folder), folder.path_join("missing-analysis"))
+	assert_eq(chart.series, [])
+	assert_true(profile.find_child("NoAccuracy", true, false).visible, "no analysed games has an explicit message")
+	profile.free()
+	_clean(folder)
+
+
+func _write_game(folder: String, stem: String, date: String, human: String, moves: String,
+		analysis_dir: String, scores: Array) -> void:
+	_write(folder.path_join("games/" + stem + ".pgn"),
+			'[Date "%s"]\n[White "Maia 1500"]\n[Black "Maia 1500"]\n[HumanColor "%s"]\n[Result "0-1"]\n\n%s 0-1\n' % [date, human, moves])
+	if scores.is_empty():
+		return
+	var positions := []
+	for score in scores:
+		positions.append({"pv": [{"cp": score}]})
+	positions[0].fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+	_write(analysis_dir.path_join(stem + ".pgn.json"), JSON.stringify({
+			"engine_version": "Stockfish 19", "node_budget": 3000000, "positions": positions}))
+
+
 func _write(path: String, text: String) -> void:
 	var file := FileAccess.open(path, FileAccess.WRITE)
 	file.store_string(text)
