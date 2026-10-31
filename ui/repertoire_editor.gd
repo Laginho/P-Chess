@@ -95,7 +95,8 @@ func _populate(parent: TreeItem, node: Dictionary, key: String, prefix: PackedSt
 		item.set_metadata(0, {"root": key, "path": moves})
 		if key == root_key and moves == path:
 			item.select(0)
-		_populate(item, node.children[move], key, moves)
+		var next: Dictionary = node.children[move]
+		_populate(item if next.children.size() > 1 else parent, next, key, moves)
 
 
 func _selected() -> void:
