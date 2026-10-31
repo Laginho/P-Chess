@@ -146,6 +146,27 @@ func _ready() -> void:
 			+ "Blunder — A serious error that costs over 20%.\n"
 			+ "Forced — The only legal move.")
 	add_child(legend)
+	legend.get_label().hide()
+	var rows := VBoxContainer.new()
+	rows.name = "LegendRows"
+	rows.custom_minimum_size.x = 420
+	rows.add_theme_constant_override("separation", 2)
+	legend.add_child(rows)
+	for line in legend.dialog_text.split("\n"):
+		var row := HBoxContainer.new()
+		var icon := TextureRect.new()
+		icon.texture = _class_icon(line.get_slice(" \u2014 ", 0))
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.custom_minimum_size = Vector2(24, 24)
+		row.add_child(icon)
+		var description := Label.new()
+		description.text = line
+		description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		description.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		description.add_theme_font_size_override("font_size", 11)
+		row.add_child(description)
+		rows.add_child(row)
 	$Margin/Content/ReviewBody/Side/ClassHelp.pressed.connect(func(): legend.popup_centered())
 	var toggle: Button = $Margin/Content/ReviewBody/Side/ClassToggle
 	toggle.pressed.connect(func(): $Margin/Content/ReviewBody/Side/Counts.visible = not $Margin/Content/ReviewBody/Side/Counts.visible)
