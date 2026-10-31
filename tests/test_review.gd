@@ -423,6 +423,17 @@ func test_review_reuses_current_analysis_and_reanalyses_stale_file():
 		if version == "Stockfish 19":
 			var list: Tree = main.review.get_node("Margin/Content/ReviewBody/Side/Moves")
 			assert_true(list.get_root().get_first_child().get_icon(1) != null, "cached class is shown")
+			var board = main.review.get_node("Margin/Content/ReviewBody/BoardView")
+			var bar = main.review.get_node("Margin/Content/ReviewBody/EvalBar")
+			list.grab_focus()
+			for flipped in [true, false]:
+				var event := InputEventKey.new()
+				event.keycode = KEY_F
+				event.pressed = true
+				Engine.get_main_loop().root.push_input(event)
+				assert_eq(board.flipped, flipped, "F flips the visible review board")
+				assert_eq(bar.flipped, flipped, "evaluation bar follows immediately")
+				assert_true(not main.board_view.flipped, "hidden game board is unchanged")
 			fake.free()
 		main.free()
 		DirAccess.remove_absolute(path)
