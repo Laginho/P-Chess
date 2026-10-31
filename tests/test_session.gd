@@ -158,7 +158,7 @@ func _session(waits, start_game := true, queue = null):
 	main.uci = HeldBridge.new()
 	main.maia = Main.MaiaPlayer.new(main.uci, waits.start)
 	# Ignore the person's preferences without saving or changing them.
-	main.preferences = Main.Settings.new("res://tests/fixtures/no_session_settings.cfg")
+	main.preferences = Main.Settings.new(folder.path_join("settings.cfg"))
 	Engine.get_main_loop().root.add_child(main)
 	main.board_view.slide_seconds = 0
 	main.sound_player.select_theme("__ui004_silent__")
@@ -589,7 +589,6 @@ func test_match_score_respects_focus_mode():
 	main.free()
 
 
-
 func test_searching_waits_for_the_net_before_starting_the_clock():
 	var main = await _session(ManualWaits.new(), false)
 	main.uci.hold_level = true
@@ -618,7 +617,6 @@ func test_searching_waits_for_the_net_before_starting_the_clock():
 func _wait_start(main) -> void:
 	while main._starting:
 		await Engine.get_main_loop().process_frame
-
 
 func test_searching_fast_quick_custom_and_rematch_last_half_a_second():
 	var main = await _session(ManualWaits.new(), false)
@@ -676,7 +674,6 @@ func _queued_search_session():
 	queue.enqueue(path)
 	return {"main": main, "runner": runner, "path": path}
 
-
 func test_searching_pauses_analysis_before_loading_the_net():
 	var fixture = await _queued_search_session()
 	var main = fixture.main
@@ -698,7 +695,6 @@ func test_searching_pauses_analysis_before_loading_the_net():
 	assert_eq(main.analysis_queue.current(), fixture.path, "queue resumes on Home")
 	main.free()
 
-
 func test_searching_engine_stop_during_net_or_minimum_returns_home():
 	for hold in [true, false]:
 		var main = await _session(ManualWaits.new(), false)
@@ -715,7 +711,6 @@ func test_searching_engine_stop_during_net_or_minimum_returns_home():
 		main.uci.level_ready.emit()
 		assert_eq(main.clock, null, "late readyok cannot start a failed game")
 		main.free()
-
 
 func test_searching_invalid_selection_and_repertoire_close_with_error():
 	for mode in ["Catalog", "My repertoire"]:
@@ -736,7 +731,6 @@ func test_searching_invalid_selection_and_repertoire_close_with_error():
 		await main._start(SETTINGS.duplicate())
 		assert_true(main.clock != null, "valid retry succeeds")
 		main.free()
-
 
 func test_searching_engine_stop_before_analysis_pause_keeps_queue_resumed():
 	var fixture = await _queued_search_session()
