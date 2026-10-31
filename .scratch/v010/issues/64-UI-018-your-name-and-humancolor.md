@@ -1,5 +1,5 @@
 # UI-018: Your name, and the HumanColor header
-Stage: to-review
+Stage: done
 Blocked by: HIST-005, UI-016
 Review: agent
 Difficulty: normal
@@ -74,7 +74,7 @@ Verdict: Reopen — criterion 1 fails because the name field overlaps the first-
 - Verification: independently checked all recorded red/green focused logs and validated the gate receipt's command, exit, log SHA-256, tested commit and unchanged production through the reviewed HEAD. Existing gate: **395 passed, 0 failed**, exit 0, with no SKIP lines; it was reused without rerunning because review changed no code. The focused geometry probe is the additional review check. Rendered first-launch/restart layout, real keyboard/mouse input and played-game acceptance remain pending; real-engine gameplay was not exercised by this review.
 - Disposition: reopen on `UI-018`; no merge, ledger entry, PR or push. Stage 2 must repair only the ❌ item and provide fresh gate evidence after the code change; stage 3 must review that repair independently.
 
-Disclosure: pending | integration | .scratch/v010/issues/64-UI-018-your-name-and-humancolor.md#resolution-2026-10-31--stage-3-round-1 — criterion 1's overlapping first-launch prompt must be repaired and independently reviewed before session integration.
+Disclosure: decision | none | .scratch/v010/issues/64-UI-018-your-name-and-humancolor.md#resolution-2026-10-31--stage-3-round-2 — round 1's overlapping-prompt integration blocker was repaired in `a0763c3` and independently approved in round 2; rendered and physical-input acceptance remains a separate release condition.
 
 #### Resolution (2026-10-31) — stage 2, round 2
 
@@ -84,3 +84,15 @@ Disclosure: pending | integration | .scratch/v010/issues/64-UI-018-your-name-and
 - Full gate ran once after the production commit: `godot --headless -s tests/run.gd`, tested commit `a0763c386bd3151e06e298dfa5a9d8e2a4d6b276`; **396 passed, 0 failed**, exit 0. Log: `C:/Users/bruno/AppData/Local/Temp/UI-018-round2-gate.log`; receipt is the `Gate evidence` line above. The headless geometry and interaction checks do not establish rendered layout, physical input or played-game acceptance.
 - Gate log inspection: 396 `PASS` entries, no `FAIL`, `SKIP` or error entries; 29 warnings from the premove geometry probe, invalid-theme fixtures and malformed time-model fixtures. No name-dialog warnings were reported.
 - Handoff: `to-review` on `UI-018`; independent stage-3 review of the repair is still required before integration. The existing release disclosure and pending product acceptance remain in force.
+
+#### Resolution (2026-10-31) — stage 3, round 2
+Verdict: Approve
+
+- Standards: 0 confirmed findings or actionable baseline smells. All repair changes stay within Primary files, and the numbered contract is unchanged. Test-only `e4e282f` precedes production-only `a0763c3`; `40a35e1` changes only handoff metadata. The native container is sufficient; no refactoring or additional production changes were authored during this review.
+- Spec: 0 findings. Round 1's P2 is closed: `ui/name_dialog.tscn` gives the explicit question and input separate container rows, clears the built-in message, and `ui/name_dialog.gd` consistently uses `Content/Name`. Criterion 1: ✅ visible question above a nonoverlapping input, with the existing default, exclusive modal, blank rejection and confirmation retained. Criterion 2: ✅ name confirmation/persistence and suppression after restart retained. Criteria 3–5: ✅ retain round 1's approved PGN, HumanColor, History, Delete and legacy-display behavior; those paths are unchanged by this repair.
+- Independent review: the stage-2 author implemented `a0763c3`; a separate stage-3 session and its independent Standards and Spec reviewers examined `0e3eebef6b61fc77bf46674c829d76821f5a60f7...40a35e1136e98675d5e53c3f06df55d3d077a17d` and both approved. Coverage: 4/4 changed files, 0 skipped, 100%, including the ticket, test, script and TSCN. OCR delegate preview excluded all four as `unsupported_ext`; all were inspected directly with the resolved default rules. The original 16-file implementation remains covered by round 1.
+- Examined interactions: Main → `present`, modal signals and confirmation, settings validation/persistence, updated input paths, and the geometry and returning-player confirmation tests. No stale path, scope expansion or introduced regression was found. This re-review covers the prior ❌ item and the complete subsequent diff; it does not claim new rendered, physical-input or real-engine gameplay acceptance.
+- Red/green evidence independently read: `ui018-round2-layout-red.log` has 13 passed/1 failed on overlap and vertical order; `ui018-round2-layout-green.log` has 14 passed/0 failed, both with the expected exit status. The committed regression checks visible question text, positive rectangles, nonintersection and vertical order.
+- Gate evidence independently validated with `Assert-GateEvidence`: command `godot --headless -s tests/run.gd`, tested commit `a0763c386bd3151e06e298dfa5a9d8e2a4d6b276`, exit 0, unchanged log SHA-256 and unchanged production through the reviewed and integrated trees. Log: `C:/Users/bruno/AppData/Local/Temp/UI-018-round2-gate.log`; 396 passed, 0 failed, 0 skipped, no error entries; 29 warnings from existing geometry/theme/time-model fixtures. Reused the passing receipt without rerunning the gate because no code changed.
+- Integration: dependencies HIST-005 and UI-016 are committed `done` on the session. Rebase onto `sweatshop/v010/2026-10-30-2302` was already up to date; merged with `--no-ff` as `6b30ab71594a6ff5c74c74725b13f96b54606ce4`, without conflicts. Stage `done` and the ledger entry are committed together on the session. No PR or push belongs to this stage; the driver publishes the session.
+- Product acceptance remains pending as recorded above: rendered first launch/restart, physical keyboard/mouse confirmation and blank rejection, and a played game displaying the chosen name in History/review. This is a release condition, not an unresolved integration blocker.
