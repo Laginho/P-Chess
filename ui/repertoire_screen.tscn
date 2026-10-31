@@ -1,0 +1,76 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://ui/repertoire_screen.gd" id="1"]
+[ext_resource type="PackedScene" path="res://ui/opening_picker.tscn" id="2"]
+[ext_resource type="PackedScene" path="res://ui/board_view.tscn" id="3"]
+[ext_resource type="PackedScene" path="res://ui/repertoire_editor.tscn" id="4"]
+[ext_resource type="PackedScene" path="res://ui/repertoire_import.tscn" id="5"]
+
+[node name="RepertoireScreen" type="PopupPanel"]
+title = "Repertoires"
+size = Vector2i(680, 540)
+exclusive = false
+script = ExtResource("1")
+
+[node name="Margin" type="MarginContainer" parent="."]
+offset_right = 680.0
+offset_bottom = 540.0
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="Form" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="Margin/Form"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "Repertoires"
+
+[node name="List" type="ItemList" parent="Margin/Form"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 90)
+
+[node name="Viewer" type="HBoxContainer" parent="Margin/Form"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Lines" type="ItemList" parent="Margin/Form/Viewer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Board" parent="Margin/Form/Viewer" instance=ExtResource("3")]
+custom_minimum_size = Vector2(280, 280)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Status" type="Label" parent="Margin/Form"]
+layout_mode = 2
+
+[node name="Buttons" type="HBoxContainer" parent="Margin/Form"]
+layout_mode = 2
+
+[node name="Edit" type="Button" parent="Margin/Form/Buttons"]
+layout_mode = 2
+text = "Edit"
+disabled = true
+
+[node name="Import" type="Button" parent="Margin/Form/Buttons"]
+layout_mode = 2
+text = "Import PGN…"
+
+[node name="FromOpenings" type="Button" parent="Margin/Form/Buttons"]
+layout_mode = 2
+text = "From openings…"
+
+[node name="Back" type="Button" parent="Margin/Form/Buttons"]
+layout_mode = 2
+text = "Back"
+
+[node name="OpeningPicker" parent="." instance=ExtResource("2")]
+
+[node name="RepertoireEditor" parent="." instance=ExtResource("4")]
+
+[node name="RepertoireImport" parent="." instance=ExtResource("5")]

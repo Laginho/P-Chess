@@ -1,0 +1,48 @@
+﻿[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://ui/repertoire_editor.gd" id="1"]
+[ext_resource type="PackedScene" path="res://ui/board_view.tscn" id="2"]
+
+[node name="RepertoireEditor" type="PopupPanel"]
+title = "Edit repertoire"
+size = Vector2i(760, 520)
+script = ExtResource("1")
+
+[node name="Margin" type="MarginContainer" parent="."]
+offset_right = 760.0
+offset_bottom = 520.0
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="Form" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+
+[node name="Content" type="HBoxContainer" parent="Margin/Form"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Tree" type="Tree" parent="Margin/Form/Content"]
+layout_mode = 2
+size_flags_horizontal = 3
+hide_root = true
+allow_rmb_select = true
+
+[node name="Board" parent="Margin/Form/Content" instance=ExtResource("2")]
+custom_minimum_size = Vector2(400, 400)
+layout_mode = 2
+
+[node name="Status" type="Label" parent="Margin/Form"]
+layout_mode = 2
+
+[node name="Buttons" type="HBoxContainer" parent="Margin/Form"]
+layout_mode = 2
+
+[node name="Save" type="Button" parent="Margin/Form/Buttons"]
+layout_mode = 2
+text = "Save"
+
+[node name="Cancel" type="Button" parent="Margin/Form/Buttons"]
+layout_mode = 2
+text = "Cancel"

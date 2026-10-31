@@ -5,6 +5,7 @@ signal catalog_ready(error: String)
 
 const Book = preload("res://bot/book.gd")
 var book = Book.new()
+var repertoire = null
 var _items := {}
 var _worker: Thread
 var _loaded := false
@@ -32,6 +33,16 @@ func _ready() -> void:
 	_refresh_names()
 	if _loaded:
 		_rebuild()
+
+
+func present_repertoire(target) -> void:
+	repertoire = target
+	$Margin/Form/Title.text = "From openings"
+	$Margin/Form/LoadRow.hide()
+	$Margin/Form/SaveRow/Colour.show()
+	_name.placeholder_text = "Repertoire name"
+	_save.text = "Save repertoire"
+	present()
 
 
 func present(selection := "") -> void:
@@ -144,9 +155,13 @@ func _refresh_names(preferred := "") -> void:
 
 func _save_selection() -> void:
 	var name := _name.text.strip_edges()
-	var error: String = book.save_selection(name)
+	var error: String = repertoire.save_openings(book, ["w", "b"][$Margin/Form/SaveRow/Colour.selected], name) if repertoire != null else book.save_selection(name)
 	if not error.is_empty():
 		_status.text = error
+		return
+	if repertoire != null:
+		hide()
+		saved.emit(name)
 		return
 	_refresh_names(name)
 	_status.text = "Saved “%s”." % name

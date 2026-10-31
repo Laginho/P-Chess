@@ -52,6 +52,18 @@ func import_pgn(text: String, human_colour: String, name: String) -> String:
 	return ""
 
 
+# Store catalog lines through the same validated PGN path as an imported repertoire.
+func save_openings(catalog, human_colour: String, name: String) -> String:
+	var selected: Array[String] = catalog.selected_ids()
+	if selected.is_empty():
+		return "Choose at least one opening."
+	var chapters: Array[String] = []
+	for entry in catalog.entries:
+		if entry.id in selected:
+			chapters.append(entry.pgn + " *")
+	return import_pgn("\n\n".join(chapters), human_colour, name)
+
+
 func load_saved(name: String) -> String:
 	if not Book._valid_name(name):
 		return "Invalid repertoire name."
@@ -131,3 +143,53 @@ static func _collect(node: Dictionary, moves: PackedStringArray, positions: Pack
 		next_moves.append(move)
 		next_positions.append(node.children[move].position)
 		_collect(node.children[move], next_moves, next_positions, paths, human_colour)
+
+# Save the edited tree through the normal PGN validation and atomic-write path.
+func save_edited(edited: Dictionary, name: String) -> String:
+	var chapters: Array[String] = []
+	for root in edited.values():
+		if root.children.is_empty():
+			continue
+		_edit_chapters(root, Board.from_fen(root.position + " 0 1"), _edit_comments(root.comments), chapters, root.position)
+	if chapters.is_empty():
+		return "A repertoire needs at least one move."
+	return import_pgn("\n\n".join(chapters), colour, name)
+
+
+static func _edit_chapters(node: Dictionary, board, moves: Array, chapters: Array[String], root: String, open_variations := 0) -> void:
+	if node.children.is_empty():
+		if not moves.is_empty():
+			chapters.append("[SetUp \"1\"]\n[FEN \"%s 0 1\"]\n%s%s *" % [root, " ".join(moves), " )".repeat(open_variations)])
+		return
+	for move in node.children:
+		var next = board.copy()
+		var path := moves.duplicate()
+		var child: Dictionary = node.children[move]
+		var san: String = next.san(move)
+		var variations := open_variations
+		if not child.comments_before.is_empty():
+			# PGN associates a leading comment with a move only inside a variation.
+			path.append(san)
+			path.append("(")
+			path.append_array(_edit_comments(child.comments_before))
+			variations += 1
+		path.append(san)
+		path.append_array(_edit_comments(child.comments))
+		for nag in child.nags:
+			path.append("$" + str(nag))
+		next.make_move(move)
+		_edit_chapters(node.children[move], next, path, chapters, root, variations)
+
+
+static func _edit_comments(comments: Array) -> Array:
+	var result := []
+	for comment in comments:
+		if "}" not in comment:
+			result.append("{" + comment + "}")
+			continue
+		# A brace comment cannot hold "}", so write ";" comments, one per line; the parser rejoins them with spaces.
+		for line in comment.split("
+"):
+			result.append("; " + line + "
+")
+	return result
