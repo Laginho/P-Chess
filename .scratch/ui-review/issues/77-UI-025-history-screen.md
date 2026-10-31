@@ -1,5 +1,5 @@
-# UI-025: History screen to the design
-Stage: to-implement
+﻿# UI-025: History screen to the design
+Stage: implementing
 Blocked by: UI-021
 Review: agent
 Difficulty: normal
@@ -90,4 +90,4 @@ Disclosure: pending | integration | This Resolution's P1: UI-025 must bind confi
 Disclosure: pending | integration | This Resolution's minimum-size P2: the stopped-engine state must preserve navigation and retry at 800x600 before integration.
 Disclosure: pending | integration | This Resolution's visual P2: restore the named reference icons/adornments or obtain an explicitly accepted visual deviation before integration.
 
-Returned to `Stage: to-implement` on the preserved ticket branch. No merge, push or PR; the next stage 2 handles all findings together.
+Returned to `Stage: implementing` on the preserved ticket branch. No merge, push or PR; the next stage 2 handles all findings together.
