@@ -1,5 +1,5 @@
 # UI-031: No Settings button outside Home; resign confirmation fits at 800×600
-Stage: implementing
+Stage: to-review
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -40,3 +40,9 @@ Capture Profile at 1280×800 and Game with Resign armed at 800×600 (`scripts/sc
 - Proxy decided (opus-5.5 xhigh): Yes. Add `ui/icon_button.gd` to Primary files and let it draw a label on two lines, but only when the label can't fit on one line. Keep `text` exactly "Click again to resign". ? That keeps 1280?800 matching `GamePanelStates.png` (one line with the flag), fits at 800?600 and leaves the exact-label assertion at `test_session.gd:442` alone. (receipt C:\Users\bruno\AppData\Local\Temp\sweatshop-proxy\20261031-230343-UI-031-04774f.json)
   - Wrap on word boundaries only when needed and opt in only for Resign; keep 15 px Bold if it fits, at least 14 px otherwise. Preserve all control rectangles including Resign. Compare captures at both sizes; the flag may be omitted only when wrapped.
 - Test harness correction: `test_profile_has_no_extra_settings_button_and_shortcut_opens_settings` uses an isolated returning-player preference file so the first-launch dialog does not intercept the shortcut. The updated `test_game_has_no_settings_button` and `test_game_over_result_shows_on_the_card_not_the_side_panel` replace assertions on the removed node; `test_enabling_checking_during_catalog_load_rejects_bad_repertoire_and_allows_repaired_retry` opens the real Settings panel directly because the retired button cannot open it during the covered searching screen.
+
+- Red/green: Profile button assertion failed before removal and passed afterward; the layout test failed before the fix (800?600 panel 260?316 px and Draw moved) and passed with both window sizes and unchanged panel, Draw and Resign rectangles. The Profile shortcut test uses real viewport key input.
+- Visual verification: [Profile 1280?800](C:/Users/bruno/AppData/Local/Temp/pchess-ui031-capture-bab81191-bd33-4761-8976-706c8bcde158/Profile.png) has no top-right Settings button, as in [Profile reference](../../../docs/design/v0.1.0/png/Profile.png). [Game 800?600](C:/Users/bruno/AppData/Local/Temp/pchess-ui031-capture-bab81191-bd33-4761-8976-706c8bcde158/Game800.png) shows the full confirmation in two lines above the bar; 14 px is necessary because 15 px takes 44 px for two lines, but only 40 px is available above the bar. [Game 1280?800](C:/Users/bruno/AppData/Local/Temp/pchess-ui031-capture-bab81191-bd33-4761-8976-706c8bcde158/Game1280.png) retains the one-line text and flag as in [GamePanelStates reference](../../../docs/design/v0.1.0/png/GamePanelStates.png).
+- Gate: `godot --headless -s tests/run.gd` ? 487 passed, 0 failed. The log includes one premove anchor warning and warnings from invalid-theme and malformed-model fixtures.
+- Disclosure: decision | none | Proxy receipt above approves the opt-in wrapping seam and 14 px minimum; the confirmation text and shortcut availability remain unchanged.
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\pchess-ui031-gate.json
