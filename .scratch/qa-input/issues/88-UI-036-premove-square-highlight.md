@@ -1,5 +1,5 @@
 # UI-036: Queued premoves highlight their from and to squares
-Stage: to-implement
+Stage: implementing
 Status: ready-for-agent
 Blocked by: none
 Review: agent
