@@ -215,6 +215,7 @@ func _process(_delta: float) -> void:
 	# Restyled only when the state flips, not every frame.
 	if resign_button.text != ("Click again to resign" if confirming else "Resign"):
 		resign_button.text = "Click again to resign" if confirming else "Resign"
+		resign_button.clip_text = confirming
 		resign_button.add_theme_font_override("font", get_theme_font("font", "BoldText" if confirming else "SemiboldText"))
 		for state in ["normal", "hover"]:
 			if confirming:
@@ -253,8 +254,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			_set_focus(not focus)
 
 
-# A screen drawn above Settings (review, history, searching, the name prompt) hides its Open
-# button, so Ctrl+, must not open the panel behind it.
+# Ctrl+, must not open the panel behind a screen drawn above Settings.
 func _covers_settings() -> bool:
 	return get_children().slice(settings_screen.get_index() + 1).any(
 			func(screen): return (screen is Control or screen is Window) and screen.visible)
@@ -403,7 +403,6 @@ func _start(new_settings: Dictionary) -> void:
 	white_clock.clock = clock
 	black_clock.clock = clock
 	_set_flipped(human == "b")
-	settings_screen.get_node("Open").hide()
 	sound_player.play("game_start")
 	_next_turn()
 

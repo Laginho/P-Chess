@@ -364,7 +364,7 @@ func test_enabling_checking_during_catalog_load_rejects_bad_repertoire_and_allow
 	book.entered.wait()
 	assert_eq(main.clock, null, "no clock while catalog I/O is pending")
 	assert_eq(main.uci.requests.size(), 0)
-	main.settings_screen.get_node("Open").pressed.emit()
+	main.settings_screen.get_node("Panel").show()
 	var form = main.settings_screen.get_node("Panel/Center/Box/Form")
 	var toggle: CheckBox
 	for i in form.get_child_count():

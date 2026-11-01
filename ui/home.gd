@@ -12,10 +12,7 @@ var store
 
 func _ready() -> void:
 	$Center/Board.game = preload("res://core/game.gd").new()
-	visibility_changed.connect(_sync_settings_button)
-	$Center.visibility_changed.connect(_sync_settings_button)
 	$Center/Form/Missing.visibility_changed.connect(_layout_home)
-	call_deferred("_sync_settings_button")
 	resized.connect(_layout_home)
 	_layout_home()
 
@@ -118,13 +115,6 @@ func show_missing(message: String) -> void:
 func sync_level() -> void:
 	var index := Setup.LEVELS.find(store.last_game().get("level", "maia-1500"))
 	$Center/Form/Level.select(index if index >= 0 else Setup.LEVELS.find("maia-1500"))
-
-
-func _sync_settings_button() -> void:
-	var open = get_parent().get_node_or_null("Settings/Open")
-	if open:
-		var searching = get_parent().get_node_or_null("Searching")
-		open.visible = (not visible or not $Center.visible) and (searching == null or not searching.visible)
 
 
 func _apply_board_theme(key: String, value) -> void:
