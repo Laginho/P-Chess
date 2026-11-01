@@ -754,6 +754,36 @@ func test_review_navigation_plays_the_shown_moves_sound_once():
 	assert_eq(heard, ["capture", "check"], "Qxe2+ plays capture and check, as in the game")
 	main.free()
 
+
+func test_move_list_shows_each_movers_clock_and_stays_clickable():
+	var root = Engine.get_main_loop().root
+	var old_size: Vector2i = root.size
+	root.size = Vector2i(1280, 800)
+	var main = await _session(FakeTime.new())
+	var game = Game.new()
+	for move in ["e2e4", "e7e5", "g1f3"]:
+		game.play(move)
+	main.review.present(game, [161000, 9400, -1], SETTINGS, "")
+	await root.get_tree().process_frame
+	await root.get_tree().process_frame
+	var list: Tree = main.review.get_node("Margin/Content/ReviewBody/Side/Moves")
+	var first: TreeItem = list.get_root().get_child(0)
+	var second: TreeItem = list.get_root().get_child(1)
+	assert_eq(main.review._clock_cells, [[first, 1, "2:41"], [first, 2, "0:09.4"]], "each mover's clock, tenths under 10 s; none without clock data")
+	assert_eq([first.get_text(2), second.get_text(1)], ["e5", "Nf3"], "the move text stays")
+	assert_eq(list.get_node("Clocks").mouse_filter, Control.MOUSE_FILTER_IGNORE, "the clock overlay lets clicks through")
+	main.review.get_node("Margin/Content/ReviewBody/Side/Navigation/First").pressed.emit()
+	var event := InputEventMouseButton.new()
+	event.button_index = MOUSE_BUTTON_LEFT
+	event.position = list.get_global_transform() * list.get_item_area_rect(first, 2).get_center()
+	event.pressed = true
+	root.push_input(event, true)
+	event.pressed = false
+	root.push_input(event, true)
+	assert_eq(main.review.get_node("Margin/Content/ReviewBody/BoardView").game.moves.size(), 2, "clicking a move with a clock shows it")
+	main.free()
+	root.size = old_size
+
 func test_unanalysed_history_keeps_book_icon():
 	var main = await _session(FakeTime.new())
 	var game = Game.new()
