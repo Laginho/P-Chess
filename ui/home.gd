@@ -31,7 +31,8 @@ func _layout_home() -> void:
 	var width := form.size.x
 	var row := (width - 12) / 2
 	var missing: Label = form.get_node("Missing")
-	var large := minf(160, (form.size.y - 282) / 2)
+	# Landscape tiles in Main.png's 210:160 proportion: a narrow panel gets shorter tiles, not tall thin ones.
+	var large := minf(minf(160, row * 160 / 210), (form.size.y - 282) / 2)
 	if missing.visible:
 		large = minf(large, maxf(36, (form.size.y - 424) / 2))
 	form.get_node("Title").position = Vector2(0, 8)
@@ -53,7 +54,7 @@ func _layout_home() -> void:
 		button.size = Vector2(row, large)
 	var custom: Button = form.get_node("Custom")
 	custom.add_theme_font_size_override("font_size", 18 if width < 320 else 24)
-	custom.add_theme_constant_override("icon_max_width", 24 if width < 320 else 30)
+	custom.add_theme_constant_override("icon_max_width", 18 if width < 320 else 24)
 	custom.position = Vector2(row + 12, 156 + large + 12)
 	custom.size = Vector2(row, large)
 	for i in 4:
