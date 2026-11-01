@@ -150,6 +150,8 @@ func _ready() -> void:
 		_show_result())
 	resign_button.pressed.connect(_resign)
 	draw_button.pressed.connect(_offer_draw)
+	$Layout/Side/Actions/NewGameButton.pressed.connect(_show_home)
+	$Layout/Side/Actions/RematchButton.pressed.connect(func(): _start(rematch(settings)))
 	draw_notice_timer.timeout.connect(func():
 		draw_notice.hide()
 		_notice_before_focus = false)
@@ -391,6 +393,10 @@ func _start(new_settings: Dictionary) -> void:
 	claim_draw.disabled = true
 	clock = Clock.new(settings.control, Time.get_ticks_msec)
 	resign_button.disabled = false
+	resign_button.show()
+	draw_button.show()
+	$Layout/Side/Actions/NewGameButton.hide()
+	$Layout/Side/Actions/RematchButton.hide()
 	_draw_offered = false
 	_draw_moves_left = 0
 	draw_button.disabled = false
@@ -661,8 +667,12 @@ func _on_flagged(side: String) -> void:
 func _show_result() -> void:
 	analysis_queue.resume()
 	draw_button.disabled = true
+	draw_button.hide()
 	_draw_offered = false
 	resign_button.disabled = true
+	resign_button.hide()
+	$Layout/Side/Actions/NewGameButton.show()
+	$Layout/Side/Actions/RematchButton.show()
 	var game = board_view.game
 	var named_settings := settings.duplicate()
 	named_settings.player_name = preferences.get_value("player_name")
