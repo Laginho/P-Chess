@@ -1,5 +1,5 @@
-# UI-035: After closing the game-over card, the panel offers New game and Rematch
-Stage: to-implement
+﻿# UI-035: After closing the game-over card, the panel offers New game and Rematch
+Stage: implementing
 Status: ready-for-agent
 Blocked by: UI-034
 Review: agent
@@ -13,7 +13,7 @@ Difficulty: normal
 
 #### What to build
 
-Bruno's QA of v0.0.2 (2026-11-01), item 8: "depois do fim do jogo, se eu clico no X do popup de final, eu não consigo mais sair daquela tela." Confirmed in code: the X (and Esc) only hides the card; with the game over, Esc's resign no-ops, Offer draw and Resign do nothing, and only an unadvertised Space rematch leaves the screen.
+Bruno's QA of v0.0.2 (2026-11-01), item 8: "depois do fim do jogo, se eu clico no X do popup de final, eu nÃ£o consigo mais sair daquela tela." Confirmed in code: the X (and Esc) only hides the card; with the game over, Esc's resign no-ops, Offer draw and Resign do nothing, and only an unadvertised Space rematch leaves the screen.
 
 Once the game is over, the panel's Actions row swaps Offer draw / Resign for **New game** (goes Home, like the card's New game) and **Rematch** (like the card's Rematch), with the same button style. A new game restores Offer draw / Resign. In focus mode (UI-034) the panel is hidden, so closing the card there also leaves focus mode, which brings the row back.
 
