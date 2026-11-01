@@ -471,6 +471,7 @@ func test_game_board_centres_and_panel_keeps_its_floor():
 	main._process(0)
 	for i in 4:
 		await Engine.get_main_loop().process_frame
+	assert_true(side.get_global_rect().end.x <= 1280, "panel stays in the resized canvas")
 	assert_true(side.size.x >= side.get_combined_minimum_size().x, "panel keeps its floor")
 	assert_true(main.resign_button.size.x >= main.resign_button.get_minimum_size().x, "armed resignation fits")
 	main.free()
