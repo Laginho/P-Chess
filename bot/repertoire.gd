@@ -9,6 +9,7 @@ const Book = preload("res://bot/book.gd")
 var tree := {}
 var lines: Array = []
 var colour := "w"
+var source := ""
 var storage_dir := "user://repertoires"
 
 
@@ -25,7 +26,7 @@ func names() -> Array[String]:
 
 # Store the original PGN with its annotations. Reloading validates it through the same parser.
 # Publish the new tree only after the complete import has been saved successfully.
-func import_pgn(text: String, human_colour: String, name: String) -> String:
+func import_pgn(text: String, human_colour: String, name: String, origin := "pgn") -> String:
 	if not Book._valid_name(name):
 		return "Choose a filename without slashes, reserved names or trailing dots."
 	var candidate = get_script().new()
@@ -39,7 +40,7 @@ func import_pgn(text: String, human_colour: String, name: String) -> String:
 	var file := FileAccess.open(temporary, FileAccess.WRITE)
 	if file == null:
 		return "Cannot write the repertoire."
-	file.store_string(JSON.stringify({"version": 1, "colour": human_colour, "pgn": text}))
+	file.store_string(JSON.stringify({"version": 1, "colour": human_colour, "pgn": text, "source": origin}))
 	file.flush()
 	var status := file.get_error()
 	file.close()
@@ -49,6 +50,7 @@ func import_pgn(text: String, human_colour: String, name: String) -> String:
 	tree = candidate.tree
 	lines = candidate.lines
 	colour = candidate.colour
+	source = origin
 	return ""
 
 
@@ -61,7 +63,7 @@ func save_openings(catalog, human_colour: String, name: String) -> String:
 	for entry in catalog.entries:
 		if entry.id in selected:
 			chapters.append(entry.pgn + " *")
-	return import_pgn("\n\n".join(chapters), human_colour, name)
+	return import_pgn("\n\n".join(chapters), human_colour, name, "openings")
 
 
 func load_saved(name: String) -> String:
@@ -77,7 +79,10 @@ func load_saved(name: String) -> String:
 	if not data is Dictionary or data.get("version") != 1 \
 			or not data.get("colour") is String or not data.get("pgn") is String:
 		return "Unknown repertoire format."
-	return parse(data.pgn, data.colour)
+	var error := parse(data.pgn, data.colour)
+	if error.is_empty():
+		source = data.get("source", "") if data.get("source", "") is String else ""
+	return error
 
 
 # Validate every chapter before publishing any tree. Errors keep the previous repertoire.
@@ -153,7 +158,7 @@ func save_edited(edited: Dictionary, name: String) -> String:
 		_edit_chapters(root, Board.from_fen(root.position + " 0 1"), _edit_comments(root.comments), chapters, root.position)
 	if chapters.is_empty():
 		return "A repertoire needs at least one move."
-	return import_pgn("\n\n".join(chapters), colour, name)
+	return import_pgn("\n\n".join(chapters), colour, name, source)
 
 
 static func _edit_chapters(node: Dictionary, board, moves: Array, chapters: Array[String], root: String, open_variations := 0) -> void:

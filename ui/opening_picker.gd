@@ -17,18 +17,32 @@ var _catalog_error := ""
 @onready var _search: LineEdit = $Margin/Form/Search
 @onready var _tree: Tree = $Margin/Form/Tree
 @onready var _name: LineEdit = $Margin/Form/SaveRow/Name
-@onready var _save: Button = $Margin/Form/SaveRow/Save
+@onready var _save: Button = $Margin/Form/Footer/Save
 @onready var _saved: OptionButton = $Margin/Form/LoadRow/Saved
 @onready var _load: Button = $Margin/Form/LoadRow/Load
-@onready var _status: Label = $Margin/Form/Status
+@onready var _status: Label = $Margin/Form/Footer/Status
 
 
 func _ready() -> void:
+	_tree.add_theme_icon_override("checked", _tree.get_theme_icon("checked", "CheckBox"))
+	_tree.add_theme_icon_override("unchecked", _tree.get_theme_icon("unchecked", "CheckBox"))
+	var partial := Image.new()
+	partial.load_svg_from_string('<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><rect width="16" height="16" rx="3" fill="#7fa650"/><path d="M4 8h8" stroke="#141412" stroke-width="2"/></svg>')
+	_tree.add_theme_icon_override("indeterminate", ImageTexture.create_from_image(partial))
 	_search.text_changed.connect(func(_text): _rebuild())
 	_tree.item_edited.connect(_on_item_edited)
 	_save.pressed.connect(_save_selection)
 	_load.pressed.connect(_load_selection)
-	$Margin/Form/Done.pressed.connect(hide)
+	$Margin/Form/Footer/Done.pressed.connect(hide)
+	$Margin/Form/SaveRow/Segment/Choices/White.pressed.connect(func(): _choose_colour(0))
+	$Margin/Form/SaveRow/Segment/Choices/Black.pressed.connect(func(): _choose_colour(1))
+	for label in [$Margin/Form/FieldLabels/Name, $Margin/Form/FieldLabels/Colour, $Margin/Form/SearchLabel, $Margin/Form/Footer/Done]:
+		label.add_theme_font_override("font", get_theme_font("font", "SemiboldText"))
+	_save.add_theme_font_override("font", get_theme_font("font", "ExtraBoldText"))
+	for choice in [["White", "ece9e4"], ["Black", "141412"]]:
+		var dot := Image.new()
+		dot.load_svg_from_string('<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"><circle cx="6" cy="6" r="5.5" fill="#%s" stroke="#8c887f"/></svg>' % choice[1])
+		get_node("Margin/Form/SaveRow/Segment/Choices/" + choice[0]).icon = ImageTexture.create_from_image(dot)
 	_loaded = not book.entries.is_empty()
 	_refresh_names()
 	if _loaded:
@@ -37,17 +51,29 @@ func _ready() -> void:
 
 func present_repertoire(target) -> void:
 	repertoire = target
-	$Margin/Form/Title.text = "From openings"
+	$Margin/Form/Title.text = "New repertoire from openings"
 	$Margin/Form/LoadRow.hide()
-	$Margin/Form/SaveRow/Colour.show()
+	$Margin/Form/SaveRow/Colour.hide()
+	$Margin/Form/SaveRow/Segment.show()
+	$Margin/Form/FieldLabels/Colour.show()
+	$Margin/Form/Footer/Done.text = "Cancel"
 	_name.placeholder_text = "Repertoire name"
-	_save.text = "Save repertoire"
+	_save.text = "Create repertoire"
 	present()
+
+
+func _choose_colour(index: int) -> void:
+	$Margin/Form/SaveRow/Colour.select(index)
+	$Margin/Form/SaveRow/Segment/Choices/White.button_pressed = index == 0
+	$Margin/Form/SaveRow/Segment/Choices/Black.button_pressed = index == 1
 
 
 func present(selection := "") -> void:
 	_requested_selection = selection
-	popup_centered(Vector2i(680, 540))
+	var target_size := Vector2i(640, mini(700, get_tree().root.size.y - 40)) if repertoire != null else Vector2i(680, 540)
+	popup_centered(target_size)
+	if get_tree().root.gui_embed_subwindows:
+		size = target_size
 	if not _loaded:
 		_status.text = "Loading opening catalog…"
 		_search.editable = false
@@ -114,6 +140,9 @@ func _rebuild() -> void:
 		var node: Dictionary = book.nodes[path]
 		var parent: TreeItem = root if node.parent.is_empty() else _items[node.parent]
 		var item := _tree.create_item(parent)
+		item.custom_minimum_height = 36
+		item.set_custom_font(0, _tree.get_theme_font("font", "BoldText" if node.parent.is_empty() else "MediumText"))
+		item.set_custom_font_size(0, 15 if node.parent.is_empty() else 14)
 		item.set_cell_mode(0, TreeItem.CELL_MODE_CHECK)
 		item.set_editable(0, true)
 		item.set_text(0, node.label)
@@ -138,7 +167,7 @@ func _refresh_checks() -> void:
 		_items[path].set_indeterminate(0, false)
 		_items[path].set_checked(0, state == 1)
 		_items[path].set_indeterminate(0, state == 2)
-	_status.text = "%d of %d lines selected" % [book.selected_ids().size(), book.entries.size()]
+	_status.text = ("%d openings selected" % book.selected_ids().size()) if repertoire != null else ("%d of %d lines selected" % [book.selected_ids().size(), book.entries.size()])
 	if not book.errors.is_empty():
 		_status.text += "; %d catalog errors (see tooltip)" % book.errors.size()
 	_status.tooltip_text = "\n".join(book.errors)
