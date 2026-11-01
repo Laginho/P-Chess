@@ -1,5 +1,5 @@
 # UI-033: The UI scales with the window; board centred on Home and Game
-Stage: implementing
+Stage: to-review
 Status: ready-for-agent
 Blocked by: none
 Review: human
@@ -46,3 +46,8 @@ There is no reference PNG for the centred layout: the canvas (`docs/design/v0.1.
 
 - 2026-11-01 Written from Bruno's QA of v0.0.2 (items 1–2). He asked whether this needs a design session; answer given: no, it is a placement rule over the existing canvas components, checked by him on captures (`Review: human`).
 - Default taken: the panel floor and the board sliding left below it. Correct it if the board should instead shrink to stay centred.
+- Stage 2: `canvas_items`/`expand` scales the canvas; Home and Game centre the board when the panel floor allows it. Review uses its compact layout at the expanded 4:3 minimum. The grip and window resizing keep the panel within the canvas.
+- Updated the History toolbar and Review window, popup, legend, compact-actions and repertoire-callout tests to use virtual coordinates or accept a single line when it fits. The containment check fails when the History screen is moved outside the canvas; the compact Review tests failed before its layout fix. The callout's no-wrap case is equivalent to wrapping when its text fits, so the test also checks the available width.
+- Verification: focused session/board 61 passed; History 14 passed. One long Review test timed out in the focused file, passed alone, and passed in the final gate. Gate: 490 passed, 0 failed. Captures: `C:/Users/bruno/AppData/Local/Temp/pchess-ui033/` (`home-720.png`, `home-1080.png`, `home-1440.png`, `game-720.png`, `game-1080.png`, `game-1440.png`, `armed-600.png`, `armed-800.png`, `review-600-compact.png`, `review-800.png`). Downscaled 16:9 captures differ by about 0.9/255 mean RGB due to rasterization.
+- Acceptance: pending | Bruno to judge the captures and manually compare Home and a 3+2 game between a 1280x720 window and fullscreen 1080p or 1440p.
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\ui033-gate-final.json
