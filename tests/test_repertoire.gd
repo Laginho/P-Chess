@@ -969,7 +969,7 @@ func test_long_repertoire_name_keeps_viewer_and_editor_inside_minimum_window():
 	await Engine.get_main_loop().process_frame
 	await Engine.get_main_loop().process_frame
 	var heading = screen.find_child("LineHeading", true, false)
-	assert_eq(screen.size, Vector2i(800, 600), "viewer fills the minimum viewport")
+	assert_eq(screen.size, Vector2i(root.get_visible_rect().size), "viewer fills the minimum viewport")
 	assert_eq(heading.text, name)
 	assert_eq(heading.tooltip_text, name, "full name remains available")
 	var editor = screen.get_node("RepertoireEditor")
@@ -977,7 +977,7 @@ func test_long_repertoire_name_keeps_viewer_and_editor_inside_minimum_window():
 	await Engine.get_main_loop().process_frame
 	await Engine.get_main_loop().process_frame
 	var editor_heading = editor.find_child("Heading", true, false)
-	assert_eq(editor.size, Vector2i(800, 600), "editor fills the minimum viewport")
+	assert_eq(editor.size, Vector2i(root.get_visible_rect().size), "editor fills the minimum viewport")
 	assert_true(editor_heading.text.ends_with(name))
 	assert_eq(editor_heading.tooltip_text, name, "full name remains available")
 	setup.free()
@@ -1095,8 +1095,8 @@ func test_full_screen_repertoire_windows_follow_the_main_window_size():
 	editor.present(setup.repertoire, "Study", 0)
 	root.size = Vector2i(800, 600)
 	await Engine.get_main_loop().process_frame
-	assert_eq(screen.size, Vector2i(800, 600), "Repertoires shrinks with the window")
-	assert_eq(editor.size, Vector2i(800, 600), "the editor shrinks with the window")
+	assert_eq(screen.size, Vector2i(root.get_visible_rect().size), "Repertoires shrinks with the window")
+	assert_eq(editor.size, Vector2i(root.get_visible_rect().size), "the editor shrinks with the window")
 	assert_eq(editor.position, Vector2i.ZERO)
 	setup.free()
 	root.gui_embed_subwindows = old_embed
@@ -1174,7 +1174,7 @@ func test_viewer_keeps_a_long_line_inside_the_minimum_window():
 	screen.get_node("Margin/Form/List").item_selected.emit(0)
 	await Engine.get_main_loop().process_frame
 	await Engine.get_main_loop().process_frame
-	assert_eq(screen.size, Vector2i(800, 600), "an 80-ply line does not grow the viewer past the window")
+	assert_eq(screen.size, Vector2i(root.get_visible_rect().size), "an 80-ply line does not grow the viewer past the window")
 	assert_eq(screen.find_child("Previous", true, false).size.y, 40.0, "navigation buttons keep their height")
 	setup.free()
 	root.gui_embed_subwindows = old_embed
