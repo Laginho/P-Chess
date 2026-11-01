@@ -1,5 +1,5 @@
 # UI-034: Focus mode shows only the board, centred, and the two clocks
-Stage: implementing
+Stage: to-review
 Status: ready-for-agent
 Blocked by: UI-033
 Review: human
@@ -44,3 +44,9 @@ In focus mode:
 
 - 2026-11-01 Written from Bruno's QA of v0.0.2 (item 3). He chose the clocks on the left, at the board's vertical centre.
 - Blocked by UI-033: same `main.tscn` layout, and focus mode must centre under the new stretch mode.
+
+- Stage 2: the session test was red before the change (side panel visible, clocks on the right, resize grip visible); the clock-gap assertion was also red against the first implementation. Gate on commit 407e86d: 492 passed, 0 failed, exit 0; six live Lc0 checks and one graphical pixel check skipped. The focus placement test passed in the gate.
+- Captured and compared `C:/Users/bruno/AppData/Local/Temp/pchess-ui034-capture/focus-final.png` (1920x1080) with `focus-reference.png`: the board is centered and the clocks are stacked to its left around the vertical center. Capture uses a fixture, not a live game.
+- Acceptance pending: Bruno to judge the capture and play the requested 1+0 game, including clock changes, Esc Esc and the game-over card.
+
+Gate evidence: C:/Users/bruno/AppData/Local/Temp/ui034-gate.json
