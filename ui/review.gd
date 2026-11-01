@@ -430,14 +430,18 @@ func _layout_review() -> void:
 		top = error.position.y + error.get_combined_minimum_size().y + 8
 	$Margin/Content/ProgressTitle.position = Vector2(at.x, top)
 	$Margin/Content/ProgressTitle.size = Vector2(side.size.x, 22)
-	var progress_text: Control = $Margin/Content/ProgressText
-	progress_text.position = Vector2(at.x, top + 2)
+	var progress_text: Label = $Margin/Content/ProgressText
+	var count_line := 22 if compact else 0
+	progress_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT if compact else HORIZONTAL_ALIGNMENT_RIGHT
+	progress_text.position = Vector2(at.x, top + 2 + count_line)
 	progress_text.size = Vector2(side.size.x, 20)
-	progress.position = Vector2(at.x, top + 30)
+	progress.position = Vector2(at.x, top + 30 + count_line)
 	progress.size = Vector2(side.size.x, 10)
-	$Margin/Content/ProgressNote.position = Vector2(at.x, top + 46)
-	$Margin/Content/ProgressNote.size = Vector2(side.size.x, 18)
-	var content_top := top + 75 if progress.visible else top - 1
+	var note: Label = $Margin/Content/ProgressNote
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	note.position = Vector2(at.x, top + 46 + count_line)
+	note.size = Vector2(side.size.x, 0)
+	var content_top := note.position.y + note.get_combined_minimum_size().y + 11 if progress.visible else top - 1
 	$Margin/Content/ReviewBody/Side/HeaderSpace.custom_minimum_size.y = maxf(0, content_top - at.y - 8)
 	var actions: HFlowContainer = $Margin/Content/Actions
 	var shown := 0
@@ -815,9 +819,6 @@ func _update_eval_bar() -> void:
 	else:
 		_eval_bar.get_node("Score").text = ("+" if cp > 0 else "") + "%.1f" % (cp / 100.0)
 	_eval_bar.white_fraction = 1.0 / (1.0 + exp(-0.00368208 * clampi(cp, -1000, 1000)))
-	# The score sits in the bar's top 22 px: about the top 3 % of it.
-	var white_on_top: bool = _eval_bar.white_fraction >= 0.05 if _eval_bar.flipped else _eval_bar.white_fraction >= 0.99
-	_eval_bar.get_node("Score").add_theme_color_override("font_color", Color("141412") if white_on_top else Color("ece9e4"))
 
 
 func present(game, clocks: Array, settings: Dictionary, result_text: String,

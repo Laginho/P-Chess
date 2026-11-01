@@ -1105,12 +1105,16 @@ func test_eval_score_stays_readable_on_either_colour():
 	var black := SETTINGS.duplicate()
 	black.colour = "b"
 	review.present(game, [180000], black, "")
-	review.receive_position(1, {"pv": [{"cp": 0, "moves": ["e7e5"]}]})
-	var score: Label = review.get_node("Margin/Content/ReviewBody/EvalBar/Score")
-	assert_eq(score.get_theme_color("font_color"), Color("141412"), "flipped: white's share is on top, so the score is dark")
+	var bar: Control = review.get_node("Margin/Content/ReviewBody/EvalBar")
+	bar.size = Vector2(28, 680)
+	var score: Label = bar.get_node("Score")
+	# Black to move: +820 for black is -8.2 for white, about 32 px of white at the flipped bar's top.
+	for case in [[0, "even"], [820, "black far ahead"]]:
+		review.receive_position(1, {"pv": [{"cp": case[0], "moves": ["e7e5"]}]})
+		assert_eq(score.get_theme_color("font_color"), Color("141412"), "flipped, %s: white is behind the score, so it is dark" % case[1])
 	review._board_view.flipped = false
 	review._update_eval_bar()
-	assert_eq(score.get_theme_color("font_color"), Color("ece9e4"), "unflipped: black's share is on top, so the score is light")
+	assert_eq(score.get_theme_color("font_color"), Color("ece9e4"), "unflipped: black's share is behind the score, so it is light")
 	main.free()
 
 
@@ -1139,5 +1143,26 @@ func test_compact_review_keeps_unanalysed_card_and_exit_readable():
 	var exit_row: TreeItem = rows[2]
 	assert_true(exit_row.get_text(1).begins_with("Left repertoire"), "fixture has an exit row")
 	assert_true(tree.get_item_area_rect(exit_row, 1).size.y > tree.get_item_area_rect(rows[0], 1).size.y, "the exit callout wraps instead of eliding the expected move")
+	main.free()
+	root.size = old_size
+
+
+func test_compact_analysis_progress_keeps_title_and_count_apart():
+	var root = Engine.get_main_loop().root
+	var old_size: Vector2i = root.size
+	root.size = Vector2i(800, 600)
+	var main = await _session(FakeTime.new())
+	var game = Game.new()
+	for move in ["e2e4", "e7e5", "g1f3", "b8c6"]:
+		game.play(move)
+	main.review.present(game, [180000, 180000, 180000, 180000], SETTINGS, "")
+	main.review.get_node("Margin/Content/Progress").show()
+	for i in 3:
+		await Engine.get_main_loop().process_frame
+	var title: Label = main.review.get_node("Margin/Content/ProgressTitle")
+	var count: Label = main.review.get_node("Margin/Content/ProgressText")
+	var title_end: float = title.global_position.x + title.get_theme_font("font").get_string_size(title.text, HORIZONTAL_ALIGNMENT_LEFT, -1, title.get_theme_font_size("font_size")).x
+	var count_start: float = count.global_position.x + count.size.x - count.get_theme_font("font").get_string_size(count.text, HORIZONTAL_ALIGNMENT_LEFT, -1, count.get_theme_font_size("font_size")).x
+	assert_true(count.global_position.y >= title.global_position.y + title.size.y or count_start >= title_end + 8, "the move count does not run into the title")
 	main.free()
 	root.size = old_size
