@@ -89,7 +89,8 @@ func _human_turn(board) -> void:
 	board.side_to_move = human
 
 
-# Geometric targets ignore occupancy and check; real legality is checked when due.
+# Geometric targets ignore enemy pieces and check; real legality is checked when due.
+# Own pieces only move when queued, so the input position decides what they block (§8.2).
 func targets(board, from: String) -> PackedStringArray:
 	var result := PackedStringArray()
 	if from.length() != 2 or from[0] not in "abcdefgh" or from[1] not in "12345678":
@@ -107,11 +108,12 @@ func targets(board, from: String) -> PackedStringArray:
 			var fits := false
 			match piece.to_lower():
 				"n": fits = (dx == 1 and dy == 2) or (dx == 2 and dy == 1)
-				"b": fits = dx == dy and dx > 0
-				"r": fits = (dx == 0) != (dy == 0)
-				"q": fits = (dx == dy and dx > 0) or ((dx == 0) != (dy == 0))
-				"k": fits = (maxi(dx, dy) == 1) or (from == ("e1" if human == "w" else "e8") and dy == 0 and dx == 2)
-				"p": fits = (dx <= 1 and forward == 1) or (dx == 0 and forward == 2 and y == (1 if human == "w" else 6))
+				"b": fits = dx == dy and dx > 0 and _clear(board, x, y, tx, ty)
+				"r": fits = (dx == 0) != (dy == 0) and _clear(board, x, y, tx, ty)
+				"q": fits = ((dx == dy and dx > 0) or ((dx == 0) != (dy == 0))) and _clear(board, x, y, tx, ty)
+				"k": fits = (maxi(dx, dy) == 1) or (from == ("e1" if human == "w" else "e8") and dy == 0 and dx == 2 and _clear(board, x, y, 7 if tx > x else 0, y))
+				# A push checks one square past its target, so its landing square is covered too.
+				"p": fits = (dx == 1 and forward == 1) or (dx == 0 and (forward == 1 or (forward == 2 and y == (1 if human == "w" else 6))) and _clear(board, x, y, tx, ty + (1 if human == "w" else -1)))
 			var to := "abcdefgh"[tx] + str(ty + 1)
 			if fits and board.piece_at(to).to_lower() != "k":
 				if piece.to_lower() == "p" and ty == (7 if human == "w" else 0):
@@ -120,3 +122,15 @@ func targets(board, from: String) -> PackedStringArray:
 				else:
 					result.append(from + to)
 	return result
+
+
+# True when no own piece stands strictly between the two squares of one line.
+func _clear(board, x: int, y: int, tx: int, ty: int) -> bool:
+	var step := Vector2i(signi(tx - x), signi(ty - y))
+	var at := Vector2i(x, y) + step
+	while at != Vector2i(tx, ty):
+		var piece: String = board.squares[at.y * 8 + at.x]
+		if piece != "" and (piece == piece.to_upper()) == (human == "w"):
+			return false
+		at += step
+	return true
