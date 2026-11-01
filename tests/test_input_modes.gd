@@ -72,6 +72,112 @@ func test_click_click_selects_without_moving_then_plays_a_legal_target():
 	board.free()
 
 
+func test_right_click_cancels_selection_without_drawing():
+	for premove in [false, true]:
+		var board = _board(Game.START if not premove else "4k3/8/8/8/8/8/4P3/4K3 b - - 0 1")
+		board.human_side = "w"
+		board.click_click = true
+		_click(board, "e2")
+		_mouse(board, true, "e4", MOUSE_BUTTON_RIGHT)
+		_mouse(board, false, "e5", MOUSE_BUTTON_RIGHT)
+		assert_eq(board._selected, "", "right click cancels selection")
+		assert_eq(board.drawings, [], "cancellation does not draw")
+		_mouse(board, true, "e4", MOUSE_BUTTON_RIGHT)
+		_mouse(board, false, "e5", MOUSE_BUTTON_RIGHT)
+		assert_eq(board.drawings, [PackedStringArray(["e4", "e5"])], "next right drag draws")
+		board.free()
+
+
+func test_right_click_on_resize_corner_cancels_selection():
+	for premove in [false, true]:
+		var board = _board(Game.START if not premove else "4k3/8/8/8/8/8/4P3/4K3 b - - 0 1")
+		var viewport := SubViewport.new()
+		viewport.size = Vector2i(500, 500)
+		Engine.get_main_loop().root.add_child(viewport)
+		board.reparent(viewport)
+		board.position = Vector2(20, 20)
+		board.size = Vector2(400, 400)
+		var grip = load("res://ui/resize_grip.gd").new()
+		grip.size = Vector2(20, 20)
+		board.add_child(grip)
+		board.human_side = "w"
+		board.click_click = true
+		await Engine.get_main_loop().process_frame
+		var event := InputEventMouseButton.new()
+		event.button_index = MOUSE_BUTTON_LEFT
+		event.position = Vector2(245, 345) # e2 on the offset board
+		event.pressed = true
+		viewport.push_input(event, true)
+		event.pressed = false
+		viewport.push_input(event, true)
+		assert_eq(board._selected, "e2", "first click selects")
+		event.position = Vector2(418, 418)
+		assert_true(grip.get_global_rect().has_point(event.position), "click reaches the real resize grip")
+		event.button_index = MOUSE_BUTTON_RIGHT
+		event.pressed = true
+		viewport.push_input(event, true)
+		event.pressed = false
+		viewport.push_input(event, true)
+		assert_eq(board._selected, "", "corner right click cancels selection")
+		assert_eq(board.drawings, [], "cancellation does not draw")
+		viewport.free()
+
+
+func test_click_outside_cancels_selection_and_reaches_button():
+	var board = _board()
+	var viewport := SubViewport.new()
+	viewport.size = Vector2i(600, 500)
+	Engine.get_main_loop().root.add_child(viewport)
+	board.reparent(viewport)
+	board.position = Vector2(20, 20)
+	board.size = Vector2(400, 400)
+	board.click_click = true
+	var button := Button.new()
+	button.position = Vector2(450, 50)
+	button.size = Vector2(100, 50)
+	viewport.add_child(button)
+	var presses := [0]
+	button.pressed.connect(func(): presses[0] += 1)
+	await Engine.get_main_loop().process_frame
+	var event := InputEventMouseButton.new()
+	event.button_index = MOUSE_BUTTON_LEFT
+	event.position = Vector2(245, 345) # e2 on the offset board
+	event.pressed = true
+	board.get_viewport().push_input(event, true)
+	event.pressed = false
+	board.get_viewport().push_input(event, true)
+	assert_eq(board._selected, "e2")
+	event.position = Vector2(500, 75)
+	event.pressed = true
+	board.get_viewport().push_input(event, true)
+	event.pressed = false
+	board.get_viewport().push_input(event, true)
+	assert_eq(board._selected, "", "outside press cancels selection")
+	assert_eq(presses[0], 1, "the button receives the click")
+	viewport.free()
+
+
+func test_clicking_another_friendly_piece_selects_it_for_a_move_or_drag():
+	for drag in [false, true]:
+		var board = _board("4k3/8/8/8/8/8/8/1NB1K3 w - - 0 1")
+		board.click_click = true
+		_click(board, "b1")
+		_mouse(board, true, "c1")
+		if drag:
+			var motion := InputEventMouseMotion.new()
+			motion.position = Vector2(350, 650)
+			motion.button_mask = MOUSE_BUTTON_MASK_LEFT
+			board._gui_input(motion)
+			_mouse(board, false, "d2")
+		else:
+			_mouse(board, false, "c1")
+			assert_eq(board._selected, "c1")
+			assert_true("c1d2" in board._held_moves, "bishop targets are shown")
+			_click(board, "d2")
+		assert_eq(board.game.moves, PackedStringArray(["c1d2"]))
+		board.free()
+
+
 func test_clicking_elsewhere_deselects_including_off_board_and_same_square():
 	for elsewhere in ["e5", "d2", "e7", "e2", ""]:
 		var board = _board()
@@ -274,7 +380,7 @@ func test_left_press_clears_all_drawings_and_cancels_an_unfinished_one():
 	_mouse(board, true, "e4")
 	assert_eq(board.drawings, [], "drawings clear on press, before release")
 	_mouse(board, false, "e4")
-	assert_eq(board.game.moves, PackedStringArray(["e2e4"]), "drawing preserves click selection")
+	assert_eq(board.game.moves, PackedStringArray(), "right click cancelled the selection")
 	_mouse(board, true, "a1", MOUSE_BUTTON_RIGHT)
 	_mouse(board, true, "d4")
 	_mouse(board, false, "d4")

@@ -268,6 +268,16 @@ func _draw_piece(piece: String, at: Vector2, cell: Vector2, opacity := 1.0) -> v
 
 # The promotion overlay consumes GUI events, so catch its right click before GUI dispatch.
 func _input(event: InputEvent) -> void:
+	if _selected and event is InputEventMouseButton and event.pressed \
+			and event.button_index == MOUSE_BUTTON_LEFT and not get_global_rect().has_point(event.position):
+		_end_snap_back()
+	if _selected and event is InputEventMouseButton and event.pressed \
+			and event.button_index == MOUSE_BUTTON_RIGHT and get_global_rect().has_point(event.position):
+		if not premoves.moves.is_empty() or _is_premove_input():
+			cancel_premoves()
+		else:
+			_cancel_interaction()
+		get_viewport().set_input_as_handled()
 	if _picker.visible and event is InputEventMouseButton and event.pressed \
 			and event.button_index == MOUSE_BUTTON_RIGHT and get_global_rect().has_point(event.position):
 		cancel_premoves()
@@ -277,12 +287,12 @@ func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT:
 		var square := square_at(event.position - _corner(), _side(), flipped)
 		if event.pressed:
-			# A right click that cancels a queue, a drag or a premove selection draws nothing.
+			# A right click that cancels a queue, a drag or a selection draws nothing.
 			var interrupts: bool = not premoves.moves.is_empty() or (_drag_from and not _snapping) \
-					or (_selected and _is_premove_input())
+					or _selected != ""
 			if not premoves.moves.is_empty() or _is_premove_input():
 				cancel_premoves()
-			elif _drag_from:
+			elif _drag_from or _selected:
 				_cancel_interaction()
 			_drawing_from = "" if interrupts else square
 			_drawing_to = _drawing_from
@@ -377,6 +387,7 @@ func _drop(point: Vector2, clicked := false, alt := false) -> void:
 		_submit(moves[0], clicked)
 	elif clicked:
 		_end_snap_back()
+		_pick_up(point)
 	else:
 		_snapping = true
 		_snap = create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)

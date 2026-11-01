@@ -588,3 +588,23 @@ func test_premove_targets_include_geometry_on_the_board():
 	_mouse(board, false, "e5")
 	assert_eq(board.premoves.moves, PackedStringArray(["f3e5"]))
 	board.free()
+
+
+func test_click_selection_preserves_own_piece_recapture_and_reselects_other_pieces():
+	var board = BoardScene.instantiate()
+	board.game = Game.new("4k3/8/8/4P3/8/5N2/P7/R3K3 b - - 0 1")
+	board.human_side = "w"
+	board.click_click = true
+	Engine.get_main_loop().root.add_child(board)
+	board.size = Vector2(800, 800)
+	for square in ["f3", "e5"]:
+		_mouse(board, true, square)
+		_mouse(board, false, square)
+	assert_eq(board.premoves.moves, PackedStringArray(["f3e5"]), "geometric recapture remains queued")
+	board.cancel_premoves()
+	for square in ["a1", "f3"]:
+		_mouse(board, true, square)
+		_mouse(board, false, square)
+	assert_eq(board._selected, "f3", "a piece outside rook geometry is reselected")
+	assert_true("f3e5" in board._held_moves)
+	board.free()
