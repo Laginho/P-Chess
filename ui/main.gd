@@ -171,6 +171,9 @@ func _ready() -> void:
 	setup.get_node("OpeningPicker").ensure_catalog()
 	$Layout.resized.connect(_fit_board)
 	resized.connect(_fit_board)
+	$Layout.sort_children.connect(func(): _place_focus_clocks.call_deferred())
+	board_view.resized.connect(_place_focus_clocks)
+	$FocusClocks.resized.connect(_place_focus_clocks)
 	$Layout/BoardView/ResizeGrip.size_requested.connect(_resize_board)
 	_fit_board()
 	if analysis_queue == null:
@@ -541,8 +544,8 @@ func _set_flipped(flipped: bool) -> void:
 	board_view.flipped = flipped
 	var bot = white_clock.get_parent() if human == "b" else black_clock.get_parent()
 	var player = black_clock.get_parent() if human == "b" else white_clock.get_parent()
-	$Layout/Side.move_child(bot, 0)
-	$Layout/Side.move_child(player, -1)
+	bot.get_parent().move_child(bot, 0)
+	player.get_parent().move_child(player, -1)
 	$Layout/Side.move_child(claim_draw.get_parent(), -1)
 	bot.get_node("Name").text = "Maia"
 	bot.get_node("Name/Colour").hide()
@@ -564,18 +567,44 @@ func _set_flipped(flipped: bool) -> void:
 func _set_focus(on: bool) -> void:
 	if on and not focus:
 		_notice_before_focus = draw_notice.visible
+	if on != focus:
+		var destination: Node = $FocusClocks if on else $Layout/Side
+		for row in [white_clock.get_parent(), black_clock.get_parent()]:
+			row.reparent(destination, false)
+		var bot = white_clock.get_parent() if human == "b" else black_clock.get_parent()
+		var player = black_clock.get_parent() if human == "b" else white_clock.get_parent()
+		destination.move_child(bot, 0)
+		destination.move_child(player, -1)
+		if not on:
+			$Layout/Side.move_child(claim_draw.get_parent(), -1)
 	focus = on
+	$Layout/Side.visible = not on
+	$Layout/BoardOffset.visible = not on
+	$Layout/BoardGap.visible = not on
+	$Layout/BoardView/ResizeGrip.visible = not on
+	$FocusClocks.visible = on
+	_fit_board()
+	_place_focus_clocks.call_deferred()
 	draw_notice.visible = not on and _notice_before_focus
 	for node in [move_list, claim_draw.get_parent(), $Layout/Side/Actions, settings_screen]:
 		node.visible = not on
 	# The game-over card shows the result; the side panel keeps only a history failure.
 	result_label.visible = not on and result_label.text.contains("History: ")
 	for row in [white_clock.get_parent(), black_clock.get_parent()]:
+		row.get_node("Lead").visible = not on
 		row.get_node("Name").visible = not on
 		row.get_node("Avatar").visible = not on and row == (white_clock.get_parent() if human == "b" else black_clock.get_parent())
 		row.get_node("Initial").visible = not on and row == (black_clock.get_parent() if human == "b" else white_clock.get_parent())
 	white_score.visible = _show_match_score and not on
 	black_score.visible = _show_match_score and not on
+
+
+func _place_focus_clocks() -> void:
+	if focus:
+		var board: Rect2 = board_view.get_global_rect()
+		$FocusClocks.size = $FocusClocks.get_combined_minimum_size()
+		$FocusClocks.position = Vector2(board.position.x - $FocusClocks.size.x - 40,
+				board.get_center().y - $FocusClocks.size.y / 2) - global_position
 
 
 # Like _input: Maia's think-time timer can fire after its clock hit zero but before the next
