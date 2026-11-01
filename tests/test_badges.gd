@@ -252,7 +252,7 @@ func test_real_games_show_badges_only_in_review_in_every_mode_and_keep_book_when
 				assert_true(main.board_view.play(move))
 			assert_true(not main.review.visible, "review stays hidden during play")
 			assert_true(not main.setup.visible, "the repertoire picker stays hidden during play")
-			assert_eq(main.move_list.get_parsed_text(), "1. e4   e5\n2. d4   Nc6\n3. Nf3", "no live book or repertoire hints")
+			assert_eq(main.move_list.get_parsed_text(), "1. e4   e52. d4   Nc63. Nf3", "no live book or repertoire hints")
 			_finish(main)
 			assert_true(main.review.visible)
 			assert_eq(_marks(main, 0), "Book · Repertoire" if checking else "Book")

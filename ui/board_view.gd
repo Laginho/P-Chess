@@ -10,7 +10,8 @@ const ThemeLoader = preload("res://ui/theme_loader.gd")
 const PromotionPicker = preload("res://ui/promotion_picker.gd")
 const PremoveQueue = preload("res://ui/premove_queue.gd")
 const SNAP_BACK_SECONDS := 0.15
-const LAST_MOVE := Color(0.61, 0.78, 0, 0.41)
+const LAST_MOVE_LIGHT := Color("#cdd26a")
+const LAST_MOVE_DARK := Color("#aaa23a")
 const CHECK := Color(1, 0, 0, 0.6)
 const TARGET := Color(0.08, 0.33, 0.12, 0.5)
 const DRAWING := Color(0.12, 0.65, 0.22, 0.75)
@@ -180,7 +181,7 @@ func _draw() -> void:
 		if not _board_style.texture:
 			draw_rect(Rect2(at, cell), _board_style.light if _is_light(square) else _board_style.dark)
 		if last and square in [last.substr(0, 2), last.substr(2, 2)]:
-			draw_rect(Rect2(at, cell), LAST_MOVE)
+			draw_rect(Rect2(at, cell), LAST_MOVE_LIGHT if _is_light(square) else LAST_MOVE_DARK)
 		var piece: String = position.piece_at(square) if position else ""
 		# A Lichess replacement is picked from the live position, so keep its source visible.
 		if game and premoves.style == "Lichess" and piece == "":
@@ -232,8 +233,8 @@ func _draw_annotation(from: String, to: String, cell: float) -> void:
 
 # Files along the bottom edge, ranks along the left edge, in the other square colour.
 func _draw_coordinates(cell: float) -> void:
-	var font := get_theme_default_font()
-	var font_size := int(cell / 5)
+	var font := get_theme_font("font", "BoldText")
+	var font_size := maxi(9, roundi(cell * 0.18))
 	var pad := cell / 20
 	for i in 8:
 		var bottom := _corner() + Vector2(i, 7) * cell

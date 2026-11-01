@@ -153,13 +153,22 @@ func capture() -> void:
   "Game", "GamePanelStates", "GameSidePanel", "Board", "GameOver", "GameOverStates", "GameOverCard":
    main.get_node("Home").hide()
    main.settings = SETTINGS.duplicate()
-   if board in ["Game", "GamePanelStates", "GameSidePanel", "Board"]:
-    game.result = "*"
-    game.reason = ""
    main.board_view.game = game
    main.clock = load("res://core/clock.gd").new("3+2", Time.get_ticks_msec)
    main.white_clock.clock = main.clock
    main.black_clock.clock = main.clock
+   # Game-over boards play the same game, then end it the way the app does.
+   game.result = "*"
+   game.reason = ""
+   main.clock._now = func(): return 1000
+   for i in 6:
+    main.clock.moved("w" if i % 2 == 0 else "b")
+    main.move_list.add(["e4", "e5", "Nf3", "Nc6", "Bc4", "Nf6"][i])
+   main.human = "w"
+   main._set_flipped(false)
+   main.resign_button.disabled = false
+   main.draw_button.disabled = false
+   main.settings_screen.get_node("Open").hide()
    if board == "GamePanelStates":
     if state == "declined":
      main.draw_notice.text = "Maia declined"
@@ -167,13 +176,10 @@ func capture() -> void:
     else:
      main.resign_key.press()
    if board in ["GameOver", "GameOverStates", "GameOverCard"]:
-    if state == "loss":
-     game.result = "0-1"
-    elif state == "draw":
-     game.result = "1/2-1/2"
-    var card = load("res://ui/game_over.tscn").instantiate()
-    main.board_view.add_child(card)
-    card.present(main, game, main.get_node("Layout/Side/ReviewButton"))
+    game.result = {"loss": "0-1", "draw": "1/2-1/2"}.get(state, "1-0")
+    game.reason = {"loss": "time", "draw": "agreement"}.get(state, "resignation")
+    main._move_clocks = clocks
+    main._show_result()
  await process_frame
  await process_frame
  await RenderingServer.frame_post_draw
