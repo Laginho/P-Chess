@@ -164,6 +164,13 @@ func test_accuracy_chart_uses_dated_analysis_and_human_colour():
 	_clean(folder)
 
 
+func test_accuracy_chart_formats_axis_dates():
+	var chart = load("res://ui/accuracy_chart.gd").new()
+	assert_eq(chart.axis_date("2026.09.14"), "14/09")
+	assert_eq(chart.axis_date("2025-01-03"), "03/01")
+	chart.free()
+
+
 func test_profile_skips_incomplete_or_corrupt_analysis_and_handles_one_point():
 	var folder := "user://test_profile_single_%d" % Time.get_ticks_usec()
 	DirAccess.make_dir_recursive_absolute(folder.path_join("games"))
