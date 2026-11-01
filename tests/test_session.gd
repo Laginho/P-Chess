@@ -455,6 +455,27 @@ func test_resign_button_shares_the_two_second_window_with_escape():
 		main.free()
 
 
+func test_game_board_centres_and_panel_keeps_its_floor():
+	var main = await _session(ManualWaits.new())
+	main.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	main.size = Vector2(1422, 800)
+	for i in 4:
+		await Engine.get_main_loop().process_frame
+	var board: Rect2 = main.board_view.get_global_rect()
+	assert_true(absf(board.get_center().x - 711.0) <= 1.0, "board is centred on a 16:9 canvas")
+	main.size = Vector2(1280, 800)
+	for i in 4:
+		await Engine.get_main_loop().process_frame
+	var side: Control = main.get_node("Layout/Side")
+	main.resign_button.pressed.emit()
+	main._process(0)
+	for i in 4:
+		await Engine.get_main_loop().process_frame
+	assert_true(side.size.x >= side.get_combined_minimum_size().x, "panel keeps its floor")
+	assert_true(main.resign_button.size.x >= main.resign_button.get_minimum_size().x, "armed resignation fits")
+	main.free()
+
+
 func test_resign_confirmation_fits_without_moving_panel_controls():
 	for window_size in [Vector2(800, 600), Vector2(1280, 800)]:
 		var main = await _session(ManualWaits.new())

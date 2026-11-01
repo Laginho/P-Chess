@@ -1,5 +1,5 @@
 # UI-033: The UI scales with the window; board centred on Home and Game
-Stage: to-implement
+Stage: implementing
 Status: ready-for-agent
 Blocked by: none
 Review: human
