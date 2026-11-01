@@ -15,14 +15,17 @@ func _ready() -> void:
 func _place() -> void:
 	var board: Control = get_parent()
 	var side := minf(board.size.x, board.size.y)
-	position = Vector2((board.size.x + side) / 2.0, (board.size.y + side) / 2.0) - size
+	# As in Game.png, the icon hangs off the board's corner onto the dark background: grey on a light square is unreadable.
+	position = Vector2((board.size.x + side) / 2.0, (board.size.y + side) / 2.0) - Vector2(4, 4)
 
 
 func _draw() -> void:
-	for offset in [4, 9, 14]:
-		# The dark edge keeps the white strokes visible on light squares.
-		draw_line(Vector2(size.x - offset, size.y - 2), Vector2(size.x - 2, size.y - offset), Color(0, 0, 0, 0.6), 4.0)
-		draw_line(Vector2(size.x - offset, size.y - 2), Vector2(size.x - 2, size.y - offset), Color.WHITE, 2.0)
+	var colour := Color("#a8a49c")
+	draw_line(Vector2(5, 5), Vector2(15, 15), colour, 1.5, true)
+	draw_line(Vector2(5, 5), Vector2(5, 10), colour, 1.5, true)
+	draw_line(Vector2(5, 5), Vector2(10, 5), colour, 1.5, true)
+	draw_line(Vector2(15, 15), Vector2(10, 15), colour, 1.5, true)
+	draw_line(Vector2(15, 15), Vector2(15, 10), colour, 1.5, true)
 
 
 func _gui_input(event: InputEvent) -> void:

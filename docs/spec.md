@@ -188,7 +188,7 @@ For each legal move `m` that keeps the game on a checked line:
 - Highlights for the last move and for a king in check.
 - Legal-move dots (setting, on by default).
 - Coordinates on the board.
-- A material-difference counter.
+- The game screen has no material-difference counter.
 
 ### 8.5 Sounds
 
@@ -212,7 +212,7 @@ All attributions go in `docs/THIRD_PARTY.md`.
 
 - The window is resizable; the default size is 1280×800 and the minimum 800×600. The board scales with the window.
 - Board resize: a grip on the board's bottom-right corner lets you drag the board bigger or smaller (`nwse-resize` cursor). The side panel takes the remaining width, the board stays square, and it never drops below the minimum size or goes past what the window fits. The chosen size is saved in settings and restored on the next launch. Double-clicking the grip resets to the default fit-to-window.
-- The side panel shows Maia's clock, the move list (SAN), your clock and buttons.
+- The side panel shows Maia, both clocks, the move list (SAN), your name and colour, and the draw and resign controls. The running clock has a light background.
 - `F11` toggles focus mode: only the board and the clocks.
 
 ## 9. Game flow, review, history
@@ -231,12 +231,12 @@ All attributions go in `docs/THIRD_PARTY.md`.
 | `F` | Flip the board |
 | `Esc` | Resign (press twice) |
 | `F11` | Focus mode |
-| `Ctrl+,` | Settings (open/close) |
+| `Ctrl+,` | Settings (open/close); there is no in-game Settings button |
 
 ### 9.3 Review
 
 After a game, a panel over the final board shows the result and reason, with Review,
-Rematch, New game and close actions. Closing it leaves a Review button in the side panel.
+Rematch, New game and close actions. After closing it, open the game from History to review it.
 The review screen opens on request:
 - The result and the reason for it.
 - The move list with these badges:
@@ -483,7 +483,7 @@ chess.com's CAPS2 is not published.
   - On first launch, a modal over Home asks "What should I call you?", prefilled with "You". It has only OK, no skip or dismissal with Esc. A blank or whitespace-only name is refused; confirming stores the trimmed name in `player_name` in `settings.cfg`, and the dialog stays closed on later launches. Confirming "You" is a valid choice; changing another setting does not count as choosing a name.
   - The name changes in the Profile.
   - New PGNs write it in the player header, plus a `HumanColor` header (`w` or `b`), since a name such as "Maia 1500" could match the opponent's. Stats, thumbnails and Delete read your side from `HumanColor`; older PGNs have none, and there your side is the one named "You". Old PGNs keep "You" in the file and in copied PGN but show the current name in History and review. Named PGNs retain their saved player name when the current name changes.
-- **Profile:** opened from Home, with a Back button. Edit your name and confirm with Save name or Enter; blank names are refused. The table shows W/D/L per level and time control, including flag wins and flag losses as subsets, omitting rows with no games. A small 0–100% chart shows your accuracy per analysed game in date order, selecting your side through `HumanColor` (or the legacy "You" fallback). Stale or missing analysis and games where you made no move are omitted; an empty series has an explicit message. The first and last dates label the chart, and its tooltip lists each game's date and accuracy.
+- **Profile:** opened from Home, with a Back button. Edit your name and confirm with Save name or Enter; blank names are refused. The name card shows the first saved game's month and year when known. Four tiles show total games, mean accuracy over analysed games, W / D / L, and flag wins / losses. The table shows one row per level with games, W/D/L per time control, and flag wins and losses summed across its time controls. A small 0–100% chart shows your accuracy per analysed game in date order, selecting your side through `HumanColor` (or the legacy "You" fallback). Stale or missing analysis and games where you made no move are omitted; an empty series has an explicit message. The first and last dates label the chart, and its tooltip lists each game's date and accuracy.
 
 ### 15.9 Repertoire from names, viewer and editor
 

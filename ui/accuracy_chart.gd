@@ -19,11 +19,11 @@ func _draw() -> void:
 	var font := get_theme_default_font()
 	var font_size := get_theme_default_font_size()
 	var plot := Rect2(52, 12, maxf(1, size.x - 70), maxf(1, size.y - 52))
-	var muted := Color(0.65, 0.68, 0.73)
-	var accent := Color(0.4, 0.8, 0.95)
+	var muted := Color("a8a49c")
+	var accent := Color("7fa650")
 	for percent in [0, 50, 100]:
 		var y: float = plot.end.y - plot.size.y * percent / 100.0
-		draw_line(Vector2(plot.position.x, y), Vector2(plot.end.x, y), Color(0.3, 0.33, 0.38))
+		draw_line(Vector2(plot.position.x, y), Vector2(plot.end.x, y), Color("3a3834"))
 		draw_string(font, Vector2(0, y + font_size / 3.0), "%d%%" % percent,
 				HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, muted)
 	var points := PackedVector2Array()

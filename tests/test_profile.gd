@@ -51,6 +51,7 @@ func test_profile_table_matches_stats_and_omits_empty_rows():
 	DirAccess.make_dir_recursive_absolute(folder)
 	var stats := ConfigFile.new()
 	stats.set_value("maia-1500", "3+2", {"wins": 4, "draws": 2, "losses": 3, "flag_wins": 1, "flag_losses": 2})
+	stats.set_value("maia-1500", "5+0", {"wins": 1, "draws": 0, "losses": 1, "flag_wins": 1, "flag_losses": 1})
 	stats.set_value("maia-1100", "1+0", {"wins": 0, "draws": 1, "losses": 0, "flag_wins": 0, "flag_losses": 0})
 	stats.set_value("maia-1900", "5+0", {"wins": 0, "draws": 0, "losses": 0, "flag_wins": 0, "flag_losses": 0})
 	stats.save(folder.path_join("stats.cfg"))
@@ -63,18 +64,48 @@ func test_profile_table_matches_stats_and_omits_empty_rows():
 		return
 	profile.present(Settings.new(folder.path_join("settings.cfg")))
 	profile.refresh(History.new(folder))
+	var since = profile.find_child("PlayingSince", true, false)
+	assert_true(since != null and not since.visible, "no games omits Playing since")
+	var games = profile.find_child("GamesValue", true, false)
+	assert_true(games != null, "Profile shows a games tile")
+	if games != null:
+		assert_eq(games.text, "12")
+	for item in [["WdlValue", "5 / 3 / 4"], ["FlagValue", "2 / 3"], ["AccuracyValue", "–"]]:
+		var label = profile.find_child(item[0], true, false)
+		assert_true(label != null, "Profile shows " + item[0])
+		if label != null:
+			assert_eq(label.get_parsed_text() if label is RichTextLabel else label.text, item[1])
 	var table = profile.find_child("Results", true, false)
 	var cells := []
 	for cell in table.get_children():
 		cells.append(cell.text)
-	assert_eq(cells, ["Level", "Time", "W", "D", "L", "Flag wins", "Flag losses",
-			"Maia 1100", "1+0", "0", "1", "0", "0", "0",
-			"Maia 1500", "3+2", "4", "2", "3", "1", "2"])
+	assert_eq(cells, ["Level", "1+0 · W D L", "3+2 · W D L", "5+0 · W D L", "Flag wins", "Flag losses",
+			"Maia 1100", "0  1  0", "–", "–", "0", "0",
+			"Maia 1500", "–", "4  2  3", "1  0  1", "2", "3"])
+	var header: Label = table.get_child(0)
+	var level: Label = table.get_child(6)
+	var flag_win: Label = table.get_child(16)
+	var flag_loss: Label = table.get_child(17)
+	assert_eq(header.get_theme_font_size("font_size"), 12, "table headers match the design")
+	assert_eq(level.get_theme_font_size("font_size"), 14, "table rows are readable")
+	assert_eq(level.horizontal_alignment, HORIZONTAL_ALIGNMENT_LEFT, "level names align left")
+	assert_eq(flag_win.get_theme_color("font_color"), Color("8fbc5a"), "flag wins are green")
+	assert_eq(flag_loss.get_theme_color("font_color"), Color("ee7a72"), "flag losses are red")
+	assert_true(profile.find_child("GamesCard", true, false).get_minimum_size().y >= 86, "tiles have the design's vertical space")
+	table.size = Vector2(380, table.size.y)
+	table.resized.emit()
+	assert_eq(table.get_child(1).text, "1+0\nW D L", "narrow screens keep time-control headings readable")
+	assert_eq(table.get_child(5).text, "Flag\nlosses", "narrow screens keep flag headings readable")
+	profile.refresh(History.new(folder))
+	assert_eq(table.get_child(1).text, "1+0\nW D L", "refresh keeps narrow headings readable")
+	table.size = Vector2(860, table.size.y)
+	table.resized.emit()
+	assert_eq(table.get_child(1).text, "1+0 · W D L", "wide screens restore the full heading")
 	assert_true(not profile.find_child("NoResults", true, false).visible)
 	stats.clear()
 	stats.save(folder.path_join("stats.cfg"))
 	profile.refresh(History.new(folder))
-	assert_eq(table.get_child_count(), 7, "refresh clears previous rows")
+	assert_eq(table.get_child_count(), 6, "refresh clears previous rows")
 	assert_true(profile.find_child("NoResults", true, false).visible, "empty stats have a readable state")
 	profile.free()
 	_clean(folder)
@@ -91,6 +122,7 @@ func test_accuracy_chart_uses_dated_analysis_and_human_colour():
 	_write_game(folder, "unanalysed", "2026.09.01", "w", "1. e4", analysis_dir, [])
 	_write_game(folder, "no-human-move", "2026.09.02", "b", "1. e4", analysis_dir, [0, 0])
 	_write_game(folder, "zero-moves", "2026.09.03", "w", "", analysis_dir, [0])
+	_write(folder.path_join("games/2025-08-01T10-00-00_1.pgn"), '[White "You"]\n[Black "Maia 1500"]\n[Result "0-1"]\n\n1. e4 0-1\n')
 	_write_game(folder, "stale", "2026.09.04", "w", "1. e4", analysis_dir, [0, 0])
 	var stale_path := analysis_dir.path_join("stale.pgn.json")
 	var stale: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(stale_path))
@@ -108,6 +140,14 @@ func test_accuracy_chart_uses_dated_analysis_and_human_colour():
 		_clean(folder)
 		return
 	profile.refresh(History.new(folder), analysis_dir)
+	var since = profile.find_child("PlayingSince", true, false)
+	assert_true(since != null, "Profile shows the first saved game date")
+	if since != null:
+		assert_eq(since.text, "Playing since Aug 2025")
+	var average = profile.find_child("AccuracyValue", true, false)
+	assert_true(average != null, "Profile shows average accuracy")
+	if average != null:
+		assert_eq(average.text, "70.3")
 	assert_eq(chart.series.size(), 3, "only analysed games where the human moved")
 	assert_eq(chart.series[0].date, "2026.10.01")
 	assert_eq(chart.series[1].date, "2026.10.02")
@@ -151,8 +191,8 @@ func test_profile_skips_incomplete_or_corrupt_analysis_and_handles_one_point():
 	var scroll = profile.find_child("Scroll", true, false)
 	var back = profile.find_child("Back", true, false)
 	assert_true(table.size.x <= scroll.size.x, "table fits the minimum window width")
-	assert_true(back.get_rect().end.y <= 600 and back.get_rect().position.y >= scroll.get_rect().end.y,
-			"Back stays below the scroll area inside the minimum window")
+	assert_true(back.global_position.y >= 0 and back.global_position.y + back.size.y <= 600,
+			"Back stays inside the minimum window")
 	assert_true(chart.size.x > 70 and chart.size.y >= 200, "single-point plot has drawing space")
 	profile.free()
 	_clean(folder)

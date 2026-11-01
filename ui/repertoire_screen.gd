@@ -3,6 +3,7 @@ extends PopupPanel
 signal saved(name: String)
 
 const Game = preload("res://core/game.gd")
+const Board = preload("res://core/board.gd")
 var repertoire
 var _lines := []
 var _line := -1
@@ -14,8 +15,8 @@ var _selection := ""
 @onready var _editor = $RepertoireEditor
 # Child of this popup, so closing it hands focus back here instead of closing the screen too.
 @onready var importer = $RepertoireImport
-@onready var _line_list: ItemList = $Margin/Form/Viewer/Lines
-@onready var _board = $Margin/Form/Viewer/Board
+@onready var _line_rows: VBoxContainer = $Margin/Form/Viewer/Lines/LineContent/LineScroll/LineRows
+@onready var _board = $Margin/Form/Viewer/BoardArea/Board
 @onready var _status: Label = $Margin/Form/Status
 
 
@@ -27,19 +28,48 @@ func _ready() -> void:
 	$Margin/Form/Buttons/Back.pressed.connect(hide)
 	_picker.saved.connect(_saved)
 	_list.item_selected.connect(_select_repertoire)
-	_line_list.item_selected.connect(_select_line)
+	$Margin/Form/Viewer/BoardArea/Navigation/Previous.pressed.connect(func(): _step(-1))
+	$Margin/Form/Viewer/BoardArea/Navigation/Next.pressed.connect(func(): _step(1))
+	for dialog in [_picker, importer]:
+		dialog.visibility_changed.connect(func(): $Dim.visible = _picker.visible or importer.visible)
+	$Margin/Form/Buttons/Import.add_theme_font_override("font", get_theme_font("font", "SemiboldText"))
+	for button in [$Margin/Form/Buttons/Import, $Margin/Form/Buttons/FromOpenings]:
+		_pad(button, 16)
+	$Margin/Form/Viewer/BoardArea/Navigation/Moves.add_theme_font_override("bold_font", get_theme_font("font", "BoldText"))
+	get_tree().root.size_changed.connect(_fit)
+
+
+func _pad(button: Button, side: float) -> void:
+	for state in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
+		var style: StyleBox = button.get_theme_stylebox(state).duplicate()
+		style.content_margin_left = side
+		style.content_margin_right = side
+		button.add_theme_stylebox_override(state, style)
 
 
 func present() -> void:
 	if not importer.saved.is_connected(_saved):
 		importer.saved.connect(_saved)
 	_refresh()
-	popup_centered(Vector2i(680, 540))
+	popup_centered(get_tree().root.size)
+	_fit()
+
+
+# A full screen: it keeps the main window's size when that changes while open.
+func _fit() -> void:
+	if visible and get_tree().root.gui_embed_subwindows:
+		position = Vector2i.ZERO
+		size = get_tree().root.size
 
 
 func _refresh() -> void:
 	_list.clear()
-	_line_list.clear()
+	for card in $Margin/Form/Viewer/CardScroll/Cards.get_children():
+		card.free()
+	_clear_lines()
+	$Margin/Form/Viewer/Lines/LineContent/LineHeading.text = ""
+	$Margin/Form/Viewer/Lines/LineContent/LineHeading.tooltip_text = ""
+	$Margin/Form/Viewer/Lines/LineContent/LineDetail.text = ""
 	_lines.clear()
 	_selection = ""
 	$Margin/Form/Buttons/Edit.disabled = true
@@ -47,15 +77,114 @@ func _refresh() -> void:
 	_board.game = null
 	_board.queue_redraw()
 	_status.text = ""
+	$Margin/Form/Viewer/BoardArea/Navigation/Moves.text = ""
 	for name in repertoire.names():
 		_list.add_item(name)
+		var index := _list.item_count - 1
+		var card := HBoxContainer.new()
+		$Margin/Form/Viewer/CardScroll/Cards.add_child(card)
+		var select := Button.new()
+		var saved = repertoire.get_script().new()
+		saved.storage_dir = repertoire.storage_dir
+		var error: String = saved.load_saved(name)
+		var detail := ""
+		if error.is_empty():
+			detail = "%d %s" % [saved.lines.size(), "line" if saved.lines.size() == 1 else "lines"]
+			if saved.source == "openings":
+				detail += " · from openings"
+			elif saved.source == "pgn":
+				detail += " · imported PGN"
+		select.accessibility_name = name
+		select.accessibility_description = detail
+		select.custom_minimum_size.y = 64
+		select.toggle_mode = true
+		select.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		select.pressed.connect(func(): _select_repertoire(index))
+		card.add_child(select)
+		for state in ["normal", "hover", "pressed", "hover_pressed"]:
+			var style: StyleBoxFlat = select.get_theme_stylebox(state).duplicate()
+			style.set_corner_radius_all(10)
+			if state.ends_with("pressed"):
+				style.bg_color = Color("363430")
+				style.border_color = Color("7fa650")
+			select.add_theme_stylebox_override(state, style)
+		var content := HBoxContainer.new()
+		select.add_child(content)
+		content.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		content.offset_left = 14
+		content.offset_right = -14
+		content.add_theme_constant_override("separation", 12)
+		content.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var dot := Panel.new()
+		dot.custom_minimum_size = Vector2(16, 16)
+		dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		dot.add_theme_stylebox_override("panel", _swatch(saved.colour, 16))
+		content.add_child(dot)
+		var labels := VBoxContainer.new()
+		labels.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		labels.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		labels.alignment = BoxContainer.ALIGNMENT_CENTER
+		labels.add_theme_constant_override("separation", 2)
+		content.add_child(labels)
+		var title := Label.new()
+		title.name = "CardTitle"
+		title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		title.theme_type_variation = "BoldText"
+		title.add_theme_font_size_override("font_size", 15)
+		title.text = name
+		title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		labels.add_child(title)
+		var subtitle := Label.new()
+		subtitle.name = "CardDetail"
+		subtitle.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		subtitle.theme_type_variation = "MutedText"
+		subtitle.add_theme_font_size_override("font_size", 12)
+		subtitle.text = detail
+		subtitle.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		labels.add_child(subtitle)
+		# Inside the card, as drawn, but a separate button so it keeps its own focus.
+		var edit := Button.new()
+		edit.name = "Edit"
+		edit.icon = preload("res://ui/icons/pencil.svg")
+		edit.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		edit.custom_minimum_size = Vector2(36, 36)
+		edit.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		edit.tooltip_text = "Edit " + name
+		var outline := StyleBoxFlat.new()
+		outline.bg_color = Color(0, 0, 0, 0)
+		outline.border_color = Color("45423d")
+		outline.set_border_width_all(1)
+		outline.set_corner_radius_all(6)
+		edit.add_theme_stylebox_override("normal", outline)
+		edit.pressed.connect(func():
+			_select_repertoire(index)
+			if $Margin/Form/Buttons/Edit.disabled == false:
+				_editor.present(repertoire, _selection, _line)
+		)
+		content.add_child(edit)
+
+
+# The colour dot of a repertoire: light for White, dark for Black.
+static func _swatch(colour: String, diameter: int) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color("ece9e4") if colour == "w" else Color("141412")
+	style.border_color = Color("8c887f")
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(diameter / 2)
+	return style
 
 
 func _select_repertoire(index: int) -> void:
 	_selection = _list.get_item_text(index)
+	for i in $Margin/Form/Viewer/CardScroll/Cards.get_child_count():
+		$Margin/Form/Viewer/CardScroll/Cards.get_child(i).get_child(0).button_pressed = i == index
 	$Margin/Form/Buttons/Edit.disabled = true
 	var error: String = repertoire.load_saved(_selection)
-	_line_list.clear()
+	_clear_lines()
+	$Margin/Form/Viewer/Lines/LineContent/LineHeading.text = ""
+	$Margin/Form/Viewer/Lines/LineContent/LineHeading.tooltip_text = ""
+	$Margin/Form/Viewer/Lines/LineContent/LineDetail.text = ""
 	_lines.clear()
 	_line = -1
 	_board.game = null
@@ -65,29 +194,87 @@ func _select_repertoire(index: int) -> void:
 		return
 	$Margin/Form/Buttons/Edit.disabled = false
 	_lines = repertoire.lines.duplicate(true)
+	$Margin/Form/Viewer/Lines/LineContent/LineHeading.text = _selection
+	$Margin/Form/Viewer/Lines/LineContent/LineHeading.tooltip_text = _selection
+	$Margin/Form/Viewer/Lines/LineContent/LineDetail.text = "As %s · %d %s" % ["White" if repertoire.colour == "w" else "Black", _lines.size(), "line" if _lines.size() == 1 else "lines"]
 	_board.flipped = repertoire.colour == "b"
 	_show_names()
+	if not _lines.is_empty():
+		_select_line(0)
 	var selected := _selection
 	error = await _picker.ensure_catalog()
 	if selected == _selection and error.is_empty():
 		_show_names()
 
 
+func _clear_lines() -> void:
+	for row in _line_rows.get_children():
+		row.free()
+
+
 func _show_names() -> void:
-	_line_list.clear()
-	for line in _lines:
-		var label: String = " ".join(line.moves)
+	_clear_lines()
+	var labels := []
+	var families := {}
+	for i in _lines.size():
+		var line: Dictionary = _lines[i]
+		var label := "Line %d" % (i + 1)
 		for entry in _picker.book.entries:
 			if entry.moves == line.moves and entry.positions[0] == line.positions[0]:
 				label = entry.name
 				break
-		_line_list.add_item(label)
-	if _line >= 0 and _line < _line_list.item_count:
-		_line_list.select(_line)
+		labels.append(label)
+		families[label.get_slice(": ", 0) if ": " in label else ""] = true
+	# Lines of one opening family show only what tells them apart; the full name stays in the tooltip.
+	var shared: String = families.keys()[0] if families.size() == 1 else ""
+	for i in _lines.size():
+		var line: Dictionary = _lines[i]
+		var label: String = labels[i]
+		var row := Button.new()
+		row.tooltip_text = label
+		row.custom_minimum_size.y = 52
+		row.toggle_mode = true
+		row.button_pressed = i == _line
+		row.accessibility_name = label
+		row.accessibility_description = _move_text(line)
+		row.pressed.connect(func(): _select_line(i))
+		_line_rows.add_child(row)
+		row.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
+		var selected_style: StyleBoxFlat = row.get_theme_stylebox("hover").duplicate()
+		selected_style.bg_color = Color("4a4741")
+		selected_style.border_color = Color("4a4741")
+		selected_style.set_corner_radius_all(6)
+		row.add_theme_stylebox_override("pressed", selected_style)
+		row.add_theme_stylebox_override("hover_pressed", selected_style)
+		var content := VBoxContainer.new()
+		row.add_child(content)
+		content.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		content.offset_left = 10
+		content.offset_right = -10
+		content.alignment = BoxContainer.ALIGNMENT_CENTER
+		content.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var title := Label.new()
+		title.name = "Name"
+		title.text = label.trim_prefix(shared + ": ") if not shared.is_empty() else label
+		title.theme_type_variation = "BoldText"
+		title.add_theme_font_size_override("font_size", 13)
+		title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		content.add_child(title)
+		var moves := Label.new()
+		moves.name = "Moves"
+		moves.text = _move_text(line)
+		moves.theme_type_variation = "MutedText"
+		moves.add_theme_font_size_override("font_size", 12)
+		moves.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		moves.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		content.add_child(moves)
 
 
 func _select_line(index: int) -> void:
 	_line = index
+	for i in _line_rows.get_child_count():
+		_line_rows.get_child(i).button_pressed = i == index
 	_ply = _lines[index].moves.size()
 	_show_position()
 
@@ -97,6 +284,31 @@ func _show_position() -> void:
 	_board.game = Game.new(line.positions[_ply] + " 0 1")
 	_board.game.moves = line.moves.slice(0, _ply)
 	_board.queue_redraw()
+	$Margin/Form/Viewer/BoardArea/Navigation/Moves.text = _move_text(line, true)
+	$Margin/Form/Viewer/BoardArea/Navigation/Previous.disabled = _ply == 0
+	$Margin/Form/Viewer/BoardArea/Navigation/Next.disabled = _ply == line.moves.size()
+
+
+func _move_text(line: Dictionary, highlight := false) -> String:
+	var board = Board.from_fen(line.positions[0] + " 0 1")
+	var start_black: bool = board.side_to_move == "b"
+	var moves := PackedStringArray()
+	for i in line.moves.size():
+		var san: String = board.san(line.moves[i])
+		var ply: int = i + int(start_black)
+		var text := ("%d." % (ply / 2 + 1) if ply % 2 == 0 else "1..." if i == 0 else "") + san
+		if highlight and i == _ply - 1:
+			text = "[bgcolor=#4a4741][color=#ece9e4][b]" + text + "[/b][/color][/bgcolor]"
+		moves.append(text)
+		board.make_move(line.moves[i])
+	return " ".join(moves)
+
+
+func _step(delta: int) -> void:
+	if _line < 0:
+		return
+	_ply = clampi(_ply + delta, 0, _lines[_line].moves.size())
+	_show_position()
 
 
 func _input(event: InputEvent) -> void:
@@ -108,8 +320,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	if not visible or _line < 0 or not event is InputEventKey or not event.pressed or event.echo:
 		return
 	if event.keycode == KEY_LEFT or event.keycode == KEY_RIGHT:
-		_ply = clampi(_ply + (-1 if event.keycode == KEY_LEFT else 1), 0, _lines[_line].moves.size())
-		_show_position()
+		_step(-1 if event.keycode == KEY_LEFT else 1)
 		get_viewport().set_input_as_handled()
 
 

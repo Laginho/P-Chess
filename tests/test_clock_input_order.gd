@@ -151,7 +151,7 @@ func test_a_mating_drop_with_one_millisecond_left_still_plays():
 	assert_eq([main.board_view.game.result, main.board_view.game.reason], ["0-1", "checkmate"])
 	assert_eq(main.board_view.game.moves, PackedStringArray(["f2f3", "e7e5", "g2g4", "d8h4"]))
 	assert_eq(played, ["Qh4#"], "the legal move emits exactly once")
-	assert_eq(main.move_list.get_parsed_text(), "1. f3   e5\n2. g4   Qh4#")
+	assert_eq(main.move_list.get_parsed_text(), "1. f3   e52. g4   Qh4#")
 	assert_eq(main.clock.left("b"), 2001, "the timed move still earns its increment")
 	assert_eq(main.sound_player.events, ["low_time", "move", "check", "game_end"])
 	main.free()

@@ -1,73 +1,231 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=17 format=3]
 
 [ext_resource type="Script" path="res://ui/repertoire_screen.gd" id="1"]
 [ext_resource type="PackedScene" path="res://ui/opening_picker.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://ui/board_view.tscn" id="3"]
 [ext_resource type="PackedScene" path="res://ui/repertoire_editor.tscn" id="4"]
 [ext_resource type="PackedScene" path="res://ui/repertoire_import.tscn" id="5"]
+[ext_resource type="Texture2D" path="res://ui/icons/back.svg" id="6"]
+[ext_resource type="Texture2D" path="res://ui/icons/import.svg" id="7"]
+[ext_resource type="Texture2D" path="res://ui/icons/book.svg" id="8"]
+[ext_resource type="Texture2D" path="res://ui/icons/chevron-left.svg" id="9"]
+[ext_resource type="Texture2D" path="res://ui/icons/chevron-right.svg" id="10"]
+
+[sub_resource type="StyleBoxFlat" id="Ground"]
+bg_color = Color(0.121569, 0.117647, 0.109804, 1)
+
+[sub_resource type="StyleBoxEmpty" id="TitleGap"]
+content_margin_left = 6.0
+
+[sub_resource type="StyleBoxEmpty" id="LineHeadingPad"]
+content_margin_left = 14.0
+content_margin_top = 12.0
+content_margin_right = 14.0
+
+[sub_resource type="StyleBoxEmpty" id="LineDetailPad"]
+content_margin_left = 14.0
+content_margin_top = 2.0
+content_margin_right = 14.0
+content_margin_bottom = 12.0
+
+[sub_resource type="StyleBoxEmpty" id="LineScrollPad"]
+content_margin_left = 6.0
+content_margin_top = 6.0
+content_margin_right = 6.0
+content_margin_bottom = 6.0
+
+[sub_resource type="StyleBoxFlat" id="LinesPanel"]
+bg_color = Color(0.168627, 0.164706, 0.152941, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.270588, 0.258824, 0.239216, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_left = 10
+corner_radius_bottom_right = 10
 
 [node name="RepertoireScreen" type="PopupPanel"]
 title = "Repertoires"
-size = Vector2i(680, 540)
+size = Vector2i(1200, 720)
 exclusive = false
+theme_override_styles/panel = SubResource("Ground")
 script = ExtResource("1")
 
 [node name="Margin" type="MarginContainer" parent="."]
-offset_right = 680.0
-offset_bottom = 540.0
-theme_override_constants/margin_left = 16
-theme_override_constants/margin_top = 16
-theme_override_constants/margin_right = 16
-theme_override_constants/margin_bottom = 16
+offset_right = 1200.0
+offset_bottom = 720.0
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 20
 
 [node name="Form" type="VBoxContainer" parent="Margin"]
 layout_mode = 2
-theme_override_constants/separation = 10
-
-[node name="Title" type="Label" parent="Margin/Form"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 24
-text = "Repertoires"
+theme_override_constants/separation = 16
 
 [node name="List" type="ItemList" parent="Margin/Form"]
+visible = false
 layout_mode = 2
 custom_minimum_size = Vector2(0, 90)
 
-[node name="Viewer" type="HBoxContainer" parent="Margin/Form"]
+[node name="Buttons" type="HBoxContainer" parent="Margin/Form"]
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
-size_flags_vertical = 3
+theme_override_constants/separation = 10
 
-[node name="Lines" type="ItemList" parent="Margin/Form/Viewer"]
+[node name="Back" type="Button" parent="Margin/Form/Buttons"]
+custom_minimum_size = Vector2(44, 44)
+layout_mode = 2
+size_flags_vertical = 4
+icon = ExtResource("6")
+tooltip_text = "Back"
+
+[node name="Title" type="Label" parent="Margin/Form/Buttons"]
 layout_mode = 2
 size_flags_horizontal = 3
-
-[node name="Board" parent="Margin/Form/Viewer" instance=ExtResource("3")]
-custom_minimum_size = Vector2(280, 280)
-layout_mode = 2
-mouse_filter = 2
-
-[node name="Status" type="Label" parent="Margin/Form"]
-layout_mode = 2
-
-[node name="Buttons" type="HBoxContainer" parent="Margin/Form"]
-layout_mode = 2
+theme_type_variation = &"ExtraBoldText"
+theme_override_font_sizes/font_size = 26
+theme_override_styles/normal = SubResource("TitleGap")
+text = "Repertoires"
 
 [node name="Edit" type="Button" parent="Margin/Form/Buttons"]
+visible = false
 layout_mode = 2
 text = "Edit"
 disabled = true
 
 [node name="Import" type="Button" parent="Margin/Form/Buttons"]
+custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
-text = "Import PGN…"
+size_flags_vertical = 4
+icon = ExtResource("7")
+text = "Import PGN"
 
 [node name="FromOpenings" type="Button" parent="Margin/Form/Buttons"]
+custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
-text = "From openings…"
+size_flags_vertical = 4
+theme_type_variation = &"PrimaryButton"
+icon = ExtResource("8")
+text = "From openings"
 
-[node name="Back" type="Button" parent="Margin/Form/Buttons"]
+[node name="Viewer" type="HBoxContainer" parent="Margin/Form"]
 layout_mode = 2
-text = "Back"
+size_flags_vertical = 3
+theme_override_constants/separation = 16
+
+[node name="CardScroll" type="ScrollContainer" parent="Margin/Form/Viewer"]
+follow_focus = true
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 0.9
+horizontal_scroll_mode = 0
+
+[node name="Cards" type="VBoxContainer" parent="Margin/Form/Viewer/CardScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="Lines" type="PanelContainer" parent="Margin/Form/Viewer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 0.97
+custom_minimum_size = Vector2(200, 0)
+theme_override_styles/panel = SubResource("LinesPanel")
+
+[node name="LineContent" type="VBoxContainer" parent="Margin/Form/Viewer/Lines"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="LineHeading" type="Label" parent="Margin/Form/Viewer/Lines/LineContent"]
+layout_mode = 2
+theme_type_variation = &"ExtraBoldText"
+theme_override_font_sizes/font_size = 15
+theme_override_styles/normal = SubResource("LineHeadingPad")
+text_overrun_behavior = 3
+
+[node name="LineDetail" type="Label" parent="Margin/Form/Viewer/Lines/LineContent"]
+layout_mode = 2
+theme_type_variation = &"MutedText"
+theme_override_font_sizes/font_size = 12
+theme_override_styles/normal = SubResource("LineDetailPad")
+
+[node name="Divider" type="ColorRect" parent="Margin/Form/Viewer/Lines/LineContent"]
+custom_minimum_size = Vector2(0, 1)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.270588, 0.258824, 0.239216, 1)
+
+[node name="LineScroll" type="ScrollContainer" parent="Margin/Form/Viewer/Lines/LineContent"]
+follow_focus = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("LineScrollPad")
+horizontal_scroll_mode = 0
+
+[node name="LineRows" type="VBoxContainer" parent="Margin/Form/Viewer/Lines/LineContent/LineScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+
+[node name="BoardArea" type="VBoxContainer" parent="Margin/Form/Viewer"]
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 2.0
+
+[node name="Board" parent="Margin/Form/Viewer/BoardArea" instance=ExtResource("3")]
+custom_minimum_size = Vector2(280, 280)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="Navigation" type="HBoxContainer" parent="Margin/Form/Viewer/BoardArea"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Previous" type="Button" parent="Margin/Form/Viewer/BoardArea/Navigation"]
+custom_minimum_size = Vector2(56, 40)
+layout_mode = 2
+theme_type_variation = &"RaisedButton"
+size_flags_vertical = 0
+icon = ExtResource("9")
+icon_alignment = 1
+tooltip_text = "Previous move"
+accessibility_name = "Previous move"
+
+[node name="Next" type="Button" parent="Margin/Form/Viewer/BoardArea/Navigation"]
+custom_minimum_size = Vector2(56, 40)
+layout_mode = 2
+theme_type_variation = &"RaisedButton"
+size_flags_vertical = 0
+icon = ExtResource("10")
+icon_alignment = 1
+tooltip_text = "Next move"
+accessibility_name = "Next move"
+
+[node name="Moves" type="RichTextLabel" parent="Margin/Form/Viewer/BoardArea/Navigation"]
+custom_minimum_size = Vector2(150, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/default_color = Color(0.658824, 0.643137, 0.611765, 1)
+bbcode_enabled = true
+vertical_alignment = 1
+text = ""
+
+[node name="Status" type="Label" parent="Margin/Form"]
+layout_mode = 2
+
+[node name="Dim" type="ColorRect" parent="."]
+visible = false
+offset_right = 1200.0
+offset_bottom = 720.0
+mouse_filter = 2
+color = Color(0.0392157, 0.0392157, 0.0352941, 0.72)
 
 [node name="OpeningPicker" parent="." instance=ExtResource("2")]
 
