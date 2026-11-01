@@ -8,6 +8,7 @@ Difficulty: normal
 - Primary files:
   - ui/settings.tscn, ui/settings.gd (the top-right `Open` button)
   - ui/main.gd (Ctrl+, opening, `_covers_settings`, the resign button text at line ~216)
+  - ui/icon_button.gd (opt-in wrapping when the label does not fit its button; buttons whose label fits draw exactly as before)
   - ui/home.gd, ui/searching.gd (`_sync_settings_button`)
   - scripts/screens.gd (hides `Open` for captures)
   - tests/test_home.gd, tests/test_session.gd, tests/test_badges.gd
@@ -35,3 +36,7 @@ Capture Profile at 1280×800 and Game with Resign armed at 800×600 (`scripts/sc
 ## Comments
 
 - 2026-10-31 Opened by the parent session after PRs #34–#36 merged. Profile's Settings button was left in place by UI-027 because `ui/main.gd` belonged to the ui-game lane; the resign overflow was a taste call listed by the PR #36 fidelity pass, and Bruno chose a ticket over blocking UI-023.
+
+- Proxy decided (opus-5.5 xhigh): Yes. Add `ui/icon_button.gd` to Primary files and let it draw a label on two lines, but only when the label can't fit on one line. Keep `text` exactly "Click again to resign". ? That keeps 1280?800 matching `GamePanelStates.png` (one line with the flag), fits at 800?600 and leaves the exact-label assertion at `test_session.gd:442` alone. (receipt C:\Users\bruno\AppData\Local\Temp\sweatshop-proxy\20261031-230343-UI-031-04774f.json)
+  - Wrap on word boundaries only when needed and opt in only for Resign; keep 15 px Bold if it fits, at least 14 px otherwise. Preserve all control rectangles including Resign. Compare captures at both sizes; the flag may be omitted only when wrapped.
+- Test harness correction: `test_profile_has_no_extra_settings_button_and_shortcut_opens_settings` uses an isolated returning-player preference file so the first-launch dialog does not intercept the shortcut. The updated `test_game_has_no_settings_button` and `test_game_over_result_shows_on_the_card_not_the_side_panel` replace assertions on the removed node; `test_enabling_checking_during_catalog_load_rejects_bad_repertoire_and_allows_repaired_retry` opens the real Settings panel directly because the retired button cannot open it during the covered searching screen.

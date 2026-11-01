@@ -465,12 +465,14 @@ func test_resign_confirmation_fits_without_moving_panel_controls():
 		var side = main.get_node("Layout/Side")
 		var draw_rect: Rect2 = main.draw_button.get_global_rect()
 		var side_rect: Rect2 = side.get_global_rect()
+		var resign_rect: Rect2 = main.resign_button.get_global_rect()
 		main.resign_button.pressed.emit()
 		main._process(0)
 		await Engine.get_main_loop().process_frame
 		await Engine.get_main_loop().process_frame
 		assert_eq(side.get_global_rect(), side_rect, "panel stays fixed at %s" % window_size)
 		assert_eq(main.draw_button.get_global_rect(), draw_rect, "draw button stays fixed at %s" % window_size)
+		assert_eq(main.resign_button.get_global_rect(), resign_rect, "resign button stays fixed at %s" % window_size)
 		assert_true(main.resign_button.get_minimum_size().x <= main.resign_button.size.x, "confirmation fits at %s" % window_size)
 		main.free()
 
