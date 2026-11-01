@@ -20,12 +20,13 @@ func _ready() -> void:
 func _layout_home() -> void:
 	var margin := 40.0 if size.x >= 1000 else 20.0
 	var gap := 48.0 if size.x >= 1000 else 20.0
-	var side := minf(size.y - margin * 2, size.x - margin * 2 - gap - 280.0)
+	var side := minf(size.y - margin * 2, size.x - margin * 2 - gap - 260.0)
 	side = maxf(side, 0.0)
-	$Center/Board.position = Vector2(margin, (size.y - side) / 2)
+	var left := maxf(margin, minf((size.x - side) / 2, size.x - margin - gap - 260.0 - side))
+	$Center/Board.position = Vector2(left, (size.y - side) / 2)
 	$Center/Board.size = Vector2(side, side)
 	var form: Control = $Center/Form
-	form.position = Vector2(margin + side + gap, margin)
+	form.position = Vector2(left + side + gap, margin)
 	form.size = Vector2(size.x - form.position.x - margin, size.y - margin * 2)
 	var width := form.size.x
 	var row := (width - 12) / 2
@@ -46,9 +47,13 @@ func _layout_home() -> void:
 	quick.size = Vector2(width, large * 2 + 12)
 	for i in 3:
 		var button: Button = quick.get_child(i)
+		button.add_theme_font_size_override("font_size", 26 if width < 320 else 34)
+		button.add_theme_constant_override("icon_max_width", 24 if width < 320 else 34)
 		button.position = Vector2((i % 2) * (row + 12), (i / 2) * (large + 12))
 		button.size = Vector2(row, large)
 	var custom: Button = form.get_node("Custom")
+	custom.add_theme_font_size_override("font_size", 18 if width < 320 else 24)
+	custom.add_theme_constant_override("icon_max_width", 24 if width < 320 else 30)
 	custom.position = Vector2(row + 12, 156 + large + 12)
 	custom.size = Vector2(row, large)
 	for i in 4:
