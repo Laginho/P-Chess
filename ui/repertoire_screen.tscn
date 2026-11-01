@@ -192,6 +192,7 @@ theme_override_constants/separation = 6
 custom_minimum_size = Vector2(56, 40)
 layout_mode = 2
 theme_type_variation = &"RaisedButton"
+size_flags_vertical = 0
 icon = ExtResource("9")
 icon_alignment = 1
 tooltip_text = "Previous move"
@@ -201,19 +202,19 @@ accessibility_name = "Previous move"
 custom_minimum_size = Vector2(56, 40)
 layout_mode = 2
 theme_type_variation = &"RaisedButton"
+size_flags_vertical = 0
 icon = ExtResource("10")
 icon_alignment = 1
 tooltip_text = "Next move"
 accessibility_name = "Next move"
 
 [node name="Moves" type="RichTextLabel" parent="Margin/Form/Viewer/BoardArea/Navigation"]
-custom_minimum_size = Vector2(150, 26)
+custom_minimum_size = Vector2(150, 40)
 layout_mode = 2
 size_flags_horizontal = 3
-size_flags_vertical = 4
 theme_override_colors/default_color = Color(0.658824, 0.643137, 0.611765, 1)
 bbcode_enabled = true
-fit_content = true
+vertical_alignment = 1
 text = ""
 
 [node name="Status" type="Label" parent="Margin/Form"]
