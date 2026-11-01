@@ -2,8 +2,6 @@ extends Control
 
 # The settings screen (§10): one row per setting of `store` (core/settings.gd), set before this
 # enters the tree. Each edit goes straight to the store, which saves it and announces it.
-# shortcut: the Open button sits in the window's top-right corner, clear of the top clock because
-# the side panel is 240 px wide and the clock text narrower; move it into the panel if they collide.
 
 const Settings = preload("res://core/settings.gd")
 const ThemeLoader = preload("res://ui/theme_loader.gd")
@@ -19,7 +17,6 @@ func _ready() -> void:
 	# Keep the additional history row within the minimum window height.
 	$Panel/Center/Box.add_theme_constant_override("separation", 0)
 	_form.add_theme_constant_override("v_separation", 0)
-	$Open.pressed.connect(func() -> void: _panel.visible = not _panel.visible)
 	$Panel/Center/Box/Close.pressed.connect(_panel.hide)
 	_choice("premove_style", "Premove style", Settings.CHOICES.premove_style)
 	_check("click_click", "Click-click moves")

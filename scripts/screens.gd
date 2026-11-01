@@ -257,7 +257,6 @@ func capture() -> void:
    main._set_flipped(false)
    main.resign_button.disabled = false
    main.draw_button.disabled = false
-   main.settings_screen.get_node("Open").hide()
    if board == "GamePanelStates":
     if state == "declined":
      main.draw_notice.text = "Maia declined"
