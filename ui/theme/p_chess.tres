@@ -595,6 +595,22 @@ corner_radius_top_right = 10
 corner_radius_bottom_right = 10
 corner_radius_bottom_left = 10
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_legend"]
+content_margin_left = 14.0
+content_margin_top = 12.0
+content_margin_right = 14.0
+content_margin_bottom = 14.0
+bg_color = Color(0.21176471, 0.20392157, 0.1882353, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.27058825, 0.25882354, 0.23921569, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
 [resource]
 default_font = ExtResource("1_7n72e")
 default_font_size = 14
@@ -651,6 +667,8 @@ HScrollBar/styles/grabber_highlight = SubResource("StyleBoxFlat_ybrpe")
 HScrollBar/styles/grabber_pressed = SubResource("StyleBoxFlat_ax004")
 HScrollBar/styles/scroll = SubResource("StyleBoxFlat_q7kbt")
 Label/colors/font_color = Color(0.9254902, 0.9137255, 0.89411765, 1)
+LegendPanel/base_type = &"PopupPanel"
+LegendPanel/styles/panel = SubResource("StyleBoxFlat_legend")
 LineEdit/colors/caret_color = Color(0.9254902, 0.9137255, 0.89411765, 1)
 LineEdit/colors/font_color = Color(0.9254902, 0.9137255, 0.89411765, 1)
 LineEdit/colors/font_placeholder_color = Color(0.5411765, 0.52156866, 0.4862745, 1)

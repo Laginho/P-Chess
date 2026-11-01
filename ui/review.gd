@@ -37,6 +37,7 @@ var _positions := []
 var _classes := []
 var _icons := {}
 var _move_rows := []
+var _exit_rows: Array[TreeItem] = []
 var _catalog := []
 var _repertoire := []
 var _colour := "w"
@@ -183,6 +184,7 @@ func _ready() -> void:
 			help_dialog.dialog_text = help.tooltip_text
 			help_dialog.popup_centered())
 	var legend := PopupPanel.new()
+	legend.theme_type_variation = "LegendPanel"
 	legend.name = "ClassLegend"
 	var legend_text := ("Brilliant — The best move, and it sacrifices a piece.\n"
 			+ "Great — The only good move here, or one that turns the game around.\n"
@@ -254,6 +256,8 @@ func _ready() -> void:
 		rows.add_child(row)
 	var class_help: Button = $Margin/Content/ReviewBody/Side/ClassHelp
 	class_help.pressed.connect(func():
+		for row: Control in legend.get_node("Content/LegendRows").get_children():
+			row.custom_minimum_size.y = 44 if get_viewport_rect().size.y >= 700 else 0
 		legend.popup(Rect2i(Vector2i.ZERO, Vector2i(484, 0)))
 		await get_tree().process_frame
 		if not legend.visible:
@@ -281,7 +285,9 @@ func _ready() -> void:
 		if not visible:
 			_cancel_analysis())
 	_moves.select_mode = Tree.SELECT_SINGLE
-	_moves.resized.connect(func(): _moves.ensure_cursor_is_visible.call_deferred())
+	_moves.resized.connect(func():
+		_fit_exit_rows()
+		_moves.ensure_cursor_is_visible.call_deferred())
 	_moves.item_selected.connect(func():
 		var selected := _moves.get_selected()
 		if selected:
@@ -311,7 +317,6 @@ func _ready() -> void:
 	$Margin/Content/Actions.add_child(back)
 	back.hide()
 	var notice: Label = $Margin/Content/ReviewBody/Side/UnanalysedNotice
-	notice.custom_minimum_size.y = 135
 	notice.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 	notice.add_theme_font_size_override("font_size", 16)
 	var title_space := StyleBoxEmpty.new()
@@ -327,6 +332,7 @@ func _ready() -> void:
 	notice_bg.offset_top = 3
 	notice_bg.offset_bottom = 80
 	var notice_icon := TextureRect.new()
+	notice_icon.name = "NoticeIcon"
 	notice_icon.texture = _svg(CHART_ICON.replace("20", "40").replace("#7fa650", "#a8a49c").replace('stroke-width="2.2"', 'stroke-width="1.8"'))
 	notice_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	notice.add_child(notice_icon)
@@ -341,11 +347,7 @@ func _ready() -> void:
 	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	description.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	notice.add_child(description)
-	description.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-	description.offset_left = 24
-	description.offset_right = -24
-	description.offset_top = -22
-	description.offset_bottom = -4
+	notice.resized.connect(_fit_notice)
 	var analyze := Button.new()
 	analyze.name = "Analyze"
 	analyze.custom_minimum_size = Vector2(124, 48)
@@ -366,6 +368,34 @@ func _ready() -> void:
 	$Margin/Content/ReviewBody/Side.add_child(notice_gap)
 	$Margin/Content/ReviewBody/Side.move_child(notice_gap, $Margin/Content/ReviewBody/Side/Moves.get_index())
 	analyze.hide()
+
+
+# An exit callout that does not fit across both move columns wraps inside the first, on taller rows.
+func _fit_exit_rows() -> void:
+	var font := _moves.get_theme_font("font")
+	for row in _exit_rows:
+		var text_width := font.get_string_size(row.get_text(1), HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x + 30
+		var fits := text_width <= _moves.get_column_width(1) + _moves.get_column_width(2)
+		var lines := 1 if fits else ceili(text_width / maxf(_moves.get_column_width(1), 1))
+		row.set_autowrap_mode(1, TextServer.AUTOWRAP_OFF if fits else TextServer.AUTOWRAP_WORD_SMART)
+		row.custom_minimum_height = 0 if fits else lines * 17 + 8
+
+
+# The card grows with its wrapped title and description; the description sits 12 px under the title.
+func _fit_notice() -> void:
+	var notice: Label = $Margin/Content/ReviewBody/Side/UnanalysedNotice
+	var description: Label = notice.get_node("AnalysisDescription")
+	description.size = Vector2(maxf(notice.size.x - 48, 0), 0)
+	var height := description.get_combined_minimum_size().y
+	description.position = Vector2(24, notice.size.y - 4 - height)
+	var style: StyleBoxEmpty = notice.get_theme_stylebox("normal")
+	# Compact: no icon, so the move list keeps a few rows at 800x600.
+	var top := 24 if size.x <= 800 else 79
+	notice.get_node("NoticeIcon").visible = top == 79
+	if style.content_margin_bottom != height + 16 or style.content_margin_top != top:
+		style.content_margin_bottom = height + 16
+		style.content_margin_top = top
+		notice.update_minimum_size()
 
 
 func _layout_review() -> void:
@@ -785,6 +815,9 @@ func _update_eval_bar() -> void:
 	else:
 		_eval_bar.get_node("Score").text = ("+" if cp > 0 else "") + "%.1f" % (cp / 100.0)
 	_eval_bar.white_fraction = 1.0 / (1.0 + exp(-0.00368208 * clampi(cp, -1000, 1000)))
+	# The score sits in the bar's top 22 px: about the top 3 % of it.
+	var white_on_top: bool = _eval_bar.white_fraction >= 0.05 if _eval_bar.flipped else _eval_bar.white_fraction >= 0.99
+	_eval_bar.get_node("Score").add_theme_color_override("font_color", Color("141412") if white_on_top else Color("ece9e4"))
 
 
 func present(game, clocks: Array, settings: Dictionary, result_text: String,
@@ -822,6 +855,7 @@ func present(game, clocks: Array, settings: Dictionary, result_text: String,
 	var moves: int = (game.moves.size() + 1) / 2
 	_result.text = "%s \u00b7 %s \u00b7 %d %s" % [settings.get("control", ""), result_text.replace("\nSpace for a rematch", ""), moves, "move" if moves == 1 else "moves"]
 	_moves.clear()
+	_exit_rows.clear()
 	var root := _moves.create_item()
 	var board = Board.from_fen(Pgn.START)
 	var badges := Badges.evaluate(game.moves, catalog, repertoire, settings.colour, check_repertoire)
@@ -846,6 +880,7 @@ func present(game, clocks: Array, settings: Dictionary, result_text: String,
 				expected.append("%d%s%s" % [i / 2 + 1, "." if i % 2 == 0 else "…", move])
 			exit_row.set_text(1, "Left repertoire · " + ("expected " + ", ".join(expected) if not expected.is_empty() else "no continuation in repertoire"))
 			exit_row.set_expand_right(1, true)
+			_exit_rows.append(exit_row)
 			exit_row.set_icon(1, _class_icon("Repertoire"))
 			exit_row.set_icon_max_width(1, 16)
 			exit_row.set_custom_color(1, Color("7db8ee"))
@@ -856,6 +891,7 @@ func present(game, clocks: Array, settings: Dictionary, result_text: String,
 		board.make_move(game.moves[i])
 	_update_summary()
 	_show_ply(_game_moves.size())
+	_fit_exit_rows()
 	_pgn = Pgn.write(Pgn.finished_game(game, clocks, settings))
 	_url = lichess_url(game)
 	show()

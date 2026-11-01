@@ -1095,3 +1095,49 @@ func test_review_cards_use_theme_variations():
 	assert_eq(empty.theme_type_variation, &"EmptyAnalysisCard")
 	assert_true(not empty.has_theme_stylebox_override("panel"), "empty-analysis card has no inline style")
 	main.free()
+
+
+func test_eval_score_stays_readable_on_either_colour():
+	var main = await _session(FakeTime.new())
+	var review = main.get_node("Review")
+	var game = Game.new()
+	game.play("e2e4")
+	var black := SETTINGS.duplicate()
+	black.colour = "b"
+	review.present(game, [180000], black, "")
+	review.receive_position(1, {"pv": [{"cp": 0, "moves": ["e7e5"]}]})
+	var score: Label = review.get_node("Margin/Content/ReviewBody/EvalBar/Score")
+	assert_eq(score.get_theme_color("font_color"), Color("141412"), "flipped: white's share is on top, so the score is dark")
+	review._board_view.flipped = false
+	review._update_eval_bar()
+	assert_eq(score.get_theme_color("font_color"), Color("ece9e4"), "unflipped: black's share is on top, so the score is light")
+	main.free()
+
+
+func test_compact_review_keeps_unanalysed_card_and_exit_readable():
+	var root = Engine.get_main_loop().root
+	var old_size: Vector2i = root.size
+	root.size = Vector2i(800, 600)
+	var main = await _session(FakeTime.new())
+	var repertoire = preload("res://bot/repertoire.gd").new()
+	assert_eq(repertoire.parse("1. e4 e5 2. Nf3 Nc6 *", "w"), "")
+	var game = Game.new()
+	for move in ["e2e4", "e7e5", "d2d4"]:
+		game.play(move)
+	main.review.present(game, [180000, 180000, 180000], SETTINGS, "", [], repertoire.lines, true)
+	main.review.present_history("user://pr35-missing-game.pgn", "user://pr35-missing-analysis.json", false)
+	for i in 3:
+		await Engine.get_main_loop().process_frame
+	var side = main.review.get_node("Margin/Content/ReviewBody/Side")
+	var notice: Label = side.get_node("UnanalysedNotice")
+	var description: Label = notice.get_node("AnalysisDescription")
+	var title_bottom: float = notice.global_position.y + notice.get_theme_stylebox("normal").content_margin_top + notice.get_line_count() * notice.get_line_height()
+	assert_true(description.global_position.y >= title_bottom, "the description starts below the wrapped title")
+	assert_true(description.get_global_rect().end.y <= side.get_node("Analyze").global_position.y, "the description ends above Analyze")
+	var tree: Tree = side.get_node("Moves")
+	var rows: Array = tree.get_root().get_children()
+	var exit_row: TreeItem = rows[2]
+	assert_true(exit_row.get_text(1).begins_with("Left repertoire"), "fixture has an exit row")
+	assert_true(tree.get_item_area_rect(exit_row, 1).size.y > tree.get_item_area_rect(rows[0], 1).size.y, "the exit callout wraps instead of eliding the expected move")
+	main.free()
+	root.size = old_size
