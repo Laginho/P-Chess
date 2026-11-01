@@ -1,5 +1,5 @@
 # UI-033: The UI scales with the window; board centred on Home and Game
-Stage: implementing
+Stage: to-review
 Status: ready-for-agent
 Blocked by: none
 Review: human
@@ -44,7 +44,7 @@ There is no reference PNG for the centred layout: the canvas (`docs/design/v0.1.
 
 - A test that sets the window (or root viewport) to 1920×1080 and checks the Game board's centre is at the viewport's horizontal centre, and that at 1280×800 the side panel is at least its floor width (red: today the board is left-aligned).
 
- - A regression test opens and resizes the embedded Repertoires screen and editor with stretch enabled, checking canvas bounds and footer visibility.
+- A regression test opens and resizes the embedded Repertoires screen and editor with stretch enabled, checking canvas bounds and footer visibility.
 
 ## Comments
 
@@ -56,7 +56,11 @@ There is no reference PNG for the centred layout: the canvas (`docs/design/v0.1.
 - Updated the History toolbar and Review window, popup, legend, compact-actions and repertoire-callout tests to use virtual coordinates or accept a single line when it fits. The containment check fails when the History screen is moved outside the canvas; the compact Review tests failed before its layout fix. The callout's no-wrap case is equivalent to wrapping when its text fits, so the test also checks the available width.
 - Verification: focused session/board 61 passed; History 14 passed. One long Review test timed out in the focused file, passed alone, and passed in the final gate. Gate: 490 passed, 0 failed. Captures: `C:/Users/bruno/AppData/Local/Temp/pchess-ui033/` (`home-720.png`, `home-1080.png`, `home-1440.png`, `game-720.png`, `game-1080.png`, `game-1440.png`, `armed-600.png`, `armed-800.png`, `review-600-compact.png`, `review-800.png`). Downscaled 16:9 captures differ by about 0.9/255 mean RGB due to rasterization.
 - Acceptance: pending | Bruno to judge the captures and manually compare Home and a 3+2 game between a 1280x720 window and fullscreen 1080p or 1440p.
-Gate evidence: C:\Users\bruno\AppData\Local\Temp\ui033-gate-final.json
+- Reopen stage 2: embedded Repertoires and editor now fill the visible virtual canvas on open and resize; native popup sizing stays unchanged. The opening picker is unchanged: its 700-pixel cap fits the minimum 800-pixel virtual height.
+- Regression test: with stretch enabled, the pre-fix focused run reported 46 passed, 1 failed, including clipped Save/Cancel at 1920?1080 and wrong popup sizes at 800?600 (`C:/Users/bruno/AppData/Local/Temp/ui033-repertoire-red.log`). The new test passes in the final gate.
+- Updated `test_long_repertoire_name_keeps_viewer_and_editor_inside_minimum_window`, `test_full_screen_repertoire_windows_follow_the_main_window_size`, and `test_viewer_keeps_a_long_line_inside_the_minimum_window` to compare with the visible virtual canvas. The first gate exposed the superseded physical-size expectations (488 passed, 3 failed); final gate: 491 passed, 0 failed, exit 0. Six live-Lc0 tests and one graphical pixel check were skipped.
+- Acceptance: pending | Bruno to judge the Home/Game captures and manually compare a 1280?720 window with fullscreen 1080p or 1440p; the repertoire fix awaits stage 3 review.
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\ui033-reopen-final.json
 
 #### Resolution (2026-11-01)
 
