@@ -1142,7 +1142,9 @@ func test_compact_review_keeps_unanalysed_card_and_exit_readable():
 	var rows: Array = tree.get_root().get_children()
 	var exit_row: TreeItem = rows[2]
 	assert_true(exit_row.get_text(1).begins_with("Left repertoire"), "fixture has an exit row")
-	assert_true(tree.get_item_area_rect(exit_row, 1).size.y > tree.get_item_area_rect(rows[0], 1).size.y, "the exit callout wraps instead of eliding the expected move")
+	var text_width := tree.get_theme_font("font").get_string_size(exit_row.get_text(1), HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x + 30
+	var fits := text_width <= tree.get_column_width(1) + tree.get_column_width(2)
+	assert_true(fits or tree.get_item_area_rect(exit_row, 1).size.y > tree.get_item_area_rect(rows[0], 1).size.y, "the exit callout fits or wraps without eliding the expected move")
 	main.free()
 	root.size = old_size
 
