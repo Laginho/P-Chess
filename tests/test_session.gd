@@ -511,6 +511,49 @@ func test_game_board_centres_and_panel_keeps_its_floor():
 	main.free()
 
 
+# Bruno's QA follow-up: Home, Searching and Game draw the board at the window's horizontal centre,
+# through the project's stretch, and Searching does not jump aside while the game loads.
+func test_board_stays_centred_on_home_searching_and_game():
+	var tree := Engine.get_main_loop()
+	var before: Vector2i = tree.root.size
+	var main = await _session(ManualWaits.new(), false)
+	for window in [Vector2i(1280, 720), Vector2i(1920, 1080), Vector2i(2560, 1440), Vector2i(3440, 1440)]:
+		tree.root.size = window
+		for i in 4:
+			await tree.process_frame
+		var canvas: Vector2 = main.get_viewport_rect().size
+		var home: Rect2 = main.get_node("Home/Center/Board").get_global_rect()
+		main.searching.present(SETTINGS)
+		for i in 2:
+			await tree.process_frame
+		var searching: Rect2 = main.searching.get_node("Board").get_global_rect()
+		main.searching.hide()
+		await main._start(SETTINGS.duplicate())
+		for i in 4:
+			await tree.process_frame
+		var game: Rect2 = main.board_view.get_global_rect()
+		for item in [["Home", home], ["Searching", searching], ["Game", game]]:
+			assert_true(absf(item[1].get_center().x - canvas.x / 2) <= 1.0, "%s board centred at %s (centre %.1f, canvas %.1f)" % [item[0], window, item[1].get_center().x, canvas.x])
+		assert_true(searching.position.distance_to(home.position) <= 1.0, "Searching board stays where Home drew it at %s" % window)
+		main._show_home()
+	# Below the panel's floor all three screens slide the board left by the same amount.
+	tree.root.size = Vector2i(800, 600)
+	for i in 4:
+		await tree.process_frame
+	var home_low: Rect2 = main.get_node("Home/Center/Board").get_global_rect()
+	main.searching.present(SETTINGS)
+	await tree.process_frame
+	var searching_low: Rect2 = main.searching.get_node("Board").get_global_rect()
+	main.searching.hide()
+	await main._start(SETTINGS.duplicate())
+	for i in 4:
+		await tree.process_frame
+	var game_low: Rect2 = main.board_view.get_global_rect()
+	assert_true(searching_low.position.distance_to(home_low.position) <= 1.0 and absf(game_low.position.x - home_low.position.x) <= 1.0, "boards agree below the floor: %s %s %s" % [home_low, searching_low, game_low])
+	main.free()
+	tree.root.size = before
+
+
 func test_resign_confirmation_fits_without_moving_panel_controls():
 	for window_size in [Vector2(800, 600), Vector2(1280, 800)]:
 		var main = await _session(ManualWaits.new())
