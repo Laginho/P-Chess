@@ -1,5 +1,5 @@
 # UI-036: Queued premoves highlight their from and to squares
-Stage: to-implement
+Stage: to-review
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -34,3 +34,9 @@ As on Chess.com, every queued premove tints its from and to squares in a premove
 ## Comments
 
 - 2026-11-01 Written from Bruno's QA of v0.0.2 (item 4).
+- Red: focused premove tests reported 24 passed, 1 failed before the highlight set existed. Green: 25 passed, 0 failed.
+- Gate: 490 passed, 0 failed; graphical pixel check and live Lc0 tests skipped in the headless environment without Lc0.
+
+Acceptance: pending | Capture two queued premoves and compare with Chess.com; verify a 1+0 game while Maia thinks, as specified in Verification above.
+Disclosure: pending | integration | UI-036 Verification and acceptance criterion 4 require the visual comparison and manual game.
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\p-chess-ui036-gate.json

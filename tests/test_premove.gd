@@ -70,6 +70,38 @@ func _drag(board, from: String, to: String, alt := false) -> void:
 	_mouse(board, false, to, MOUSE_BUTTON_LEFT, alt)
 
 
+func test_premove_highlights_follow_the_queue():
+	var main = await _session(FakeTime.new())
+	var board = main.board_view
+	if not board.has_method("premove_highlighted_squares"):
+		assert_true(false, "the board exposes the squares it highlights")
+		main.free()
+		return
+	assert_eq(board.premove_highlighted_squares(), PackedStringArray())
+	board.play("e2e4")
+	for pair in [["d2", "d4"], ["a2", "a3"], ["g1", "f3"]]:
+		_drag(board, pair[0], pair[1])
+	assert_eq(board.premove_highlighted_squares(), PackedStringArray(["d2", "d4", "a2", "a3", "g1", "f3"]))
+	main._on_maia_move("e7e5")
+	assert_eq(board.premove_highlighted_squares(), PackedStringArray(["a2", "a3", "g1", "f3"]), "played move disappears")
+	_mouse(board, true, "e4", MOUSE_BUTTON_RIGHT)
+	assert_eq(board.premove_highlighted_squares(), PackedStringArray(), "right click clears highlights")
+	_drag(board, "d4", "d5")
+	main._on_maia_move("e5d4")
+	assert_eq(board.premove_highlighted_squares(), PackedStringArray(), "illegal move is dropped")
+	main.free()
+
+	main = await _session(FakeTime.new(), "b")
+	board = main.board_view
+	board.premove_style = "Lichess"
+	assert_true(board.flipped)
+	_drag(board, "g8", "f6")
+	assert_eq(board.premove_highlighted_squares(), PackedStringArray(["g8", "f6"]))
+	_drag(board, "b8", "c6")
+	assert_eq(board.premove_highlighted_squares(), PackedStringArray(["b8", "c6"]), "replacement removes old highlights")
+	main.free()
+
+
 func test_main_queues_human_moves_and_executes_one_per_maia_reply():
 	var time := FakeTime.new()
 	var main = await _session(time)
