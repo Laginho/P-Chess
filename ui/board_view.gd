@@ -268,6 +268,9 @@ func _draw_piece(piece: String, at: Vector2, cell: Vector2, opacity := 1.0) -> v
 
 # The promotion overlay consumes GUI events, so catch its right click before GUI dispatch.
 func _input(event: InputEvent) -> void:
+	if _selected and event is InputEventMouseButton and event.pressed \
+			and event.button_index == MOUSE_BUTTON_LEFT and not get_global_rect().has_point(event.position):
+		_end_snap_back()
 	if _picker.visible and event is InputEventMouseButton and event.pressed \
 			and event.button_index == MOUSE_BUTTON_RIGHT and get_global_rect().has_point(event.position):
 		cancel_premoves()
