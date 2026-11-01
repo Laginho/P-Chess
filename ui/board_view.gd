@@ -12,6 +12,8 @@ const PremoveQueue = preload("res://ui/premove_queue.gd")
 const SNAP_BACK_SECONDS := 0.15
 const LAST_MOVE_LIGHT := Color("#cdd26a")
 const LAST_MOVE_DARK := Color("#aaa23a")
+const PREMOVE_LIGHT := Color("#e28b80")
+const PREMOVE_DARK := Color("#b75e56")
 const CHECK := Color(1, 0, 0, 0.6)
 const TARGET := Color(0.08, 0.33, 0.12, 0.5)
 const DRAWING := Color(0.12, 0.65, 0.22, 0.75)
@@ -159,12 +161,22 @@ func play(move: String, premove := false) -> bool:
 	return true
 
 
+func premove_highlighted_squares() -> PackedStringArray:
+	var squares := PackedStringArray()
+	for move in premoves.moves:
+		for square in [move.substr(0, 2), move.substr(2, 2)]:
+			if square not in squares:
+				squares.append(square)
+	return squares
+
+
 func _draw() -> void:
 	var side := _side()
 	if side < 40:
 		return
 	var cell := Vector2.ONE * side / 8
 	var last: String = game.moves[-1] if game and game.moves else ""
+	var premove_squares := premove_highlighted_squares()
 	var checked := ""
 	var position = game.board if game else null
 	if game and not premoves.moves.is_empty():
@@ -182,6 +194,8 @@ func _draw() -> void:
 			draw_rect(Rect2(at, cell), _board_style.light if _is_light(square) else _board_style.dark)
 		if last and square in [last.substr(0, 2), last.substr(2, 2)]:
 			draw_rect(Rect2(at, cell), LAST_MOVE_LIGHT if _is_light(square) else LAST_MOVE_DARK)
+		if square in premove_squares:
+			draw_rect(Rect2(at, cell), PREMOVE_LIGHT if _is_light(square) else PREMOVE_DARK)
 		var piece: String = position.piece_at(square) if position else ""
 		# A Lichess replacement is picked from the live position, so keep its source visible.
 		if game and premoves.style == "Lichess" and piece == "":
