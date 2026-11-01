@@ -122,6 +122,27 @@ func test_click_outside_cancels_selection_and_reaches_button():
 	viewport.free()
 
 
+func test_clicking_another_friendly_piece_selects_it_for_a_move_or_drag():
+	for drag in [false, true]:
+		var board = _board("4k3/8/8/8/8/8/8/1NB1K3 w - - 0 1")
+		board.click_click = true
+		_click(board, "b1")
+		_mouse(board, true, "c1")
+		if drag:
+			var motion := InputEventMouseMotion.new()
+			motion.position = Vector2(350, 650)
+			motion.button_mask = MOUSE_BUTTON_MASK_LEFT
+			board._gui_input(motion)
+			_mouse(board, false, "d2")
+		else:
+			_mouse(board, false, "c1")
+			assert_eq(board._selected, "c1")
+			assert_true("c1d2" in board._held_moves, "bishop targets are shown")
+			_click(board, "d2")
+		assert_eq(board.game.moves, PackedStringArray(["c1d2"]))
+		board.free()
+
+
 func test_clicking_elsewhere_deselects_including_off_board_and_same_square():
 	for elsewhere in ["e5", "d2", "e7", "e2", ""]:
 		var board = _board()
