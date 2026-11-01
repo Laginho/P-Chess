@@ -128,6 +128,8 @@ func _ready() -> void:
 		$Margin/Content/ProgressTitle.visible = $Margin/Content/Progress.visible
 		$Margin/Content/ProgressNote.visible = $Margin/Content/Progress.visible
 		_layout_review())
+	# An error can appear after layout settles: place it when it shows.
+	$Margin/Content/AnalysisError.visibility_changed.connect(_layout_review)
 	_graph.ply_selected.connect(_show_ply)
 	_board_view.resized.connect(_update_player_labels)
 	_result.resized.connect(_layout_review)

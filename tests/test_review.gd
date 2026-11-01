@@ -1166,3 +1166,25 @@ func test_compact_analysis_progress_keeps_title_and_count_apart():
 	assert_true(count.global_position.y >= title.global_position.y + title.size.y or count_start >= title_end + 8, "the move count does not run into the title")
 	main.free()
 	root.size = old_size
+
+
+func test_late_analysis_error_is_laid_out_in_the_card():
+	var root = Engine.get_main_loop().root
+	var old_size: Vector2i = root.size
+	for window_size in [Vector2i(1280, 800), Vector2i(800, 600)]:
+		root.size = window_size
+		var main = await _session(FakeTime.new())
+		var game = Game.new()
+		game.play("e2e4")
+		main.review.present(game, [180000], SETTINGS, "")
+		main.review.get_node("Margin/Content/Progress").show()
+		for i in 3:
+			await Engine.get_main_loop().process_frame
+		main.review._analysis_error("Stockfish stopped")
+		await Engine.get_main_loop().process_frame
+		var error: Label = main.review.get_node("Margin/Content/AnalysisError")
+		var side: Control = main.review.get_node("Margin/Content/ReviewBody/Side")
+		assert_true(error.visible and absf(error.size.x - side.size.x) < 1, "the error spans the side column at %s" % window_size)
+		assert_true(absf(error.global_position.x - side.global_position.x) < 1, "the error starts at the column's edge at %s" % window_size)
+		main.free()
+	root.size = old_size
