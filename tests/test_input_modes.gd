@@ -88,6 +88,41 @@ func test_right_click_cancels_selection_without_drawing():
 		board.free()
 
 
+func test_right_click_on_resize_corner_cancels_selection():
+	for premove in [false, true]:
+		var board = _board(Game.START if not premove else "4k3/8/8/8/8/8/4P3/4K3 b - - 0 1")
+		var viewport := SubViewport.new()
+		viewport.size = Vector2i(500, 500)
+		Engine.get_main_loop().root.add_child(viewport)
+		board.reparent(viewport)
+		board.position = Vector2(20, 20)
+		board.size = Vector2(400, 400)
+		var grip = load("res://ui/resize_grip.gd").new()
+		grip.size = Vector2(20, 20)
+		board.add_child(grip)
+		board.human_side = "w"
+		board.click_click = true
+		await Engine.get_main_loop().process_frame
+		var event := InputEventMouseButton.new()
+		event.button_index = MOUSE_BUTTON_LEFT
+		event.position = Vector2(245, 345) # e2 on the offset board
+		event.pressed = true
+		viewport.push_input(event, true)
+		event.pressed = false
+		viewport.push_input(event, true)
+		assert_eq(board._selected, "e2", "first click selects")
+		event.position = Vector2(418, 418)
+		assert_true(grip.get_global_rect().has_point(event.position), "click reaches the real resize grip")
+		event.button_index = MOUSE_BUTTON_RIGHT
+		event.pressed = true
+		viewport.push_input(event, true)
+		event.pressed = false
+		viewport.push_input(event, true)
+		assert_eq(board._selected, "", "corner right click cancels selection")
+		assert_eq(board.drawings, [], "cancellation does not draw")
+		viewport.free()
+
+
 func test_click_outside_cancels_selection_and_reaches_button():
 	var board = _board()
 	var viewport := SubViewport.new()

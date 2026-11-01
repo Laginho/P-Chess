@@ -1,5 +1,5 @@
 # UI-037: Click-click's second click: right cancels, outside cancels, own piece reselects
-Stage: to-implement
+Stage: implementing
 Status: ready-for-agent
 Blocked by: UI-036
 Review: agent
