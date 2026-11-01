@@ -1,5 +1,5 @@
 # UI-037: Click-click's second click: right cancels, outside cancels, own piece reselects
-Stage: implementing
+Stage: to-review
 Status: ready-for-agent
 Blocked by: UI-036
 Review: agent
@@ -46,7 +46,7 @@ Bruno's QA of v0.0.2 (2026-11-01), items 5–7. With a piece selected by click-c
 
 Acceptance: pending | Manual 3+2 click-click game on the player's turn and while Maia thinks, as specified in Verification.
 Disclosure: pending | integration | UI-037 Verification requires the manual 3+2 game before acceptance.
-Gate evidence: C:\Users\bruno\AppData\Local\Temp\p-chess-ui037-gate.json
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\p-chess-ui037-corner-gate.json
 
 #### Resolution (2026-11-01)
 
@@ -63,4 +63,10 @@ Verdict: Reopen — criterion 1 fails on the board's resize corner.
 - Gate: receipt command, commit, log SHA256, exit marker and production equality validated with `Assert-GateEvidence`: **494 passed, 0 failed**, tested commit `97d65b26fea01672269d2f6bde1a5af1cca8eccc`. Reused without another full gate run because code is unchanged. Headless gate skips graphical last-move pixels and six live-engine cases; the separate ticket probes above do not replace those whole-suite cases.
 - Limits: automated live pointer verification and reviewer capture inspection are not human hands-on play. Whole-suite graphical execution, other sizes/themes, unrelated live-engine cases and release acceptance were not assessed. The pending acceptance/disclosure above remains open; fix and reverify criterion 1 before integration. No merge, ledger entry, push or PR.
 
-Disclosure: pending | integration | [Stage-3 corner failure](C:/Users/bruno/AppData/Local/Temp/p-chess-ui037-review/review.log): criterion 1 remains unresolved on this reopened ticket; the resize-corner right click must cancel selection before integration.
+- The stage-3 corner failure above was the reason for reopening; its fix is pending review.
+
+#### Reopen handoff (2026-11-01)
+
+- A routed regression using the real resize-grip control reproduced the failure on the player's turn and during premove: **20 passed, 1 failed** before the fix, **21 passed, 0 failed** after. Logs: `C:\Users\bruno\AppData\Local\Temp\p-chess-ui037-corner-red.log` and `C:\Users\bruno\AppData\Local\Temp\p-chess-ui037-corner-green.log`.
+- The board now consumes a right press over a selection before a child control can receive it, preserving premove cancellation and ordinary drawing without a selection. Gate on commit `0aaf54614c03d358455cc05ddb3c302d5ed619ec`: **495 passed, 0 failed**, exit 0; graphical pixels and six live-Lc0 tests skipped in this headless run.
+- The manual 3+2 acceptance and its integration disclosure above remain pending.
