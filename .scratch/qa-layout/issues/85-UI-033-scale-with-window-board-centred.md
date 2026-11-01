@@ -1,5 +1,5 @@
 # UI-033: The UI scales with the window; board centred on Home and Game
-Stage: to-review
+Stage: done
 Status: ready-for-agent
 Blocked by: none
 Review: human
@@ -86,3 +86,28 @@ Verdict: Reopen — P1 regression: global stretch clips the existing repertoire 
 Acceptance: pending | Bruno's capture judgement and real window/fullscreen comparison remain pending; the repertoire regression also prevents integration.
 Disclosure: pending | integration | UI-033 P1 above; restore visible repertoire editor actions before lane integration.
 Disclosure: pending | release | Bruno to judge the existing Home/Game captures and manually compare a 1280x720 window with fullscreen 1080p or 1440p; no aesthetic acceptance is inferred from the green gate.
+
+#### Resolution (2026-11-01, re-review)
+
+Verdict: Approve
+
+- Re-reviewed `73cc16b...d44c06b` against the prior P1 and criterion 7, with the complete `536c74e...d44c06b` diff for context. Independent Standards and Spec reviewers found 0 findings each. The previous P1 is resolved; there are no unresolved integration findings. No production behavior was authored during this review.
+- Standards: changes stay within the proxy-approved Primary files. Regression-test commit `0563347` precedes production-only fix `408f61a`; `0d8b2fc` adapts the superseded physical-size assertions while retaining containment checks. The supplied red log fails the intended popup-size and Save/Cancel assertions (46 passed, 1 failed, exit 1).
+- Spec: both embedded popup `_fit()` methods now use the root's visible virtual canvas on open and resize. The existing `popup_centered(root.size)` native path and embedding guard remain intact. Examined the Setup -> Repertoires -> editor callers, resize connections, reopen lifecycle, footer containment, and the opening picker's capped size; no scope creep or new regression found.
+- Reviewed the existing `Proxy decided (opus-5.5 xhigh)` decision and its receipt `C:/Users/bruno/AppData/Local/Temp/sweatshop-proxy/20261101-143745-UI-033-f49cda.json`. It authorizes the two repertoire popup files and their tests, preserving native sizing. The opening picker remains unchanged; the independent probe confirms its bounds fit the virtual canvas.
+
+**Numbered criteria:**
+
+1. Pass for implementation: retained the earlier layout/capture evidence at 1280x720, 1920x1080 and 2560x1440; the re-review changes only repertoire popup sizing and its tests. Bruno's judgement of the supplied Home/Game captures remains pending.
+2. Pass: the previously verified board centring and outer-margin layout are unchanged.
+3. Pass: the panel-floor and armed-Resign containment evidence are unchanged.
+4. Pass: Review's compact layout and containment evidence are unchanged; its tests remain green in the validated gate.
+5. Pass: the earlier routed physical-to-virtual grip probe remains applicable; no grip or board-layout code changed in this pass.
+6. Pass: validated the existing receipt against `d44c06b` and again after lane integration, including tested-code equality, SHA256 log hash and exit marker: 491 passed, 0 failed, exit 0. Reused the run because production did not change. Six live-Lc0 checks and one graphical pixel check were skipped.
+7. Pass: an independent probe opened both embedded screens at 1920x1080 (1422x800 canvas), resized them to 800x600 (1280x960), and reopened them at 2560x1440 (1422x800); both stayed at (0,0), filled the canvas and contained Save/Cancel. The native `_fit()` guard preserved the popup sizes. Probe: `C:/Users/bruno/AppData/Local/Temp/ui033-rereview-spec/result.log`, exit 0. New graphical editor captures at 1920x1080 and 800x600 were inspected: Save/Cancel are visible in both. Captures: `C:/Users/bruno/AppData/Local/Temp/ui033-rereview-editor-80640d4c-4caa-4928-8e0a-199ee7b598c1/editor-1080.png` and `editor-600.png`, both capture exits 0.
+
+Rebase onto the lane was already up to date. Integrated without squashing into `sweatshop/qa-layout/2026-11-01-1407` as `27fa11c`; no PR or push is part of this stage. Stage and ledger close together in this commit.
+
+Acceptance: pending | Bruno to judge the Home/Game captures in `C:/Users/bruno/AppData/Local/Temp/pchess-ui033/` and compare a 1280x720 window with physical fullscreen at 1080p or 1440p. Native desktop-window sizing and live Lc0 play were not exercised in this review.
+Disclosure: decision | none | The proxy-approved repertoire sizing correction resolves the prior integration P1; independent probe and graphical evidence are recorded above.
+Disclosure: pending | release | Bruno's Home/Game visual judgement and physical window/fullscreen comparison remain required; implementation approval and lane integration do not establish that acceptance.
