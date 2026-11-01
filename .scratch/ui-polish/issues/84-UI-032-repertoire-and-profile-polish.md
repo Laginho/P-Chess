@@ -1,5 +1,5 @@
 # UI-032: Editor's new moves in green, short line names, dd/mm chart dates
-Stage: implementing
+Stage: to-review
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -35,3 +35,8 @@ Follow-up of the UI redo (`.scratch/ui-redo/spec.md`): three taste calls the PR 
 ## Comments
 
 - 2026-10-31 Opened by the parent session after PR #34 merged, from the fidelity pass's "for Bruno" list. The other calls on that list (current-move highlight shape, accuracy with "%", eval with a sign, panel buttons disabled after the game) were accepted as they are.
+- 2026-10-31 Implemented the three changes; updated `test_viewer_line_names_drop_the_shared_opening_family` for the new display contract. Focused red/green checks covered new move colour, line names, and both PGN and filename dates. Full gate: 489 passed, 0 failed.
+- Visual comparison with `docs/design/v0.1.0/png/Repertoire.png`, `RepertoireEditor.png`, and `Profile.png`: captures are `C:/Users/bruno/AppData/Local/Temp/pchess-ui032-captures-20261031/{Repertoire,RepertoireEditor,Profile}-{1280x800,800x600}.png`. At 800x600 Profile scrolls and the chart is below the initial viewport; the editor capture shows the new move selected, so its unselected green is covered by the focused test rather than that capture.
+- Acceptance: pending | Inspect the scrolled Profile chart at 800x600 and the unselected new move visually; the captures above do not show those states.
+
+Gate evidence: C:/Users/bruno/AppData/Local/Temp/ui032-gate.json
