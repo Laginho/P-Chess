@@ -290,7 +290,7 @@ func test_left_press_clears_all_drawings_and_cancels_an_unfinished_one():
 	_mouse(board, true, "e4")
 	assert_eq(board.drawings, [], "drawings clear on press, before release")
 	_mouse(board, false, "e4")
-	assert_eq(board.game.moves, PackedStringArray(["e2e4"]), "drawing preserves click selection")
+	assert_eq(board.game.moves, PackedStringArray(), "right click cancelled the selection")
 	_mouse(board, true, "a1", MOUSE_BUTTON_RIGHT)
 	_mouse(board, true, "d4")
 	_mouse(board, false, "d4")
