@@ -1,5 +1,5 @@
 # UI-037: Click-click's second click: right cancels, outside cancels, own piece reselects
-Stage: to-review
+Stage: done
 Status: ready-for-agent
 Blocked by: UI-036
 Review: agent
@@ -44,8 +44,8 @@ Bruno's QA of v0.0.2 (2026-11-01), items 5–7. With a piece selected by click-c
 - Updated `test_left_press_clears_all_drawings_and_cancels_an_unfinished_one`: its old selection-preservation assertion contradicted criterion 1; the updated assertion fails against the original production code. The outside-click fixture was corrected to use a sized SubViewport because the headless root is 64x64.
 - Gate: 494 passed, 0 failed, exit 0. Graphical last-move pixels and live Lc0 tests skipped in the headless environment without Lc0.
 
-Acceptance: pending | Manual 3+2 click-click game on the player's turn and while Maia thinks, as specified in Verification.
-Disclosure: pending | integration | UI-037 Verification requires the manual 3+2 game before acceptance.
+Acceptance: passed | [Graphical/live log](C:/Users/bruno/AppData/Local/Temp/p-chess-ui037-rereview/review.log): stage 3 re-review verified the 3+2 click-click game in graphical Main against real Lc0/Maia 1500, including right click, outside click and own-piece reselection on the player's turn and while Maia thought, plus the resize corner; evidence and limits in the final Resolution below.
+Disclosure: decision | none | [Proxy receipt](C:/Users/bruno/AppData/Local/Temp/sweatshop-proxy/20261101-144849-UI-037-170228.json): the reviewer's live graphical run satisfies the written Manual Verification (Review: agent, behavioural check, UI-036 precedent), resolving the earlier integration item. Pointer input used Viewport.push_input; no human hands-on play or OS mouse events were assessed.
 Gate evidence: C:\Users\bruno\AppData\Local\Temp\p-chess-ui037-corner-gate.json
 
 #### Resolution (2026-11-01)
@@ -70,3 +70,20 @@ Verdict: Reopen — criterion 1 fails on the board's resize corner.
 - A routed regression using the real resize-grip control reproduced the failure on the player's turn and during premove: **20 passed, 1 failed** before the fix, **21 passed, 0 failed** after. Logs: `C:\Users\bruno\AppData\Local\Temp\p-chess-ui037-corner-red.log` and `C:\Users\bruno\AppData\Local\Temp\p-chess-ui037-corner-green.log`.
 - The board now consumes a right press over a selection before a child control can receive it, preserving premove cancellation and ordinary drawing without a selection. Gate on commit `0aaf54614c03d358455cc05ddb3c302d5ed619ec`: **495 passed, 0 failed**, exit 0; graphical pixels and six live-Lc0 tests skipped in this headless run.
 - The manual 3+2 acceptance and its integration disclosure above remain pending.
+
+- Proxy decided (opus-5.5 xhigh): Satisfied. The reviewer's live graphical run meets UI-037's written `Manual:` verification, so Acceptance can be `passed` and the integration disclosure is resolved, following UI-036. Owner hands-on play is not required — the ticket is `Review: agent` and its check is about behaviour, not feel, and every case passed against real Main, a 3+2 clock and Maia. (receipt C:\Users\bruno\AppData\Local\Temp\sweatshop-proxy\20261101-144849-UI-037-170228.json)
+
+#### Resolution (2026-11-01)
+
+Verdict: Approve
+
+- Re-reviewed every file in `git diff 02bf604...85468d7`: this ticket, `tests/test_input_modes.gd`, and `ui/board_view.gd` (3/3, 100% coverage, none skipped). OCR excluded all three as `unsupported_ext`; all were reviewed directly under its resolved default rules. The first Resolution above records coverage of the original four-file implementation and its connected paths. No production or test changes authored during re-review.
+- Standards: 0 documented-standard violations and 0 actionable heuristic findings from the independent Standards agent. The new commits retain the test-first split: `b8017c6` test plus implementing metadata, `0aaf546` production only, `85468d7` handoff metadata only. The supplied red log shows 20 passed, 1 failed; supplied green shows 21 passed, 0 failed. These logs were inspected, not recreated by mutating production.
+- Spec: 0 new findings from the independent Spec agent. Prior P3 resize-corner finding: resolved. `_input` now cancels and consumes a selection's right press before the real child resize control receives GUI dispatch. Checked queue clearing, interaction cancellation, promotion-picker dispatch and ordinary drawing; numbered criteria are unchanged.
+- Criterion 1: ✅ independently reran `test_input_modes.gd`, including the routed real-grip regression on the player's turn and during premove: **21 passed, 0 failed**, exit 0. The graphical real-Main corner probe also clears the selection and draws nothing. Criteria 2–5: ✅ graphical/live checks reconfirm outside clicks activate real panel buttons, friendly-piece reselection and targets, geometric own-piece recapture, ordinary right drawing and the green gate. The routed matrix passed both premove styles and both orientations.
+- Graphical/live verification: real Main with OpenGL at 1000×800, installed Lc0/Maia 1500, actual 3+2 clocks, click-click enabled and external isolated APPDATA. All pointer events used `Viewport.push_input`; no fake engine, injected reply or changed think time. Live moves were `e2e4 e7e5 g1f3`; the queued knight played naturally after Maia's reply (policy latency 70.247 ms). **0 review failures**, exit 0. Reviewer inspected the own-turn reselection, thinking-time premove and corrected resize-corner captures.
+- Evidence: [focused input log](C:/Users/bruno/AppData/Local/Temp/p-chess-ui037-rereview-input.log), [graphical/live harness](C:/Users/bruno/AppData/Local/Temp/p-chess-ui037-rereview/review.gd), [graphical/live log](C:/Users/bruno/AppData/Local/Temp/p-chess-ui037-rereview/review.log), [reselection capture](C:/Users/bruno/AppData/Local/Temp/p-chess-ui037-rereview/own-turn-reselected.png), [thinking-time capture](C:/Users/bruno/AppData/Local/Temp/p-chess-ui037-rereview/maia-thinking-queued.png), [corner capture](C:/Users/bruno/AppData/Local/Temp/p-chess-ui037-rereview/resize-corner-after-right-click.png). Temporary focused directory and engine junctions removed.
+- Gate: `Assert-GateEvidence` validated command, tested commit, log SHA256, exit marker and production equality before and after session merge: **495 passed, 0 failed**, exit 0, tested commit `0aaf54614c03d358455cc05ddb3c302d5ed619ec`. Rebase was unchanged; reused the existing receipt without another full gate run. The headless gate skips graphical last-move pixels and six live-engine cases; the separate ticket checks above do not replace those whole-suite cases.
+- The recorded `Proxy decided (opus-5.5 xhigh)` decision resolves the pending acceptance/integration item: these observable behavioural checks satisfy the ticket's Manual Verification, consistently with UI-036. The proxy relied on the run log and this reviewer's capture inspection; it did not inspect the PNGs itself. The receipt preserves its full answer. No remaining integration blocker within UI-037.
+- Limits: automated live pointer input and reviewer inspection of three captures, not human hands-on play. OS-level mouse events, small mouse movement between press and release on the second click (existing UI-006 click/drag threshold), other sizes/themes, the full graphical suite and release QA were not assessed.
+- Integrated by merge commit `d51a64abdc8141ef7759e283c3b0e8ab74c5fe0d` into `sweatshop/qa-input/2026-11-01-1407`; no push or PR (session driver owns publication).
