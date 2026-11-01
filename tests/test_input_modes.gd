@@ -72,6 +72,22 @@ func test_click_click_selects_without_moving_then_plays_a_legal_target():
 	board.free()
 
 
+func test_right_click_cancels_selection_without_drawing():
+	for premove in [false, true]:
+		var board = _board(Game.START if not premove else "4k3/8/8/8/8/8/4P3/4K3 b - - 0 1")
+		board.human_side = "w"
+		board.click_click = true
+		_click(board, "e2")
+		_mouse(board, true, "e4", MOUSE_BUTTON_RIGHT)
+		_mouse(board, false, "e5", MOUSE_BUTTON_RIGHT)
+		assert_eq(board._selected, "", "right click cancels selection")
+		assert_eq(board.drawings, [], "cancellation does not draw")
+		_mouse(board, true, "e4", MOUSE_BUTTON_RIGHT)
+		_mouse(board, false, "e5", MOUSE_BUTTON_RIGHT)
+		assert_eq(board.drawings, [PackedStringArray(["e4", "e5"])], "next right drag draws")
+		board.free()
+
+
 func test_clicking_elsewhere_deselects_including_off_board_and_same_square():
 	for elsewhere in ["e5", "d2", "e7", "e2", ""]:
 		var board = _board()
