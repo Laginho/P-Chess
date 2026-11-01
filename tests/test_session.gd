@@ -188,7 +188,7 @@ func test_game_over_panel_actions():
 		var panel = main.board_view.get_node_or_null("GameOver")
 		assert_true(panel != null and panel.visible, "game-over panel appears")
 		if panel:
-			assert_eq(panel.get_node("Panel/Content/Headline").text, "Black won")
+			assert_eq(panel.get_node("Panel/Content/Headline").text, "You lost")
 			assert_eq(panel.get_node("Panel/Content/Reason").text, "by resignation")
 			if action == "Escape":
 				var event := InputEventKey.new()
@@ -207,12 +207,64 @@ func test_game_over_panel_actions():
 					assert_true(main.get_node("Home").visible, "New game opens Home")
 				_:
 					assert_true(not panel.visible, "the final board remains visible")
-					var review_button = main.get_node_or_null("Layout/Side/ReviewButton")
-					assert_true(review_button != null and review_button.visible, "side Review is available")
-					if review_button:
-						review_button.pressed.emit()
-						assert_true(main.review.visible, "side Review opens review")
+					assert_true(main.get_node_or_null("Layout/Side/ReviewButton") == null, "side Review is removed")
 		main.free()
+
+
+func test_game_over_copies_the_same_pgn_as_review():
+	var main = await _session(ManualWaits.new())
+	assert_true(main.board_view.play("e2e4"))
+	main.board_view.game.resign("b")
+	main._show_result()
+	var panel = main.board_view.get_node("GameOver")
+	assert_eq(panel.get_node("Panel/Content/Review").text, "Review")
+	var copied := [""]
+	main.review.copy_text = func(text): copied[0] = text
+	var copy = panel.get_node_or_null("Panel/Content/CopyPgn")
+	assert_true(copy != null, "Copy PGN exists on the card")
+	if copy:
+		copy.pressed.emit()
+		assert_true('[Result "1-0"]' in copied[0] and "1. e4" in copied[0], "copies the finished game")
+		var from_card: String = copied[0]
+		copied[0] = ""
+		main.review.get_node("Margin/Content/Actions/CopyPgn").pressed.emit()
+		assert_eq(copied[0], from_card, "card and review copy the same PGN")
+	main.free()
+
+
+func test_game_over_long_player_name_is_visibly_truncated():
+	var main = await _session(ManualWaits.new())
+	var player_name := "Alexandria Catherine Montgomery de Albuquerque"
+	main.preferences.set_value("player_name", player_name)
+	main.board_view.game.resign("b")
+	main._show_result()
+	var label: Label = main.board_view.get_node("GameOver/Panel/Content/HumanName")
+	assert_eq(label.text, player_name, "card retains the full name")
+	assert_eq(main.preferences.get_value("player_name"), player_name, "saved name stays intact")
+	assert_eq(label.text_overrun_behavior, TextServer.OVERRUN_TRIM_ELLIPSIS, "long names show an ellipsis")
+	main.free()
+
+
+func test_game_over_space_activates_the_focused_button():
+	var main = await _session(ManualWaits.new())
+	main.board_view.game.resign("b")
+	main._show_result()
+	var panel = main.board_view.get_node("GameOver")
+	var close = panel.get_node("Panel/Content/Close")
+	close.grab_focus()
+	assert_true(close.has_focus(), "Close receives keyboard focus")
+	var event := InputEventKey.new()
+	event.keycode = KEY_SPACE
+	event.pressed = true
+	main.get_viewport().push_input(event)
+	event = InputEventKey.new()
+	event.keycode = KEY_SPACE
+	event.pressed = false
+	main.get_viewport().push_input(event)
+	await Engine.get_main_loop().process_frame
+	assert_true(not panel.visible, "Space activates Close")
+	assert_true(not main._starting, "Space does not start a rematch")
+	main.free()
 
 
 func _resign_and_rematch(main) -> void:
@@ -387,12 +439,11 @@ func test_resign_button_shares_the_two_second_window_with_escape():
 			button.pressed.emit()
 		main._process(0)
 		assert_true(not main.board_view.game.is_over(), "first action arms")
-		assert_true(main.resign_hint.visible, "hint visible")
-		assert_eq(main.resign_hint.text, "Click again to resign")
+		assert_eq(button.text, "Click again to resign", "button shows confirmation")
 		time.now = 2100 if sequence == "expired_click" else 1900
 		if sequence == "expired_click":
 			main._process(0)
-			assert_true(not main.resign_hint.visible, "expired hint is hidden")
+			assert_eq(button.text, "Resign", "expired confirmation is hidden")
 		if sequence == "click_escape":
 			_key(main, KEY_ESCAPE)
 		else:
@@ -422,13 +473,13 @@ func test_settings_blocks_focused_resign_button_from_space():
 	await Engine.get_main_loop().process_frame
 	await Engine.get_main_loop().process_frame
 	var viewport = main.get_viewport()
-	for control in [main.resign_button, main.settings_screen.get_node("Open")]:
-		for down in [true, false]:
-			var mouse := InputEventMouseButton.new()
-			mouse.button_index = MOUSE_BUTTON_LEFT
-			mouse.pressed = down
-			mouse.position = control.get_global_rect().get_center()
-			viewport.push_input(mouse, true)
+	for down in [true, false]:
+		var mouse := InputEventMouseButton.new()
+		mouse.button_index = MOUSE_BUTTON_LEFT
+		mouse.pressed = down
+		mouse.position = main.resign_button.get_global_rect().get_center()
+		viewport.push_input(mouse, true)
+	_push_key(viewport, KEY_COMMA, true)
 	assert_true(main.resign_key.armed(), "click arms resignation")
 	assert_true(main.settings_screen.get_node("Panel").visible, "Settings opened")
 	for down in [true, false]:
@@ -448,7 +499,7 @@ func test_draw_offer_accepted_on_reply_without_playing_it():
 	if button == null:
 		main.free()
 		return
-	assert_eq(button.text, String.chr(0x00bd), "draw button label")
+	assert_eq(button.text, String.chr(0x00bd) + "  Offer draw", "draw button label")
 	assert_true(not button.disabled, "offer available during game")
 	assert_true(main.board_view.play("e2e4"))
 	button.pressed.emit()
@@ -537,7 +588,7 @@ func test_match_score_follows_players_and_resets():
 	var score = main.board_view.get_node_or_null("GameOver/Panel/Content/Score")
 	assert_true(score != null, "game-over score exists")
 	if score:
-		assert_eq(score.text, "You 1 – 0 Maia 1700")
+		assert_eq(score.text, "1 – 0")
 	_key(main, KEY_SPACE)
 	await _wait_start(main)
 	assert_true(white.visible and black.visible, "rematch shows boxes")
@@ -546,7 +597,7 @@ func test_match_score_follows_players_and_resets():
 	main.board_view.game.agree_draw()
 	main._show_result()
 	score = main.board_view.get_node("GameOver/Panel/Content/Score")
-	assert_eq(score.text, "You 1½ – ½ Maia 1700")
+	assert_eq(score.text, "1½ – ½")
 	assert_eq(black.text, "1½", "finished rematch updates human score")
 	assert_eq(white.text, "½", "finished rematch updates Maia score")
 	main.board_view.get_node("GameOver/Panel/Content/Close").pressed.emit()
@@ -713,15 +764,14 @@ func test_settings_shortcut_availability_and_mouse_close():
 	_push_key(viewport, KEY_COMMA, true)
 	assert_true(not panel.visible, "shortcut disabled in review")
 	main.review.hide()
-	for control in [screen.get_node("Open"), screen.get_node("Panel/Center/Box/Close")]:
-		for down in [true, false]:
-			var mouse := InputEventMouseButton.new()
-			mouse.button_index = MOUSE_BUTTON_LEFT
-			mouse.pressed = down
-			mouse.position = control.get_global_rect().get_center()
-			viewport.push_input(mouse, true)
-		if control == screen.get_node("Open"):
-			assert_true(panel.visible and viewport.gui_get_focus_owner() == screen.get_node("Panel/Center/Box/Form").get_child(1), "mouse open focuses first row")
+	_push_key(viewport, KEY_COMMA, true)
+	assert_true(panel.visible and viewport.gui_get_focus_owner() == screen.get_node("Panel/Center/Box/Form").get_child(1), "shortcut focuses first row")
+	for down in [true, false]:
+		var mouse := InputEventMouseButton.new()
+		mouse.button_index = MOUSE_BUTTON_LEFT
+		mouse.pressed = down
+		mouse.position = screen.get_node("Panel/Center/Box/Close").get_global_rect().get_center()
+		viewport.push_input(mouse, true)
 	assert_true(not panel.visible and viewport.gui_get_focus_owner() == null, "mouse Close releases focus")
 	_push_key(viewport, KEY_F)
 	assert_true(main.board_view.flipped, "F still flips after closing")
@@ -959,4 +1009,87 @@ func test_searching_engine_stop_during_catalog_closes_without_a_game():
 	await _wait_start(main)
 	assert_eq(main.clock, null, "finishing the catalog cannot start a failed game")
 	assert_eq(main.uci.requests.size(), 0)
+	main.free()
+
+
+func test_game_has_no_settings_button():
+	var main = await _session(ManualWaits.new())
+	assert_true(not main.settings_screen.get_node("Open").visible, "game has no Settings button")
+	main.free()
+
+
+func test_game_panel_identifies_players_and_actions():
+	var main = await _session(ManualWaits.new())
+	var side = main.get_node("Layout/Side")
+	assert_eq(side.get_child(0), main.black_clock.get_parent(), "Maia is at the top")
+	var maia_name = main.black_clock.get_parent().get_node_or_null("Name")
+	var player_name = main.white_clock.get_parent().get_node_or_null("Name")
+	assert_true(maia_name != null and player_name != null, "both player names exist")
+	if maia_name and player_name:
+		assert_eq(maia_name.text, "Maia")
+		assert_eq(player_name.text, "You")
+	assert_eq(main.draw_button.text, String.chr(189) + "  Offer draw")
+	assert_eq(main.resign_button.text, "Resign")
+	main.free()
+
+
+func test_game_over_result_shows_on_the_card_not_the_side_panel():
+	var main = await _session(ManualWaits.new())
+	main.board_view.game.resign(main.human)
+	main._show_result()
+	assert_true(main.history.error.is_empty())
+	assert_true(not main.result_label.visible, "the game-over card shows the result")
+	assert_true(not main.settings_screen.get_node("Open").visible, "game over has no Settings button")
+	main._set_focus(true)
+	main._set_focus(false)
+	assert_true(not main.result_label.visible, "leaving focus mode keeps it hidden")
+	main.free()
+
+
+func test_flip_keeps_player_details_hidden_in_focus_mode():
+	var main = await _session(ManualWaits.new())
+	main._set_focus(true)
+	main._set_flipped(not main.board_view.flipped)
+	for row in [main.white_clock.get_parent(), main.black_clock.get_parent()]:
+		assert_true(not row.get_node("Avatar").visible and not row.get_node("Initial").visible, "focus keeps avatars hidden after flip")
+	main.free()
+
+
+func test_new_moves_preserve_manual_scroll_and_follow_at_bottom():
+	var main = await _session(ManualWaits.new())
+	await _laid_out(main)
+	for i in 100:
+		main.move_list.add("e4" if i % 2 == 0 else "e5")
+	for i in 4:
+		await Engine.get_main_loop().process_frame
+	var scroll = main.move_list.get_v_scroll_bar()
+	assert_true(scroll.max_value > scroll.page, "the move list overflows")
+	scroll.value = 100
+	await Engine.get_main_loop().process_frame
+	main.move_list.add("Nf3")
+	for i in 4:
+		await Engine.get_main_loop().process_frame
+	assert_eq(scroll.value, 100.0, "new moves preserve the reading position")
+	scroll.value = scroll.max_value - scroll.page
+	await Engine.get_main_loop().process_frame
+	var old_bottom: float = scroll.max_value - scroll.page
+	main.move_list.add("Nc6")
+	main.move_list.add("d4")
+	for i in 4:
+		await Engine.get_main_loop().process_frame
+	assert_true(scroll.max_value - scroll.page > old_bottom, "the new row extends the list")
+	assert_eq(scroll.value, scroll.max_value - scroll.page, "new moves follow at the bottom")
+	main.free()
+
+
+func test_draw_notice_does_not_return_after_focus_rematch():
+	var main = await _session(ManualWaits.new())
+	main.draw_notice.text = "Maia declined"
+	main.draw_notice.show()
+	main.draw_notice_timer.start()
+	main._set_focus(true)
+	await _flag_and_rematch(main)
+	main._set_focus(false)
+	assert_true(not main.draw_notice.visible, "the previous game's notice stays hidden")
+	assert_true(main.draw_notice_timer.is_stopped(), "the previous notice timer is stopped")
 	main.free()
