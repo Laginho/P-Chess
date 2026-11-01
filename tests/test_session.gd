@@ -455,6 +455,28 @@ func test_resign_button_shares_the_two_second_window_with_escape():
 		main.free()
 
 
+func test_resign_confirmation_fits_without_moving_panel_controls():
+	for window_size in [Vector2(800, 600), Vector2(1280, 800)]:
+		var main = await _session(ManualWaits.new())
+		main.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+		main.size = window_size
+		await Engine.get_main_loop().process_frame
+		await Engine.get_main_loop().process_frame
+		var side = main.get_node("Layout/Side")
+		var draw_rect: Rect2 = main.draw_button.get_global_rect()
+		var side_rect: Rect2 = side.get_global_rect()
+		var resign_rect: Rect2 = main.resign_button.get_global_rect()
+		main.resign_button.pressed.emit()
+		main._process(0)
+		await Engine.get_main_loop().process_frame
+		await Engine.get_main_loop().process_frame
+		assert_eq(side.get_global_rect(), side_rect, "panel stays fixed at %s" % window_size)
+		assert_eq(main.draw_button.get_global_rect(), draw_rect, "draw button stays fixed at %s" % window_size)
+		assert_eq(main.resign_button.get_global_rect(), resign_rect, "resign button stays fixed at %s" % window_size)
+		assert_true(main.resign_button.get_minimum_size().x <= main.resign_button.size.x, "confirmation fits at %s" % window_size)
+		main.free()
+
+
 func test_resign_button_disabled_in_setup_and_after_engine_stops():
 	var main = await _session(ManualWaits.new())
 	var button = main.get_node_or_null("Layout/Side/Actions/ResignButton")
@@ -1014,7 +1036,7 @@ func test_searching_engine_stop_during_catalog_closes_without_a_game():
 
 func test_game_has_no_settings_button():
 	var main = await _session(ManualWaits.new())
-	assert_true(not main.settings_screen.get_node("Open").visible, "game has no Settings button")
+	assert_true(main.settings_screen.get_node_or_null("Open") == null, "game has no Settings button")
 	main.free()
 
 
@@ -1039,7 +1061,7 @@ func test_game_over_result_shows_on_the_card_not_the_side_panel():
 	main._show_result()
 	assert_true(main.history.error.is_empty())
 	assert_true(not main.result_label.visible, "the game-over card shows the result")
-	assert_true(not main.settings_screen.get_node("Open").visible, "game over has no Settings button")
+	assert_true(main.settings_screen.get_node_or_null("Open") == null, "game over has no Settings button")
 	main._set_focus(true)
 	main._set_focus(false)
 	assert_true(not main.result_label.visible, "leaving focus mode keeps it hidden")

@@ -10,7 +10,6 @@ func _ready() -> void:
 	$Card.draw.connect(_draw_card)
 	$Board.game = preload("res://core/game.gd").new()
 	$Spinner.draw.connect(func(): $Spinner.draw_arc(Vector2(48, 48), 40, _spin, _spin + PI * 1.25, 32, Color("7fa650"), 8, true))
-	visibility_changed.connect(_sync_settings_button)
 	resized.connect(_layout_searching)
 	_layout_searching()
 
@@ -87,13 +86,6 @@ func _draw_card() -> void:
 	var border := Color("#45423d")
 	card.draw_line(Vector2(1, 64), Vector2(card.size.x - 1, 64), border)
 	card.draw_line(Vector2(1, card.size.y - 64), Vector2(card.size.x - 1, card.size.y - 64), border)
-
-
-func _sync_settings_button() -> void:
-	var open = get_parent().get_node_or_null("Settings/Open")
-	if open:
-		var home = get_parent().get_node_or_null("Home")
-		open.visible = not visible and (home == null or not home.visible or not home.get_node("Center").visible)
 
 
 func _apply_board_theme(key: String, value) -> void:

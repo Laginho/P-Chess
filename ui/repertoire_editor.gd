@@ -80,6 +80,7 @@ func _played(_san: String) -> void:
 	var node := _node()
 	if not node.children.has(move):
 		node.children[move] = Repertoire._node(board.game.board.position_key())
+		node.children[move]["_new"] = true
 		changed = true
 	path.append(move)
 	_refresh()
@@ -134,7 +135,7 @@ func _populate(node: Dictionary, key: String, prefix: PackedStringArray, depth: 
 				san = "%d.%s" % [ply / 2 + 1, san]
 			elif first_in_row:
 				san = "%d...%s" % [ply / 2 + 1, san]
-			_add_move(line, key, moves.duplicate(), san)
+			_add_move(line, key, moves.duplicate(), san, current.children[next_move].get("_new", false))
 			first_in_row = false
 			current = current.children[next_move]
 			if current.children.size() != 1:
@@ -143,7 +144,7 @@ func _populate(node: Dictionary, key: String, prefix: PackedStringArray, depth: 
 		_populate(current, key, moves, depth + 1)
 
 
-func _add_move(line: HFlowContainer, key: String, moves: PackedStringArray, san: String) -> void:
+func _add_move(line: HFlowContainer, key: String, moves: PackedStringArray, san: String, added: bool) -> void:
 	var group := HBoxContainer.new()
 	line.add_child(group)
 	var button := Button.new()
@@ -160,6 +161,10 @@ func _add_move(line: HFlowContainer, key: String, moves: PackedStringArray, san:
 	group.add_child(button)
 	button.custom_minimum_size.y = 28
 	button.add_theme_font_override("font", get_theme_font("font", "SemiboldText"))
+	if added:
+		button.add_theme_color_override("font_color", Color("a6cf7a"))
+		button.add_theme_color_override("font_hover_color", Color("a6cf7a"))
+		button.add_theme_color_override("font_focus_color", Color("a6cf7a"))
 	var selected_style: StyleBoxFlat = button.get_theme_stylebox("normal", "PrimaryButton").duplicate()
 	selected_style.content_margin_left = 6
 	selected_style.content_margin_right = 6

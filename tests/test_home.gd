@@ -206,19 +206,27 @@ func test_missing_engine_message_does_not_overlap_navigation_at_minimum_window()
 	home.free()
 
 
-func test_profile_keeps_settings_available_after_opening_from_home():
+func test_profile_has_no_extra_settings_button_and_shortcut_opens_settings():
 	var main = MainScene.instantiate()
 	var folder := "user://test_home_profile_%d" % Time.get_ticks_usec()
 	main.history = load("res://core/history.gd").new(folder)
 	main.uci.free()
 	main.uci = Session.HeldBridge.new()
 	main.maia = main.MaiaPlayer.new(main.uci)
-	main.preferences = main.Settings.new("res://tests/fixtures/no_session_settings.cfg")
+	DirAccess.make_dir_recursive_absolute(folder)
+	main.preferences = main.Settings.new(folder.path_join("settings.cfg"))
+	main.preferences.set_value("player_name", "You")
 	Engine.get_main_loop().root.add_child(main)
 	await Engine.get_main_loop().process_frame
 	var home = main.get_node("Home")
 	home._show_profile()
-	assert_true(main.settings_screen.get_node("Open").visible, "Settings remains available in Profile")
+	assert_true(main.settings_screen.get_node_or_null("Open") == null, "Profile has no extra Settings button")
+	var viewport = main.get_viewport()
+	var panel = main.settings_screen.get_node("Panel")
+	Session.new()._push_key(viewport, KEY_COMMA, true)
+	assert_true(panel.visible, "Ctrl+, opens Settings in Profile")
+	Session.new()._push_key(viewport, KEY_COMMA, true)
+	assert_true(not panel.visible, "Ctrl+, closes Settings in Profile")
 	main.free()
 	Session.HistoryStorage.clean(folder)
 

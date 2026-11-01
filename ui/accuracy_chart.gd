@@ -3,6 +3,10 @@ extends Control
 var series: Array = []
 
 
+static func axis_date(date: String) -> String:
+	return date.substr(8, 2) + "/" + date.substr(5, 2) if date.length() >= 10 else date
+
+
 func set_series(values: Array) -> void:
 	series = values
 	visible = not series.is_empty()
@@ -34,8 +38,8 @@ func _draw() -> void:
 		draw_polyline(points, accent, 2.0, true)
 	for point in points:
 		draw_circle(point, 4.0, accent, true, -1, true)
-	var first: String = series[0].date
-	var last: String = series[-1].date
+	var first := axis_date(series[0].date)
+	var last := axis_date(series[-1].date)
 	draw_string(font, Vector2(plot.position.x, size.y - 8), first,
 			HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, muted)
 	if series.size() > 1:
