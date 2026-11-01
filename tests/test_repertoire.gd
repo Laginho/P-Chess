@@ -1013,6 +1013,83 @@ func test_repertoire_screen_dims_behind_its_dialogs():
 	_clean(folder)
 
 
+func test_full_screen_repertoire_windows_follow_the_main_window_size():
+	var root: Window = Engine.get_main_loop().root
+	var old_embed := root.gui_embed_subwindows
+	var old_size := root.size
+	root.gui_embed_subwindows = true
+	root.size = Vector2i(1280, 800)
+	var setup = load("res://ui/setup.tscn").instantiate()
+	var folder := _folder()
+	setup.repertoire.storage_dir = folder
+	assert_eq(setup.repertoire.import_pgn("1. e4 e5 *", "w", "Study"), "")
+	root.add_child(setup)
+	var screen = setup.get_node("RepertoireScreen")
+	screen.present()
+	var editor = screen.get_node("RepertoireEditor")
+	editor.present(setup.repertoire, "Study", 0)
+	root.size = Vector2i(800, 600)
+	await Engine.get_main_loop().process_frame
+	assert_eq(screen.size, Vector2i(800, 600), "Repertoires shrinks with the window")
+	assert_eq(editor.size, Vector2i(800, 600), "the editor shrinks with the window")
+	assert_eq(editor.position, Vector2i.ZERO)
+	setup.free()
+	root.gui_embed_subwindows = old_embed
+	root.size = old_size
+	_clean(folder)
+
+
+func test_repertoire_lists_scroll_to_the_focused_control():
+	var screen = load("res://ui/repertoire_screen.tscn").instantiate()
+	for name in ["CardScroll", "LineScroll"]:
+		assert_true(screen.find_child(name, true, false).follow_focus, "%s follows Tab" % name)
+	assert_true(screen.get_node("RepertoireEditor").find_child("Tree", true, false).follow_focus, "editor tree follows Tab")
+	screen.free()
+
+
+func test_editor_marks_an_edit_at_the_end_of_a_long_line():
+	var repertoire = _repertoire()
+	var folder := _folder()
+	repertoire.storage_dir = folder
+	var moves := PackedStringArray()
+	for i in 20:
+		moves.append("%d. %s %s" % [i + 1, "Nf3" if i % 2 == 0 else "Ng1", "Nf6" if i % 2 == 0 else "Ng8"])
+	assert_eq(repertoire.import_pgn(" ".join(moves) + " *", "w", "Long"), "")
+	var editor = load("res://ui/repertoire_editor.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(editor)
+	editor.present(repertoire, "Long", 0)
+	var unsaved = editor.find_child("Unsaved", true, false)
+	assert_true(not unsaved.visible, "an untouched long line has no unsaved changes")
+	assert_true(editor.get_node("Margin/Form/Content/Board").play("e2e4"))
+	assert_true(unsaved.visible, "a move added after 40 plies is an unsaved change")
+	editor.free()
+	_clean(folder)
+
+
+func test_viewer_line_names_drop_the_shared_opening_family():
+	var setup = load("res://ui/setup.tscn").instantiate()
+	var folder := _folder()
+	setup.repertoire.storage_dir = folder
+	assert_eq(setup.repertoire.import_pgn("1. e4 c6 2. d4 d5 3. e5 Bf5 4. Nf3 (4. h4) *", "b", "Caro"), "")
+	var screen = setup.get_node("RepertoireScreen")
+	screen.get_node("OpeningPicker").book.load_tsv("eco	name	pgn
+B12	Caro-Kann Defense: Advance Variation, Short Variation	1. e4 c6 2. d4 d5 3. e5 Bf5 4. Nf3
+B12	Caro-Kann Defense: Advance Variation, Tal Variation	1. e4 c6 2. d4 d5 3. e5 Bf5 4. h4
+")
+	Engine.get_main_loop().root.add_child(setup)
+	screen.present()
+	screen.get_node("Margin/Form/List").item_selected.emit(0)
+	var names := []
+	for row in screen.find_child("LineRows", true, false).get_children():
+		names.append(row.find_child("Name", true, false).text)
+		assert_true(row.tooltip_text.begins_with("Caro-Kann Defense: "), "the full name stays in the tooltip")
+		assert_true(row.accessibility_name.begins_with("Caro-Kann Defense: "), "and in the accessible name")
+	names.sort()
+	assert_eq(names, ["Advance Variation, Short Variation", "Advance Variation, Tal Variation"])
+	setup.free()
+	_clean(folder)
+
+
 func _editor_mouse(window: Window, point: Vector2, button: int, pressed: bool) -> void:
 	var motion := InputEventMouseMotion.new()
 	motion.position = point + Vector2(window.position)
