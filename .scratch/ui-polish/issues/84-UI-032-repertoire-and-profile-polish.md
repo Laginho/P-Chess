@@ -1,5 +1,5 @@
 # UI-032: Editor's new moves in green, short line names, dd/mm chart dates
-Stage: to-implement
+Stage: implementing
 Status: ready-for-agent
 Blocked by: none
 Review: agent

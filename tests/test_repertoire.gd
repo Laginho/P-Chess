@@ -674,6 +674,29 @@ func test_editor_shows_unsaved_changes_only_after_a_change():
 	_clean(folder)
 
 
+func test_editor_colours_new_moves_until_saved():
+	var repertoire = _repertoire()
+	var folder := _folder()
+	repertoire.storage_dir = folder
+	assert_eq(repertoire.import_pgn("1. e4 e5 *", "w", "Study"), "")
+	var editor = load("res://ui/repertoire_editor.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(editor)
+	editor.present(repertoire, "Study", 0)
+	var tree = editor.find_child("Tree", true, false)
+	assert_true(editor.board.play("g1f3"))
+	var saved := _find_move(tree, PackedStringArray(["e2e4"]))
+	var added := _find_move(tree, PackedStringArray(["e2e4", "e7e5", "g1f3"]))
+	assert_eq(added.get_theme_color("font_color"), Color("a6cf7a"), "new move is green")
+	assert_true(saved.get_theme_color("font_color") != Color("a6cf7a"), "saved move stays normal")
+	assert_eq(added.get_theme_color("font_pressed_color"), Color("141412"), "selection remains legible")
+	editor.save()
+	editor.present(repertoire, "Study", 0)
+	added = _find_move(tree, PackedStringArray(["e2e4", "e7e5", "g1f3"]))
+	assert_true(added.get_theme_color("font_color") != Color("a6cf7a"), "saved move is normal")
+	editor.free()
+	_clean(folder)
+
+
 func test_editor_extends_a_selected_line_and_saves_it():
 	var path := "res://ui/repertoire_editor.tscn"
 	assert_true(ResourceLoader.exists(path), "editor scene exists")
