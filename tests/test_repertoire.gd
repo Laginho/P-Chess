@@ -1090,6 +1090,33 @@ B12	Caro-Kann Defense: Advance Variation, Tal Variation	1. e4 c6 2. d4 d5 3. e5 
 	_clean(folder)
 
 
+func test_viewer_keeps_a_long_line_inside_the_minimum_window():
+	var root: Window = Engine.get_main_loop().root
+	var old_embed := root.gui_embed_subwindows
+	var old_size := root.size
+	root.gui_embed_subwindows = true
+	root.size = Vector2i(800, 600)
+	var setup = load("res://ui/setup.tscn").instantiate()
+	var folder := _folder()
+	setup.repertoire.storage_dir = folder
+	var moves := PackedStringArray()
+	for i in 40:
+		moves.append("%d. %s %s" % [i + 1, "Nf3" if i % 2 == 0 else "Ng1", "Nf6" if i % 2 == 0 else "Ng8"])
+	assert_eq(setup.repertoire.import_pgn(" ".join(moves) + " *", "w", "Long"), "")
+	root.add_child(setup)
+	var screen = setup.get_node("RepertoireScreen")
+	screen.present()
+	screen.get_node("Margin/Form/List").item_selected.emit(0)
+	await Engine.get_main_loop().process_frame
+	await Engine.get_main_loop().process_frame
+	assert_eq(screen.size, Vector2i(800, 600), "an 80-ply line does not grow the viewer past the window")
+	assert_eq(screen.find_child("Previous", true, false).size.y, 40.0, "navigation buttons keep their height")
+	setup.free()
+	root.gui_embed_subwindows = old_embed
+	root.size = old_size
+	_clean(folder)
+
+
 func _editor_mouse(window: Window, point: Vector2, button: int, pressed: bool) -> void:
 	var motion := InputEventMouseMotion.new()
 	motion.position = point + Vector2(window.position)
