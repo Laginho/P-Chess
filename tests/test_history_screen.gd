@@ -423,7 +423,7 @@ func test_long_analysis_error_keeps_toolbar_inside_minimum_window():
 	for node_path in ["Header/Back", "Header/Title", "BatchActions/SelectAll", "BatchActions/AnalyzeSelected", "BatchActions/Status", "BatchActions/AnalyzeAll"]:
 		var control: Control = screen.get_node("Margin/Content/" + node_path)
 		var rect := control.get_global_rect()
-		assert_true(rect.position.x >= 0 and rect.end.x <= 800 and rect.position.y >= 0 and rect.end.y <= 600, node_path + " stays inside the window")
+		assert_true(root.get_visible_rect().encloses(rect), node_path + " stays inside the window")
 	assert_true(status.text.contains("fetch-engine.ps1") and status.size.y >= status.get_line_height() * 2, "the full error wraps and remains readable")
 	screen.free()
 	queue.free()
