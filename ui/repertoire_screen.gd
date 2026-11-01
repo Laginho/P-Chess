@@ -256,6 +256,9 @@ func _show_names() -> void:
 		var title := Label.new()
 		title.name = "Name"
 		title.text = label.trim_prefix(shared + ": ") if not shared.is_empty() else label
+		if not shared.is_empty() and ", " in title.text:
+			var parts := title.text.split(", ", true, 1)
+			title.text = parts[0].trim_suffix(" Variation") + ": " + parts[1]
 		title.theme_type_variation = "BoldText"
 		title.add_theme_font_size_override("font_size", 13)
 		title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
