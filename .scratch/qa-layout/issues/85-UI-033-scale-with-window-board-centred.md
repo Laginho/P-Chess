@@ -1,5 +1,5 @@
 # UI-033: The UI scales with the window; board centred on Home and Game
-Stage: to-review
+Stage: to-implement
 Status: ready-for-agent
 Blocked by: none
 Review: human
@@ -51,3 +51,28 @@ There is no reference PNG for the centred layout: the canvas (`docs/design/v0.1.
 - Verification: focused session/board 61 passed; History 14 passed. One long Review test timed out in the focused file, passed alone, and passed in the final gate. Gate: 490 passed, 0 failed. Captures: `C:/Users/bruno/AppData/Local/Temp/pchess-ui033/` (`home-720.png`, `home-1080.png`, `home-1440.png`, `game-720.png`, `game-1080.png`, `game-1440.png`, `armed-600.png`, `armed-800.png`, `review-600-compact.png`, `review-800.png`). Downscaled 16:9 captures differ by about 0.9/255 mean RGB due to rasterization.
 - Acceptance: pending | Bruno to judge the captures and manually compare Home and a 3+2 game between a 1280x720 window and fullscreen 1080p or 1440p.
 Gate evidence: C:\Users\bruno\AppData\Local\Temp\ui033-gate-final.json
+
+#### Resolution (2026-11-01)
+
+Verdict: Reopen — P1 regression: global stretch clips the existing repertoire screens and hides the editor's Save/Cancel actions.
+
+- Reviewed the complete nine-file diff `536c74e...73cc16b` against the lane session base. Standards: 0 findings; Spec: 1 finding. The seven stage-2 commits separate tests from production, and the supplied red logs fail on board centring, window shrinking and the compact Review layout before their fixes.
+- Examined Home layout/configuration and missing-engine state; Game board fit, saved size, panel floor, armed resignation and grip input; Review compact layout, notice, legend, tooltips, actions and callout tests; History containment; screenshot dimensions; and the repertoire popup callers affected by global stretch. Fullscreen on physical hardware, live Lc0 play and every screen's rendered state were not exercised.
+
+**Unresolved finding (stage 2):**
+
+- **P1 — `project.godot:25-26`**, regression caused by global stretch. `ui/repertoire_screen.gd:54,62` and `ui/repertoire_editor.gd:55,62` still use physical `root.size` for embedded popup sizing. Open Custom game -> Repertoires -> edit a repertoire at 1920x1080: the visible canvas is 1422x800, but both popups are 1920x1080 virtual pixels. Save is at `(1544,984,320,44)` and Cancel at `(1214,984,320,44)`, entirely below the visible area; the editor also extends past the right edge. Without stretch, the same controls fit the physical 1920x1080 canvas. Default embedding is enabled. Suggested fix: use virtual viewport bounds for embedded fullscreen popup targets and resize handlers, preserving native-window coordinate handling; audit the opening picker's physical-height calculation too. These production files are outside the current Primary files, so stage 2 must obtain the ticket-flow proxy's seam decision before editing them. Regressing an existing feature is a reopen condition even though the six numbered criteria focus on Home/Game/Review.
+- Reproduction: existing `scripts/screens.gd` with `RepertoireEditor 1920 1080`, using the design README's isolated data root. Graphical evidence: `C:/Users/bruno/AppData/Local/Temp/ui033-stage3-editor-1080/editor-1080.png` (capture exit 0). Independent geometry and baseline logs: `C:/Users/bruno/AppData/Local/Temp/ui033-spec-popup-probe.log` and `C:/Users/bruno/AppData/Local/Temp/ui033-spec-popup-baseline.log` (both exit 0). Add a regression test that opens and resizes the embedded repertoire screen/editor at scaled window sizes and contains their footer controls in the visible virtual canvas.
+
+**Numbered criteria:**
+
+1. ✅ Automated layout evidence: actual root sizes 1280x720, 1920x1080 and 2560x1440 all produce the same 1422x800 canvas and identical Home/Game board and panel rectangles. Existing stage-2 captures support the scaled appearance; Bruno's visual acceptance remains pending.
+2. ✅ Both boards have horizontal centre 711 at all three 16:9 sizes; the Game panel ends at 1382, leaving the 40-pixel virtual outer margin.
+3. ✅ Game panel floor is 260 virtual pixels at 1280x800 and 800x600; supplied armed-state captures at both sizes show the label inside its button. The floor exception intentionally moves the board left.
+4. ✅ Inspected the supplied `review-600-compact.png` and `review-800.png`; the existing compact/containment tests are green in the validated gate.
+5. ✅ Independent routed mouse probe at 1920x1080, including physical-to-virtual input transformation: dragging by -135 physical pixels changes the board from 720 to 620 virtual pixels while its centre remains 711. Log: `C:/Users/bruno/AppData/Local/Temp/ui033-stage3-probe-data/physical-grip-output.log` (exit 0).
+6. ✅ Revalidated the existing receipt against reviewed HEAD, including tested-code equality, SHA256 log hash and exit marker: 490 passed, 0 failed, exit 0. Reused the run because production is unchanged. Six live-Lc0 checks and one graphical pixel check report skips.
+
+Acceptance: pending | Bruno's capture judgement and real window/fullscreen comparison remain pending; the repertoire regression also prevents integration.
+Disclosure: pending | integration | UI-033 P1 above; restore visible repertoire editor actions before lane integration.
+Disclosure: pending | release | Bruno to judge the existing Home/Game captures and manually compare a 1280x720 window with fullscreen 1080p or 1440p; no aesthetic acceptance is inferred from the green gate.
