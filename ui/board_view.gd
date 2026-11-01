@@ -271,6 +271,13 @@ func _input(event: InputEvent) -> void:
 	if _selected and event is InputEventMouseButton and event.pressed \
 			and event.button_index == MOUSE_BUTTON_LEFT and not get_global_rect().has_point(event.position):
 		_end_snap_back()
+	if _selected and event is InputEventMouseButton and event.pressed \
+			and event.button_index == MOUSE_BUTTON_RIGHT and get_global_rect().has_point(event.position):
+		if not premoves.moves.is_empty() or _is_premove_input():
+			cancel_premoves()
+		else:
+			_cancel_interaction()
+		get_viewport().set_input_as_handled()
 	if _picker.visible and event is InputEventMouseButton and event.pressed \
 			and event.button_index == MOUSE_BUTTON_RIGHT and get_global_rect().has_point(event.position):
 		cancel_premoves()
