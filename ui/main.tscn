@@ -347,6 +347,12 @@ layout_mode = 2
 layout_mode = 2
 mouse_filter = 2
 
+[node name="FocusClocks" type="VBoxContainer" parent="."]
+visible = false
+layout_mode = 0
+mouse_filter = 2
+theme_override_constants/separation = 0
+
 [node name="Setup" parent="." instance=ExtResource("4")]
 visible = false
 layout_mode = 1
