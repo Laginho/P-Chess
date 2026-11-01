@@ -313,16 +313,12 @@ func test_expected_moves_are_visible_in_review_without_hovering_over_a_clipped_b
 	for move in ["e2e4", "e7e5", "d2d4"]:
 		assert_true(main.board_view.play(move))
 	_finish(main)
-	var details = main.review.get_node_or_null("Margin/Content/ReviewBody/Side/RepertoireExit")
-	assert_true(details != null, "expected moves have a readable area outside the narrow badge column")
-	if details != null:
-		assert_true(details.is_visible_in_tree())
-		assert_eq(details.text, "2. White: Left repertoire — expected: Nc3, Nf3")
+	# The exit row spans both move columns, so the expected moves are readable without hovering.
+	assert_eq(_exit_rows(main.review), PackedStringArray(["Left repertoire · expected 2.Nc3, 2.Nf3"]))
 	main.review.rematch_requested.emit()
 	await _wait_start(main)
 	_finish(main)
-	if details != null:
-		assert_true(not details.visible, "a fresh no-move review clears the previous exit details")
+	assert_eq(_exit_rows(main.review), PackedStringArray(), "a fresh no-move review clears the previous exit details")
 	main.free()
 	_clean(folder)
 
@@ -415,3 +411,11 @@ func test_enabling_checking_during_catalog_load_rejects_bad_repertoire_and_allow
 func _wait_start(main) -> void:
 	while main._starting:
 		await Engine.get_main_loop().process_frame
+
+
+func _exit_rows(review) -> PackedStringArray:
+	var rows := PackedStringArray()
+	for row in review.get_node("Margin/Content/ReviewBody/Side/Moves").get_root().get_children():
+		if row.get_text(1).begins_with("Left repertoire"):
+			rows.append(row.get_text(1))
+	return rows

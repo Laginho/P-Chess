@@ -22,7 +22,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.08, 0.09, 0.11, 1)
+color = Color(0.1216, 0.1176, 0.1098, 1)
 
 [node name="Margin" type="MarginContainer" parent="."]
 layout_mode = 1
@@ -31,28 +31,93 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 20
-theme_override_constants/margin_top = 12
-theme_override_constants/margin_right = 20
-theme_override_constants/margin_bottom = 12
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 16
 
-[node name="Content" type="VBoxContainer" parent="Margin"]
+[node name="Content" type="Control" parent="Margin"]
 layout_mode = 2
-theme_override_constants/separation = 8
+
+[node name="Card" type="Panel" parent="Margin/Content"]
+layout_mode = 0
+theme_type_variation = &"CardPanel"
+mouse_filter = 2
+
+[node name="ReviewIcon" type="TextureRect" parent="Margin/Content"]
+layout_mode = 0
+mouse_filter = 2
 
 [node name="Title" type="Label" parent="Margin/Content"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 28
-text = "Game review"
+theme_type_variation = &"ExtraBoldText"
+theme_override_font_sizes/font_size = 17
+text = "Game Review"
+vertical_alignment = 1
 
 [node name="Result" type="Label" parent="Margin/Content"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 20
+theme_type_variation = &"MutedText"
+theme_override_font_sizes/font_size = 13
+vertical_alignment = 1
 autowrap_mode = 3
+
+[node name="HeaderRule" type="ColorRect" parent="Margin/Content"]
+layout_mode = 0
+mouse_filter = 2
+color = Color(0.27058825, 0.25882354, 0.23921569, 1)
+
+[node name="ListRule" type="ColorRect" parent="Margin/Content"]
+layout_mode = 0
+mouse_filter = 2
+color = Color(0.27058825, 0.25882354, 0.23921569, 1)
+
+[node name="NavRule" type="ColorRect" parent="Margin/Content"]
+layout_mode = 0
+mouse_filter = 2
+color = Color(0.27058825, 0.25882354, 0.23921569, 1)
+
+[node name="ProgressTitle" type="Label" parent="Margin/Content"]
+visible = false
+layout_mode = 0
+theme_type_variation = &"BoldText"
+theme_override_font_sizes/font_size = 15
+text = "Analysing game…"
 
 [node name="Progress" type="ProgressBar" parent="Margin/Content"]
 visible = false
 layout_mode = 2
+show_percentage = false
+
+[node name="ProgressText" type="Label" parent="Margin/Content"]
+visible = false
+layout_mode = 0
+theme_type_variation = &"MutedText"
+theme_override_font_sizes/font_size = 13
+horizontal_alignment = 2
+
+[node name="ProgressNote" type="Label" parent="Margin/Content"]
+visible = false
+layout_mode = 0
+theme_type_variation = &"MutedText"
+theme_override_font_sizes/font_size = 12
+text = "Stockfish · accuracy appears when every move is done"
+
+[node name="WhiteHead" type="Label" parent="Margin/Content"]
+layout_mode = 0
+theme_type_variation = &"SectionLabel"
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1
+vertical_alignment = 1
+text_overrun_behavior = 3
+
+[node name="BlackHead" type="Label" parent="Margin/Content"]
+layout_mode = 0
+theme_type_variation = &"SectionLabel"
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1
+vertical_alignment = 1
+text_overrun_behavior = 3
 
 [node name="AnalysisError" type="Label" parent="Margin/Content"]
 visible = false
@@ -60,14 +125,33 @@ layout_mode = 2
 autowrap_mode = 3
 
 [node name="ReviewBody" type="HBoxContainer" parent="Margin/Content"]
-layout_mode = 2
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 44.0
+offset_bottom = -44.0
+grow_horizontal = 2
+grow_vertical = 2
 size_flags_vertical = 3
+theme_override_constants/separation = 8
 
 [node name="EvalBar" type="Control" parent="Margin/Content/ReviewBody"]
-custom_minimum_size = Vector2(20, 0)
+custom_minimum_size = Vector2(28, 0)
 layout_mode = 2
 size_flags_vertical = 3
 script = ExtResource("3")
+
+[node name="Score" type="Label" parent="Margin/Content/ReviewBody/EvalBar"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 6.0
+offset_bottom = 22.0
+theme_type_variation = &"ExtraBoldText"
+theme_override_font_sizes/font_size = 11
+horizontal_alignment = 1
+mouse_filter = 2
 
 [node name="BoardView" parent="Margin/Content/ReviewBody" instance=ExtResource("2")]
 layout_mode = 2
@@ -75,18 +159,50 @@ size_flags_horizontal = 3
 size_flags_vertical = 3
 mouse_filter = 2
 
+[node name="TopPlayer" type="Label" parent="Margin/Content/ReviewBody/BoardView"]
+layout_mode = 0
+theme_type_variation = &"BoldText"
+theme_override_font_sizes/font_size = 15
+mouse_filter = 2
+
+[node name="BottomPlayer" type="Label" parent="Margin/Content/ReviewBody/BoardView"]
+layout_mode = 0
+theme_type_variation = &"BoldText"
+theme_override_font_sizes/font_size = 15
+mouse_filter = 2
+
+[node name="TopDot" type="Panel" parent="Margin/Content/ReviewBody/BoardView"]
+layout_mode = 0
+mouse_filter = 2
+
+[node name="BottomDot" type="Panel" parent="Margin/Content/ReviewBody/BoardView"]
+layout_mode = 0
+mouse_filter = 2
+
+[node name="CardGap" type="Control" parent="Margin/Content/ReviewBody"]
+custom_minimum_size = Vector2(24, 0)
+layout_mode = 2
+mouse_filter = 2
+
 [node name="Side" type="VBoxContainer" parent="Margin/Content/ReviewBody"]
 custom_minimum_size = Vector2(220, 0)
 layout_mode = 2
 size_flags_horizontal = 3
-size_flags_stretch_ratio = 0.6
+size_flags_stretch_ratio = 0.676
+theme_override_constants/separation = 8
+
+[node name="HeaderSpace" type="Control" parent="Margin/Content/ReviewBody/Side"]
+custom_minimum_size = Vector2(0, 17)
+layout_mode = 2
 
 [node name="AccuracyHelp" type="Button" parent="Margin/Content/ReviewBody/Side"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 11
-text = "Accuracy  ?"
+size_flags_horizontal = 0
+theme_override_constants/h_separation = 6
+text = "Accuracy"
 flat = true
 alignment = 0
+icon_alignment = 2
 
 [node name="Summary" type="Label" parent="Margin/Content/ReviewBody/Side"]
 visible = false
@@ -95,52 +211,111 @@ autowrap_mode = 3
 
 [node name="ClassHelp" type="Button" parent="Margin/Content/ReviewBody/Side"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 11
-text = "Move classes  ?"
+size_flags_horizontal = 0
+theme_override_constants/h_separation = 6
+text = "Moves"
 flat = true
 alignment = 0
+icon_alignment = 2
 
-[node name="Counts" type="Label" parent="Margin/Content/ReviewBody/Side"]
+[node name="Counts" type="GridContainer" parent="Margin/Content/ReviewBody/Side"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 11
+columns = 4
+theme_override_constants/v_separation = 0
+theme_override_constants/h_separation = 8
 
 [node name="EvalGraph" type="Control" parent="Margin/Content/ReviewBody/Side"]
-custom_minimum_size = Vector2(0, 60)
+custom_minimum_size = Vector2(0, 72)
 layout_mode = 2
 script = ExtResource("4")
+
+[node name="ClassToggle" type="Button" parent="Margin/Content/ReviewBody/Side"]
+visible = false
+layout_mode = 2
+text = "Move classes"
+
+[node name="UnanalysedNotice" type="Label" parent="Margin/Content/ReviewBody/Side"]
+visible = false
+layout_mode = 2
+theme_type_variation = &"BoldText"
+text = "This game hasn’t been analysed yet"
+horizontal_alignment = 1
+autowrap_mode = 3
 
 [node name="Moves" type="Tree" parent="Margin/Content/ReviewBody/Side"]
 layout_mode = 2
 size_flags_vertical = 3
+theme_override_constants/draw_guides = 0
+theme_override_constants/draw_relationship_lines = 0
+theme_override_constants/v_separation = 3
+theme_override_constants/h_separation = 6
+theme_override_constants/item_margin = 0
+theme_override_font_sizes/font_size = 14
 columns = 3
-column_titles_visible = true
+column_titles_visible = false
 hide_root = true
 
-[node name="RepertoireExit" type="Label" parent="Margin/Content/ReviewBody/Side"]
-visible = false
+[node name="Navigation" type="HBoxContainer" parent="Margin/Content/ReviewBody/Side"]
 layout_mode = 2
-autowrap_mode = 3
+theme_override_constants/separation = 6
+alignment = 1
 
-[node name="Actions" type="HBoxContainer" parent="Margin/Content"]
+[node name="First" type="Button" parent="Margin/Content/ReviewBody/Side/Navigation"]
+custom_minimum_size = Vector2(64, 40)
 layout_mode = 2
-theme_override_constants/separation = 12
+theme_type_variation = &"RaisedButton"
+tooltip_text = "First move"
+
+[node name="Previous" type="Button" parent="Margin/Content/ReviewBody/Side/Navigation"]
+custom_minimum_size = Vector2(64, 40)
+layout_mode = 2
+theme_type_variation = &"RaisedButton"
+tooltip_text = "Previous move"
+
+[node name="Next" type="Button" parent="Margin/Content/ReviewBody/Side/Navigation"]
+custom_minimum_size = Vector2(64, 40)
+layout_mode = 2
+theme_type_variation = &"RaisedButton"
+tooltip_text = "Next move"
+
+[node name="Last" type="Button" parent="Margin/Content/ReviewBody/Side/Navigation"]
+custom_minimum_size = Vector2(64, 40)
+layout_mode = 2
+theme_type_variation = &"RaisedButton"
+tooltip_text = "Last move"
+
+[node name="FooterSpace" type="Control" parent="Margin/Content/ReviewBody/Side"]
+custom_minimum_size = Vector2(0, 14)
+layout_mode = 2
+
+[node name="Actions" type="HFlowContainer" parent="Margin/Content"]
+layout_mode = 2
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 8
+theme_override_font_sizes/font_size = 13
 
 [node name="CopyPgn" type="Button" parent="Margin/Content/Actions"]
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Copy PGN"
 
 [node name="Lichess" type="Button" parent="Margin/Content/Actions"]
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Open in Lichess"
 
 [node name="Rematch" type="Button" parent="Margin/Content/Actions"]
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 size_flags_horizontal = 3
-text = "Rematch (Space)"
+text = "Rematch"
+tooltip_text = "Rematch (Space)"
 
 [node name="Setup" type="Button" parent="Margin/Content/Actions"]
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 size_flags_horizontal = 3
+theme_type_variation = &"PrimaryButton"
 text = "New game"
