@@ -1,5 +1,5 @@
 # UI-034: Focus mode shows only the board, centred, and the two clocks
-Stage: to-review
+Stage: done
 Status: ready-for-agent
 Blocked by: UI-033
 Review: human
@@ -50,3 +50,26 @@ In focus mode:
 - Acceptance pending: Bruno to judge the capture and play the requested 1+0 game, including clock changes, Esc Esc and the game-over card.
 
 Gate evidence: C:/Users/bruno/AppData/Local/Temp/ui034-gate.json
+
+#### Resolution (2026-11-01)
+
+Verdict: Approve
+
+- Reviewed the complete `a97a25d...57ae0d4` diff: `ui/main.gd`, `ui/main.tscn`, `tests/test_session.gd` and this ticket. Independent Standards and Spec reviewers examined the connected code. No production changes were authored during review.
+- Standards: 0 documented violations. One optional Duplicated Code observation: the short bot/player lookup and ordering appears in `_set_flipped()` and `_set_focus()`; retained as straightforward code, with no refactor needed for this ticket. Test-only commits `cefb7f9` and `f642baf` precede production-only `407e86d`. Supplied red logs fail the intended panel/clock/grip visibility and clock-gap assertions; the final gate is green.
+- Spec: 0 findings. Examined F11 and flip callers, clock-row reparenting and retained clock references, resize/layout callbacks, draw notice and its timer, resignation and flag paths, game-over actions, rematch colour/score changes, engine failure and return to Home. All production lookups after reparenting use retained clock references. No scope creep or unresolved integration finding.
+
+**Numbered criteria:**
+
+1. Pass: independently inspected the supplied 1920x1080 capture. A focused runtime probe at physical 1920x1080 and 800x600, with automatic and fixed-640 board sizes and both human colours, confirms board centring and a hidden side panel. The virtual canvases are 1422x800 and 1280x960 respectively.
+2. Pass for implementation: in all eight probe cases both clocks are contained in the visible canvas, left of the board with the opponent above the player. A fake time source on a 1+0 clock confirms countdown and active-clock styling switch after real `BoardView.play()` move accounting. Live Lc0 play remains a human acceptance item.
+3. Pass: routed viewport Esc Esc resigns in focus and displays the game-over card. Focusing Rematch and routing Space starts the opposite colour, preserves focus and reorders the clocks. The engine-stop failure path restores Home and reparents the clock rows back to the side panel.
+4. Pass: routed F11 twice restores every Control rectangle and visibility under Layout, the exact side-panel child order and a visible draw notice, including with a long player name, at both resolutions and both board sizes. Existing notice-expiry/rematch tests are green in the validated gate.
+5. Pass for verification: compared `C:/Users/bruno/AppData/Local/Temp/pchess-ui034-capture/focus-final.png` by eye with `.scratch/qa-layout/focus-reference.png`; placement follows the requested centred board and two clocks on its left. Revalidated the existing gate receipt against the reviewed and merged trees: tested commit `407e86d`, matching SHA256 log hash and exit marker, 492 passed, 0 failed, exit 0. Six live-Lc0 checks and one graphical pixel check were skipped. Reused the run because production did not change.
+
+Independent probe: `C:/Users/bruno/AppData/Local/Temp/ui034-review-probe.gd`; final log `C:/Users/bruno/AppData/Local/Temp/ui034-review-probe-final.log`, eight cases, 0 failures or script errors, exit 0. The initial probe bypassed move bookkeeping; the corrected harness uses `BoardView.play()` and required no source fix. This is headless runtime evidence with a fake engine and time source, not a played live game.
+
+Rebase onto the lane was already up to date. Integrated without squashing into `sweatshop/qa-layout/2026-11-01-1407` as `63c64db`; no PR or push is part of this stage. Stage and ledger close together in this commit.
+
+Acceptance: pending | Bruno to judge the supplied focus capture and play the requested real 1+0 game, checking clock transitions, Esc Esc, game-over actions and the return from focus.
+Disclosure: pending | release | Human visual and live-game acceptance above remain required; implementation approval and lane integration do not establish product acceptance. The gate skipped live Lc0 and graphical pixel checks as recorded above.
