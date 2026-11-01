@@ -277,12 +277,12 @@ func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT:
 		var square := square_at(event.position - _corner(), _side(), flipped)
 		if event.pressed:
-			# A right click that cancels a queue, a drag or a premove selection draws nothing.
+			# A right click that cancels a queue, a drag or a selection draws nothing.
 			var interrupts: bool = not premoves.moves.is_empty() or (_drag_from and not _snapping) \
-					or (_selected and _is_premove_input())
+					or _selected != ""
 			if not premoves.moves.is_empty() or _is_premove_input():
 				cancel_premoves()
-			elif _drag_from:
+			elif _drag_from or _selected:
 				_cancel_interaction()
 			_drawing_from = "" if interrupts else square
 			_drawing_to = _drawing_from
