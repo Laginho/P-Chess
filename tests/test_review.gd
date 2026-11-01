@@ -591,7 +591,7 @@ func test_review_fits_an_800_by_600_window():
 	await Engine.get_main_loop().process_frame
 	for path in ["Margin/Content/ReviewBody/BoardView", "Margin/Content/ReviewBody/Side/Moves", "Margin/Content/Actions/Setup"]:
 		var rect: Rect2 = main.review.get_node(path).get_global_rect()
-		assert_true(rect.position.x >= 0 and rect.position.y >= 0 and rect.end.x <= 800 and rect.end.y <= 600, path + " fits the window")
+		assert_true(root.get_visible_rect().encloses(rect), path + " fits the window")
 		assert_true(rect.size.x > 0 and rect.size.y > 0, path + " is visible")
 	main.free()
 	root.size = old_size
@@ -614,12 +614,12 @@ func test_review_help_popups_fit_minimum_window():
 		var help = main.review.get_node("Margin/Content/ReviewBody/Side/" + help_name)
 		var event := InputEventMouseMotion.new()
 		event.position = help.get_global_rect().get_center()
-		root.push_input(event)
+		root.push_input(event, true)
 		await tree.create_timer(1.0).timeout
 		var popup = _visible_tooltip(root)
 		assert_true(popup != null, help_name + " opens a tooltip")
 		if popup != null:
-			assert_true(popup.position.x >= 0 and popup.position.y >= 0 and popup.position.x + popup.size.x <= 800 and popup.position.y + popup.size.y <= 600, help_name + " tooltip fits")
+			assert_true(root.get_visible_rect().encloses(Rect2(popup.position, popup.size)), help_name + " tooltip fits")
 			var label = popup.get_child(0)
 			assert_true(label is Label and label.text == help.tooltip_text, help_name + " displays the full explanation")
 		# Keyboard users reach the same text: focus the "?" and press Enter.
@@ -634,7 +634,7 @@ func test_review_help_popups_fit_minimum_window():
 		await tree.process_frame
 		assert_true(dialog.visible and dialog.dialog_text == help.tooltip_text, help_name + " opens its explanation with Enter")
 		var rect := Rect2(dialog.position, dialog.size)
-		assert_true(Rect2(0, 0, 800, 600).encloses(rect), help_name + " dialog fits")
+		assert_true(root.get_visible_rect().encloses(rect), help_name + " dialog fits")
 		dialog.hide()
 	main.free()
 	root.size = old_size
@@ -698,7 +698,7 @@ func test_move_classes_collapse_in_small_review():
 		assert_true(side.get_node("Counts").visible, "toggle opens class table")
 		await Engine.get_main_loop().process_frame
 		var actions: Control = main.review.get_node("Margin/Content/Actions")
-		assert_true(actions.global_position.y + actions.size.y <= 600, "expanded classes leave actions inside the window")
+		assert_true(actions.global_position.y + actions.size.y <= root.get_visible_rect().end.y, "expanded classes leave actions inside the window")
 		toggle.pressed.emit()
 		assert_true(side.get_node("Moves").visible, "collapsing returns to the moves")
 	main.free()
@@ -1018,7 +1018,7 @@ func test_move_class_legend_is_anchored_and_contained():
 		await root.get_tree().process_frame
 		var legend = review.get_node("ClassLegend")
 		var rect := Rect2i(legend.position, legend.size)
-		assert_true(rect.position.x >= 0 and rect.position.y >= 0 and rect.end.x <= window_size.x and rect.end.y <= window_size.y, "legend fits inside window")
+		assert_true(root.get_visible_rect().encloses(Rect2(rect)), "legend fits inside window")
 		assert_true(absf(rect.end.x - help.global_position.x) <= 24, "legend sits beside the Moves help")
 		assert_true(legend.get_node("Content/Header/Close").text == "×", "legend offers a close action")
 		legend.get_node("Content/Header/Close").pressed.emit()
@@ -1142,7 +1142,9 @@ func test_compact_review_keeps_unanalysed_card_and_exit_readable():
 	var rows: Array = tree.get_root().get_children()
 	var exit_row: TreeItem = rows[2]
 	assert_true(exit_row.get_text(1).begins_with("Left repertoire"), "fixture has an exit row")
-	assert_true(tree.get_item_area_rect(exit_row, 1).size.y > tree.get_item_area_rect(rows[0], 1).size.y, "the exit callout wraps instead of eliding the expected move")
+	var text_width := tree.get_theme_font("font").get_string_size(exit_row.get_text(1), HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x + 30
+	var fits := text_width <= tree.get_column_width(1) + tree.get_column_width(2)
+	assert_true(fits or tree.get_item_area_rect(exit_row, 1).size.y > tree.get_item_area_rect(rows[0], 1).size.y, "the exit callout fits or wraps without eliding the expected move")
 	main.free()
 	root.size = old_size
 

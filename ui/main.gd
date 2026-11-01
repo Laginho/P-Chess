@@ -170,6 +170,7 @@ func _ready() -> void:
 	# The catalog takes seconds to parse: start it now so the first game does not wait for it.
 	setup.get_node("OpeningPicker").ensure_catalog()
 	$Layout.resized.connect(_fit_board)
+	resized.connect(_fit_board)
 	$Layout/BoardView/ResizeGrip.size_requested.connect(_resize_board)
 	_fit_board()
 	if analysis_queue == null:
@@ -520,11 +521,15 @@ func _fit_board() -> void:
 	var fit := _board_fit_size()
 	var chosen: int = preferences.get_value("board_size")
 	board_view.custom_minimum_size.x = fit if chosen == 0 else clampf(chosen, minf(MIN_BOARD_SIZE, fit), fit)
+	var board_width: float = board_view.custom_minimum_size.x
+	var width := minf($Layout.size.x, size.x - 80)
+	$Layout/BoardOffset.custom_minimum_size.x = maxf(0, minf((width - board_width) / 2,
+			width - board_width - 40 - $Layout/Side.get_combined_minimum_size().x))
 
 
 func _board_fit_size() -> float:
-	return maxf(0, minf($Layout.size.y,
-			$Layout.size.x - $Layout/Side.get_combined_minimum_size().x - 40))
+	return maxf(0, minf(minf($Layout.size.y, size.y - 80),
+			minf($Layout.size.x, size.x - 80) - $Layout/Side.get_combined_minimum_size().x - 40))
 
 
 func _resize_board(side: int) -> void:
