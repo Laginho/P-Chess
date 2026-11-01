@@ -112,6 +112,7 @@ func _ready() -> void:
 		var icon := TextureRect.new()
 		icon.name = label + "Icon"
 		icon.texture = _class_icon(label)
+		icon.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		icon.custom_minimum_size = Vector2(18, 18)
@@ -233,6 +234,7 @@ func _ready() -> void:
 		row.add_theme_constant_override("separation", 12)
 		var icon := TextureRect.new()
 		icon.texture = _class_icon(line.get_slice(" \u2014 ", 0))
+		icon.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		icon.custom_minimum_size = Vector2(24, 24)
@@ -287,6 +289,8 @@ func _ready() -> void:
 		if not visible:
 			_cancel_analysis())
 	_moves.select_mode = Tree.SELECT_SINGLE
+	# Class icons are imported at 4x; mipmaps keep their strokes when drawn at 16-18 px.
+	_moves.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	_moves.resized.connect(func():
 		_fit_exit_rows()
 		_moves.ensure_cursor_is_visible.call_deferred())
@@ -781,7 +785,7 @@ func _class_icon(label: String) -> Texture2D:
 			_icons[label] = ImageTexture.create_from_image(image)
 		else:
 			var path := "res://ui/icons/classes/" + label.to_lower() + ".svg"
-			_icons[label] = load(path) if ResourceLoader.exists(path) else ThemeLoader.load_texture(path)
+			_icons[label] = load(path) if ResourceLoader.exists(path) else ThemeLoader.load_texture(path, 4.0)
 	return _icons[label]
 
 
