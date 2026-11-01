@@ -1,5 +1,5 @@
 # UI-034: Focus mode shows only the board, centred, and the two clocks
-Stage: to-implement
+Stage: implementing
 Status: ready-for-agent
 Blocked by: UI-033
 Review: human

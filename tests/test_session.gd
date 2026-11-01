@@ -1099,6 +1099,32 @@ func test_flip_keeps_player_details_hidden_in_focus_mode():
 	main.free()
 
 
+func test_focus_centres_board_and_keeps_only_clocks_until_restored():
+	var main = await _session(ManualWaits.new())
+	main.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	main.size = Vector2(1422, 800) # 1920x1080 with the project's canvas stretch.
+	main.draw_notice.show()
+	await _laid_out(main)
+	_key(main, KEY_F11)
+	for i in 4:
+		await Engine.get_main_loop().process_frame
+	var board: Rect2 = main.board_view.get_global_rect()
+	var bot: Rect2 = main.black_clock.get_global_rect()
+	var player: Rect2 = main.white_clock.get_global_rect()
+	assert_true(not main.get_node("Layout/Side").is_visible_in_tree(), "no side panel in focus")
+	assert_true(absf(board.get_center().x - main.size.x / 2) <= 1 and absf(board.get_center().y - main.size.y / 2) <= 1, "board is centred")
+	assert_true(main.black_clock.is_visible_in_tree() and main.white_clock.is_visible_in_tree(), "both clocks are visible")
+	assert_true(bot.end.x <= board.position.x and player.end.x <= board.position.x and bot.position.y < player.position.y, "Maia above player, left of board")
+	assert_true(not main.get_node("Layout/BoardView/ResizeGrip").is_visible_in_tree(), "only board and clocks show")
+	main.board_view.game.resign(main.human)
+	main._show_result()
+	assert_true(main.board_view.get_node("GameOver").is_visible_in_tree(), "game-over card appears in focus")
+	_key(main, KEY_F11)
+	await _laid_out(main)
+	assert_true(main.get_node("Layout/Side").is_visible_in_tree() and main.draw_notice.visible, "normal panel and notice return")
+	main.free()
+
+
 func test_new_moves_preserve_manual_scroll_and_follow_at_bottom():
 	var main = await _session(ManualWaits.new())
 	await _laid_out(main)
