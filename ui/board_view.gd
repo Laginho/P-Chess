@@ -380,6 +380,7 @@ func _drop(point: Vector2, clicked := false, alt := false) -> void:
 		_submit(moves[0], clicked)
 	elif clicked:
 		_end_snap_back()
+		_pick_up(point)
 	else:
 		_snapping = true
 		_snap = create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
