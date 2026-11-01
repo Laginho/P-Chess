@@ -88,6 +88,37 @@ func test_right_click_cancels_selection_without_drawing():
 		board.free()
 
 
+func test_click_outside_cancels_selection_and_reaches_button():
+	var board = _board()
+	board.position = Vector2(20, 20)
+	board.size = Vector2(400, 400)
+	board.click_click = true
+	var button := Button.new()
+	button.position = Vector2(450, 50)
+	button.size = Vector2(100, 50)
+	Engine.get_main_loop().root.add_child(button)
+	var presses := [0]
+	button.pressed.connect(func(): presses[0] += 1)
+	await Engine.get_main_loop().process_frame
+	var event := InputEventMouseButton.new()
+	event.button_index = MOUSE_BUTTON_LEFT
+	event.position = Vector2(245, 345) # e2 on the offset board
+	event.pressed = true
+	board.get_viewport().push_input(event, true)
+	event.pressed = false
+	board.get_viewport().push_input(event, true)
+	assert_eq(board._selected, "e2")
+	event.position = Vector2(500, 75)
+	event.pressed = true
+	board.get_viewport().push_input(event, true)
+	event.pressed = false
+	board.get_viewport().push_input(event, true)
+	assert_eq(board._selected, "", "outside press cancels selection")
+	assert_eq(presses[0], 1, "the button receives the click")
+	button.free()
+	board.free()
+
+
 func test_clicking_elsewhere_deselects_including_off_board_and_same_square():
 	for elsewhere in ["e5", "d2", "e7", "e2", ""]:
 		var board = _board()
