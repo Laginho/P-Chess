@@ -1,5 +1,5 @@
 # UI-031: No Settings button outside Home; resign confirmation fits at 800×600
-Stage: to-implement
+Stage: implementing
 Status: ready-for-agent
 Blocked by: none
 Review: agent

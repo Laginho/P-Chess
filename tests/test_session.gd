@@ -1014,7 +1014,7 @@ func test_searching_engine_stop_during_catalog_closes_without_a_game():
 
 func test_game_has_no_settings_button():
 	var main = await _session(ManualWaits.new())
-	assert_true(not main.settings_screen.get_node("Open").visible, "game has no Settings button")
+	assert_true(main.settings_screen.get_node_or_null("Open") == null, "game has no Settings button")
 	main.free()
 
 
@@ -1039,7 +1039,7 @@ func test_game_over_result_shows_on_the_card_not_the_side_panel():
 	main._show_result()
 	assert_true(main.history.error.is_empty())
 	assert_true(not main.result_label.visible, "the game-over card shows the result")
-	assert_true(not main.settings_screen.get_node("Open").visible, "game over has no Settings button")
+	assert_true(main.settings_screen.get_node_or_null("Open") == null, "game over has no Settings button")
 	main._set_focus(true)
 	main._set_focus(false)
 	assert_true(not main.result_label.visible, "leaving focus mode keeps it hidden")
