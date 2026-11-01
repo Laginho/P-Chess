@@ -90,13 +90,17 @@ func test_right_click_cancels_selection_without_drawing():
 
 func test_click_outside_cancels_selection_and_reaches_button():
 	var board = _board()
+	var viewport := SubViewport.new()
+	viewport.size = Vector2i(600, 500)
+	Engine.get_main_loop().root.add_child(viewport)
+	board.reparent(viewport)
 	board.position = Vector2(20, 20)
 	board.size = Vector2(400, 400)
 	board.click_click = true
 	var button := Button.new()
 	button.position = Vector2(450, 50)
 	button.size = Vector2(100, 50)
-	Engine.get_main_loop().root.add_child(button)
+	viewport.add_child(button)
 	var presses := [0]
 	button.pressed.connect(func(): presses[0] += 1)
 	await Engine.get_main_loop().process_frame
@@ -115,8 +119,7 @@ func test_click_outside_cancels_selection_and_reaches_button():
 	board.get_viewport().push_input(event, true)
 	assert_eq(board._selected, "", "outside press cancels selection")
 	assert_eq(presses[0], 1, "the button receives the click")
-	button.free()
-	board.free()
+	viewport.free()
 
 
 func test_clicking_elsewhere_deselects_including_off_board_and_same_square():
