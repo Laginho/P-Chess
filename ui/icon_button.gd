@@ -35,6 +35,14 @@ func _draw() -> void:
 	var label := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
 	var width := float(get_theme_constant("icon_max_width")) if icon else 0.0
 	var gap := float(get_theme_constant("h_separation")) if icon else 0.0
+	if clip_text and label + width + gap > size.x - 16:
+		# Two 14 px lines fit above the confirmation's 4 px progress bar.
+		font_size = 14
+		var available := size.x - 16
+		var height := font.get_multiline_string_size(text, HORIZONTAL_ALIGNMENT_CENTER, available, font_size, -1, TextServer.AUTOWRAP_WORD_SMART).y
+		draw_multiline_string(font, Vector2(8, (size.y - 4 - height) / 2 + font.get_ascent(font_size)), text,
+				HORIZONTAL_ALIGNMENT_CENTER, available, font_size, -1, _colours[get_draw_mode()])
+		return
 	var x := (size.x - width - gap - label) / 2
 	var text_x := x + width + gap
 	# A narrow button falls back to the group, so the icon never runs into the label.

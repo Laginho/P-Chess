@@ -215,6 +215,7 @@ func _process(_delta: float) -> void:
 	# Restyled only when the state flips, not every frame.
 	if resign_button.text != ("Click again to resign" if confirming else "Resign"):
 		resign_button.text = "Click again to resign" if confirming else "Resign"
+		resign_button.clip_text = confirming
 		resign_button.add_theme_font_override("font", get_theme_font("font", "BoldText" if confirming else "SemiboldText"))
 		for state in ["normal", "hover"]:
 			if confirming:
