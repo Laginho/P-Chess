@@ -1,5 +1,5 @@
 # UI-037: Click-click's second click: right cancels, outside cancels, own piece reselects
-Stage: implementing
+Stage: to-review
 Status: ready-for-agent
 Blocked by: UI-036
 Review: agent
@@ -40,3 +40,10 @@ Bruno's QA of v0.0.2 (2026-11-01), items 5–7. With a piece selected by click-c
 
 - 2026-11-01 Written from Bruno's QA of v0.0.2 (items 5, 6, 7). Item 6 arrived cut off; Bruno confirmed it is the click outside the board.
 - Blocked by UI-036: both edit `board_view.gd`.
+- Red/green: right-click selection 17 passed, 1 failed -> 18 passed; outside routed click 18 passed, 1 failed -> 19 passed; reselection and recapture 44 passed, 2 failed -> 46 passed. Logs: `C:\Users\bruno\AppData\Local\Temp\p-chess-ui037-*-red.log` and `C:\Users\bruno\AppData\Local\Temp\p-chess-ui037-*-green.log`.
+- Updated `test_left_press_clears_all_drawings_and_cancels_an_unfinished_one`: its old selection-preservation assertion contradicted criterion 1; the updated assertion fails against the original production code. The outside-click fixture was corrected to use a sized SubViewport because the headless root is 64x64.
+- Gate: 494 passed, 0 failed, exit 0. Graphical last-move pixels and live Lc0 tests skipped in the headless environment without Lc0.
+
+Acceptance: pending | Manual 3+2 click-click game on the player's turn and while Maia thinks, as specified in Verification.
+Disclosure: pending | integration | UI-037 Verification requires the manual 3+2 game before acceptance.
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\p-chess-ui037-gate.json
