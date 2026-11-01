@@ -19,7 +19,7 @@ func _ready() -> void:
 
 func _layout_home() -> void:
 	var margin := 40.0 if size.x >= 1000 else 20.0
-	var gap := 48.0 if size.x >= 1000 else 20.0
+	var gap := 40.0 if size.x >= 1000 else 20.0
 	var side := minf(size.y - margin * 2, size.x - margin * 2 - gap - 260.0)
 	side = maxf(side, 0.0)
 	var left := maxf(margin, minf((size.x - side) / 2, size.x - margin - gap - 260.0 - side))
