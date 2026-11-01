@@ -181,6 +181,7 @@ func _ready() -> void:
 	settings_screen.store = preferences
 	add_child(settings_screen)
 	add_child(review)
+	review.get_node("Margin/Content/ReviewBody/BoardView").sound_requested.connect(sound_player.play)
 	add_child(history_screen)
 	add_child(name_dialog)
 	history_screen.back_requested.connect(_show_home)

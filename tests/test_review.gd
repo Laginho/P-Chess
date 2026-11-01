@@ -719,6 +719,41 @@ func test_review_navigation_buttons_visit_first_and_last_move():
 		assert_eq(main.review.get_node("Margin/Content/ReviewBody/BoardView").game.moves.size(), 2)
 	main.free()
 
+
+func test_review_navigation_plays_the_shown_moves_sound_once():
+	var main = await _session(FakeTime.new())
+	var board = main.review.get_node("Margin/Content/ReviewBody/BoardView")
+	assert_true(board.sound_requested.is_connected(main.sound_player.play), "review sounds go through the game's sound player")
+	var heard := []
+	board.sound_requested.connect(func(event): heard.append(event))
+	var game = Game.new()
+	for move in ["e2e4", "d7d5", "e4d5", "d8d5", "b1c3", "d5e5", "f1e2", "e5e2"]:
+		assert_true(game.play(move), move)
+	main.review.present(game, [-1, -1, -1, -1, -1, -1, -1, -1], SETTINGS, "")
+	assert_eq(heard, [], "opening the review is silent")
+	var nav = main.review.get_node("Margin/Content/ReviewBody/Side/Navigation")
+	nav.get_node("Next").pressed.emit()
+	assert_eq(heard, [], "Next at the last move changes nothing, so no sound")
+	nav.get_node("Previous").pressed.emit()
+	assert_eq(heard, ["move"], "stepping back plays the now-last move, Be2")
+	heard.clear()
+	nav.get_node("First").pressed.emit()
+	assert_eq(heard, [], "the start position is silent")
+	var event := InputEventKey.new()
+	event.pressed = true
+	event.keycode = KEY_RIGHT
+	main.review._input(event)
+	assert_eq(heard, ["move"], "arrow key: e4")
+	heard.clear()
+	var list: Tree = main.review.get_node("Margin/Content/ReviewBody/Side/Moves")
+	list.get_root().get_child(1).select(1)
+	list.item_selected.emit()
+	assert_eq(heard, ["capture"], "clicking exd5 plays one capture")
+	heard.clear()
+	nav.get_node("Last").pressed.emit()
+	assert_eq(heard, ["capture", "check"], "Qxe2+ plays capture and check, as in the game")
+	main.free()
+
 func test_unanalysed_history_keeps_book_icon():
 	var main = await _session(FakeTime.new())
 	var game = Game.new()

@@ -131,7 +131,7 @@ func _ready() -> void:
 		_layout_review())
 	# An error can appear after layout settles: place it when it shows.
 	$Margin/Content/AnalysisError.visibility_changed.connect(_layout_review)
-	_graph.ply_selected.connect(_show_ply)
+	_graph.ply_selected.connect(_show_ply.bind(true))
 	_board_view.resized.connect(_update_player_labels)
 	_result.resized.connect(_layout_review)
 	$Margin/Content/ReviewBody/Side.resized.connect(_layout_review)
@@ -299,16 +299,16 @@ func _ready() -> void:
 		if selected:
 			var ply = selected.get_metadata(_moves.get_selected_column())
 			if ply != null:
-				_show_ply(ply))
+				_show_ply(ply, true))
 	_moves.set_column_title(0, "Move")
 	_moves.set_column_title(1, "White")
 	_moves.set_column_title(2, "Black")
 	_moves.set_column_expand(0, false)
 	_moves.set_column_custom_minimum_width(0, 40)
-	$Margin/Content/ReviewBody/Side/Navigation/First.pressed.connect(func(): _show_ply(0))
-	$Margin/Content/ReviewBody/Side/Navigation/Previous.pressed.connect(func(): _show_ply(_ply - 1))
-	$Margin/Content/ReviewBody/Side/Navigation/Next.pressed.connect(func(): _show_ply(_ply + 1))
-	$Margin/Content/ReviewBody/Side/Navigation/Last.pressed.connect(func(): _show_ply(_game_moves.size()))
+	$Margin/Content/ReviewBody/Side/Navigation/First.pressed.connect(func(): _show_ply(0, true))
+	$Margin/Content/ReviewBody/Side/Navigation/Previous.pressed.connect(func(): _show_ply(_ply - 1, true))
+	$Margin/Content/ReviewBody/Side/Navigation/Next.pressed.connect(func(): _show_ply(_ply + 1, true))
+	$Margin/Content/ReviewBody/Side/Navigation/Last.pressed.connect(func(): _show_ply(_game_moves.size(), true))
 	$Margin/Content/Actions/CopyPgn.pressed.connect(func(): copy_text.call(_pgn))
 	$Margin/Content/Actions/Lichess.pressed.connect(func(): open_browser.call(_url))
 	$Margin/Content/Actions/Rematch.pressed.connect(func(): rematch_requested.emit())
@@ -664,7 +664,7 @@ func _input(event: InputEvent) -> void:
 		_update_eval_bar()
 	elif visible and event is InputEventKey and event.is_pressed() and not event.is_echo() and event.keycode in [KEY_LEFT, KEY_RIGHT]:
 		get_viewport().set_input_as_handled()
-		_show_ply(_ply + (-1 if event.keycode == KEY_LEFT else 1))
+		_show_ply(_ply + (-1 if event.keycode == KEY_LEFT else 1), true)
 
 
 func _update_player_labels() -> void:
@@ -691,7 +691,9 @@ func _update_player_labels() -> void:
 		dot.add_theme_stylebox_override("panel", style)
 
 
-func _show_ply(ply: int) -> void:
+# Navigation (announce) plays the shown last move's sounds once, as the game did; opening the review is silent.
+func _show_ply(ply: int, announce := false) -> void:
+	var before := _ply
 	_ply = clampi(ply, 0, _game_moves.size())
 	if _ply > 0 and _ply <= _move_rows.size():
 		_move_rows[_ply - 1].select((_ply - 1) % 2 + 1)
@@ -699,9 +701,14 @@ func _show_ply(ply: int) -> void:
 	elif _moves.get_selected() != null:
 		_moves.deselect_all()
 	var position = Game.new()
+	var san := ""
 	for i in _ply:
+		if i == _ply - 1:
+			san = position.board.san(_game_moves[i])
 		position.play(_game_moves[i])
 	_board_view.game = position
+	if announce and _ply != before and _ply > 0:
+		_board_view.request_move_sounds(san)
 	_update_board_annotations()
 	_board_view.queue_redraw()
 	_update_eval_bar()

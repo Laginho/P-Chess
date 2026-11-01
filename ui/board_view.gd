@@ -412,6 +412,15 @@ func _layout_picker() -> void:
 	_picker.layout(_corner() + at, _side() / 8, at.y < _side() / 2)
 
 
+# The sounds of a move just played, as SAN, in the shown game: Review replays them when stepping.
+func request_move_sounds(san: String, premove := false) -> void:
+	sound_requested.emit("premove" if premove else "castle" if san.begins_with("O-O") else "capture" if "x" in san else "move")
+	if "=" in san:
+		sound_requested.emit("promote")
+	if game.board.in_check():
+		sound_requested.emit("check")
+
+
 # shortcut: only the moving piece slides, a castling rook jumps; slide it too if it looks wrong.
 func _commit(move: String, slide: bool, premove := false) -> void:
 	var san: String = game.board.san(move)
@@ -429,11 +438,7 @@ func _commit(move: String, slide: bool, premove := false) -> void:
 		_slide.tween_property(self, "_slide_pos", _centre(_slide_to), slide_seconds)
 		_slide.tween_callback(_end_slide)
 	queue_redraw()
-	sound_requested.emit("premove" if premove else "castle" if san.begins_with("O-O") else "capture" if "x" in san else "move")
-	if "=" in san:
-		sound_requested.emit("promote")
-	if game.board.in_check():
-		sound_requested.emit("check")
+	request_move_sounds(san, premove)
 	move_played.emit(san)
 	# A reply's listeners may also play the due premove before input resumes.
 	var held := _drag_from if _drag_from else _selected
