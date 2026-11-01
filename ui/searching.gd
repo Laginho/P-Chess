@@ -71,8 +71,9 @@ func _layout_searching() -> void:
 	$Center/Content/Status.position = Vector2(0, middle + 37)
 	$Center/Content/Status.size = Vector2(card.size.x, 26)
 	# Chips as wide as their labels, centred as a pair 10 px apart.
-	var control_width := minf($Center/Content/ControlChip.get_combined_minimum_size().x, (card.size.x - 40) / 2)
-	var level_width := minf($Center/Content/LevelChip.get_combined_minimum_size().x, (card.size.x - 40) / 2)
+	# A button never shrinks below its minimum, so a cap here would only uncentre the pair.
+	var control_width: float = $Center/Content/ControlChip.get_combined_minimum_size().x
+	var level_width: float = $Center/Content/LevelChip.get_combined_minimum_size().x
 	var left := (card.size.x - control_width - level_width - 10) / 2
 	$Center/Content/ControlChip.position = Vector2(left, middle + 82)
 	$Center/Content/ControlChip.size = Vector2(control_width, 36)
