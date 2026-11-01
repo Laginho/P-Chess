@@ -213,7 +213,9 @@ func test_profile_has_no_extra_settings_button_and_shortcut_opens_settings():
 	main.uci.free()
 	main.uci = Session.HeldBridge.new()
 	main.maia = main.MaiaPlayer.new(main.uci)
-	main.preferences = main.Settings.new("res://tests/fixtures/no_session_settings.cfg")
+	DirAccess.make_dir_recursive_absolute(folder)
+	main.preferences = main.Settings.new(folder.path_join("settings.cfg"))
+	main.preferences.set_value("player_name", "You")
 	Engine.get_main_loop().root.add_child(main)
 	await Engine.get_main_loop().process_frame
 	var home = main.get_node("Home")
