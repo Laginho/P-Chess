@@ -1108,7 +1108,7 @@ B12	Caro-Kann Defense: Advance Variation, Tal Variation	1. e4 c6 2. d4 d5 3. e5 
 		assert_true(row.tooltip_text.begins_with("Caro-Kann Defense: "), "the full name stays in the tooltip")
 		assert_true(row.accessibility_name.begins_with("Caro-Kann Defense: "), "and in the accessible name")
 	names.sort()
-	assert_eq(names, ["Advance Variation, Short Variation", "Advance Variation, Tal Variation"])
+	assert_eq(names, ["Advance: Short Variation", "Advance: Tal Variation"])
 	setup.free()
 	_clean(folder)
 
