@@ -1108,13 +1108,39 @@ func test_eval_score_stays_readable_on_either_colour():
 	var bar: Control = review.get_node("Margin/Content/ReviewBody/EvalBar")
 	bar.size = Vector2(28, 680)
 	var score: Label = bar.get_node("Score")
-	# Black to move: +820 for black is -8.2 for white, about 32 px of white at the flipped bar's top.
-	for case in [[0, "even"], [820, "black far ahead"]]:
-		review.receive_position(1, {"pv": [{"cp": case[0], "moves": ["e7e5"]}]})
-		assert_eq(score.get_theme_color("font_color"), Color("141412"), "flipped, %s: white is behind the score, so it is dark" % case[1])
+	# Black to move: +820 for black is -8.2 for white; the score sits on black's part at black's end.
+	review.receive_position(1, {"pv": [{"cp": 0, "moves": ["e7e5"]}]})
+	assert_eq(score.get_theme_color("font_color"), Color("141412"), "flipped, even: the score is at white's end, on white, so it is dark")
+	review.receive_position(1, {"pv": [{"cp": 820, "moves": ["e7e5"]}]})
+	assert_eq(score.get_theme_color("font_color"), Color("ece9e4"), "flipped, black far ahead: the score is on black's part, so it is light")
 	review._board_view.flipped = false
 	review._update_eval_bar()
-	assert_eq(score.get_theme_color("font_color"), Color("ece9e4"), "unflipped: black's share is behind the score, so it is light")
+	assert_eq(score.get_theme_color("font_color"), Color("ece9e4"), "unflipped, black far ahead: still on black's part, so it is light")
+	main.free()
+
+
+func test_eval_score_sits_at_the_end_of_the_side_ahead():
+	var main = await _session(FakeTime.new())
+	var review = main.get_node("Review")
+	var game = Game.new()
+	game.play("e2e4")
+	review.present(game, [180000], SETTINGS, "")
+	var bar: Control = review.get_node("Margin/Content/ReviewBody/EvalBar")
+	bar.size = Vector2(28, 680)
+	var score: Label = bar.get_node("Score")
+	# Black to move, so the engine's cp is black's view: -360 is +3.6 for white.
+	for case in [[-360, false, true, "white ahead"], [-360, true, false, "white ahead, flipped"],
+			[360, false, false, "black ahead"], [360, true, true, "black ahead, flipped"],
+			[0, false, true, "level"], [0, true, false, "level, flipped"]]:
+		review._board_view.flipped = case[1]
+		review.receive_position(1, {"pv": [{"cp": case[0], "moves": ["e7e5"]}]})
+		var middle := score.position.y + score.size.y / 2
+		assert_eq(middle > bar.size.y / 2, case[2], "%s: score at the %s end" % [case[3], "bottom" if case[2] else "top"])
+		var white_ahead: bool = case[0] <= 0
+		assert_eq(score.get_theme_color("font_color"), Color("141412") if white_ahead else Color("ece9e4"), case[3] + ": readable on its part")
+	review._board_view.flipped = false
+	review.receive_position(1, {"pv": [{"mate": -2, "moves": ["e7e5"]}]})
+	assert_true(score.text == "+M2" and score.position.y > bar.size.y / 2, "mate for white sits at white's end")
 	main.free()
 
 
