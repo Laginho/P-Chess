@@ -1115,6 +1115,8 @@ func test_focus_centres_board_and_keeps_only_clocks_until_restored():
 	assert_true(absf(board.get_center().x - main.size.x / 2) <= 1 and absf(board.get_center().y - main.size.y / 2) <= 1, "board is centred")
 	assert_true(main.black_clock.is_visible_in_tree() and main.white_clock.is_visible_in_tree(), "both clocks are visible")
 	assert_true(bot.end.x <= board.position.x and player.end.x <= board.position.x and bot.position.y < player.position.y, "Maia above player, left of board")
+	assert_true(board.position.x - bot.end.x <= 60 and board.position.x - player.end.x <= 60, "clocks stay close to the board")
+	assert_true(absf((bot.get_center().y + player.get_center().y) / 2 - board.get_center().y) <= 1, "clocks straddle the board centre")
 	assert_true(not main.get_node("Layout/BoardView/ResizeGrip").is_visible_in_tree(), "only board and clocks show")
 	main.board_view.game.resign(main.human)
 	main._show_result()
