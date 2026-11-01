@@ -18,6 +18,8 @@ var saved_name := ""
 var edited := {}
 var root_key := ""
 var path := PackedStringArray()
+# Set by edits; comparing deep trees hits Godot's recursion limit on long lines.
+var changed := false
 var _move_buttons: Array[Button] = []
 
 @onready var board = $Margin/Form/Content/Board
@@ -28,6 +30,7 @@ var _move_buttons: Array[Button] = []
 
 func _ready() -> void:
 	board.move_played.connect(_played)
+	get_tree().root.size_changed.connect(_fit)
 	$Margin/Form/Content/Card/Panel/Buttons/Save.pressed.connect(save)
 	$Margin/Form/Content/Card/Panel/Buttons/Cancel.pressed.connect(hide)
 	$Margin/Form/Content/Card/Panel/Buttons/Cancel.add_theme_font_override("font", get_theme_font("font", "SemiboldText"))
@@ -39,6 +42,7 @@ func present(source, name: String, line: int = -1) -> void:
 	repertoire = source
 	saved_name = name
 	edited = source.tree.duplicate(true)
+	changed = false
 	root_key = source.lines[line].positions[0] if line >= 0 else edited.keys()[0]
 	path = source.lines[line].moves.duplicate() if line >= 0 else PackedStringArray()
 	board.flipped = source.colour == "b"
@@ -49,7 +53,12 @@ func present(source, name: String, line: int = -1) -> void:
 	_refresh()
 	# A full screen in the design, over the Repertoires screen.
 	popup_centered(get_tree().root.size)
-	if get_tree().root.gui_embed_subwindows:
+	_fit()
+
+
+func _fit() -> void:
+	if visible and get_tree().root.gui_embed_subwindows:
+		position = Vector2i.ZERO
 		size = get_tree().root.size
 
 
@@ -71,12 +80,13 @@ func _played(_san: String) -> void:
 	var node := _node()
 	if not node.children.has(move):
 		node.children[move] = Repertoire._node(board.game.board.position_key())
+		changed = true
 	path.append(move)
 	_refresh()
 
 
 func _refresh() -> void:
-	$Margin/Form/Content/Card/Panel/HeadingRow/Unsaved.visible = edited != repertoire.tree
+	$Margin/Form/Content/Card/Panel/HeadingRow/Unsaved.visible = changed
 	_move_buttons.clear()
 	for row in rows.get_children():
 		row.free()
@@ -201,6 +211,7 @@ func _delete_path(key: String, moves: PackedStringArray) -> void:
 	var move: String = path[path.size() - 1]
 	path.remove_at(path.size() - 1)
 	_node().children.erase(move)
+	changed = true
 	_refresh.call_deferred()
 
 
@@ -208,6 +219,7 @@ func save() -> void:
 	var error: String = repertoire.save_edited(edited, saved_name)
 	status.text = error
 	if error.is_empty():
+		changed = false
 		$Margin/Form/Content/Card/Panel/HeadingRow/Unsaved.hide()
 		hide()
 		saved.emit(saved_name)

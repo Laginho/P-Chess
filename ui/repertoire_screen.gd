@@ -36,6 +36,7 @@ func _ready() -> void:
 	for button in [$Margin/Form/Buttons/Import, $Margin/Form/Buttons/FromOpenings]:
 		_pad(button, 16)
 	$Margin/Form/Viewer/BoardArea/Navigation/Moves.add_theme_font_override("bold_font", get_theme_font("font", "BoldText"))
+	get_tree().root.size_changed.connect(_fit)
 
 
 func _pad(button: Button, side: float) -> void:
@@ -51,7 +52,13 @@ func present() -> void:
 		importer.saved.connect(_saved)
 	_refresh()
 	popup_centered(get_tree().root.size)
-	if get_tree().root.gui_embed_subwindows:
+	_fit()
+
+
+# A full screen: it keeps the main window's size when that changes while open.
+func _fit() -> void:
+	if visible and get_tree().root.gui_embed_subwindows:
+		position = Vector2i.ZERO
 		size = get_tree().root.size
 
 
@@ -207,6 +214,8 @@ func _clear_lines() -> void:
 
 func _show_names() -> void:
 	_clear_lines()
+	var labels := []
+	var families := {}
 	for i in _lines.size():
 		var line: Dictionary = _lines[i]
 		var label := "Line %d" % (i + 1)
@@ -214,7 +223,15 @@ func _show_names() -> void:
 			if entry.moves == line.moves and entry.positions[0] == line.positions[0]:
 				label = entry.name
 				break
+		labels.append(label)
+		families[label.get_slice(": ", 0) if ": " in label else ""] = true
+	# Lines of one opening family show only what tells them apart; the full name stays in the tooltip.
+	var shared: String = families.keys()[0] if families.size() == 1 else ""
+	for i in _lines.size():
+		var line: Dictionary = _lines[i]
+		var label: String = labels[i]
 		var row := Button.new()
+		row.tooltip_text = label
 		row.custom_minimum_size.y = 52
 		row.toggle_mode = true
 		row.button_pressed = i == _line
@@ -238,7 +255,7 @@ func _show_names() -> void:
 		content.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var title := Label.new()
 		title.name = "Name"
-		title.text = label
+		title.text = label.trim_prefix(shared + ": ") if not shared.is_empty() else label
 		title.theme_type_variation = "BoldText"
 		title.add_theme_font_size_override("font_size", 13)
 		title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS

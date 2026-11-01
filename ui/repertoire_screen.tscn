@@ -117,6 +117,7 @@ size_flags_vertical = 3
 theme_override_constants/separation = 16
 
 [node name="CardScroll" type="ScrollContainer" parent="Margin/Form/Viewer"]
+follow_focus = true
 custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -159,6 +160,7 @@ mouse_filter = 2
 color = Color(0.270588, 0.258824, 0.239216, 1)
 
 [node name="LineScroll" type="ScrollContainer" parent="Margin/Form/Viewer/Lines/LineContent"]
+follow_focus = true
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_styles/panel = SubResource("LineScrollPad")
