@@ -1,5 +1,5 @@
 ﻿# UI-035: After closing the game-over card, the panel offers New game and Rematch
-Stage: implementing
+Stage: to-review
 Status: ready-for-agent
 Blocked by: UI-034
 Review: agent
@@ -37,3 +37,8 @@ Once the game is over, the panel's Actions row swaps Offer draw / Resign for **N
 
 - 2026-11-01 Written from Bruno's QA of v0.0.2 (item 8). The canvas has no post-game panel state (`GamePanelStates.png` shows only in-game states). Default taken: Chess.com's behaviour, the action row becomes New game / Rematch. Correct it if the X should instead go back Home or reopen the card.
 - Blocked by UI-034: same files (`main.gd` focus and panel code).
+
+- Stage 2: the new session test was red before the implementation (post-game actions absent and focus not restored), then passed in the gate. Gate on e052e51: 493 passed, 0 failed, exit 0; six live Lc0 checks and one graphical pixel check skipped. The test covers X and routed Esc, both post-game actions, focus restoration, and restoration of in-game actions.
+- Acceptance pending: play a real 1+0 game, let the clock expire, close the card with X and select New game.
+
+Gate evidence: C:/Users/bruno/AppData/Local/Temp/ui035-gate.json
