@@ -1,5 +1,5 @@
 # UI-033: The UI scales with the window; board centred on Home and Game
-Stage: to-implement
+Stage: implementing
 Status: ready-for-agent
 Blocked by: none
 Review: human
@@ -12,6 +12,7 @@ Difficulty: hard
   - ui/resize_grip.gd (the grip turns mouse movement into a board size)
   - ui/review.gd (`size.x <= 800` compact breakpoints at lines ~395, 404, 488, 751)
   - scripts/screens.gd (capture sizes)
+  - ui/repertoire_screen.gd, ui/repertoire_editor.gd (embedded fullscreen sizing)
   - tests/ touching window or panel sizes
 
 #### What to build
@@ -32,6 +33,7 @@ There is no reference PNG for the centred layout: the canvas (`docs/design/v0.1.
 4. Review at 800×600 and 1280×800 shows no clipped or overlapping element (its compact breakpoint may need to move to virtual sizes).
 5. The resize grip still resizes the board and the board stays centred.
 6. Gate green.
+7. With embedded subwindows, the Repertoires screen and editor opened at 1920?1080 and resized to 800?600 fill the visible virtual canvas at (0,0), and Save and Cancel remain visible. Native popups retain physical-window sizing.
 
 #### Verification
 
@@ -42,7 +44,11 @@ There is no reference PNG for the centred layout: the canvas (`docs/design/v0.1.
 
 - A test that sets the window (or root viewport) to 1920×1080 and checks the Game board's centre is at the viewport's horizontal centre, and that at 1280×800 the side panel is at least its floor width (red: today the board is left-aligned).
 
+ - A regression test opens and resizes the embedded Repertoires screen and editor with stretch enabled, checking canvas bounds and footer visibility.
+
 ## Comments
+
+- Proxy decided (opus-5.5 xhigh): Yes, with one condition. Add `ui/repertoire_screen.gd`, `ui/repertoire_editor.gd` and `tests/test_repertoire.gd` to Primary files now. Leave `ui/opening_picker.gd` and `tests/test_catalog.gd` out unless a red test shows the picker clipping. The P1 is a regression caused by this ticket's own stretch change, and the fix is two lines with no change to any interface. (receipt C:\Users\bruno\AppData\Local\Temp\sweatshop-proxy\20261101-143745-UI-033-f49cda.json)
 
 - 2026-11-01 Written from Bruno's QA of v0.0.2 (items 1–2). He asked whether this needs a design session; answer given: no, it is a placement rule over the existing canvas components, checked by him on captures (`Review: human`).
 - Default taken: the panel floor and the board sliding left below it. Correct it if the board should instead shrink to stay centred.
