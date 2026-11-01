@@ -211,6 +211,40 @@ func test_game_over_panel_actions():
 		main.free()
 
 
+func test_closed_game_over_offers_a_way_out():
+	for close_with_escape in [false, true]:
+		for use_rematch in [false, true]:
+			var main = await _session(ManualWaits.new())
+			main._set_focus(close_with_escape)
+			main.board_view.game.resign(main.human)
+			main._show_result()
+			var card = main.board_view.get_node("GameOver")
+			if close_with_escape:
+				_push_key(main.get_viewport(), KEY_ESCAPE)
+			else:
+				card.get_node("Panel/Content/Close").pressed.emit()
+			var actions = main.get_node("Layout/Side/Actions")
+			var new_game = actions.get_node_or_null("NewGameButton")
+			var rematch = actions.get_node_or_null("RematchButton")
+			assert_true(not card.visible and not main.focus and actions.is_visible_in_tree(), "closing restores the panel")
+			assert_true(new_game != null and rematch != null, "post-game actions exist")
+			if new_game and rematch:
+				assert_true(new_game.is_visible_in_tree() and rematch.is_visible_in_tree(), "post-game actions are visible")
+				assert_true(not main.draw_button.visible and not main.resign_button.visible, "in-game actions are hidden")
+				if use_rematch:
+					rematch.pressed.emit()
+					await _wait_start(main)
+					assert_eq(main.human, "b", "rematch swaps colours")
+				else:
+					new_game.pressed.emit()
+					assert_true(main.get_node("Home").visible, "New game opens Home")
+					await main._start(SETTINGS.duplicate())
+				assert_true(main.draw_button.is_visible_in_tree() and not main.draw_button.disabled, "Offer draw is restored")
+				assert_true(main.resign_button.is_visible_in_tree() and not main.resign_button.disabled, "Resign is restored")
+				assert_true(not new_game.visible and not rematch.visible, "post-game actions are hidden during play")
+			main.free()
+
+
 func test_game_over_copies_the_same_pgn_as_review():
 	var main = await _session(ManualWaits.new())
 	assert_true(main.board_view.play("e2e4"))
