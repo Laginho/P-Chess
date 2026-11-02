@@ -19,3 +19,4 @@ Single-context: one `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agent
 - Gate: `godot --headless -s tests/run.gd`
 - Godot: `godot` is `C:\Users\bruno\AppData\Local\Programs\Godot\godot.cmd` (Godot 4.7 console exe beside it). It is installed: if a sandbox denies reading it or writing `.git`, escalate the command; never download Godot.
 - Base branch: `main`
+- Windowed runs by agents (captures, live checks, anything not `--headless`): open the window off Bruno's screen with `--position 3000,3000`, e.g. `godot --path . --position 3000,3000`, so it does not cover what he is using. Commands handed to Bruno to play the game himself keep the default position.
