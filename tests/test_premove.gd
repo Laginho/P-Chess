@@ -70,6 +70,38 @@ func _drag(board, from: String, to: String, alt := false) -> void:
 	_mouse(board, false, to, MOUSE_BUTTON_LEFT, alt)
 
 
+func test_premove_highlights_follow_the_queue():
+	var main = await _session(FakeTime.new())
+	var board = main.board_view
+	if not board.has_method("premove_highlighted_squares"):
+		assert_true(false, "the board exposes the squares it highlights")
+		main.free()
+		return
+	assert_eq(board.premove_highlighted_squares(), PackedStringArray())
+	board.play("e2e4")
+	for pair in [["d2", "d4"], ["a2", "a3"], ["g1", "f3"]]:
+		_drag(board, pair[0], pair[1])
+	assert_eq(board.premove_highlighted_squares(), PackedStringArray(["d2", "d4", "a2", "a3", "g1", "f3"]))
+	main._on_maia_move("e7e5")
+	assert_eq(board.premove_highlighted_squares(), PackedStringArray(["a2", "a3", "g1", "f3"]), "played move disappears")
+	_mouse(board, true, "e4", MOUSE_BUTTON_RIGHT)
+	assert_eq(board.premove_highlighted_squares(), PackedStringArray(), "right click clears highlights")
+	_drag(board, "d4", "d5")
+	main._on_maia_move("e5d4")
+	assert_eq(board.premove_highlighted_squares(), PackedStringArray(), "illegal move is dropped")
+	main.free()
+
+	main = await _session(FakeTime.new(), "b")
+	board = main.board_view
+	board.premove_style = "Lichess"
+	assert_true(board.flipped)
+	_drag(board, "g8", "f6")
+	assert_eq(board.premove_highlighted_squares(), PackedStringArray(["g8", "f6"]))
+	_drag(board, "b8", "c6")
+	assert_eq(board.premove_highlighted_squares(), PackedStringArray(["b8", "c6"]), "replacement removes old highlights")
+	main.free()
+
+
 func test_main_queues_human_moves_and_executes_one_per_maia_reply():
 	var time := FakeTime.new()
 	var main = await _session(time)
@@ -540,9 +572,77 @@ func test_geometric_premoves_and_recapture():
 	assert_eq(queue.take(game.board), "f3e5")
 	assert_true(game.play("f3e5"), "the recapture plays")
 	queue.clear()
-	assert_true(queue.enqueue(game.board, "a1a4"), "rook passes through a blocker")
+	assert_true(not queue.enqueue(game.board, "a1a4"), "rook cannot pass its own pawn")
 	queue.clear()
 	assert_true(queue.enqueue(game.board, "a2b3"), "pawn captures diagonally onto empty square")
+
+
+func test_own_pieces_block_pushes_and_slider_paths_but_not_recaptures():
+	# Bruno's QA: pawn e2, own knight e3; only the diagonals remain.
+	var game = Game.new("rnbqkbnr/pppppppp/8/8/8/4N3/PPPPPPPP/R1BQKBNR b KQkq - 0 1")
+	var queue = PremoveQueue.new("w")
+	assert_eq(queue.targets(game.board, "e2"), PackedStringArray(["e2d3", "e2f3"]), "no push onto or through the own knight")
+	assert_true(not queue.enqueue(game.board, "e2e3"))
+	assert_true(not queue.enqueue(game.board, "e2e4"))
+	assert_true(queue.enqueue(game.board, "e3g4"), "the knight leaves in the ghost")
+	assert_true(queue.enqueue(game.board, "e2e4"), "then the double push is clear")
+	game = Game.new("4k3/8/8/8/4P3/8/4P3/4K3 b - - 0 1")
+	queue = PremoveQueue.new("w")
+	assert_eq(queue.targets(game.board, "e2"), PackedStringArray(["e2d3", "e2e3", "e2f3"]), "no push onto the own pawn on e4")
+	game = Game.new("4k3/8/8/8/8/4p3/4P3/4K3 b - - 0 1")
+	queue = PremoveQueue.new("w")
+	assert_true(queue.enqueue(game.board, "e2e4"), "a push may pass an enemy piece, it may move")
+	queue.clear()
+	assert_true(queue.enqueue(game.board, "e2e3"), "a push may land on an enemy piece, it may move")
+	game = Game.new("4k3/4p3/4n3/8/8/8/8/4K3 w - - 0 1")
+	queue = PremoveQueue.new("b")
+	assert_eq(queue.targets(game.board, "e7"), PackedStringArray(["e7d6", "e7f6"]), "black pushes follow the same rule")
+	# Sliders stop before own pieces, may land on them, and pass enemies.
+	game = Game.new("4k3/8/p7/8/8/8/P2P4/R1B1KQ2 b - - 0 1")
+	queue = PremoveQueue.new("w")
+	assert_true(not queue.enqueue(game.board, "a1a3"), "rook through its own pawn")
+	assert_true(queue.enqueue(game.board, "a1a2"), "rook recaptures on its own pawn")
+	queue.clear()
+	assert_true(not queue.enqueue(game.board, "c1e3"), "bishop through its own pawn")
+	assert_true(queue.enqueue(game.board, "c1d2"), "bishop recaptures on its own pawn")
+	queue.clear()
+	assert_true(not queue.enqueue(game.board, "f1d1"), "queen through its own king")
+	assert_true(queue.enqueue(game.board, "e1d1"), "king steps")
+	queue.clear()
+	assert_true(not queue.enqueue(game.board, "a1a7"), "the own a2 pawn blocks before the enemy a6 pawn")
+	game = Game.new("4k3/8/p7/8/8/8/8/R3K3 b - - 0 1")
+	queue = PremoveQueue.new("w")
+	assert_true(queue.enqueue(game.board, "a1a7"), "rook passes an enemy pawn")
+	queue.clear()
+	assert_true(queue.enqueue(game.board, "e1d2"), "king targets stay geometric")
+
+
+func test_castling_premoves_need_no_own_piece_between_king_and_rook():
+	var game = Game.new("4k3/8/8/8/8/8/8/RN2K1NR b KQ - 0 1")
+	var queue = PremoveQueue.new("w")
+	assert_true(not queue.enqueue(game.board, "e1g1"), "own knight on g1")
+	assert_true(not queue.enqueue(game.board, "e1c1"), "own knight on b1, even off the king's path")
+	assert_true(queue.enqueue(game.board, "g1f3"))
+	assert_true(queue.enqueue(game.board, "e1g1"), "the knight left in the ghost")
+	game = Game.new("4k3/8/8/8/8/8/8/R3Kb1R b KQ - 0 1")
+	queue = PremoveQueue.new("w")
+	assert_true(queue.enqueue(game.board, "e1g1"), "an enemy piece between may still move")
+	game = Game.new("4k2r/8/8/8/8/8/8/4K3 w k - 0 1")
+	queue = PremoveQueue.new("b")
+	assert_true(queue.enqueue(game.board, "e8g8"), "black castles on an empty side")
+
+
+func test_own_piece_dots_follow_the_input_position_on_the_board():
+	var board = BoardScene.instantiate()
+	board.game = Game.new("rnbqkbnr/pppppppp/8/8/8/4N3/PPPPPPPP/R1BQKBNR b KQkq - 0 1")
+	board.human_side = "w"
+	Engine.get_main_loop().root.add_child(board)
+	board.size = Vector2(800, 800)
+	_mouse(board, true, "e2")
+	assert_eq(board._held_moves, PackedStringArray(["e2d3", "e2f3"]), "no dot or capture ring on e3 and e4")
+	_mouse(board, false, "e3")
+	assert_eq(board.premoves.moves, PackedStringArray(), "dropping on the own knight queues nothing")
+	board.free()
 
 
 func test_premove_targets_include_geometry_on_the_board():
@@ -555,4 +655,24 @@ func test_premove_targets_include_geometry_on_the_board():
 	assert_true("f3e5" in board._held_moves, "own piece is a displayed target")
 	_mouse(board, false, "e5")
 	assert_eq(board.premoves.moves, PackedStringArray(["f3e5"]))
+	board.free()
+
+
+func test_click_selection_preserves_own_piece_recapture_and_reselects_other_pieces():
+	var board = BoardScene.instantiate()
+	board.game = Game.new("4k3/8/8/4P3/8/5N2/P7/R3K3 b - - 0 1")
+	board.human_side = "w"
+	board.click_click = true
+	Engine.get_main_loop().root.add_child(board)
+	board.size = Vector2(800, 800)
+	for square in ["f3", "e5"]:
+		_mouse(board, true, square)
+		_mouse(board, false, square)
+	assert_eq(board.premoves.moves, PackedStringArray(["f3e5"]), "geometric recapture remains queued")
+	board.cancel_premoves()
+	for square in ["a1", "f3"]:
+		_mouse(board, true, square)
+		_mouse(board, false, square)
+	assert_eq(board._selected, "f3", "a piece outside rook geometry is reselected")
+	assert_true("f3e5" in board._held_moves)
 	board.free()

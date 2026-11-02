@@ -49,7 +49,9 @@ func _fixture_game(movetext: String, ending: String, colour: String) -> Array:
  var clocks := []
  for move in parsed.games[0].moves:
   game.play(move.uci)
-  clocks.append(175000)
+  # Each side's clock runs down unevenly; Black's ends under 10 s, as in a flag.
+  var i := clocks.size()
+  clocks.append(maxi(180000 - i / 2 * (5200 if i % 2 == 0 else 13300) + i * 731 % 2300, 900))
  var other := "b" if colour == "w" else "w"
  match ending:
   "draw": game.agree_draw()

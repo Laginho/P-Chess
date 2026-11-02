@@ -172,7 +172,7 @@ For each legal move `m` that keeps the game on a checked line:
 ### 8.2 Premoves
 
 - Premove style setting: off / Lichess (one premove) / Chess.com (a queue). The default is Chess.com.
-- Premove targets follow piece geometry, ignoring pieces on and between squares; king squares cannot be targeted. Queued moves replace their targets in the ghost position and show as ghost pieces.
+- Premove targets follow piece geometry in the premove input position (the ghost position once moves are queued); king squares cannot be targeted. Enemy pieces never block, since the opponent moves first. Your own pieces stay put unless a queued move moves them, so they block what they must: a pawn push cannot land on or pass through one, a rook, bishop or queen cannot pass through one, and castling needs the squares between king and rook free of them. Landing on your own piece stays allowed for pawn diagonals, knights, kings and sliders, so recaptures can be queued. Queued moves replace their targets in the ghost position and show as ghost pieces.
 - When a queued premove turns out illegal as it comes to run, it and the rest of the queue are dropped.
 - A right click cancels the whole queue.
 - Premoves are played the moment Maia moves and cost 0.1 s, as on Chess.com.

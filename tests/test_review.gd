@@ -719,6 +719,71 @@ func test_review_navigation_buttons_visit_first_and_last_move():
 		assert_eq(main.review.get_node("Margin/Content/ReviewBody/BoardView").game.moves.size(), 2)
 	main.free()
 
+
+func test_review_navigation_plays_the_shown_moves_sound_once():
+	var main = await _session(FakeTime.new())
+	var board = main.review.get_node("Margin/Content/ReviewBody/BoardView")
+	assert_true(board.sound_requested.is_connected(main.sound_player.play), "review sounds go through the game's sound player")
+	var heard := []
+	board.sound_requested.connect(func(event): heard.append(event))
+	var game = Game.new()
+	for move in ["e2e4", "d7d5", "e4d5", "d8d5", "b1c3", "d5e5", "f1e2", "e5e2"]:
+		assert_true(game.play(move), move)
+	main.review.present(game, [-1, -1, -1, -1, -1, -1, -1, -1], SETTINGS, "")
+	assert_eq(heard, [], "opening the review is silent")
+	var nav = main.review.get_node("Margin/Content/ReviewBody/Side/Navigation")
+	nav.get_node("Next").pressed.emit()
+	assert_eq(heard, [], "Next at the last move changes nothing, so no sound")
+	nav.get_node("Previous").pressed.emit()
+	assert_eq(heard, ["move"], "stepping back plays the now-last move, Be2")
+	heard.clear()
+	nav.get_node("First").pressed.emit()
+	assert_eq(heard, [], "the start position is silent")
+	var event := InputEventKey.new()
+	event.pressed = true
+	event.keycode = KEY_RIGHT
+	main.review._input(event)
+	assert_eq(heard, ["move"], "arrow key: e4")
+	heard.clear()
+	var list: Tree = main.review.get_node("Margin/Content/ReviewBody/Side/Moves")
+	list.get_root().get_child(1).select(1)
+	list.item_selected.emit()
+	assert_eq(heard, ["capture"], "clicking exd5 plays one capture")
+	heard.clear()
+	nav.get_node("Last").pressed.emit()
+	assert_eq(heard, ["capture", "check"], "Qxe2+ plays capture and check, as in the game")
+	main.free()
+
+
+func test_move_list_shows_each_movers_clock_and_stays_clickable():
+	var root = Engine.get_main_loop().root
+	var old_size: Vector2i = root.size
+	root.size = Vector2i(1280, 800)
+	var main = await _session(FakeTime.new())
+	var game = Game.new()
+	for move in ["e2e4", "e7e5", "g1f3"]:
+		game.play(move)
+	main.review.present(game, [161000, 9400, -1], SETTINGS, "")
+	await root.get_tree().process_frame
+	await root.get_tree().process_frame
+	var list: Tree = main.review.get_node("Margin/Content/ReviewBody/Side/Moves")
+	var first: TreeItem = list.get_root().get_child(0)
+	var second: TreeItem = list.get_root().get_child(1)
+	assert_eq(main.review._clock_cells, [[first, 1, "2:41"], [first, 2, "0:09.4"]], "each mover's clock, tenths under 10 s; none without clock data")
+	assert_eq([first.get_text(2), second.get_text(1)], ["e5", "Nf3"], "the move text stays")
+	assert_eq(list.get_node("Clocks").mouse_filter, Control.MOUSE_FILTER_IGNORE, "the clock overlay lets clicks through")
+	main.review.get_node("Margin/Content/ReviewBody/Side/Navigation/First").pressed.emit()
+	var event := InputEventMouseButton.new()
+	event.button_index = MOUSE_BUTTON_LEFT
+	event.position = list.get_global_transform() * list.get_item_area_rect(first, 2).get_center()
+	event.pressed = true
+	root.push_input(event, true)
+	event.pressed = false
+	root.push_input(event, true)
+	assert_eq(main.review.get_node("Margin/Content/ReviewBody/BoardView").game.moves.size(), 2, "clicking a move with a clock shows it")
+	main.free()
+	root.size = old_size
+
 func test_unanalysed_history_keeps_book_icon():
 	var main = await _session(FakeTime.new())
 	var game = Game.new()
@@ -1108,13 +1173,39 @@ func test_eval_score_stays_readable_on_either_colour():
 	var bar: Control = review.get_node("Margin/Content/ReviewBody/EvalBar")
 	bar.size = Vector2(28, 680)
 	var score: Label = bar.get_node("Score")
-	# Black to move: +820 for black is -8.2 for white, about 32 px of white at the flipped bar's top.
-	for case in [[0, "even"], [820, "black far ahead"]]:
-		review.receive_position(1, {"pv": [{"cp": case[0], "moves": ["e7e5"]}]})
-		assert_eq(score.get_theme_color("font_color"), Color("141412"), "flipped, %s: white is behind the score, so it is dark" % case[1])
+	# Black to move: +820 for black is -8.2 for white; the score sits on black's part at black's end.
+	review.receive_position(1, {"pv": [{"cp": 0, "moves": ["e7e5"]}]})
+	assert_eq(score.get_theme_color("font_color"), Color("141412"), "flipped, even: the score is at white's end, on white, so it is dark")
+	review.receive_position(1, {"pv": [{"cp": 820, "moves": ["e7e5"]}]})
+	assert_eq(score.get_theme_color("font_color"), Color("ece9e4"), "flipped, black far ahead: the score is on black's part, so it is light")
 	review._board_view.flipped = false
 	review._update_eval_bar()
-	assert_eq(score.get_theme_color("font_color"), Color("ece9e4"), "unflipped: black's share is behind the score, so it is light")
+	assert_eq(score.get_theme_color("font_color"), Color("ece9e4"), "unflipped, black far ahead: still on black's part, so it is light")
+	main.free()
+
+
+func test_eval_score_sits_at_the_end_of_the_side_ahead():
+	var main = await _session(FakeTime.new())
+	var review = main.get_node("Review")
+	var game = Game.new()
+	game.play("e2e4")
+	review.present(game, [180000], SETTINGS, "")
+	var bar: Control = review.get_node("Margin/Content/ReviewBody/EvalBar")
+	bar.size = Vector2(28, 680)
+	var score: Label = bar.get_node("Score")
+	# Black to move, so the engine's cp is black's view: -360 is +3.6 for white.
+	for case in [[-360, false, true, "white ahead"], [-360, true, false, "white ahead, flipped"],
+			[360, false, false, "black ahead"], [360, true, true, "black ahead, flipped"],
+			[0, false, true, "level"], [0, true, false, "level, flipped"]]:
+		review._board_view.flipped = case[1]
+		review.receive_position(1, {"pv": [{"cp": case[0], "moves": ["e7e5"]}]})
+		var middle := score.position.y + score.size.y / 2
+		assert_eq(middle > bar.size.y / 2, case[2], "%s: score at the %s end" % [case[3], "bottom" if case[2] else "top"])
+		var white_ahead: bool = case[0] <= 0
+		assert_eq(score.get_theme_color("font_color"), Color("141412") if white_ahead else Color("ece9e4"), case[3] + ": readable on its part")
+	review._board_view.flipped = false
+	review.receive_position(1, {"pv": [{"mate": -2, "moves": ["e7e5"]}]})
+	assert_true(score.text == "+M2" and score.position.y > bar.size.y / 2, "mate for white sits at white's end")
 	main.free()
 
 

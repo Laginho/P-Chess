@@ -12,6 +12,8 @@ const PremoveQueue = preload("res://ui/premove_queue.gd")
 const SNAP_BACK_SECONDS := 0.15
 const LAST_MOVE_LIGHT := Color("#cdd26a")
 const LAST_MOVE_DARK := Color("#aaa23a")
+const PREMOVE_LIGHT := Color("#e28b80")
+const PREMOVE_DARK := Color("#b75e56")
 const CHECK := Color(1, 0, 0, 0.6)
 const TARGET := Color(0.08, 0.33, 0.12, 0.5)
 const DRAWING := Color(0.12, 0.65, 0.22, 0.75)
@@ -159,12 +161,22 @@ func play(move: String, premove := false) -> bool:
 	return true
 
 
+func premove_highlighted_squares() -> PackedStringArray:
+	var squares := PackedStringArray()
+	for move in premoves.moves:
+		for square in [move.substr(0, 2), move.substr(2, 2)]:
+			if square not in squares:
+				squares.append(square)
+	return squares
+
+
 func _draw() -> void:
 	var side := _side()
 	if side < 40:
 		return
 	var cell := Vector2.ONE * side / 8
 	var last: String = game.moves[-1] if game and game.moves else ""
+	var premove_squares := premove_highlighted_squares()
 	var checked := ""
 	var position = game.board if game else null
 	if game and not premoves.moves.is_empty():
@@ -182,6 +194,8 @@ func _draw() -> void:
 			draw_rect(Rect2(at, cell), _board_style.light if _is_light(square) else _board_style.dark)
 		if last and square in [last.substr(0, 2), last.substr(2, 2)]:
 			draw_rect(Rect2(at, cell), LAST_MOVE_LIGHT if _is_light(square) else LAST_MOVE_DARK)
+		if square in premove_squares:
+			draw_rect(Rect2(at, cell), PREMOVE_LIGHT if _is_light(square) else PREMOVE_DARK)
 		var piece: String = position.piece_at(square) if position else ""
 		# A Lichess replacement is picked from the live position, so keep its source visible.
 		if game and premoves.style == "Lichess" and piece == "":
@@ -254,6 +268,16 @@ func _draw_piece(piece: String, at: Vector2, cell: Vector2, opacity := 1.0) -> v
 
 # The promotion overlay consumes GUI events, so catch its right click before GUI dispatch.
 func _input(event: InputEvent) -> void:
+	if _selected and event is InputEventMouseButton and event.pressed \
+			and event.button_index == MOUSE_BUTTON_LEFT and not get_global_rect().has_point(event.position):
+		_end_snap_back()
+	if _selected and event is InputEventMouseButton and event.pressed \
+			and event.button_index == MOUSE_BUTTON_RIGHT and get_global_rect().has_point(event.position):
+		if not premoves.moves.is_empty() or _is_premove_input():
+			cancel_premoves()
+		else:
+			_cancel_interaction()
+		get_viewport().set_input_as_handled()
 	if _picker.visible and event is InputEventMouseButton and event.pressed \
 			and event.button_index == MOUSE_BUTTON_RIGHT and get_global_rect().has_point(event.position):
 		cancel_premoves()
@@ -263,12 +287,12 @@ func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT:
 		var square := square_at(event.position - _corner(), _side(), flipped)
 		if event.pressed:
-			# A right click that cancels a queue, a drag or a premove selection draws nothing.
+			# A right click that cancels a queue, a drag or a selection draws nothing.
 			var interrupts: bool = not premoves.moves.is_empty() or (_drag_from and not _snapping) \
-					or (_selected and _is_premove_input())
+					or _selected != ""
 			if not premoves.moves.is_empty() or _is_premove_input():
 				cancel_premoves()
-			elif _drag_from:
+			elif _drag_from or _selected:
 				_cancel_interaction()
 			_drawing_from = "" if interrupts else square
 			_drawing_to = _drawing_from
@@ -363,6 +387,7 @@ func _drop(point: Vector2, clicked := false, alt := false) -> void:
 		_submit(moves[0], clicked)
 	elif clicked:
 		_end_snap_back()
+		_pick_up(point)
 	else:
 		_snapping = true
 		_snap = create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
@@ -387,6 +412,15 @@ func _layout_picker() -> void:
 	_picker.layout(_corner() + at, _side() / 8, at.y < _side() / 2)
 
 
+# The sounds of a move just played, as SAN, in the shown game: Review replays them when stepping.
+func request_move_sounds(san: String, premove := false) -> void:
+	sound_requested.emit("premove" if premove else "castle" if san.begins_with("O-O") else "capture" if "x" in san else "move")
+	if "=" in san:
+		sound_requested.emit("promote")
+	if game.board.in_check():
+		sound_requested.emit("check")
+
+
 # shortcut: only the moving piece slides, a castling rook jumps; slide it too if it looks wrong.
 func _commit(move: String, slide: bool, premove := false) -> void:
 	var san: String = game.board.san(move)
@@ -404,11 +438,7 @@ func _commit(move: String, slide: bool, premove := false) -> void:
 		_slide.tween_property(self, "_slide_pos", _centre(_slide_to), slide_seconds)
 		_slide.tween_callback(_end_slide)
 	queue_redraw()
-	sound_requested.emit("premove" if premove else "castle" if san.begins_with("O-O") else "capture" if "x" in san else "move")
-	if "=" in san:
-		sound_requested.emit("promote")
-	if game.board.in_check():
-		sound_requested.emit("check")
+	request_move_sounds(san, premove)
 	move_played.emit(san)
 	# A reply's listeners may also play the due premove before input resumes.
 	var held := _drag_from if _drag_from else _selected

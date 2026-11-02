@@ -26,6 +26,30 @@ func test_class_icon_colours_match_canvas():
 		assert_true(colours[icon] in svg.to_lower(), "%s uses canvas colour %s" % [icon, colours[icon]])
 
 
+func test_class_icons_render_their_white_glyph_at_4x_with_mipmaps():
+	for icon in ["brilliant", "great", "best", "excellent", "good", "book", "repertoire", "inaccuracy", "mistake", "miss", "blunder", "forced"]:
+		var path := "res://ui/icons/classes/%s.svg" % icon
+		var image := Image.new()
+		assert_eq(image.load_svg_from_string(FileAccess.get_file_as_string(path), 4.0), OK, icon)
+		var white := 0
+		var glyph := Rect2i()
+		for x in image.get_width():
+			for y in image.get_height():
+				var pixel := image.get_pixel(x, y)
+				if pixel.a > 0.9 and pixel.r > 0.95 and pixel.g > 0.95 and pixel.b > 0.95:
+					white += 1
+				if pixel.a > 0.9 and pixel.r > 0.9 and pixel.g > 0.9 and pixel.b > 0.9:
+					glyph = Rect2i(x, y, 1, 1) if glyph.size == Vector2i.ZERO else glyph.expand(Vector2i(x, y)).expand(Vector2i(x + 1, y + 1))
+		# Godot's SVG renderer ignores stroke/fill set on a nested <svg>; such glyphs came out black or empty.
+		assert_true(white > 300, "%s glyph renders white (%d px)" % [icon, white])
+		# It ignores a nested <svg>'s x/y/width/height too, so glyphs sit in a translated <g>, centred by their box.
+		var off := Vector2(glyph.position) + Vector2(glyph.size) / 2.0 - Vector2(64, 64)
+		assert_true(absf(off.x) <= 1.0 and absf(off.y) <= 1.0, "%s glyph is centred in its circle at 128 px (off by %s)" % [icon, off])
+		var texture: Texture2D = load(path)
+		assert_eq(texture.get_width(), 128, icon + " imports at svg/scale 4")
+		assert_true(texture.get_image().has_mipmaps(), icon + " imports with mipmaps")
+
+
 func test_trash_icon_uses_canvas_delete_glyph():
 	var svg := FileAccess.get_file_as_string("res://ui/icons/trash.svg")
 	assert_true('d="M4 7h16M10 7V4.5h4V7M6.5 7l1 13h9l1-13"' in svg, "Delete game glyph from History.dc.html")
