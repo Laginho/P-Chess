@@ -211,6 +211,40 @@ func test_game_over_panel_actions():
 		main.free()
 
 
+func test_closed_game_over_offers_a_way_out():
+	for close_with_escape in [false, true]:
+		for use_rematch in [false, true]:
+			var main = await _session(ManualWaits.new())
+			main._set_focus(close_with_escape)
+			main.board_view.game.resign(main.human)
+			main._show_result()
+			var card = main.board_view.get_node("GameOver")
+			if close_with_escape:
+				_push_key(main.get_viewport(), KEY_ESCAPE)
+			else:
+				card.get_node("Panel/Content/Close").pressed.emit()
+			var actions = main.get_node("Layout/Side/Actions")
+			var new_game = actions.get_node_or_null("NewGameButton")
+			var rematch = actions.get_node_or_null("RematchButton")
+			assert_true(not card.visible and not main.focus and actions.is_visible_in_tree(), "closing restores the panel")
+			assert_true(new_game != null and rematch != null, "post-game actions exist")
+			if new_game and rematch:
+				assert_true(new_game.is_visible_in_tree() and rematch.is_visible_in_tree(), "post-game actions are visible")
+				assert_true(not main.draw_button.visible and not main.resign_button.visible, "in-game actions are hidden")
+				if use_rematch:
+					rematch.pressed.emit()
+					await _wait_start(main)
+					assert_eq(main.human, "b", "rematch swaps colours")
+				else:
+					new_game.pressed.emit()
+					assert_true(main.get_node("Home").visible, "New game opens Home")
+					await main._start(SETTINGS.duplicate())
+				assert_true(main.draw_button.is_visible_in_tree() and not main.draw_button.disabled, "Offer draw is restored")
+				assert_true(main.resign_button.is_visible_in_tree() and not main.resign_button.disabled, "Resign is restored")
+				assert_true(not new_game.visible and not rematch.visible, "post-game actions are hidden during play")
+			main.free()
+
+
 func test_game_over_copies_the_same_pgn_as_review():
 	var main = await _session(ManualWaits.new())
 	assert_true(main.board_view.play("e2e4"))
@@ -453,6 +487,71 @@ func test_resign_button_shares_the_two_second_window_with_escape():
 			assert_eq(main.board_view.game.reason, "resignation")
 			assert_true(button.disabled, "disabled after game")
 		main.free()
+
+
+func test_game_board_centres_and_panel_keeps_its_floor():
+	var main = await _session(ManualWaits.new())
+	main.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	main.size = Vector2(1422, 800)
+	for i in 4:
+		await Engine.get_main_loop().process_frame
+	var board: Rect2 = main.board_view.get_global_rect()
+	assert_true(absf(board.get_center().x - 711.0) <= 1.0, "board is centred on a 16:9 canvas")
+	main.size = Vector2(1280, 800)
+	for i in 4:
+		await Engine.get_main_loop().process_frame
+	var side: Control = main.get_node("Layout/Side")
+	main.resign_button.pressed.emit()
+	main._process(0)
+	for i in 4:
+		await Engine.get_main_loop().process_frame
+	assert_true(side.get_global_rect().end.x <= 1280, "panel stays in the resized canvas")
+	assert_true(side.size.x >= side.get_combined_minimum_size().x, "panel keeps its floor")
+	assert_true(main.resign_button.size.x >= main.resign_button.get_minimum_size().x, "armed resignation fits")
+	main.free()
+
+
+# Bruno's QA follow-up: Home, Searching and Game draw the board at the window's horizontal centre,
+# through the project's stretch, and Searching does not jump aside while the game loads.
+func test_board_stays_centred_on_home_searching_and_game():
+	var tree := Engine.get_main_loop()
+	var before: Vector2i = tree.root.size
+	var main = await _session(ManualWaits.new(), false)
+	for window in [Vector2i(1280, 720), Vector2i(1920, 1080), Vector2i(2560, 1440), Vector2i(3440, 1440)]:
+		tree.root.size = window
+		for i in 4:
+			await tree.process_frame
+		var canvas: Vector2 = main.get_viewport_rect().size
+		var home: Rect2 = main.get_node("Home/Center/Board").get_global_rect()
+		main.searching.present(SETTINGS)
+		for i in 2:
+			await tree.process_frame
+		var searching: Rect2 = main.searching.get_node("Board").get_global_rect()
+		main.searching.hide()
+		await main._start(SETTINGS.duplicate())
+		for i in 4:
+			await tree.process_frame
+		var game: Rect2 = main.board_view.get_global_rect()
+		for item in [["Home", home], ["Searching", searching], ["Game", game]]:
+			assert_true(absf(item[1].get_center().x - canvas.x / 2) <= 1.0, "%s board centred at %s (centre %.1f, canvas %.1f)" % [item[0], window, item[1].get_center().x, canvas.x])
+		assert_true(searching.position.distance_to(home.position) <= 1.0, "Searching board stays where Home drew it at %s" % window)
+		main._show_home()
+	# Below the panel's floor all three screens slide the board left by the same amount.
+	tree.root.size = Vector2i(800, 600)
+	for i in 4:
+		await tree.process_frame
+	var home_low: Rect2 = main.get_node("Home/Center/Board").get_global_rect()
+	main.searching.present(SETTINGS)
+	await tree.process_frame
+	var searching_low: Rect2 = main.searching.get_node("Board").get_global_rect()
+	main.searching.hide()
+	await main._start(SETTINGS.duplicate())
+	for i in 4:
+		await tree.process_frame
+	var game_low: Rect2 = main.board_view.get_global_rect()
+	assert_true(searching_low.position.distance_to(home_low.position) <= 1.0 and absf(game_low.position.x - home_low.position.x) <= 1.0, "boards agree below the floor: %s %s %s" % [home_low, searching_low, game_low])
+	main.free()
+	tree.root.size = before
 
 
 func test_resign_confirmation_fits_without_moving_panel_controls():
@@ -1074,6 +1173,34 @@ func test_flip_keeps_player_details_hidden_in_focus_mode():
 	main._set_flipped(not main.board_view.flipped)
 	for row in [main.white_clock.get_parent(), main.black_clock.get_parent()]:
 		assert_true(not row.get_node("Avatar").visible and not row.get_node("Initial").visible, "focus keeps avatars hidden after flip")
+	main.free()
+
+
+func test_focus_centres_board_and_keeps_only_clocks_until_restored():
+	var main = await _session(ManualWaits.new())
+	main.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	main.size = Vector2(1422, 800) # 1920x1080 with the project's canvas stretch.
+	main.draw_notice.show()
+	await _laid_out(main)
+	_key(main, KEY_F11)
+	for i in 4:
+		await Engine.get_main_loop().process_frame
+	var board: Rect2 = main.board_view.get_global_rect()
+	var bot: Rect2 = main.black_clock.get_global_rect()
+	var player: Rect2 = main.white_clock.get_global_rect()
+	assert_true(not main.get_node("Layout/Side").is_visible_in_tree(), "no side panel in focus")
+	assert_true(absf(board.get_center().x - main.size.x / 2) <= 1 and absf(board.get_center().y - main.size.y / 2) <= 1, "board is centred")
+	assert_true(main.black_clock.is_visible_in_tree() and main.white_clock.is_visible_in_tree(), "both clocks are visible")
+	assert_true(bot.end.x <= board.position.x and player.end.x <= board.position.x and bot.position.y < player.position.y, "Maia above player, left of board")
+	assert_true(board.position.x - bot.end.x <= 60 and board.position.x - player.end.x <= 60, "clocks stay close to the board")
+	assert_true(absf((bot.get_center().y + player.get_center().y) / 2 - board.get_center().y) <= 1, "clocks straddle the board centre")
+	assert_true(not main.get_node("Layout/BoardView/ResizeGrip").is_visible_in_tree(), "only board and clocks show")
+	main.board_view.game.resign(main.human)
+	main._show_result()
+	assert_true(main.board_view.get_node("GameOver").is_visible_in_tree(), "game-over card appears in focus")
+	_key(main, KEY_F11)
+	await _laid_out(main)
+	assert_true(main.get_node("Layout/Side").is_visible_in_tree() and main.draw_notice.visible, "normal panel and notice return")
 	main.free()
 
 

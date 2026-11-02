@@ -41,13 +41,15 @@ func _process(delta: float) -> void:
 
 
 func _layout_searching() -> void:
+	# The board stands where Home and Game put it: centred, sliding left to keep the card at the panel's 260 floor.
 	var margin := 40.0 if size.x >= 1000 else 20.0
 	var gap := 40.0 if size.x >= 1000 else 20.0
-	var side := maxf(0, minf(size.y - margin * 2, size.x - margin * 2 - gap - 280))
-	$Board.position = Vector2(margin, (size.y - side) / 2)
+	var side := maxf(0, minf(size.y - margin * 2, size.x - margin * 2 - gap - 260))
+	var board_left := maxf(margin, minf((size.x - side) / 2, size.x - margin - gap - 260 - side))
+	$Board.position = Vector2(board_left, (size.y - side) / 2)
 	$Board.size = Vector2(side, side)
 	var card: Control = $Card
-	card.position = Vector2(margin + side + gap, (size.y - side) / 2)
+	card.position = Vector2(board_left + side + gap, (size.y - side) / 2)
 	card.size = Vector2(size.x - card.position.x - margin, side)
 	$Spinner.position = card.position + Vector2(card.size.x / 2 - 48, card.size.y / 2 - 119)
 	$Spinner.size = Vector2(96, 96)
@@ -69,8 +71,9 @@ func _layout_searching() -> void:
 	$Center/Content/Status.position = Vector2(0, middle + 37)
 	$Center/Content/Status.size = Vector2(card.size.x, 26)
 	# Chips as wide as their labels, centred as a pair 10 px apart.
-	var control_width := minf($Center/Content/ControlChip.get_combined_minimum_size().x, (card.size.x - 40) / 2)
-	var level_width := minf($Center/Content/LevelChip.get_combined_minimum_size().x, (card.size.x - 40) / 2)
+	# A button never shrinks below its minimum, so a cap here would only uncentre the pair.
+	var control_width: float = $Center/Content/ControlChip.get_combined_minimum_size().x
+	var level_width: float = $Center/Content/LevelChip.get_combined_minimum_size().x
 	var left := (card.size.x - control_width - level_width - 10) / 2
 	$Center/Content/ControlChip.position = Vector2(left, middle + 82)
 	$Center/Content/ControlChip.size = Vector2(control_width, 36)

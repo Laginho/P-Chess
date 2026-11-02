@@ -296,3 +296,22 @@ func test_searching_keeps_long_player_name_inside_card_at_minimum_window():
 	assert_eq(main.preferences.get_value("player_name"), name, "the full name remains saved")
 	main.free()
 	Session.HistoryStorage.clean(folder)
+
+
+# Bruno's QA follow-up: each quick-play label sits at its tile's centre with the icon just left of it,
+# and the tiles stay landscape however narrow the panel gets.
+func test_quick_play_tiles_are_landscape_with_centred_labels():
+	var home = load("res://ui/home.tscn").instantiate()
+	home.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	Engine.get_main_loop().root.add_child(home)
+	for canvas in [Vector2(1422, 800), Vector2(1280, 960), Vector2(1911, 800), Vector2(800, 600)]:
+		home.size = canvas
+		for name in ["OneZero", "ThreeTwo", "FiveZero", "Custom"]:
+			var tile: Button = home.find_child(name, true, false)
+			assert_true(tile.size.x > tile.size.y, "%s is landscape at %s (%s)" % [name, canvas, tile.size])
+			var placed: Vector3 = tile.placement()
+			var label: float = tile.get_theme_font("font").get_string_size(tile.text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(placed.z)).x
+			assert_true(absf(placed.y + label / 2 - tile.size.x / 2) <= 1.0, "%s label centred at %s" % [name, canvas])
+			var icon_end: float = placed.x + tile.get_theme_constant("icon_max_width")
+			assert_true(placed.x >= tile.icon_left and icon_end <= placed.y and placed.y - icon_end <= 12, "%s icon just left of its label at %s: %s" % [name, canvas, placed])
+	home.free()

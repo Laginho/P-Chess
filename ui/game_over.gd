@@ -80,6 +80,8 @@ func _input(event: InputEvent) -> void:
 
 func _close() -> void:
 	hide()
+	if main.focus:
+		main._set_focus(false)
 
 
 func _open_review() -> void:

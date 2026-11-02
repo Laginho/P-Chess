@@ -78,8 +78,12 @@ offset_right = -40.0
 offset_bottom = -40.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 40
+theme_override_constants/separation = 0
 alignment = 1
+
+[node name="BoardOffset" type="Control" parent="Layout"]
+layout_mode = 2
+mouse_filter = 2
 
 [node name="BoardView" parent="Layout" instance=ExtResource("2")]
 layout_mode = 2
@@ -90,6 +94,11 @@ layout_mode = 0
 offset_right = 20.0
 offset_bottom = 20.0
 script = ExtResource("6")
+
+[node name="BoardGap" type="Control" parent="Layout"]
+custom_minimum_size = Vector2(40, 0)
+layout_mode = 2
+mouse_filter = 2
 
 [node name="Side" type="VBoxContainer" parent="Layout"]
 custom_minimum_size = Vector2(240, 0)
@@ -243,6 +252,30 @@ theme_override_styles/background = SubResource("BarEmpty")
 theme_override_styles/fill = SubResource("BarFill")
 show_percentage = false
 
+[node name="NewGameButton" type="Button" parent="Layout/Side/Actions"]
+visible = false
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 0
+theme_type_variation = &"RaisedButton"
+theme_override_font_sizes/font_size = 15
+script = ExtResource("11")
+font_type = &"SemiboldText"
+text = "New game"
+
+[node name="RematchButton" type="Button" parent="Layout/Side/Actions"]
+visible = false
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 0
+theme_type_variation = &"RaisedButton"
+theme_override_font_sizes/font_size = 15
+script = ExtResource("11")
+font_type = &"SemiboldText"
+text = "Rematch"
+
 [node name="Trail" type="Control" parent="Layout/Side/Actions"]
 custom_minimum_size = Vector2(4, 0)
 layout_mode = 2
@@ -337,6 +370,12 @@ layout_mode = 2
 [node name="Trail" type="Control" parent="Layout/Side/WhiteClockRow"]
 layout_mode = 2
 mouse_filter = 2
+
+[node name="FocusClocks" type="VBoxContainer" parent="."]
+visible = false
+layout_mode = 0
+mouse_filter = 2
+theme_override_constants/separation = 0
 
 [node name="Setup" parent="." instance=ExtResource("4")]
 visible = false

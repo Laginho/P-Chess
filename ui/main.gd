@@ -150,6 +150,8 @@ func _ready() -> void:
 		_show_result())
 	resign_button.pressed.connect(_resign)
 	draw_button.pressed.connect(_offer_draw)
+	$Layout/Side/Actions/NewGameButton.pressed.connect(_show_home)
+	$Layout/Side/Actions/RematchButton.pressed.connect(func(): _start(rematch(settings)))
 	draw_notice_timer.timeout.connect(func():
 		draw_notice.hide()
 		_notice_before_focus = false)
@@ -170,6 +172,10 @@ func _ready() -> void:
 	# The catalog takes seconds to parse: start it now so the first game does not wait for it.
 	setup.get_node("OpeningPicker").ensure_catalog()
 	$Layout.resized.connect(_fit_board)
+	resized.connect(_fit_board)
+	$Layout.sort_children.connect(func(): _place_focus_clocks.call_deferred())
+	board_view.resized.connect(_place_focus_clocks)
+	$FocusClocks.resized.connect(_place_focus_clocks)
 	$Layout/BoardView/ResizeGrip.size_requested.connect(_resize_board)
 	_fit_board()
 	if analysis_queue == null:
@@ -388,6 +394,10 @@ func _start(new_settings: Dictionary) -> void:
 	claim_draw.disabled = true
 	clock = Clock.new(settings.control, Time.get_ticks_msec)
 	resign_button.disabled = false
+	resign_button.show()
+	draw_button.show()
+	$Layout/Side/Actions/NewGameButton.hide()
+	$Layout/Side/Actions/RematchButton.hide()
 	_draw_offered = false
 	_draw_moves_left = 0
 	draw_button.disabled = false
@@ -521,11 +531,15 @@ func _fit_board() -> void:
 	var fit := _board_fit_size()
 	var chosen: int = preferences.get_value("board_size")
 	board_view.custom_minimum_size.x = fit if chosen == 0 else clampf(chosen, minf(MIN_BOARD_SIZE, fit), fit)
+	var board_width: float = board_view.custom_minimum_size.x
+	var width := minf($Layout.size.x, size.x - 80)
+	$Layout/BoardOffset.custom_minimum_size.x = maxf(0, minf((width - board_width) / 2,
+			width - board_width - 40 - $Layout/Side.get_combined_minimum_size().x))
 
 
 func _board_fit_size() -> float:
-	return maxf(0, minf($Layout.size.y,
-			$Layout.size.x - $Layout/Side.get_combined_minimum_size().x - 40))
+	return maxf(0, minf(minf($Layout.size.y, size.y - 80),
+			minf($Layout.size.x, size.x - 80) - $Layout/Side.get_combined_minimum_size().x - 40))
 
 
 func _resize_board(side: int) -> void:
@@ -537,8 +551,8 @@ func _set_flipped(flipped: bool) -> void:
 	board_view.flipped = flipped
 	var bot = white_clock.get_parent() if human == "b" else black_clock.get_parent()
 	var player = black_clock.get_parent() if human == "b" else white_clock.get_parent()
-	$Layout/Side.move_child(bot, 0)
-	$Layout/Side.move_child(player, -1)
+	bot.get_parent().move_child(bot, 0)
+	player.get_parent().move_child(player, -1)
 	$Layout/Side.move_child(claim_draw.get_parent(), -1)
 	bot.get_node("Name").text = "Maia"
 	bot.get_node("Name/Colour").hide()
@@ -560,18 +574,44 @@ func _set_flipped(flipped: bool) -> void:
 func _set_focus(on: bool) -> void:
 	if on and not focus:
 		_notice_before_focus = draw_notice.visible
+	if on != focus:
+		var destination: Node = $FocusClocks if on else $Layout/Side
+		for row in [white_clock.get_parent(), black_clock.get_parent()]:
+			row.reparent(destination, false)
+		var bot = white_clock.get_parent() if human == "b" else black_clock.get_parent()
+		var player = black_clock.get_parent() if human == "b" else white_clock.get_parent()
+		destination.move_child(bot, 0)
+		destination.move_child(player, -1)
+		if not on:
+			$Layout/Side.move_child(claim_draw.get_parent(), -1)
 	focus = on
+	$Layout/Side.visible = not on
+	$Layout/BoardOffset.visible = not on
+	$Layout/BoardGap.visible = not on
+	$Layout/BoardView/ResizeGrip.visible = not on
+	$FocusClocks.visible = on
+	_fit_board()
+	_place_focus_clocks.call_deferred()
 	draw_notice.visible = not on and _notice_before_focus
 	for node in [move_list, claim_draw.get_parent(), $Layout/Side/Actions, settings_screen]:
 		node.visible = not on
 	# The game-over card shows the result; the side panel keeps only a history failure.
 	result_label.visible = not on and result_label.text.contains("History: ")
 	for row in [white_clock.get_parent(), black_clock.get_parent()]:
+		row.get_node("Lead").visible = not on
 		row.get_node("Name").visible = not on
 		row.get_node("Avatar").visible = not on and row == (white_clock.get_parent() if human == "b" else black_clock.get_parent())
 		row.get_node("Initial").visible = not on and row == (black_clock.get_parent() if human == "b" else white_clock.get_parent())
 	white_score.visible = _show_match_score and not on
 	black_score.visible = _show_match_score and not on
+
+
+func _place_focus_clocks() -> void:
+	if focus:
+		var board: Rect2 = board_view.get_global_rect()
+		$FocusClocks.size = $FocusClocks.get_combined_minimum_size()
+		$FocusClocks.position = Vector2(board.position.x - $FocusClocks.size.x - 40,
+				board.get_center().y - $FocusClocks.size.y / 2) - global_position
 
 
 # Like _input: Maia's think-time timer can fire after its clock hit zero but before the next
@@ -628,8 +668,12 @@ func _on_flagged(side: String) -> void:
 func _show_result() -> void:
 	analysis_queue.resume()
 	draw_button.disabled = true
+	draw_button.hide()
 	_draw_offered = false
 	resign_button.disabled = true
+	resign_button.hide()
+	$Layout/Side/Actions/NewGameButton.show()
+	$Layout/Side/Actions/RematchButton.show()
 	var game = board_view.game
 	var named_settings := settings.duplicate()
 	named_settings.player_name = preferences.get_value("player_name")

@@ -1,8 +1,9 @@
 extends Button
 
 # Godot pins a left icon to the button's edge and centres the label in the space left over.
-# The canvas centres icon and label as one group, or with `icon_left` set, pins the icon that far
-# from the left edge and centres the label on the whole button. So this button paints both itself:
+# The canvas centres icon and label as one group, or with `icon_left` set, centres the label on the
+# whole button with the icon just left of it, at least `icon_left` from the edge (the font shrinks
+# until both fit). So this button paints both itself:
 # Godot still lays it out from `text` and `icon` (minimum size, accessibility) but draws them clear.
 
 @export var icon_left := -1.0
@@ -43,14 +44,30 @@ func _draw() -> void:
 		draw_multiline_string(font, Vector2(8, (size.y - 4 - height) / 2 + font.get_ascent(font_size)), text,
 				HORIZONTAL_ALIGNMENT_CENTER, available, font_size, -1, _colours[get_draw_mode()])
 		return
-	var x := (size.x - width - gap - label) / 2
-	var text_x := x + width + gap
-	# A narrow button falls back to the group, so the icon never runs into the label.
-	if icon and icon_left >= 0 and (size.x - label) / 2 - icon_left - width >= gap:
-		x = icon_left
-		text_x = (size.x - label) / 2
+	var placed := placement()
+	font_size = int(placed.z)
 	if icon:
 		var height := width * icon.get_height() / icon.get_width()
-		draw_texture_rect(icon, Rect2(x, (size.y - height) / 2, width, height), false, _icon_colours[disabled])
-	draw_string(font, Vector2(text_x, (size.y - font.get_height(font_size)) / 2 + font.get_ascent(font_size)),
+		draw_texture_rect(icon, Rect2(placed.x, (size.y - height) / 2, width, height), false, _icon_colours[disabled])
+	draw_string(font, Vector2(placed.y, (size.y - font.get_height(font_size)) / 2 + font.get_ascent(font_size)),
 			text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, _colours[get_draw_mode()])
+
+
+# The one-line layout: icon x, label x and font size.
+func placement() -> Vector3:
+	var font := get_theme_font("font")
+	var font_size := get_theme_font_size("font_size")
+	var label := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	var width := float(get_theme_constant("icon_max_width")) if icon else 0.0
+	var gap := float(get_theme_constant("h_separation")) if icon else 0.0
+	if icon and icon_left >= 0:
+		while font_size > 12 and (size.x - label) / 2 - gap - width < icon_left:
+			font_size -= 1
+			label = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	var x := (size.x - width - gap - label) / 2
+	var text_x := x + width + gap
+	# A button too narrow even at the smallest font falls back to the group, so the icon never runs into the label.
+	if icon and icon_left >= 0 and (size.x - label) / 2 - gap - width >= icon_left:
+		text_x = (size.x - label) / 2
+		x = text_x - gap - width
+	return Vector3(x, text_x, font_size)

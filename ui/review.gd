@@ -407,7 +407,7 @@ func _fit_notice() -> void:
 	description.position = Vector2(24, notice.size.y - 4 - height)
 	var style: StyleBoxEmpty = notice.get_theme_stylebox("normal")
 	# Compact: no icon, so the move list keeps a few rows at 800x600.
-	var top := 24 if size.x <= 800 else 79
+	var top := 24 if _compact() else 79
 	notice.get_node("NoticeIcon").visible = top == 79
 	if style.content_margin_bottom != height + 16 or style.content_margin_top != top:
 		style.content_margin_bottom = height + 16
@@ -415,8 +415,12 @@ func _fit_notice() -> void:
 		notice.update_minimum_size()
 
 
+func _compact() -> bool:
+	return size.x <= 800 or size.y * 4 >= size.x * 3
+
+
 func _layout_review() -> void:
-	var compact := size.x <= 800
+	var compact := _compact()
 	var content: Control = $Margin/Content
 	var body: Control = $Margin/Content/ReviewBody
 	var side: Control = $Margin/Content/ReviewBody/Side
@@ -500,7 +504,7 @@ func _place_rules() -> void:
 
 
 func _resize_classes() -> void:
-	var compact := size.x <= 800
+	var compact := _compact()
 	var side: Control = $Margin/Content/ReviewBody/Side
 	side.custom_minimum_size.x = 190 if compact else 220
 	# 1280 wide: a 680 board beside a 460 column, as drawn.
@@ -770,7 +774,7 @@ func _update_summary() -> void:
 		var index := 0 if side == "White" else 1
 		summary.get_node("AccuracyCards/" + side + "Score/Value").text = white if index == 0 else black
 		summary.get_node("AccuracyCards/" + side + "Name").text = _player_names[index]
-	summary.visible = not $Margin/Content/ReviewBody/Side/UnanalysedNotice.visible and not (size.x <= 800 and $Margin/Content/ReviewBody/Side/Counts.visible)
+	summary.visible = not $Margin/Content/ReviewBody/Side/UnanalysedNotice.visible and not (_compact() and $Margin/Content/ReviewBody/Side/Counts.visible)
 	$Margin/Content/ReviewBody/Side/AccuracyHelp.visible = summary.visible
 
 

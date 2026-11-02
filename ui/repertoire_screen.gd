@@ -59,7 +59,7 @@ func present() -> void:
 func _fit() -> void:
 	if visible and get_tree().root.gui_embed_subwindows:
 		position = Vector2i.ZERO
-		size = get_tree().root.size
+		size = Vector2i(get_tree().root.get_visible_rect().size)
 
 
 func _refresh() -> void:
