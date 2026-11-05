@@ -1,5 +1,5 @@
 # REV-007: Side lines in the Review, and the Best move arrow setting
-Stage: to-review
+Stage: to-implement
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -57,8 +57,9 @@ Today the Review's `BoardView` already accepts moves for both sides, but nothing
 
 - 2026-11-05 Resolution: Added a disposable side line with branch navigation and exits, the default-on best-move arrow, and live Review board preferences. The full gate on commit `0f8a102` reported 528 passed, 0 failed; Lc0-dependent checks and the existing last-move pixel test skipped on this headless Linux run. A graphical Xvfb test verified the blue arrow appears and clears; disabling its draw call made the test fail. The settings test failed on the missing key before its implementation; the side-line scene test failed on missing line state before implementation.
 
-Acceptance: pending | Automated interaction checks now pass for Review entered from focused gameplay, including real Ctrl+, and checkbox input; complete manual post-game and History exploration remains pending. See the Focus-mode repair handoff below.
-Disclosure: pending | release | Complete manual post-game and History exploration remains pending; automated coverage and its limits are recorded in the Focus-mode repair handoff below.
+Acceptance: pending | Criterion 8 still fails briefly when Review opens from a focused agreed draw while DrawNotice remains visible; complete manual post-game and History exploration also remains pending. See the third Resolution below.
+Disclosure: pending | integration | The open REV-007 repair below covers the remaining criterion-8 Settings access failure during the three-second DrawNotice interval.
+Disclosure: pending | release | Complete manual post-game and History exploration remains pending; automated coverage and its limits are recorded in the Focus-mode repair handoff and third Resolution below.
 Gate evidence: /run/media/lage/New Volume/Scratch/rev007-focus-repair/gate.json
 
 
@@ -169,4 +170,42 @@ External evidence: [focused graphical log](/run/media/lage/New Volume/Scratch/re
 - **10 focused graphical checks passed, 0 failed** under Xvfb, including this new scenario, the existing focused checkmate entry, mouse drag/click-click, side-line navigation/exits, animations, normal Review Settings, History/name-dialog/searching coverage and actual blue-arrow pixels. [Graphical log](/run/media/lage/New Volume/Scratch/rev007-focus-repair/graphical.log); [runner](/run/media/lage/New Volume/Scratch/rev007-focus-repair/focused.gd).
 - Full bound gate on committed code `2a136081068cbd3ec4588a4c54a26fd4068bc041`: `godot --headless -s tests/run.gd`, exit 0, **532 passed, 0 failed**. The runner reports six Lc0-dependent skips and the existing graphical-only last-move pixel skip; no engine was downloaded. [Receipt](/run/media/lage/New Volume/Scratch/rev007-focus-repair/gate.json); [gate log](/run/media/lage/New Volume/Scratch/rev007-focus-repair/gate.log). After the tested commit, only this ticket changes.
 - Manual post-game and History exploration, physical promotion input and real engine behavior remain unverified. This handoff makes no claim of complete product acceptance and leaves the pending manual release check explicit above. Stage 2 stops at `to-review`; no merge or independent-review verdict is claimed.
+
+#### Resolution (2026-11-05)
+Verdict: Reopen — criterion 8 still has a transient Settings access failure after a focused agreed draw.
+
+Re-reviewed `a3dab24..4ec85d9`, the previous R2 finding and the affected visibility/input paths; read the cumulative implementation diff as context. Independent Standards and Spec reviews examined the repair. No production or test changes were authored during this review; the ticket branch is preserved, with no merge or ledger entry.
+
+**Standards:** no source/test findings or actionable baseline smells. The new test and production commits stay within Primary files and separate tests from production. The corrected test at `e5e5097` fails exactly the three Settings-opening assertions against unchanged production (`red-final.log`) and passes with the repair (`green-final.log`). One non-blocking process deviation: the new test, production and handoff commits cite REV-007 in their subjects but omit the explanatory bodies requested by `ticket-flow`. The stage-3 reviewer accepts retaining those commits and the existing evidence; rewriting their history has no product benefit or runtime impact. Future commits should include the reason and ID in the body. This is not a reopen trigger.
+
+The recorded `Proxy decided (opus-5.5 xhigh)` scope expansion matches [its receipt](/tmp/sweatshop-proxy/20261105-175641-REV-007-2bed17.json). The latest repair honors that scope; no additional contract change or concurrent child-order change was found.
+
+**Spec:** one confirmed remaining finding; no scope creep.
+
+- **R2 (P3), criterion 8 ❌ — DrawNotice briefly prevents opening Settings in Review after a focused agreed draw.** `_set_focus` reparents `draw_notice` as a direct Main child after Settings (`ui/main.gd:615`). `_covers_settings()` treats every visible later Control as a covering screen (`ui/main.gd:281-283`), including this non-modal label. After an agreed draw, its existing timer keeps it visible for three seconds (`ui/main.tscn:285`). The latest visibility repair exposes the Settings root correctly, but Ctrl+, is rejected until the notice expires. This is bounded by the remaining notice duration, rather than permanent loss of Settings access. It is the previous round-2 review's missed draw-notice variant of R2, not a regression created by the latest visibility expression.
+
+  Reproduction at `4ec85d9`, with actual viewport F11, Offer draw, result-card Review and Ctrl+, input: enter focus, play `e2e4`, offer a draw and have fake Maia accept (`evaluation=-2.0`, reply `e7e5`). Open Review immediately and select game ply 0. The probe reports `REVIEW=true FOCUS=true SETTINGS_ROOT=true COVERS=true`; the sole visible covering sibling is `DrawNotice`, and `PANEL=false` after Ctrl+,. Play `d2d4` and repeat: `LINE=true LINE_PANEL=false`, with about 2.8 seconds left on the notice timer. Wait for its natural expiry and repeat the same shortcut: `NOTICE_AFTER_TIMEOUT=false PANEL_AFTER_TIMEOUT=true`. The final graphical run has no GDScript errors.
+
+  Remaining repair: keep Settings reachable in Review while the draw notice is visible, preserving History/name-dialog/searching coverage and the focused-game restriction. Extend the approved Review-scene viewport-input coverage with this agreed-draw path and test the shortcut before the notice timeout, at a game position and in a side line. Do not hide the notice or wait it out in the test setup. This remains within the existing Settings-access scope; no numbered criterion was added or rewritten.
+
+Numbered criterion record:
+
+1. ✅ Retained actual viewport drag/click-click scene checks pass.
+2. ✅ Retained viewport checks advance the game's own continuation without branching.
+3. ✅ Retained navigation, replacement and continuation checks pass.
+4. ✅ Retained exit, History two-Esc and flip checks pass; Settings retains keyboard ownership in the tested normal and focused checkmate paths.
+5. ✅ Retained game/summary/graph/PGN invariants pass; the visibility repair adds no persistence or export path.
+6. ✅ Retained wide-layout collapse/restoration checks pass; compact behavior is unchanged by the new repair.
+7. ✅ Retained side-line score/icon/arrow suppression checks pass.
+8. ❌ R2 remains during the focused agreed-draw notice interval. The focused checkmate path, both Review focus transitions, immediate checkbox updates and focused rematch restriction now pass graphically.
+9. ✅ Default-on persistence and check-row placement remain as previously reviewed.
+10. ✅ Retained animation and live board-setting checks pass graphically.
+11. ✅ Reused the valid green [gate receipt](/run/media/lage/New Volume/Scratch/rev007-focus-repair/gate.json): tested commit `2a136081068cbd3ec4588a4c54a26fd4068bc041`, `godot --headless -s tests/run.gd`, exit 0, **532 passed, 0 failed**. The log SHA-256 matches; only this tracker ticket changed after the tested commit. Six Lc0-dependent checks and the existing graphical-only last-move pixel check skipped. No unchanged full gate was rerun.
+
+Verification in this review: **10 focused graphical checks passed, 0 failed**, including focused checkmate entry, real Settings checkbox/keyboard input, viewport drag/click-click, side-line navigation/exits, move animation, History/name-dialog/searching coverage and blue-arrow pixels. [Review graphical log](/run/media/lage/New Volume/Scratch/rev007-focus-repair/review-graphical.log). The separate agreed-draw probe exposes the remaining gap: [script](/run/media/lage/New Volume/Scratch/rev007-spec-review/draw-notice-probe.gd), [result](/run/media/lage/New Volume/Scratch/rev007-spec-review/draw-notice-probe.log). Run with `xvfb-run -a godot --path . --position 3000,3000 --rendering-method gl_compatibility -s '/run/media/lage/New Volume/Scratch/rev007-spec-review/draw-notice-probe.gd'`.
+
+Coverage: examined Review visibility callbacks and their callers (`present`, `open_analysis`, result preparation, rematch, Home/Setup and History), focus transitions/reparenting, Settings covering checks and input ownership, and the draw-notice timeout. Manual product acceptance in both entry paths, physical promotion and real engines remain unverified. The existing [CLEAN-014](93-CLEAN-014-review-line-scroll.md) follow-up stays open and adds no requirement to this repair.
+
+Disclosure: decision | none | The recorded proxy scope expansion remains valid; the latest visibility repair and remaining R2 repair stay inside the approved Review Settings-access scope. See the proxy receipt linked above.
+Disclosure: deferred | none | The stage-3 reviewer accepts retaining existing commit messages without explanatory bodies, to preserve implementation/evidence history; subjects identify REV-007 and the deviation has no runtime impact. This is recorded under Standards above.
 
