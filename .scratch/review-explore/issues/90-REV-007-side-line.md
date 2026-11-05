@@ -1,5 +1,5 @@
 # REV-007: Side lines in the Review, and the Best move arrow setting
-Stage: to-implement
+Stage: blocked
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -50,3 +50,5 @@ Today the Review's `BoardView` already accepts moves for both sides, but nothing
 ## Comments
 
 - 2026-11-05 Written from the grill (spec.md). Prototype of the engine-lines placement: branch `prototype/review-engine-lines` (`251ff4c`); the engine block itself is REV-008.
+
+- 2026-11-05 Stage stopped (incomplete handoff): Stage left uncommitted work; saved for recovery. See /home/lage/Projects/P-Chess/.artifacts-build/lanes/review-explore/.scratch/run-log/REV-007-implement-20261105-172352.txt.runtime.json and run-log/recovery.txt; inspect the saved work before retrying.
