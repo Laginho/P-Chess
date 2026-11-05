@@ -68,9 +68,16 @@ func test_live_search_sets_two_lines_and_max_threads_switches_without_stale_resu
 # independently of id name, just as the reader can deliver them on separate frames.
 class HandshakingBridge extends "res://engine/uci.gd":
 	var transcript_path := "user://rev008-handshake-%d.txt" % Time.get_ticks_usec()
+	var child_script := transcript_path + ".gd"
 	func start(_dirs := PackedStringArray()) -> bool:
 		available = true
-		pid = OS.get_process_id()
+		# Godot's process monitor accepts only children it launched, not its own PID.
+		var file := FileAccess.open(child_script, FileAccess.WRITE)
+		file.store_string("extends SceneTree\n")
+		file.close()
+		pid = OS.create_process(OS.get_executable_path(), PackedStringArray([
+				"--headless", "--path", ProjectSettings.globalize_path("res://"),
+				"--script", ProjectSettings.globalize_path(child_script)]))
 		_stdio = FileAccess.open(transcript_path, FileAccess.WRITE)
 		_queue(["uci"], "uciok")
 		deliver("id name Test Stockfish")
@@ -83,9 +90,9 @@ class HandshakingBridge extends "res://engine/uci.gd":
 		_stdio.flush()
 		return FileAccess.get_file_as_string(transcript_path)
 	func stop() -> void:
-		pid = -1 # The fake endpoint has no child process to kill.
 		super.stop()
 		DirAccess.remove_absolute(transcript_path)
+		DirAccess.remove_absolute(child_script)
 
 
 func test_switch_before_uciok_still_stops_old_search_and_reaches_latest_fen():

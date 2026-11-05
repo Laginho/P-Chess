@@ -47,3 +47,5 @@ Spec: `.scratch/review-explore/spec.md`. The two engine lines show between the e
 - 2026-11-05 Written from the grill (spec.md). Note: `ui/main.gd` pauses the queue and then hides the Review when a game starts, so a resume on the Review's hide would undo that pause (criterion 7).
 
 - 2026-11-05 Stage 2: seams confirmed by the ticket: live controller with a fake UCI bridge, and the Review scene with `analysis_bridge_factory`. Callers inspected: navigation, streamed game analysis, class toggle, main game start/hide, queue cancel/resume and the shared analyser parser. Degenerate cases include rapid position switches before bestmove, missing/stopped engine, one legal move, terminal positions and absent stored PVs.
+
+- 2026-11-05 Test harness correction: the delayed-handshake fake initially used Godot’s own PID, which `OS.is_process_running` rejects because it tracks launched children. It now owns a temporary headless child and releases it synchronously. The corrected test exercises the real UCI command queue through the agreed fake-bridge seam.
