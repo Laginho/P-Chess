@@ -1,5 +1,5 @@
 # REV-008: Engine lines in the Review, and live Stockfish in side lines
-Stage: to-review
+Stage: done
 Status: ready-for-agent
 Blocked by: REV-007
 Review: human
@@ -69,3 +69,33 @@ Verification:
 Acceptance: pending | Bruno's Windows checks with real Stockfish from this ticket's Verification remain: explore a blunder, watch depth rise, click lines, Back to game, Rematch and a queued History game. Automated fake-engine checks and graphical captures pass; real engine output/timing and CPU load are not validated on Linux.
 Disclosure: pending | integration | Complete Bruno's real-Stockfish Windows acceptance before merging into main, as required by this ticket's Verification and [the approved test seam](../spec.md#test-seams).
 Gate evidence: /run/media/lage/New Volume/Scratch/rev008/gate.json
+
+#### Resolution (2026-11-05)
+Verdict: Approve
+
+Reviewed the complete diff `d9da283..f64e9c5` against all ten numbered criteria. Independent `code-review` Standards and Spec agents (`standards_review` and `spec_review`) found no implementation blocker. The reviewer authored no source or test changes. Rebasing onto the session left the ticket branch unchanged. Integrated into `sweatshop/review-explore/2026-11-05-1723` with merge commit `153d4545d3f67a9148f4355b39c706e0d5d4016c`; its tree exactly matches the reviewed ticket branch.
+
+**Standards:** source, tests and documentation remain within Primary files. The implementation history preserves separate test-only and production-only commits, including the documented test-harness corrections. One documentary deviation was found during the final commit-message check: the sixteen stage-2 commits have conventional English subjects citing REV-008, but omit the explanatory bodies required by `ticket-flow`. The stage-3 reviewer accepts preserving those messages to retain the red/green history and its evidence; this has no runtime impact. The optional score-conversion duplication heuristic was considered: the chip and eval bar have separate display responsibilities and mate formatting, and the small shared expression is not treated as a confirmed defect or an additional ticket requirement.
+
+**Spec:** no missing numbered requirement, scope creep or regression found. The terminal checks, stale-search isolation, queue ownership and error restoration follow the written contract. Product acceptance with real Stockfish remains separate from this implementation verdict.
+
+Numbered criterion record:
+
+1. ✅ Stored rows sit between graph and move list, with White-perspective light/dark chips, SAN, ellipsis and first-row depth. Compact visibility follows Move classes; positions without analysis hide the block. Scene tests cover scores, mate text, ordering, toggling and actual viewport chip/PV clicks.
+2. ✅ Entering a side line pauses the queue and creates the Review's own bridge through `analysis_bridge_factory`, with cores − 1 threads, MultiPV 2 and `go infinite`. Both rows show the thinking placeholder before results.
+3. ✅ Live lines, eval bar and the enabled blue arrow use the shown position. PV2 cannot become PV1 when it arrives first; lower/upper bounds cannot replace exact scores. Arrow-setting updates remain immediate.
+4. ✅ Search switches send Stop and drain bestmove before starting the latest FEN. Generation checks, draining and the Review's FEN check reject stale updates. The real UCI command queue fixture covers switching before `uciok`.
+5. ✅ Checkmate, stalemate, fifty-move and insufficient-material positions display one message without a chip or new search. Reaching a terminal side-line position releases the running live process.
+6. ✅ A chip plays the first move and a SAN link plays through the clicked move. The frozen PV advances a matching game prefix before branching, and replaces the continuation after a side-line cursor. The compact viewport test exercises real mouse input.
+7. ✅ Back to game, graph/game navigation, First/Last, Esc and hiding Review discard the line and release the live process. Normal exits resume the queue. Rematch marks the gameplay handoff so hiding Review preserves Main's pause; New game follows the existing Home/Setup and later game-start pause flow.
+8. ✅ Queue and direct game analysis stop while exploring, preserving the displayed progress and Stop control. Exiting resumes analysis; Stop of a paused direct analyser prevents its restart, and Stop removes a paused queued game.
+9. ✅ Missing or stopped Stockfish leaves legal exploration available. Its message stays separate from the earlier game error, survives Stop of the queued game, and is removed/restored correctly on leaving the line.
+10. ✅ Reused the valid green [gate receipt](</run/media/lage/New Volume/Scratch/rev008/gate.json>): tested commit `3e1019e25e8faa6ff24f7ac9d418257970f829fb`, `godot --headless -s tests/run.gd`, exit 0, **544 passed, 0 failed**. Independently verified the log SHA-256 and the helper's `Assert-GateEvidence` on the session merge. Only tracker metadata differs from tested code. The existing graphical last-move pixel assertion and six real-Lc0 checks skipped. No unchanged full gate was rerun.
+
+Red/green evidence examined: controller `a0fcb30` → `130c770`; stored rows `4f9187b` → `1eaca91`; live integration and clicks `93c1858` → `5678a00`; terminal/queue cases `a7f817c` → `ea3858e`; corrected delayed-handshake/PV2 cases `035a343`/`dc7a5c4` → `41028ec`; Stop/error cases `c0e387c` → `9da07f5`. The viewport harness correction `a18fd39` has the documented production-handler mutation check. Durable regression coverage lives in `tests/test_live_analysis.gd` and `tests/test_review.gd`; the detailed red/green logs remain beside the receipt.
+
+Coverage: examined the complete changed source and tests, shared analyser parsing and its callers, UCI handshake/queue/callback ordering, rapid position switches, Review navigation and visibility, Settings arrow updates, Main's Rematch/Home/History/game-start callers, queued and direct analysis lifecycle, progress/Stop, PV input and terminal/error paths. Inspected the [800×600 live capture](</run/media/lage/New Volume/Scratch/rev008/live-800.png>): both engine rows, Back to game, navigation and actions remain visible. Real Stockfish output/timing, CPU load, Bruno's complete Windows acceptance and physical input beyond the recorded fake-engine checks were not verified in this review.
+
+Acceptance: pending | Bruno's Windows checks with real Stockfish from Verification remain outstanding: explore a blunder, watch depth rise, click lines, Back to game, Rematch and a queued History game. Automated implementation checks permit session integration.
+Disclosure: pending | integration | Complete Bruno's real-Stockfish Windows acceptance before merging the session into main, per [the approved test seam](../spec.md#test-seams). This implementation approval and session merge do not satisfy that product check.
+Disclosure: deferred | none | The stage-3 reviewer accepts retaining the sixteen stage-2 commit subjects without explanatory bodies to preserve the test-first and gate-evidence history. Subjects cite REV-008; this documentary deviation has no integration, release or runtime impact.
