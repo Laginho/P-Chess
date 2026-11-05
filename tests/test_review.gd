@@ -1826,7 +1826,7 @@ func test_engine_line_click_plays_matching_game_prefix_and_replaces_side_continu
 	for move in ["e2e4", "e7e5", "g1f3"]:
 		game.play(move)
 	review.present(game, [180000, 180000, 180000], SETTINGS, "")
-	review.receive_position(0, {"pv": [{"depth": 12, "cp": 30, "moves": ["e2e4", "e7e5", "b1c3", "b8c6"]}]})
+	review.receive_position(0, {"best_move": "e2e4", "pv": [{"depth": 12, "cp": 30, "moves": ["e2e4", "e7e5", "b1c3", "b8c6"]}]})
 	review.receive_position(1, {"best_move": "e7e5", "pv": [{"cp": 0, "moves": ["e7e5"]}]})
 	review.receive_position(2, {"best_move": "g1f3", "pv": [{"cp": 0, "moves": ["g1f3"]}]})
 	review._show_ply(0)
@@ -2145,4 +2145,65 @@ func test_terminal_side_move_settles_its_before_position_without_searching_mate(
 		assert_eq(board.review_square, "h4")
 		assert_eq(board.review_arrow, "d8h4")
 		assert_eq(bridge.stops, 1, "release the process after terminal prerequisites finish")
+	main.free()
+
+
+func test_fast_side_line_waits_for_required_positions_and_classes_arrive_in_order():
+	var main = await _session(FakeTime.new())
+	var review = main.review
+	var bridge = load("res://tests/test_live_analysis.gd").FakeBridge.new()
+	review.analysis_bridge_factory = func(): return bridge
+	review.present(Game.new(), [], SETTINGS, "")
+	var board = review.get_node("Margin/Content/ReviewBody/BoardView")
+	for move in ["d2d4", "d7d5", "c2c4"]:
+		assert_true(board.play(move))
+	var block = review.get_node("Margin/Content/ReviewBody/Side/EngineLines")
+	assert_eq(bridge.callbacks.size(), 1, "keep finishing the first required position across rapid moves")
+	assert_true(board.review_icon == null and board.review_arrow.is_empty())
+	_rev009_settle(bridge, "d2d4", 0, "e2e4", -10)
+	assert_true(board.review_icon == null and board.review_arrow.is_empty())
+	assert_eq(block.get_node("Row1/PV").get_parsed_text(), "Stockfish is thinking…")
+	bridge.callbacks.back().call("bestmove d2d4")
+	_rev009_settle(bridge, "d7d5", 0, "g8f6", -10)
+	assert_eq(review._line_rows[0].get_icon(1), review._class_icon("Best"))
+	assert_true(review._line_rows[1].get_icon(1) == null and board.review_icon == null)
+	bridge.callbacks.back().call("bestmove d7d5")
+	_rev009_settle(bridge, "c2c4", 0, "g1f3", -10)
+	assert_eq(review._line_rows[1].get_icon(1), review._class_icon("Best"))
+	assert_eq(board.review_arrow, "c2c4")
+	assert_true(board.review_icon == null, "shown after-position still needs settlement")
+	bridge.callbacks.back().call("bestmove c2c4")
+	_rev009_settle(bridge, "e7e6", 0, "g8f6", -10)
+	assert_eq(board.review_icon, review._class_icon("Best"))
+	assert_eq(board.review_square, "c4")
+	assert_eq(review._line_rows[2].get_icon(1), review._class_icon("Best"))
+	main.free()
+
+
+func test_side_line_preserves_book_and_repertoire_context_from_game_prefix():
+	var main = await _session(FakeTime.new())
+	var review = main.review
+	var book = load("res://bot/book.gd").new()
+	book.load_tsv("eco\tname\tpgn\nB20\tFixture\t1. e4 c5\n")
+	assert_eq(book.entries.size(), 1)
+	var settings := SETTINGS.duplicate()
+	settings.colour = "b"
+	for label in ["Book", "Repertoire"]:
+		var bridge = load("res://tests/test_live_analysis.gd").FakeBridge.new()
+		review.analysis_bridge_factory = func(): return bridge
+		var game = Game.new()
+		game.play("e2e4")
+		game.play("e7e5")
+		review.present(game, [180000, 180000], settings, "", book.entries,
+				book.entries if label == "Repertoire" else [], label == "Repertoire")
+		review.receive_position(0, {"best_move": "e2e4", "pv": [{"cp": 0, "moves": ["e2e4"]}]})
+		review.receive_position(1, {"best_move": "d7d5", "pv": [
+			{"cp": 0, "moves": ["d7d5"]}, {"cp": -10, "moves": ["g8f6"]}]})
+		review._show_ply(1)
+		var board = review.get_node("Margin/Content/ReviewBody/BoardView")
+		assert_true(board.play("c7c5"))
+		_rev009_settle(bridge, "g1f3", 400, "b1c3", 390)
+		assert_eq(board.review_icon, review._class_icon(label), "opening mark overrides the scripted Blunder")
+		assert_eq(review._line_rows[0].get_icon(1), review._class_icon(label))
+		review._back_to_game()
 	main.free()
