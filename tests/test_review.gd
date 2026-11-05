@@ -2114,3 +2114,30 @@ func test_unanalysed_side_line_settles_history_for_miss_and_prunes_replacements(
 	review._back_to_game()
 	assert_true(not review._line_active)
 	main.free()
+
+
+func test_terminal_side_move_settles_its_before_position_without_searching_mate():
+	var main = await _session(FakeTime.new())
+	var review = main.review
+	var bridge = load("res://tests/test_live_analysis.gd").FakeBridge.new()
+	review.analysis_bridge_factory = func(): return bridge
+	var game = Game.new()
+	for move in ["f2f3", "e7e5", "g2g4"]:
+		game.play(move)
+	review.present(game, [180000, 180000, 180000], SETTINGS, "")
+	for i in 3:
+		var best: String = ["f2f3", "e7e5", "g2g4"][i]
+		review.receive_position(i, {"best_move": best, "pv": [{"cp": 0, "moves": [best]}]})
+	var board = review.get_node("Margin/Content/ReviewBody/BoardView")
+	assert_true(board.play("d8h4"))
+	var block = review.get_node("Margin/Content/ReviewBody/Side/EngineLines")
+	assert_eq(block.get_node("Row1/PV").get_parsed_text(), "Checkmate")
+	assert_true(not "position fen " + board.game.board.to_fen() in bridge.commands, "terminal after-position needs no engine search")
+	assert_true("position fen " + review._positions[3].fen in bridge.commands, "mate still needs its unsettled before-position")
+	if not bridge.callbacks.is_empty():
+		_rev009_settle(bridge, "d8h4", 1000, "g8f6", 900)
+		assert_eq(board.review_icon, review._class_icon("Best"))
+		assert_eq(board.review_square, "h4")
+		assert_eq(board.review_arrow, "d8h4")
+		assert_eq(bridge.stops, 1, "release the process after terminal prerequisites finish")
+	main.free()
