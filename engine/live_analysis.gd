@@ -17,6 +17,7 @@ var _draining := false
 var _lines := {}
 var _generation := 0
 var _results := {}
+var _live_results := {}
 var _depths := {}
 var _only_legal_move := false
 var _required := []
@@ -37,7 +38,9 @@ func search(fen: String, required: Array = []) -> bool:
 		_started = true
 		_bridge.stopped.connect(_engine_stopped)
 		_bridge.new_game()
-	if _results.has(fen):
+	if _live_results.has(fen):
+		updated.emit(fen, _live_results[fen].duplicate(true))
+	elif _results.has(fen):
 		updated.emit(fen, result(fen))
 	_schedule()
 	return true
@@ -47,6 +50,9 @@ func retain(fens: Array) -> void:
 	for fen in _results.keys():
 		if not fen in fens:
 			_results.erase(fen)
+	for fen in _live_results.keys():
+		if not fen in fens:
+			_live_results.erase(fen)
 
 
 # Terminal results are supplied by Review's game state, including repetition draws.
@@ -64,7 +70,8 @@ func _next_fen() -> String:
 	for fen: String in _required:
 		if not _results.has(fen):
 			return fen
-	return _fen if not _results.has(_fen) else ""
+	# Frozen class inputs do not replace the unlimited shown-position search.
+	return _fen
 
 
 func _schedule() -> void:
@@ -73,7 +80,7 @@ func _schedule() -> void:
 	var next := _next_fen()
 	if not _search_fen.is_empty():
 		# Keep the unlimited shown search running after its class settles.
-		if next == _search_fen or (next.is_empty() and _search_fen == _fen):
+		if next == _search_fen:
 			return
 		_draining = true
 		_bridge.stop_search()
@@ -121,8 +128,12 @@ func _receive(line: String, generation: int) -> void:
 		if _lines.has(n):
 			pv.append(_lines[n].duplicate(true))
 	if _search_fen == _fen:
-		updated.emit(_fen, {"fen": _fen, "pv": pv,
-				"best_move": _lines[1].moves[0]})
+		# Keep newer PVs visible while a restarted search catches up.
+		var previous: Dictionary = _live_results.get(_fen, {})
+		if previous.is_empty() or _lines[1].depth >= previous.pv[0].depth:
+			var position := {"fen": _fen, "pv": pv, "best_move": _lines[1].moves[0]}
+			_live_results[_fen] = position.duplicate(true)
+			updated.emit(_fen, position)
 	_schedule()
 
 
@@ -176,6 +187,7 @@ func stop(clear_results := true) -> void:
 	_lines.clear()
 	if clear_results:
 		_results.clear()
+		_live_results.clear()
 	_required.clear()
 	_depths.clear()
 	if _started:
