@@ -648,13 +648,10 @@ func _search_shown_position() -> void:
 	var fen: String = _board_view.game.board.to_fen()
 	if _live_position.get("fen", "") != fen:
 		_live_position = {"fen": fen}
-	if _board_view.game.is_over():
-		_stop_live_process()
+	var terminal: bool = _board_view.game.is_over()
+	if terminal:
 		_live_position = {"fen": fen, "pv": [], "best_move": "",
 				"terminal_score": -1000 if _board_view.game.reason == "checkmate" else 0}
-		return
-	if _live_failed:
-		return
 	if _live_analysis == null:
 		_live_bridge = analysis_bridge_factory.call()
 		add_child(_live_bridge)
@@ -677,6 +674,8 @@ func _search_shown_position() -> void:
 			_update_engine_lines()
 			_update_eval_bar()
 			_update_board_annotations())
+	if terminal:
+		_live_analysis.remember(_live_position)
 	var positions := _line_positions()
 	var retained := []
 	for position: Dictionary in positions:
@@ -685,7 +684,11 @@ func _search_shown_position() -> void:
 			_live_analysis.remember(position)
 	_live_analysis.retain(retained)
 	_refresh_line_classes()
-	_live_analysis.search(fen, _line_requirements(positions))
+	var required := _line_requirements(positions)
+	if terminal and required.is_empty():
+		_live_analysis.stop(false)
+	elif not _live_failed:
+		_live_analysis.search("" if terminal else fen, required)
 
 
 # Only walk farther into game history when an earlier undecided class needs it.
