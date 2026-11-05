@@ -209,6 +209,9 @@ static func _parse_info(line: String) -> Dictionary:
 	if number < 1 or number > 2:
 		return {}
 	var result := {"depth": words[d + 1].to_int(), "multipv": number, "moves": Array(words.slice(p + 1))}
+	var nodes := words.find("nodes")
+	if nodes >= 0 and nodes + 1 < words.size() and words[nodes + 1].is_valid_int():
+		result.nodes = words[nodes + 1].to_int()
 	result[words[s + 1]] = words[s + 2].to_int()
 	return result
 
