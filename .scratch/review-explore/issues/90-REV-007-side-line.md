@@ -1,5 +1,5 @@
 # REV-007: Side lines in the Review, and the Best move arrow setting
-Stage: implementing
+Stage: to-review
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -57,9 +57,9 @@ Today the Review's `BoardView` already accepts moves for both sides, but nothing
 
 - 2026-11-05 Resolution: Added a disposable side line with branch navigation and exits, the default-on best-move arrow, and live Review board preferences. The full gate on commit `0f8a102` reported 528 passed, 0 failed; Lc0-dependent checks and the existing last-move pixel test skipped on this headless Linux run. A graphical Xvfb test verified the blue arrow appears and clears; disabling its draw call made the test fail. The settings test failed on the missing key before its implementation; the side-line scene test failed on missing line state before implementation.
 
-Acceptance: pending | Criterion 8 still fails in Review opened after focused gameplay; manual post-game and History exploration remains pending. See the second Resolution below and its graphical reproduction.
-Disclosure: pending | integration | Criterion 8 still blocks integration: Ctrl+, cannot open Settings after entering Review from a focused game's result card. The open REV-007 repair is recorded in the second Resolution below.
-Gate evidence: /run/media/lage/New Volume/Scratch/rev007-review/gate-final.json
+Acceptance: pending | Automated interaction checks now pass for Review entered from focused gameplay, including real Ctrl+, and checkbox input; complete manual post-game and History exploration remains pending. See the Focus-mode repair handoff below.
+Disclosure: pending | release | Complete manual post-game and History exploration remains pending; automated coverage and its limits are recorded in the Focus-mode repair handoff below.
+Gate evidence: /run/media/lage/New Volume/Scratch/rev007-focus-repair/gate.json
 
 
 #### Resolution (2026-11-05)
@@ -161,4 +161,12 @@ External evidence: [focused graphical log](/run/media/lage/New Volume/Scratch/re
 - 2026-11-05 Test harness correction: the new focused-game scenario must restore checkbox focus after direction keys and deliver Space release as well as press, because the CheckBox toggles on release. The existing `_review_key` helper sends only a press. These changes affect only the new test, not production behavior or the approved seam; corrected red/green evidence is recorded at handoff.
 
 - 2026-11-05 Corrected red/green proof: the committed test at `e5e5097`, with `ui/main.gd` restored to that commit's unmodified production, failed only the same three Settings-access assertions (0 passed, 1 failed; `red-final.log`). Restoring the visibility repair made the complete scenario pass (1 passed, 0 failed; `green-final.log`), including actual checkbox mouse/Space toggles, immediate arrow updates, Settings keyboard ownership, two-Esc side-line exit, both Review focus transitions and focused rematch restrictions. Logs are in `/run/media/lage/New Volume/Scratch/rev007-focus-repair/`.
+
+#### Focus-mode repair handoff (2026-11-05)
+
+- Repaired the remaining R2/criterion 8 path in `ui/main.gd` (`2a13608`): Settings visibility now follows both focus and Review visibility. Opening Review from the focused result card exposes Settings, focus transitions keep it reachable inside Review, and leaving Review for a focused rematch hides it again. The existing child order, History/name-dialog/searching coverage checks and Settings keyboard handling are preserved.
+- Added `test_settings_remain_available_in_review_after_focused_game` in `tests/test_review.gd`, committed before production. It enters F11 focus, finishes `f3 e5 g4 Qh4#`, clicks the actual result-card Review button, and exercises real Ctrl+, and the Best move arrow checkbox at a game position and in a side line. It checks immediate arrow updates, Settings ownership of F/arrows/Space/Esc, the second Esc leaving the line, both focus transitions inside Review, and Settings remaining unavailable in a focused rematch. Corrected test commit `e5e5097` failed three Settings-opening assertions against unchanged production and passed after the repair; the harness corrections are recorded above.
+- **10 focused graphical checks passed, 0 failed** under Xvfb, including this new scenario, the existing focused checkmate entry, mouse drag/click-click, side-line navigation/exits, animations, normal Review Settings, History/name-dialog/searching coverage and actual blue-arrow pixels. [Graphical log](/run/media/lage/New Volume/Scratch/rev007-focus-repair/graphical.log); [runner](/run/media/lage/New Volume/Scratch/rev007-focus-repair/focused.gd).
+- Full bound gate on committed code `2a136081068cbd3ec4588a4c54a26fd4068bc041`: `godot --headless -s tests/run.gd`, exit 0, **532 passed, 0 failed**. The runner reports six Lc0-dependent skips and the existing graphical-only last-move pixel skip; no engine was downloaded. [Receipt](/run/media/lage/New Volume/Scratch/rev007-focus-repair/gate.json); [gate log](/run/media/lage/New Volume/Scratch/rev007-focus-repair/gate.log). After the tested commit, only this ticket changes.
+- Manual post-game and History exploration, physical promotion input and real engine behavior remain unverified. This handoff makes no claim of complete product acceptance and leaves the pending manual release check explicit above. Stage 2 stops at `to-review`; no merge or independent-review verdict is claimed.
 
