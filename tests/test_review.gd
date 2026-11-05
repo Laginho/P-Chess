@@ -1983,7 +1983,7 @@ func test_engine_pv_and_chip_accept_real_viewport_clicks_in_compact_layout():
 		assert_true(block.get_global_rect().end.y <= review.get_node("Margin/Content/ReviewBody/Side/Moves").global_position.y)
 		assert_true(block.get_node("Row2").is_visible_in_tree())
 		var chip: Button = block.get_node("Row1/Score")
-		var at: Vector2 = chip.get_screen_transform() * (chip.size / 2) if use_chip else pv.get_screen_transform() * Vector2(5, 7)
+		var at: Vector2 = root.get_final_transform() * (chip.global_position + chip.size / 2) if use_chip else root.get_final_transform() * (pv.global_position + Vector2(5, 7))
 		await _review_mouse_motion(root, at)
 		await _review_mouse_button(root, at, true)
 		await _review_mouse_button(root, at, false)
