@@ -1762,3 +1762,86 @@ func test_engine_lines_show_stored_white_scores_san_depth_and_compact_toggle():
 	assert_true(not block.visible, "navigating to unknown position clears stored lines")
 	main.free()
 	root.size = old_size
+
+
+func test_live_engine_updates_only_shown_position_pauses_queue_and_restores_errors():
+	var main = await _session(FakeTime.new())
+	var review = main.review
+	var bridge = load("res://tests/test_live_analysis.gd").FakeBridge.new()
+	review.analysis_bridge_factory = func(): return bridge
+	var game = Game.new()
+	game.play("e2e4")
+	game.play("e7e5")
+	review.present(game, [180000, 180000, 180000], SETTINGS, "")
+	main.analysis_queue.resume()
+	review._analysis_error("earlier game error")
+	review._show_ply(0)
+	var board = review.get_node("Margin/Content/ReviewBody/BoardView")
+	assert_true(board.play("d2d4"))
+	var block = review.get_node("Margin/Content/ReviewBody/Side/EngineLines")
+	assert_true(main.analysis_queue._paused, "exploring pauses the real queue")
+	assert_eq(bridge.callbacks.size(), 1, "Review creates its own live search")
+	assert_true(block.visible)
+	assert_eq(block.get_node("Row1/PV").get_parsed_text(), "Stockfish is thinking…")
+	assert_eq(block.get_node("Row2/PV").get_parsed_text(), "Stockfish is thinking…")
+	if bridge.callbacks.is_empty():
+		main.free()
+		return
+	bridge.callbacks[0].call("info depth 16 multipv 1 score cp -120 pv d7d5 c2c4")
+	bridge.callbacks[0].call("info depth 16 multipv 2 score cp -80 pv g8f6 c2c4")
+	assert_eq(block.get_node("Row1/Score").text, "+1.2")
+	assert_eq(block.get_node("Row1/Depth").text, "depth 16")
+	assert_eq(review.get_node("Margin/Content/ReviewBody/EvalBar/Score").text, "+1.2")
+	assert_eq(board.best_move_arrow, "d7d5")
+	main.preferences.set_value("best_move_arrow", false)
+	assert_eq(board.best_move_arrow, "")
+	main.preferences.set_value("best_move_arrow", true)
+	assert_eq(board.best_move_arrow, "d7d5")
+	assert_true(board.play("d7d5"))
+	assert_eq(board.best_move_arrow, "", "position change clears old arrow at once")
+	assert_eq(review.get_node("Margin/Content/ReviewBody/EvalBar/Score").text, "")
+	bridge.callbacks[0].call("info depth 22 score cp 500 pv g8f6")
+	assert_eq(block.get_node("Row1/PV").get_parsed_text(), "Stockfish is thinking…")
+	bridge.callbacks[0].call("bestmove d7d5")
+	bridge.callbacks[1].call("info depth 8 score cp 20 pv c2c4")
+	assert_eq(board.best_move_arrow, "c2c4")
+	bridge.error = "Stockfish stopped"
+	bridge.stopped.emit()
+	assert_eq(review.get_node("Margin/Content/AnalysisError").text, "Analysis: Stockfish stopped")
+	assert_true(board.play("c2c4"), "engine failure leaves the side line usable")
+	review._back_to_game()
+	assert_true(not main.analysis_queue._paused, "Back to game resumes the queue")
+	assert_eq(review.get_node("Margin/Content/AnalysisError").text, "Analysis: earlier game error")
+	main.free()
+
+
+func test_engine_line_click_plays_matching_game_prefix_and_replaces_side_continuation():
+	var main = await _session(FakeTime.new())
+	var review = main.review
+	var bridge = load("res://tests/test_live_analysis.gd").FakeBridge.new()
+	review.analysis_bridge_factory = func(): return bridge
+	var game = Game.new()
+	for move in ["e2e4", "e7e5", "g1f3"]:
+		game.play(move)
+	review.present(game, [180000, 180000, 180000], SETTINGS, "")
+	review.receive_position(0, {"pv": [{"depth": 12, "cp": 30, "moves": ["e2e4", "e7e5", "b1c3", "b8c6"]}]})
+	review._show_ply(0)
+	var block = review.get_node("Margin/Content/ReviewBody/Side/EngineLines")
+	block.get_node("Row1/Score").pressed.emit()
+	assert_eq(review._ply, 1, "chip plays only the first move")
+	assert_true(not review._line_active)
+	review._show_ply(0)
+	block.get_node("Row1/PV").meta_clicked.emit("2")
+	assert_eq(review._ply, 2, "matching prefix advances the game")
+	assert_true(review._line_active)
+	var board = review.get_node("Margin/Content/ReviewBody/BoardView")
+	assert_eq(Array(board.game.moves), ["e2e4", "e7e5", "b1c3"])
+	assert_true(board.play("b8c6"))
+	review._step(-1)
+	# Finish the old search; only the last requested FEN starts next.
+	bridge.callbacks[0].call("bestmove b8c6")
+	bridge.callbacks.back().call("info depth 12 score cp -10 pv g8f6 d2d4")
+	block.get_node("Row1/PV").meta_clicked.emit("1")
+	assert_eq(Array(review._line_moves), ["b1c3", "g8f6", "d2d4"], "click replaces moves after the cursor")
+	assert_eq(review._line_index, 3)
+	main.free()
