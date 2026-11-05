@@ -789,7 +789,7 @@ func _on_board_move(_san: String) -> void:
 	var move: String = _board_view.game.moves[-1]
 	if not _line_active:
 		if _ply < _game_moves.size() and move == _game_moves[_ply]:
-			_show_ply(_ply + 1)
+			_show_ply(_ply + 1, false, true)
 			return
 		_line_active = true
 		_line_index = 0
@@ -800,7 +800,7 @@ func _on_board_move(_san: String) -> void:
 		_line_moves.append(move)
 	_line_index += 1
 	_build_line_rows()
-	_show_line(_line_index)
+	_show_line(_line_index, false, true)
 
 
 func _build_line_rows() -> void:
@@ -838,7 +838,7 @@ func _build_line_rows() -> void:
 	_line_rows.append(back)
 
 
-func _show_line(index: int, announce := false) -> void:
+func _show_line(index: int, announce := false, already_played := false) -> void:
 	if not _line_active:
 		return
 	var before := _line_index
@@ -851,7 +851,8 @@ func _show_line(index: int, announce := false) -> void:
 		if i == _line_index - 1:
 			san = position.board.san(_line_moves[i])
 		position.play(_line_moves[i])
-	_board_view.game = position
+	if not already_played:
+		_board_view.game = position
 	_moves.set_block_signals(true)
 	if _line_index > 0:
 		_line_rows[_line_index - 1].select(1)
@@ -889,7 +890,7 @@ func _back_to_game() -> void:
 
 
 # Navigation (announce) plays the shown last move's sounds once, as the game did; opening the review is silent.
-func _show_ply(ply: int, announce := false) -> void:
+func _show_ply(ply: int, announce := false, already_played := false) -> void:
 	_discard_line()
 	var before := _ply
 	_ply = clampi(ply, 0, _game_moves.size())
@@ -906,7 +907,8 @@ func _show_ply(ply: int, announce := false) -> void:
 		if i == _ply - 1:
 			san = position.board.san(_game_moves[i])
 		position.play(_game_moves[i])
-	_board_view.game = position
+	if not already_played:
+		_board_view.game = position
 	if announce and _ply != before and _ply > 0:
 		_board_view.request_move_sounds(san)
 	_update_board_annotations()
