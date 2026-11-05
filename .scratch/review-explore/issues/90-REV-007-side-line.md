@@ -1,5 +1,5 @@
 # REV-007: Side lines in the Review, and the Best move arrow setting
-Stage: to-review
+Stage: done
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -57,8 +57,8 @@ Today the Review's `BoardView` already accepts moves for both sides, but nothing
 
 - 2026-11-05 Resolution: Added a disposable side line with branch navigation and exits, the default-on best-move arrow, and live Review board preferences. The full gate on commit `0f8a102` reported 528 passed, 0 failed; Lc0-dependent checks and the existing last-move pixel test skipped on this headless Linux run. A graphical Xvfb test verified the blue arrow appears and clears; disabling its draw call made the test fail. The settings test failed on the missing key before its implementation; the side-line scene test failed on missing line state before implementation.
 
-Acceptance: pending | Automated Settings access and live arrow checks now pass during the focused agreed-draw notice interval; complete manual post-game and History exploration remains pending. See the Draw-notice repair handoff below.
-Disclosure: pending | release | Complete manual post-game and History exploration remains pending; see the Draw-notice repair handoff below for automated evidence and its limits.
+Acceptance: pending | Independent stage-3 review and 11 graphical checks pass, including Settings access during the focused agreed-draw notice interval; complete manual post-game and History exploration remains pending. See the final Resolution below.
+Disclosure: pending | release | Complete manual post-game and History exploration remains pending; the final Resolution records automated evidence and its limits.
 Gate evidence: /run/media/lage/New Volume/Scratch/rev007-draw-notice-repair/gate.json
 
 
@@ -217,4 +217,37 @@ Disclosure: deferred | none | The stage-3 reviewer accepts retaining existing co
 - With the repair, **11 focused graphical checks passed, 0 failed** under Xvfb, including the new agreed-draw path, focused checkmate entry, normal Review settings, viewport drag/click-click, side-line navigation/exits, animations, blue-arrow pixels, and History/name-dialog/searching coverage. [Graphical log](/run/media/lage/New Volume/Scratch/rev007-draw-notice-repair/graphical.log); [runner](/run/media/lage/New Volume/Scratch/rev007-draw-notice-repair/focused.gd).
 - Full bound gate on committed code `3157ff0fd317f9dea13a0adbc065c019c033c0c1`: `godot --headless -s tests/run.gd`, exit 0, **533 passed, 0 failed**. The runner reports six Lc0-dependent skips and the existing graphical-only last-move pixel skip. [Receipt](/run/media/lage/New Volume/Scratch/rev007-draw-notice-repair/gate.json); [gate log](/run/media/lage/New Volume/Scratch/rev007-draw-notice-repair/gate.log). Only this ticket changes after the tested commit.
 - Complete manual post-game and History exploration, physical promotion input and real engines remain unverified. The earlier integration-blocking draw-notice finding is repaired and awaits independent review; the manual release check remains pending above. Stage 2 hands off at `to-review` without a merge or review verdict.
+
+#### Resolution (2026-11-05)
+Verdict: Approve
+
+Re-reviewed `9d69734..b28ee0f`, the remaining R2/criterion 8 failure and the cumulative implementation against all numbered criteria. Independent `code-review` Standards and Spec agents (`standards_review` and `spec_review`) both returned no findings. The reviewer authored no production or test changes. The ticket branch was rebased with merge history preserved; its commit and tree remained `b28ee0f`. Integrated into `sweatshop/review-explore/2026-11-05-1723` with merge commit `431a80af3a0357f8266b70a42f826524cdf89831`; the merge tree exactly matches the reviewed tree.
+
+**Standards:** no documented-standard breaches or actionable baseline smells. Test-only `b3fcd24`, production-only `3157ff0` and metadata handoff `b28ee0f` stay within the approved scope, preserve test-first separation and include explanatory English bodies citing REV-007. The existing accepted historical commit-message deferral remains recorded above; these new commits comply.
+
+**Spec:** R2 is repaired. `_covers_settings()` excludes only the existing non-modal `draw_notice`; History, the name dialog and searching controls still cover Settings. Focused gameplay retains its separate Settings visibility restriction. The committed regression test uses actual F11, Offer draw, result-card Review, Ctrl+, and checkbox input without hiding or waiting out the notice. Its red log contains precisely the two Settings-opening failures against unchanged production; the repaired scenario passes graphically. No missing requirement, scope creep or regression was found.
+
+The recorded `Proxy decided (opus-5.5 xhigh)` expansion matches [its receipt](/tmp/sweatshop-proxy/20261105-175641-REV-007-2bed17.json). This repair stays inside its approved Review Settings-access scope. No concurrent child-order change or new contract decision was introduced.
+
+Numbered criterion record:
+
+1. ✅ Actual viewport drag and click-click start an alternative line; retained scene checks verify placement under the branch. Move and sound routing remain as previously reviewed.
+2. ✅ The same viewport checks advance the game's own continuation without starting a line.
+3. ✅ Retained navigation, overwrite, matching-continuation and branch/end bounds pass graphically.
+4. ✅ Retained exits, History two-Esc and flip checks pass. Settings closes on the first Esc without discarding the line; the next Esc returns to the game, including during the live draw notice.
+5. ✅ Retained game/summary/graph/PGN invariants pass; exports and saved-game paths remain isolated from side-line state. The latest repair adds no persistence path.
+6. ✅ Retained wide-layout collapse/restoration checks pass; compact layout is unchanged.
+7. ✅ Retained line-position checks confirm blank evaluation and no class, green or blue annotations.
+8. ✅ R2 repaired: Settings opens before the focused agreed-draw notice expires at both game and side-line positions. The real checkbox updates the game arrow immediately, leaves it absent in the line and restores it on Back to game. Normal Review and focused-checkmate entry, keyboard ownership and focus transitions also pass. Stored-position selection, terminal/no-analysis suppression, color and layering remain as previously reviewed; blue-arrow pixel checks pass.
+9. ✅ Default-on persistence and row placement after Legal-move dots remain as previously reviewed; the new scenario operates the actual row.
+10. ✅ Retained live board-setting and animation checks pass; game and line moves retain their configured animation until it finishes.
+11. ✅ Valid green [gate receipt](/run/media/lage/New Volume/Scratch/rev007-draw-notice-repair/gate.json): tested `3157ff0fd317f9dea13a0adbc065c019c033c0c1`, `godot --headless -s tests/run.gd`, exit 0, **533 passed, 0 failed**. Independently checked the log hash and the helper's `Assert-GateEvidence`; only tracker metadata differs. Reused the gate for unchanged code. Six Lc0-dependent checks and the existing graphical-only last-move pixel check skipped.
+
+Independent runtime verification: **11 focused graphical checks passed, 0 failed** under Xvfb, including the draw-notice regression, focused checkmate, normal Settings access, keyboard ownership, viewport drag/click-click, navigation/exits, animations, covering screens and actual blue-arrow pixels. [Review log](/run/media/lage/New Volume/Scratch/rev007-draw-notice-repair/review-graphical.log); [runner](/run/media/lage/New Volume/Scratch/rev007-draw-notice-repair/focused.gd). No GDScript errors were reported. The existing XCompose and unsupported V-Sync environment messages do not affect these checks.
+
+Coverage: read the complete latest repair diff and cumulative implementation, its callers, Review visibility/focus transitions, draw-notice reparenting/timer, Settings covering checks, real input routing and the previously repaired mouse/animation paths. Complete manual post-game and History exploration, physical promotion and real engines remain unverified. The non-blocking long-line scrolling observation has the open destination [CLEAN-014](93-CLEAN-014-review-line-scroll.md); it adds no REV-007 requirement.
+
+Disclosure: decision | none | The recorded proxy expansion authorizes Review board input and Settings ordering/access/keyboard ownership for criteria 1, 2 and 8; see the receipt linked above. Independent review confirms this repair honors it.
+Disclosure: pending | release | Complete manual post-game and History product acceptance remains outstanding; automated checks above permit session integration, while release retains this check.
+Disclosure: pending | none | [CLEAN-014](93-CLEAN-014-review-line-scroll.md) tracks the previously observed long-line scrolling behavior; no integration or release hold is imposed by that observation.
 
