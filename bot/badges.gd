@@ -55,10 +55,12 @@ static func catalog_index(lines: Array) -> Dictionary:
 		_catalog_size = lines.size()
 		var positions := {}
 		var endings := {}
+		var longest := 0
 		for line in lines:
 			for key in line.positions:
 				positions[key] = true
+			longest = maxi(longest, line.positions.size())
 			if not line.positions.is_empty():
 				endings[line.positions[-1]] = line.get("name", "")
-		_index = {"continuations": _continuations(lines), "positions": positions, "endings": endings}
+		_index = {"continuations": _continuations(lines), "positions": positions, "endings": endings, "longest": longest}
 	return _index

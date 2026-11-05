@@ -59,16 +59,15 @@ func test_history_progress_preserves_cards_and_updates_percent():
 	screen.analysis_queue = queue
 	Engine.get_main_loop().root.add_child(screen)
 	screen.present(history, Settings.new(folder.path_join("settings.cfg")))
-	var list = screen.get_node("Margin/Content/Cards/List")
-	var card = list.get_child(0)
+	var card = screen._visible_cards()[0]
 	var id: int = card.get_instance_id()
 	for done in [1, 2, 3]:
 		runner.progress.emit(done, 4)
-	assert_eq(list.get_child(0).get_instance_id(), id, "progress must not rebuild a card")
+	assert_eq(screen._visible_cards()[0].get_instance_id(), id, "progress must not rebuild a card")
 	assert_eq(card.find_child("AnalysisPercent", true, false).text, "75%")
 	assert_eq(card.find_child("AnalysisProgress", true, false).value, 75.0)
 	queue.remove(path)
-	assert_true(list.get_child(0).get_instance_id() != id, "queue membership changes rebuild cards")
+	assert_true(screen._visible_cards()[0].get_instance_id() != id, "queue membership changes rebuild cards")
 	screen.free()
 	queue.free()
 	Storage.clean(folder)
@@ -105,7 +104,7 @@ class ReusableBridge extends Node:
 		stops += 1
 
 
-func test_runner_reuses_engine_after_game_and_cancel_but_discards_dead_engine():
+func test_runner_reuses_engine_after_a_game_but_stops_it_on_cancel_or_failure():
 	var folder := "user://freezes_runner_%d" % Time.get_ticks_usec()
 	DirAccess.make_dir_recursive_absolute(folder)
 	var history = History.new(folder)
@@ -131,12 +130,16 @@ func test_runner_reuses_engine_after_game_and_cancel_but_discards_dead_engine():
 	assert_true(runner.start(path, true))
 	assert_eq(bridge.resets, 2, "each game still sends ucinewgame")
 	runner.cancel()
-	runner.analyser._on_line("bestmove e7e5")
 	assert_true(runner.analyser == null)
-	assert_true(is_same(runner.bridge, bridge), "cancel drains bestmove and retains the engine")
-	bridge.stopped.emit()
-	assert_true(runner.bridge == null, "an idle engine failure discards the bridge")
+	assert_true(runner.bridge == null, "cancel stops the engine so a late bestmove cannot reach the next game")
 	assert_eq(bridge.stops, 1)
+	var idle := ReusableBridge.new()
+	runner.bridge = idle
+	runner.add_child(idle)
+	idle.stopped.connect(runner._stopped)
+	idle.stopped.emit()
+	assert_true(runner.bridge == null, "an idle engine failure discards the bridge")
+	assert_eq(idle.stops, 1)
 	runner.free()
 	DirAccess.remove_absolute(history.analysis_folder().path_join(path.get_file() + ".json"))
 	DirAccess.remove_absolute(history.analysis_folder())

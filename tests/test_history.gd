@@ -381,6 +381,29 @@ func test_games_is_empty_before_the_first_save():
 	HistoryStorage.clean(folder)
 
 
+func test_games_cache_round_trips_survives_corruption_and_drops_deleted_games():
+	var folder := _folder()
+	var history = History.new(folder)
+	var game = Game.new()
+	game.play("e2e4")
+	game.flag("b")
+	var path: String = history.save(game, [178000], SETTINGS)
+	var parsed: Dictionary = Pgn.parse(FileAccess.get_file_as_string(path)).games[0]
+	var first: Array = history.games()
+	assert_eq(first.size(), 1)
+	assert_eq(first[0].game, parsed)
+	first[0].game.moves.clear()
+	assert_eq(history.games()[0].game, parsed, "callers get copies of the cached game")
+	assert_eq(History.new(folder).games()[0].game, parsed, "the disk cache keeps types, e.g. integer clocks")
+	var cache := FileAccess.open(folder.path_join("history_cache.bin"), FileAccess.WRITE)
+	cache.store_string("not a cache")
+	cache.close()
+	assert_eq(History.new(folder).games()[0].game, parsed, "a corrupt cache is rebuilt from the PGNs")
+	assert_true(history.delete(path))
+	assert_eq(history.games(), [])
+	HistoryStorage.clean(folder)
+
+
 func test_thumbnail_uses_deepest_named_position_or_fallback():
 	var history = History.new(_folder())
 	var book = load("res://bot/book.gd").new()

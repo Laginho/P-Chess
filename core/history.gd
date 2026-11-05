@@ -204,18 +204,50 @@ func _restore_deleted_files(paths: Array, contents: Dictionary) -> void:
 				file.close()
 
 
+# Parsed games by file name with the PGN's modified time, also kept on disk: parsing a PGN replays
+# its moves, so each saved game is parsed once, not on every History visit or refresh.
+var _parsed = null
+
+
 func games() -> Array:
 	var folder := _root.path_join("games")
 	var result := []
 	if not DirAccess.dir_exists_absolute(folder):
 		return result
+	var cache_path := _root.path_join("history_cache.bin")
+	if _parsed == null:
+		var cache := FileAccess.open(cache_path, FileAccess.READ)
+		var stored = null
+		# store_var writes a 32-bit length first; checking it keeps get_var from erroring on a corrupt file.
+		if cache != null and cache.get_length() >= 4 and cache.get_32() == cache.get_length() - 4:
+			cache.seek(0)
+			stored = cache.get_var()
+		_parsed = stored if stored is Dictionary else {}
+	var changed := false
+	var seen := {}
 	for file in DirAccess.get_files_at(folder):
 		if not file.ends_with(".pgn"):
 			continue
 		var path := folder.path_join(file)
-		var parsed := Pgn.parse(FileAccess.get_file_as_string(path))
-		if parsed.error.is_empty() and parsed.games.size() == 1:
-			result.append({"path": path, "game": parsed.games[0], "modified": FileAccess.get_modified_time(path)})
+		var modified := FileAccess.get_modified_time(path)
+		seen[file] = true
+		var entry = _parsed.get(file)
+		if not (entry is Dictionary and entry.get("modified") == modified and (entry.get("game") == null or entry.get("game") is Dictionary)):
+			var parsed := Pgn.parse(FileAccess.get_file_as_string(path))
+			entry = {"modified": modified, "game": parsed.games[0] if parsed.error.is_empty() and parsed.games.size() == 1 else null}
+			_parsed[file] = entry
+			changed = true
+		if entry.game != null:
+			result.append({"path": path, "game": entry.game.duplicate(true), "modified": modified})
+	for file in _parsed.keys():
+		if not seen.has(file):
+			_parsed.erase(file)
+			changed = true
+	if changed:
+		var cache := FileAccess.open(cache_path, FileAccess.WRITE)
+		if cache != null:
+			cache.store_var(_parsed)
+			cache.close()
 	result.sort_custom(func(a, b): return a.modified > b.modified if a.modified != b.modified else a.path > b.path)
 	return result
 
@@ -224,13 +256,14 @@ func thumbnail(moves: PackedStringArray) -> Dictionary:
 	var index: Dictionary = preload("res://bot/badges.gd").catalog_index(book.entries if book != null else [])
 	var endings: Dictionary = index.endings
 	var positions: Dictionary = index.positions
-	var game = Game.new()
+	# Saved moves are legal, so a bare board replays them; no catalog position lies past its longest line.
+	# shortcut: a tempo-losing transposition back into the catalog after that ply is ignored.
+	var board = Game.new().board
 	var match_ply := 0
 	var opening := ""
-	for i in moves.size():
-		if not game.play(moves[i]):
-			break
-		var key: String = game.board.position_key()
+	for i in mini(moves.size(), index.longest):
+		board.make_move(moves[i])
+		var key: String = board.position_key()
 		if positions.has(key):
 			match_ply = i + 1
 		if endings.has(key):
