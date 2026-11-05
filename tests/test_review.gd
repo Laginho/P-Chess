@@ -1414,3 +1414,25 @@ func test_side_line_exit_paths_and_live_settings():
 	review._input(escape)
 	assert_true(returned[0])
 	main.free()
+
+
+func test_played_review_moves_keep_their_animation_until_finished():
+	var main = await _session(FakeTime.new())
+	var review = main.review
+	var game = Game.new()
+	game.play("e2e4")
+	game.play("e7e5")
+	review.present(game, [180000, 180000], SETTINGS, "")
+	main.preferences.set_value("animation_ms", 500)
+	var board = review.get_node("Margin/Content/ReviewBody/BoardView")
+	review._show_ply(0)
+	assert_true(board.play("e2e4"))
+	assert_eq(board._slide_to, "e4", "game continuation is animating")
+	review._show_ply(0)
+	assert_true(board.play("d2d4"))
+	assert_eq(board._slide_to, "d4", "first side-line move is animating")
+	assert_true(board.play("d7d5"))
+	assert_eq(board._slide_to, "d5", "side-line continuation is animating")
+	await Engine.get_main_loop().create_timer(0.65).timeout
+	assert_eq(board._slide_to, "", "animation eventually finishes")
+	main.free()

@@ -1,5 +1,5 @@
 # REV-007: Side lines in the Review, and the Best move arrow setting
-Stage: to-implement
+Stage: implementing
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -7,11 +7,11 @@ Difficulty: normal
 
 - Primary files:
   - ui/review.gd (side-line state, move-list rows, navigation, `Esc`, class-table collapse, blue arrow on game positions)
-  - ui/review.tscn (only if the Back to game control needs a node)
+  - ui/review.tscn (Back to game node if needed; BoardView mouse input)
   - ui/board_view.gd (a best-move arrow property, drawn translucent blue under `review_arrow` and the drawings)
   - core/settings.gd (`DEFAULTS`: `best_move_arrow`)
   - ui/settings.gd (the row)
-  - ui/main.gd (`_apply`: the board settings and `best_move_arrow` also reach the Review's board)
+  - ui/main.gd (`_apply` board settings; Settings above Review, Ctrl+, access and keyboard ownership while open)
   - tests/test_review.gd, tests/test_board_view.gd, tests/test_settings.gd
   - docs/spec.md (§15.6 side lines and arrow, §15.10 the new setting)
 
@@ -94,3 +94,10 @@ Additional usability observation, outside the numbered contract: after 20 line m
 Coverage: read the full diff and affected callers; examined actual viewport mouse input, real Ctrl+, dispatch, BoardView move/sound/tween callbacks, side-line state/replacement/discard, tree selection and deferred exits, class toggling, game analysis arriving during a line, PGN/link isolation, settings startup/change callbacks and annotation draw order. Inspected captures at 1280×800 and 800×600, including a 20-move line. Not verified: physical promotion input, real Stockfish/Lc0, or complete manual product acceptance in both post-game and History entry paths.
 
 External reproduction artifacts (not required to understand or reproduce the findings above): `/run/media/lage/New Volume/Scratch/rev007-review/` contains `input-probe.gd`, `input-probe.log` (drag and click-click results), `settings-path-probe.gd`, `spec-probe.gd` and graphical `probe.gd`/`probe.log` plus captures. Run a headless probe with `godot --headless --path . -s '<absolute script path>'`; run `probe.gd` with `xvfb-run -a godot --path . --position 3000,3000 --rendering-method gl_compatibility -s '<absolute script path>'`. The final graphical run completes without script errors; earlier harness mistakes (empty PV fixture and a nonexistent Tree scrollbar accessor) were corrected only in that external probe.
+
+
+- Proxy decided (opus-5.5 xhigh): Yes. Stage 2 may widen both scopes, limited to the bullets below. Criteria 1, 2 and 8 can't be met without these changes, both files are already Primary files, and review R2 sent this question to the proxy. Precedent: BOT-005 and CLOCK-001 widened scope the same way. (receipt /tmp/sweatshop-proxy/20261105-175641-REV-007-2bed17.json)
+
+  Scope: enable Review BoardView mouse input; put Settings above Review, allow Ctrl+, there and give Settings keyboard ownership while open. Test real viewport drag/click-click, game and side-line moves, toggling the real arrow row in both contexts, and Esc twice. Block all Review shortcuts while Settings is open. Preserve History and name-dialog covering behavior and existing game hotkeys. The proxy suggested ordering Settings after Review and before History, with a Review input guard; keep `ui/settings.gd` input unchanged. Commit tests first and the `ui/main.gd` change separately. If another lane changes this child sequence, disclose an integration dependency. Stage 3 should record the decision disclosure.
+
+- 2026-11-05 Animation regression test failed before the fix: game continuation, first side-line move and continuation each immediately cleared the active slide.
