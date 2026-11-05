@@ -1719,3 +1719,310 @@ func test_settings_open_in_review_while_focused_draw_notice_is_visible():
 				"Settings leaves the live draw notice intact, line=%s" % in_line)
 	main.free()
 	root.size = old_size
+
+
+func test_engine_lines_show_stored_white_scores_san_depth_and_compact_toggle():
+	var root: Window = Engine.get_main_loop().root
+	var old_size := root.size
+	root.size = Vector2i(800, 600)
+	var main = await _session(FakeTime.new())
+	var review = main.review
+	var game = Game.new()
+	game.play("e2e4")
+	review.present(game, [180000], SETTINGS, "")
+	var side = review.get_node("Margin/Content/ReviewBody/Side")
+	var block = side.get_node_or_null("EngineLines")
+	assert_true(block != null, "engine block exists between graph and move list")
+	if block == null:
+		main.free()
+		root.size = old_size
+		return
+	assert_true(not block.visible, "unknown game position hides the block")
+	review.receive_position(1, {"best_move": "e7e5", "pv": [
+		{"depth": 18, "cp": -80, "moves": ["e7e5", "g1f3", "b8c6"]},
+		{"depth": 18, "cp": 120, "moves": ["c7c5", "g1f3"]}]})
+	await Engine.get_main_loop().process_frame
+	await Engine.get_main_loop().process_frame
+	assert_true(block.visible)
+	assert_eq(block.get_child_count(), 2, "two rows also in compact")
+	assert_true(side.get_node("EvalGraph").get_index() < block.get_index() and block.get_index() < side.get_node("Moves").get_index())
+	assert_eq(block.get_node("Row1/Score").text, "+0.8")
+	assert_eq(block.get_node("Row2/Score").text, "-1.2")
+	assert_true(block.get_node("Row1/Score").get_theme_stylebox("normal").bg_color.get_luminance() > 0.5)
+	assert_true(block.get_node("Row2/Score").get_theme_stylebox("normal").bg_color.get_luminance() < 0.3)
+	assert_eq(block.get_node("Row1/Depth").text, "depth 18")
+	assert_true(block.get_node("Row1/PV").get_parsed_text().contains("e5"), "PV uses SAN")
+	side.get_node("ClassToggle").pressed.emit()
+	assert_true(not block.visible, "class table hides the whole block")
+	side.get_node("ClassToggle").pressed.emit()
+	assert_true(block.visible)
+	review.receive_position(1, {"pv": [{"depth": 20, "mate": -3, "moves": ["e7e5"]}]})
+	assert_eq(block.get_node("Row1/Score").text, "M3")
+	review._show_ply(0)
+	assert_true(not block.visible, "navigating to unknown position clears stored lines")
+	main.free()
+	root.size = old_size
+
+
+func test_live_engine_updates_only_shown_position_pauses_queue_and_restores_errors():
+	var main = await _session(FakeTime.new())
+	var review = main.review
+	var bridge = load("res://tests/test_live_analysis.gd").FakeBridge.new()
+	review.analysis_bridge_factory = func(): return bridge
+	var game = Game.new()
+	game.play("e2e4")
+	game.play("e7e5")
+	review.present(game, [180000, 180000, 180000], SETTINGS, "")
+	main.analysis_queue.resume()
+	review._analysis_error("earlier game error")
+	review._show_ply(0)
+	var board = review.get_node("Margin/Content/ReviewBody/BoardView")
+	assert_true(board.play("d2d4"))
+	var block = review.get_node("Margin/Content/ReviewBody/Side/EngineLines")
+	assert_true(main.analysis_queue._paused, "exploring pauses the real queue")
+	assert_eq(bridge.callbacks.size(), 1, "Review creates its own live search")
+	assert_true(block.visible)
+	assert_eq(block.get_node("Row1/PV").get_parsed_text(), "Stockfish is thinking…")
+	assert_eq(block.get_node("Row2/PV").get_parsed_text(), "Stockfish is thinking…")
+	if bridge.callbacks.is_empty():
+		main.free()
+		return
+	bridge.callbacks[0].call("info depth 16 multipv 1 score cp -120 pv d7d5 c2c4")
+	bridge.callbacks[0].call("info depth 16 multipv 2 score cp -80 pv g8f6 c2c4")
+	assert_eq(block.get_node("Row1/Score").text, "+1.2")
+	assert_eq(block.get_node("Row1/Depth").text, "depth 16")
+	assert_eq(review.get_node("Margin/Content/ReviewBody/EvalBar/Score").text, "+1.2")
+	assert_eq(board.best_move_arrow, "d7d5")
+	main.preferences.set_value("best_move_arrow", false)
+	assert_eq(board.best_move_arrow, "")
+	main.preferences.set_value("best_move_arrow", true)
+	assert_eq(board.best_move_arrow, "d7d5")
+	assert_true(board.play("d7d5"))
+	assert_eq(board.best_move_arrow, "", "position change clears old arrow at once")
+	assert_eq(review.get_node("Margin/Content/ReviewBody/EvalBar/Score").text, "")
+	bridge.callbacks[0].call("info depth 22 score cp 500 pv g8f6")
+	assert_eq(block.get_node("Row1/PV").get_parsed_text(), "Stockfish is thinking…")
+	bridge.callbacks[0].call("bestmove d7d5")
+	bridge.callbacks[1].call("info depth 8 score cp 20 pv c2c4")
+	assert_eq(board.best_move_arrow, "c2c4")
+	bridge.error = "Stockfish stopped"
+	bridge.stopped.emit()
+	assert_eq(review.get_node("Margin/Content/AnalysisError").text, "Analysis: Stockfish stopped")
+	assert_true(board.play("c2c4"), "engine failure leaves the side line usable")
+	review._back_to_game()
+	assert_true(not main.analysis_queue._paused, "Back to game resumes the queue")
+	assert_eq(review.get_node("Margin/Content/AnalysisError").text, "Analysis: earlier game error")
+	main.free()
+
+
+func test_engine_line_click_plays_matching_game_prefix_and_replaces_side_continuation():
+	var main = await _session(FakeTime.new())
+	var review = main.review
+	var bridge = load("res://tests/test_live_analysis.gd").FakeBridge.new()
+	review.analysis_bridge_factory = func(): return bridge
+	var game = Game.new()
+	for move in ["e2e4", "e7e5", "g1f3"]:
+		game.play(move)
+	review.present(game, [180000, 180000, 180000], SETTINGS, "")
+	review.receive_position(0, {"pv": [{"depth": 12, "cp": 30, "moves": ["e2e4", "e7e5", "b1c3", "b8c6"]}]})
+	review._show_ply(0)
+	var block = review.get_node("Margin/Content/ReviewBody/Side/EngineLines")
+	block.get_node("Row1/Score").pressed.emit()
+	assert_eq(review._ply, 1, "chip plays only the first move")
+	assert_true(not review._line_active)
+	review._show_ply(0)
+	block.get_node("Row1/PV").meta_clicked.emit("2")
+	assert_eq(review._ply, 2, "matching prefix advances the game")
+	assert_true(review._line_active)
+	var board = review.get_node("Margin/Content/ReviewBody/BoardView")
+	assert_eq(Array(board.game.moves), ["e2e4", "e7e5", "b1c3"])
+	assert_true(board.play("b8c6"))
+	review._step(-1)
+	# Finish the old search; only the last requested FEN starts next.
+	bridge.callbacks[0].call("bestmove b8c6")
+	bridge.callbacks.back().call("info depth 12 score cp -10 pv g8f6 d2d4")
+	block.get_node("Row1/PV").meta_clicked.emit("1")
+	assert_eq(Array(review._line_moves), ["b1c3", "g8f6", "d2d4"], "click replaces moves after the cursor")
+	assert_eq(review._line_index, 3)
+	main.free()
+
+
+func test_terminal_engine_lines_have_one_message_and_never_search():
+	var main = await _session(FakeTime.new())
+	var review = main.review
+	var bridges := []
+	review.analysis_bridge_factory = func():
+		var bridge = load("res://tests/test_live_analysis.gd").FakeBridge.new()
+		bridges.append(bridge)
+		return bridge
+	review.present(Game.new(), [], SETTINGS, "")
+	var board = review.get_node("Margin/Content/ReviewBody/BoardView")
+	for move in ["f2f3", "e7e5", "g2g4", "d8h4"]:
+		assert_true(board.play(move))
+	var block = review.get_node("Margin/Content/ReviewBody/Side/EngineLines")
+	assert_eq(block.get_node("Row1/PV").get_parsed_text(), "Checkmate")
+	assert_true(not block.get_node("Row1/Score").visible and not block.get_node("Row2").visible)
+	assert_eq(bridges[0].stops, 1, "terminal position releases the ongoing search")
+	review._back_to_game()
+	# The scene's public board accepts explicit terminal FENs, as the core rules fixtures do.
+	for case in [["7k/5Q2/6K1/8/8/8/8/8 b - - 0 1", "Stalemate"],
+		["7k/8/8/8/8/8/8/K7 w - - 0 1", "Draw"],
+		["7k/8/8/8/8/8/R7/K7 w - - 100 1", "Draw"]]:
+		board.game = Game.new(case[0])
+		review.receive_position(0, {"fen": case[0], "pv": []})
+		assert_true(block.visible)
+		assert_eq(block.get_node("Row1/PV").get_parsed_text(), case[1])
+		assert_true(not block.get_node("Row1/Score").visible and not block.get_node("Row2").visible)
+	assert_eq(bridges.size(), 1, "terminal positions never create another bridge")
+	main.free()
+
+
+func test_side_line_freezes_queued_game_progress_stop_works_and_rematch_keeps_pause():
+	var queue_script = load("res://core/analysis_queue.gd")
+	var runner = load("res://tests/test_analysis_queue.gd").FakeAnalyser.new()
+	var path := "user://rev008-queue-%d.cfg" % Time.get_ticks_usec()
+	var queue = queue_script.new(runner, path)
+	var review = load("res://ui/review.tscn").instantiate()
+	review.analysis_queue = queue
+	review.analysis_bridge_factory = func(): return load("res://tests/test_live_analysis.gd").FakeBridge.new()
+	Engine.get_main_loop().root.add_child(review)
+	var game = Game.new()
+	game.play("e2e4")
+	game.play("e7e5")
+	review.present(game, [180000, 180000], SETTINGS, "")
+	review._queue_path = "fixture.pgn"
+	queue.enqueue("fixture.pgn")
+	runner.progress.emit(1, 2)
+	var progress = review.get_node("Margin/Content/Progress")
+	assert_true(progress.visible)
+	assert_eq(progress.value, 50.0)
+	review._show_ply(0)
+	assert_true(review.get_node("Margin/Content/ReviewBody/BoardView").play("d2d4"))
+	assert_true(progress.visible, "paused game's progress remains visible")
+	assert_eq(progress.value, 50.0)
+	assert_eq(queue.current(), "", "queue's real runner is cancelled")
+	assert_eq(runner.starts.size(), 1, "no background restart during exploration")
+	review._back_to_game()
+	assert_eq(runner.starts.size(), 2, "leaving resumes the queued game")
+	runner.progress.emit(1, 2)
+	assert_true(review.get_node("Margin/Content/ReviewBody/BoardView").play("d2d4"))
+	review.get_node("Margin/Content/StopAnalysis").pressed.emit()
+	assert_eq(queue.pending(), [])
+	assert_true(not progress.visible, "Stop still removes the paused game")
+	review._back_to_game()
+	review.free()
+	queue.free()
+	DirAccess.remove_absolute(path)
+	var main = await _session(FakeTime.new())
+	var bridge = load("res://tests/test_live_analysis.gd").FakeBridge.new()
+	var stop_events: Array = bridge.stop_events
+	main.review.analysis_bridge_factory = func(): return bridge
+	main.review.present(game, [180000, 180000], SETTINGS, "")
+	main.analysis_queue.resume()
+	main.review._show_ply(0)
+	assert_true(main.review.get_node("Margin/Content/ReviewBody/BoardView").play("d2d4"))
+	main.review.get_node("Margin/Content/Actions/Rematch").pressed.emit()
+	await _wait_start(main)
+	assert_true(not main.review.visible)
+	assert_eq(stop_events.size(), 1, "rematch releases the live engine")
+	assert_true(main.analysis_queue._paused, "Review hide must preserve main's gameplay pause")
+	main.free()
+
+
+func test_stopping_direct_game_analysis_in_a_line_does_not_restart_it_on_exit():
+	var main = await _session(FakeTime.new())
+	var review = main.review
+	review.analysis_queue = null
+	var bridges := []
+	review.analysis_bridge_factory = func():
+		var bridge = load("res://tests/test_live_analysis.gd").FakeBridge.new()
+		bridges.append(bridge)
+		return bridge
+	var game = Game.new()
+	game.play("e2e4")
+	review.present(game, [180000], SETTINGS, "")
+	var path := "user://rev008-direct-%d.json" % Time.get_ticks_usec()
+	review.open_analysis(path, false)
+	bridges[0].callbacks[0].call("info depth 12 score cp -20 pv e7e5")
+	bridges[0].callbacks[0].call("bestmove e7e5")
+	var progress = review.get_node("Margin/Content/Progress")
+	assert_eq(progress.value, 50.0)
+	review._show_ply(0)
+	assert_true(review.get_node("Margin/Content/ReviewBody/BoardView").play("d2d4"))
+	assert_eq(progress.value, 50.0)
+	assert_true(progress.visible)
+	review.get_node("Margin/Content/StopAnalysis").pressed.emit()
+	assert_true(not progress.visible)
+	review._back_to_game()
+	assert_eq(bridges.size(), 2, "Stop cancels resuming the game's direct analyser")
+	assert_true(not progress.visible)
+	main.free()
+	DirAccess.remove_absolute(path)
+
+
+func test_engine_pv_and_chip_accept_real_viewport_clicks_in_compact_layout():
+	var root: Window = Engine.get_main_loop().root
+	var old_size := root.size
+	root.size = Vector2i(800, 600)
+	var main = await _session(FakeTime.new())
+	var review = main.review
+	var game = Game.new()
+	game.play("e2e4")
+	game.play("e7e5")
+	review.analysis_bridge_factory = func(): return load("res://tests/test_live_analysis.gd").FakeBridge.new()
+	review.present(game, [180000, 180000], SETTINGS, "")
+	review.receive_position(0, {"pv": [{"depth": 20, "cp": 80, "moves": ["e2e4", "e7e5", "b1c3", "b8c6", "d2d4", "e5d4", "d1d4", "d7d6", "g1f3", "g8f6", "f1b5", "c8d7", "b5c6", "d7c6"]},
+		{"depth": 20, "cp": 20, "moves": ["d2d4", "d7d5", "c2c4"]}]})
+	for use_chip in [true, false]:
+		review._show_ply(0)
+		await Engine.get_main_loop().process_frame
+		await Engine.get_main_loop().process_frame
+		var block = review.get_node("Margin/Content/ReviewBody/Side/EngineLines")
+		var pv: RichTextLabel = block.get_node("Row1/PV")
+		assert_true(pv.get_parsed_text().ends_with("…"), "long PV is ellipsized")
+		assert_true(block.get_global_rect().end.y <= review.get_node("Margin/Content/ReviewBody/Side/Moves").global_position.y)
+		assert_true(block.get_node("Row2").is_visible_in_tree())
+		var chip: Button = block.get_node("Row1/Score")
+		var at: Vector2 = root.get_final_transform() * (chip.global_position + chip.size / 2) if use_chip else root.get_final_transform() * (pv.global_position + Vector2(5, 7))
+		await _review_mouse_motion(root, at)
+		await _review_mouse_button(root, at, true)
+		await _review_mouse_button(root, at, false)
+		assert_eq(review._ply, 1, "real click plays first engine move, chip=%s" % use_chip)
+		assert_true(not review._line_active, "matching move stays in the game")
+	main.free()
+	root.size = old_size
+
+
+func test_missing_live_engine_error_survives_stopping_the_queued_game():
+	var runner = load("res://tests/test_analysis_queue.gd").FakeAnalyser.new()
+	var queue_file := "user://rev008-error-queue-%d.cfg" % Time.get_ticks_usec()
+	var queue = load("res://core/analysis_queue.gd").new(runner, queue_file)
+	var review = load("res://ui/review.tscn").instantiate()
+	review.analysis_queue = queue
+	review.analysis_bridge_factory = func():
+		var bridge = load("res://tests/test_live_analysis.gd").FakeBridge.new()
+		bridge.starts = false
+		bridge.error = "Stockfish is missing"
+		return bridge
+	Engine.get_main_loop().root.add_child(review)
+	var game = Game.new()
+	game.play("e2e4")
+	review.present(game, [180000], SETTINGS, "")
+	review._queue_path = "fixture.pgn"
+	queue.enqueue("fixture.pgn")
+	runner.progress.emit(1, 2)
+	review._show_ply(0)
+	var board = review.get_node("Margin/Content/ReviewBody/BoardView")
+	assert_true(board.play("d2d4"))
+	var error = review.get_node("Margin/Content/AnalysisError")
+	assert_true(error.visible)
+	assert_eq(error.text, "Analysis: Stockfish is missing")
+	assert_true(board.play("d7d5"), "exploration remains available without Stockfish")
+	review.get_node("Margin/Content/StopAnalysis").pressed.emit()
+	assert_true(error.visible, "stopping the game's analysis preserves the live engine's error")
+	review._back_to_game()
+	assert_true(not error.visible, "no pre-existing game error is restored")
+	assert_true(not queue._paused)
+	review.free()
+	queue.free()
+	DirAccess.remove_absolute(queue_file)

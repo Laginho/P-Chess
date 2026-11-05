@@ -1,5 +1,5 @@
 # REV-008: Engine lines in the Review, and live Stockfish in side lines
-Stage: to-implement
+Stage: to-review
 Status: ready-for-agent
 Blocked by: REV-007
 Review: human
@@ -45,3 +45,27 @@ Spec: `.scratch/review-explore/spec.md`. The two engine lines show between the e
 ## Comments
 
 - 2026-11-05 Written from the grill (spec.md). Note: `ui/main.gd` pauses the queue and then hides the Review when a game starts, so a resume on the Review's hide would undo that pause (criterion 7).
+
+- 2026-11-05 Stage 2: seams confirmed by the ticket: live controller with a fake UCI bridge, and the Review scene with `analysis_bridge_factory`. Callers inspected: navigation, streamed game analysis, class toggle, main game start/hide, queue cancel/resume and the shared analyser parser. Degenerate cases include rapid position switches before bestmove, missing/stopped engine, one legal move, terminal positions and absent stored PVs.
+
+- 2026-11-05 Test harness correction: the delayed-handshake fake initially used Godot’s own PID, which `OS.is_process_running` rejects because it tracks launched children. It now owns a temporary headless child and releases it synchronously. The corrected test exercises the real UCI command queue through the agreed fake-bridge seam.
+
+- 2026-11-05 Test harness correction: compact viewport mouse coordinates must include the root stretch transform (`1280×960` logical at `800×600` physical); `get_screen_transform()` omits that scale on the headless DisplayServer. Corrected the real-click test and verified it fails when the production PV click handler is disabled.
+
+
+#### Resolution (2026-11-05, stage 2)
+
+Implemented stored and live engine lines, White-perspective chips, SAN links and depth in both layouts. The Review owns a separate unlimited MultiPV-2 search while exploring; position switches stop and drain the previous search, and stale callbacks cannot update the displayed position. Live scores and the best-move arrow follow the shown FEN. Terminal positions display one message without a search. Clicking a PV follows the matching game prefix before branching or replaces the continuation at the side-line cursor.
+
+Queue and direct game analysis pause during exploration, with visible progress frozen and Stop available. Returning or hiding Review releases the live process and resumes analysis; the Rematch handoff preserves main's gameplay pause. Stop of a paused direct analyser persists after leaving the line. Missing/stopped live Stockfish leaves exploration usable, and its error stays separate from the game's error, including when the queued game is stopped. Updated `docs/spec.md` §15.6. All source and test edits stay within Primary files; `ui/review.tscn` required no change.
+
+Verification:
+
+- Bound gate on `3e1019e25e8faa6ff24f7ac9d418257970f829fb`: **544 passed, 0 failed**, exit 0. Receipt and log are under `/run/media/lage/New Volume/Scratch/rev008/`; receipt SHA-256 verified. The headless gate skips the existing last-move pixel assertion and six real-Lc0 checks because the Windows engine is absent.
+- Red/green commits retain the evidence: the controller first failed on its missing production file; the stored-lines scene test failed with 61 passed / 1 failed before the block, then 62 passed / 0 failed. Focused scene tests failed on absent live searches/queue pause, PV clicks and terminal messages. The corrected real-UCI-queue fixture exposed cancellation before `uciok`, and the out-of-order-PV test exposed PV2 being published as PV1 (1 passed / 2 failed); all three controller tests now pass.
+- Additional red cases caught direct analysis restarting after Stop and Stop hiding the live engine's missing-engine message. Both pass after their production fixes. Disabling the production PV click handler makes the compact real-viewport click test fail; restoring it passes both headless and in Xvfb (**1 passed, 0 failed** in the graphical run). The tests use the root stretch transform for physical mouse input.
+- Inspected Xvfb captures of stored and live lines at both sizes: [stored 1280](</run/media/lage/New Volume/Scratch/rev008/stored-1280.png>), [stored 800](</run/media/lage/New Volume/Scratch/rev008/stored-800.png>), [live 1280](</run/media/lage/New Volume/Scratch/rev008/live-1280.png>), [live 800](</run/media/lage/New Volume/Scratch/rev008/live-800.png>). Two engine rows, Back to game and actions remain visible; live score and blue arrow use the fake engine's shown position. The graphical run used `--position 3000,3000`.
+
+Acceptance: pending | Bruno's Windows checks with real Stockfish from this ticket's Verification remain: explore a blunder, watch depth rise, click lines, Back to game, Rematch and a queued History game. Automated fake-engine checks and graphical captures pass; real engine output/timing and CPU load are not validated on Linux.
+Disclosure: pending | integration | Complete Bruno's real-Stockfish Windows acceptance before merging into main, as required by this ticket's Verification and [the approved test seam](../spec.md#test-seams).
+Gate evidence: /run/media/lage/New Volume/Scratch/rev008/gate.json

@@ -12,6 +12,7 @@ const Board = preload("res://core/board.gd")
 const Game = preload("res://core/game.gd")
 const Uci = preload("res://engine/uci.gd")
 const Analyser = preload("res://engine/analyser.gd")
+const LiveAnalysis = preload("res://engine/live_analysis.gd")
 const Tunables = preload("res://core/tunables.gd")
 const Classification = preload("res://core/classification.gd")
 const Accuracy = preload("res://core/accuracy.gd")
@@ -39,6 +40,17 @@ var _line_active := false
 var _line_moves := PackedStringArray()
 var _line_index := 0
 var _line_rows: Array[TreeItem] = []
+var _engine_lines: VBoxContainer
+var _live_analysis
+var _live_bridge
+var _live_position := {}
+var _live_failed := false
+var _game_error := ""
+var _game_error_visible := false
+var _line_progress_visible := false
+var _line_progress_value := 0.0
+var _direct_paused := false
+var _leaving_for_game := false
 var best_move_arrow_enabled := true:
 	set(value):
 		best_move_arrow_enabled = value
@@ -72,6 +84,7 @@ const CLASS_NAMES := ["Brilliant", "Great", "Best", "Excellent", "Good", "Book",
 
 
 func _ready() -> void:
+	_create_engine_lines()
 	if analysis_queue != null:
 		analysis_queue.position_ready.connect(_queue_position)
 		analysis_queue.changed.connect(_queue_changed)
@@ -297,6 +310,7 @@ func _ready() -> void:
 		side.get_node("AccuracyHelp").visible = not expanded
 		side.get_node("EvalGraph").visible = not expanded
 		side.get_node("Moves").visible = not expanded
+		_update_engine_lines()
 		_update_summary())
 	resized.connect(_resize_classes)
 	_resize_classes()
@@ -347,7 +361,7 @@ func _ready() -> void:
 	$Margin/Content/ReviewBody/Side/Navigation/Last.pressed.connect(func(): _show_ply(_game_moves.size(), true))
 	$Margin/Content/Actions/CopyPgn.pressed.connect(func(): copy_text.call(_pgn))
 	$Margin/Content/Actions/Lichess.pressed.connect(func(): open_browser.call(_url))
-	$Margin/Content/Actions/Rematch.pressed.connect(func(): rematch_requested.emit())
+	$Margin/Content/Actions/Rematch.pressed.connect(_request_rematch)
 	$Margin/Content/Actions/Setup.pressed.connect(func(): setup_requested.emit())
 	var back := Button.new()
 	back.name = "BackHistory"
@@ -568,7 +582,208 @@ func _resize_classes() -> void:
 	$Margin/Content/ReviewBody/Side/AccuracyHelp.visible = not unanalysed
 	_moves.visible = true
 	_graph.visible = not unanalysed
+	_update_engine_lines()
 	_update_summary()
+
+
+# Both layouts keep two fixed-height rows; the SAN text yields width to score and depth.
+func _create_engine_lines() -> void:
+	var side := $Margin/Content/ReviewBody/Side
+	_engine_lines = VBoxContainer.new()
+	_engine_lines.name = "EngineLines"
+	_engine_lines.add_theme_constant_override("separation", 2)
+	side.add_child(_engine_lines)
+	side.move_child(_engine_lines, side.get_node("Moves").get_index())
+	for number in [1, 2]:
+		var row := HBoxContainer.new()
+		row.name = "Row%d" % number
+		row.add_theme_constant_override("separation", 6)
+		_engine_lines.add_child(row)
+		var chip := Button.new()
+		chip.name = "Score"
+		chip.custom_minimum_size = Vector2(48, 24)
+		chip.add_theme_font_size_override("font_size", 12)
+		row.add_child(chip)
+		chip.pressed.connect(func(): _play_engine_line(number - 1, 0))
+		var pv := RichTextLabel.new()
+		pv.name = "PV"
+		pv.bbcode_enabled = true
+		pv.scroll_active = false
+		pv.custom_minimum_size.y = 24
+		pv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		pv.add_theme_font_size_override("normal_font_size", 12)
+		row.add_child(pv)
+		pv.meta_clicked.connect(func(index): _play_engine_line(number - 1, int(str(index))))
+		var depth := Label.new()
+		depth.name = "Depth"
+		depth.add_theme_font_size_override("font_size", 10)
+		depth.theme_type_variation = "MutedText"
+		depth.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		depth.visible = number == 1
+		row.add_child(depth)
+	_engine_lines.resized.connect(_update_engine_lines)
+	_engine_lines.hide()
+
+
+func _request_rematch() -> void:
+	_leaving_for_game = true
+	rematch_requested.emit()
+
+
+func _pause_for_line() -> void:
+	_live_failed = false
+	_game_error = $Margin/Content/AnalysisError.text
+	_game_error_visible = $Margin/Content/AnalysisError.visible
+	_line_progress_visible = $Margin/Content/Progress.visible
+	_line_progress_value = $Margin/Content/Progress.value
+	_direct_paused = _analysis_bridge != null
+	if analysis_queue != null:
+		analysis_queue.pause()
+	if _direct_paused:
+		_cancel_analysis()
+
+
+func _search_shown_position() -> void:
+	var fen: String = _board_view.game.board.to_fen()
+	if _live_position.get("fen", "") == fen:
+		return
+	_live_position = {"fen": fen}
+	if _board_view.game.is_over():
+		_stop_live_process()
+		_live_position = {"fen": fen, "pv": [], "best_move": "",
+				"terminal_score": -1000 if _board_view.game.reason == "checkmate" else 0}
+		return
+	if _live_failed:
+		return
+	if _live_analysis == null:
+		_live_bridge = analysis_bridge_factory.call()
+		add_child(_live_bridge)
+		_live_analysis = LiveAnalysis.new(_live_bridge)
+		add_child(_live_analysis)
+		_live_analysis.updated.connect(func(searched_fen: String, position: Dictionary):
+			if _line_active and searched_fen == _board_view.game.board.to_fen():
+				_live_position = position
+				_update_engine_lines()
+				_update_eval_bar()
+				_update_board_annotations())
+		_live_analysis.failed.connect(func(message: String):
+			_live_failed = true
+			_live_position = {"fen": _board_view.game.board.to_fen()}
+			$Margin/Content/AnalysisError.text = "Analysis: " + message
+			$Margin/Content/AnalysisError.show()
+			_update_engine_lines()
+			_update_eval_bar()
+			_update_board_annotations())
+	_live_analysis.search(fen)
+
+
+func _stop_live_process() -> void:
+	if _live_analysis != null:
+		_live_analysis.stop()
+		_live_analysis.queue_free()
+		_live_analysis = null
+	if _live_bridge != null:
+		_live_bridge.queue_free()
+		_live_bridge = null
+	_live_position.clear()
+
+
+func _exit_tree() -> void:
+	_stop_live_process()
+
+
+func _finish_line_analysis() -> void:
+	_stop_live_process()
+	$Margin/Content/AnalysisError.text = _game_error
+	$Margin/Content/AnalysisError.visible = _game_error_visible
+	if analysis_queue != null and not _leaving_for_game:
+		analysis_queue.resume()
+	if _direct_paused:
+		_direct_paused = false
+		if not _leaving_for_game and visible:
+			open_analysis(_analysis_path, _draw_at_end)
+
+
+func _play_engine_line(number: int, last_move: int) -> void:
+	var lines: Array = _shown_engine_position().get("pv", [])
+	if number >= lines.size():
+		return
+	# Freeze the clicked PV before each played move replaces the displayed position.
+	var moves: Array = lines[number].get("moves", []).duplicate()
+	for i in mini(last_move + 1, moves.size()):
+		if not _board_view.play(moves[i]):
+			break
+
+
+func _shown_engine_position() -> Dictionary:
+	if _line_active:
+		return _live_position
+	return _positions[_ply] if not _positions.is_empty() else {}
+
+
+func _update_engine_lines() -> void:
+	if _engine_lines == null or _positions.is_empty():
+		return
+	var position := _shown_engine_position()
+	_engine_lines.visible = _moves.visible and (_line_active or position.has("pv") or _board_view.game.is_over())
+	if not _engine_lines.visible:
+		return
+	if _board_view.game.is_over():
+		var first := _engine_lines.get_node("Row1")
+		first.show()
+		first.get_node("Score").hide()
+		first.get_node("Depth").text = ""
+		var reason: String = _board_view.game.reason
+		first.get_node("PV").text = "Checkmate" if reason == "checkmate" else ("Stalemate" if reason == "stalemate" else "Draw")
+		_engine_lines.get_node("Row2").hide()
+		return
+	var lines: Array = position.get("pv", [])
+	var white: bool = _board_view.game.board.side_to_move == "w"
+	for i in 2:
+		var row := _engine_lines.get_child(i)
+		row.show()
+		var chip: Button = row.get_node("Score")
+		var pv: RichTextLabel = row.get_node("PV")
+		var depth: Label = row.get_node("Depth")
+		depth.text = ""
+		pv.text = ""
+		chip.visible = i < lines.size()
+		if i >= lines.size():
+			pv.text = "[color=#a8a49c]Stockfish is thinking…[/color]" if _line_active else ""
+			continue
+		var line: Dictionary = lines[i]
+		var score: int = line.get("cp", 1000 if line.get("mate", 0) > 0 else -1000)
+		if not white:
+			score = -score
+		chip.text = "M%d" % absi(int(line.mate)) if line.has("mate") else ("+" if score > 0 else "") + "%.1f" % (score / 100.0)
+		var style := StyleBoxFlat.new()
+		style.bg_color = Color("ece9e4") if score >= 0 else Color("30302d")
+		style.set_corner_radius_all(3)
+		for state in ["normal", "hover", "pressed", "focus"]:
+			chip.add_theme_stylebox_override(state, style)
+		for state in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+			chip.add_theme_color_override(state, Color("242321") if score >= 0 else Color("ece9e4"))
+		if i == 0:
+			depth.text = "depth %d" % int(line.get("depth", 0))
+		var board = _board_view.game.board.copy()
+		var text := ""
+		var markup := ""
+		var move_index := 0
+		var font := pv.get_theme_font("normal_font")
+		var width := maxf(0, _engine_lines.size.x - 48 - 12 - (depth.get_minimum_size().x if i == 0 else 0))
+		for move: String in line.get("moves", []):
+			if not move in board.legal_moves():
+				break
+			var san: String = board.san(move)
+			var next := text + (" " if not text.is_empty() else "") + san
+			if font.get_string_size(next + " …", HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x > width:
+				markup += " …"
+				break
+			markup += (" " if not text.is_empty() else "") + "[url=%d]%s[/url]" % [move_index, san]
+			move_index += 1
+			text = next
+			board.make_move(move)
+		pv.text = markup.strip_edges()
 
 
 func _class_help() -> String:
@@ -683,6 +898,7 @@ func _analysis_error(message: String) -> void:
 
 
 func _stop_analysis() -> void:
+	_direct_paused = false
 	if analysis_queue != null and _queue_path in analysis_queue.pending():
 		analysis_queue.remove(_queue_path)
 	else:
@@ -694,7 +910,8 @@ func _stop_analysis() -> void:
 # The analyser writes atomically on completion, so an older cache is still safe.
 func _restore_analysis() -> void:
 	$Margin/Content/Progress.hide()
-	$Margin/Content/AnalysisError.hide()
+	if not (_line_active and _live_failed):
+		$Margin/Content/AnalysisError.hide()
 	$Margin/Content/ProgressText.text = "0 of %d moves" % _game_moves.size()
 	for i in _classes.size():
 		if _classes[i] != null:
@@ -746,7 +963,7 @@ func _input(event: InputEvent) -> void:
 			and event.keycode == KEY_SPACE:
 		get_viewport().set_input_as_handled()
 		if not _from_history:
-			rematch_requested.emit()
+			_request_rematch()
 	elif visible and event is InputEventKey and event.is_pressed() and not event.is_echo() and event.keycode == KEY_ESCAPE and (_line_active or _from_history):
 		get_viewport().set_input_as_handled()
 		if _line_active:
@@ -797,6 +1014,7 @@ func _on_board_move(_san: String) -> void:
 		_line_active = true
 		_line_index = 0
 		_line_moves.clear()
+		_pause_for_line()
 		_resize_classes()
 	if _line_index >= _line_moves.size() or _line_moves[_line_index] != move:
 		_line_moves.resize(_line_index)
@@ -864,8 +1082,10 @@ func _show_line(index: int, announce := false, already_played := false) -> void:
 	_moves.set_block_signals(false)
 	if announce and before != _line_index and _line_index > 0:
 		_board_view.request_move_sounds(san)
+	_search_shown_position()
 	_update_board_annotations()
 	_update_eval_bar()
+	_update_engine_lines()
 	_board_view.queue_redraw()
 
 
@@ -880,6 +1100,7 @@ func _discard_line() -> void:
 	if not _line_active:
 		return
 	_line_active = false
+	_finish_line_analysis()
 	_line_index = 0
 	_line_moves.clear()
 	for row in _line_rows:
@@ -917,6 +1138,7 @@ func _show_ply(ply: int, announce := false, already_played := false) -> void:
 	_update_board_annotations()
 	_board_view.queue_redraw()
 	_update_eval_bar()
+	_update_engine_lines()
 
 
 func receive_position(index: int, position: Dictionary) -> void:
@@ -942,6 +1164,7 @@ func _positions_changed() -> void:
 	_update_summary()
 	_update_board_annotations()
 	_update_eval_bar()
+	_update_engine_lines()
 
 
 func _update_summary() -> void:
@@ -1015,7 +1238,9 @@ func _update_board_annotations() -> void:
 	_board_view.review_arrow = ""
 	_board_view.review_icon = null
 	_board_view.best_move_arrow = ""
-	if _line_active and _line_index > 0:
+	if _line_active:
+		if best_move_arrow_enabled and not _board_view.game.is_over():
+			_board_view.best_move_arrow = _live_position.get("best_move", "")
 		_board_view.queue_redraw()
 		return
 	if best_move_arrow_enabled and not _positions.is_empty() and not _board_view.game.is_over():
@@ -1038,9 +1263,9 @@ func _update_eval_bar() -> void:
 	_eval_bar.flipped = _board_view.flipped
 	_eval_bar.white_fraction = 0.5
 	_eval_bar.get_node("Score").text = ""
-	if (_line_active and _line_index > 0) or _positions.is_empty() or not _positions[_ply].has("pv"):
+	var position := _shown_engine_position()
+	if not position.has("pv"):
 		return
-	var position: Dictionary = _positions[_ply]
 	var line: Dictionary = position.pv[0] if not position.pv.is_empty() else {"cp": position.get("terminal_score", 0)}
 	var cp: int = line.get("cp", 1000 if line.get("mate", 0) > 0 else -1000)
 	var black_to_move: bool = Board.from_fen(position.fen).side_to_move == "b"
@@ -1057,6 +1282,7 @@ func _update_eval_bar() -> void:
 func present(game, clocks: Array, settings: Dictionary, result_text: String,
 		catalog: Array = [], repertoire: Array = [], check_repertoire := false) -> void:
 	_discard_line()
+	_leaving_for_game = false
 	_from_history = false
 	_queue_was_pending = false
 	$Margin/Content/ReviewBody/Side/UnanalysedNotice.hide()
@@ -1219,7 +1445,7 @@ static func lichess_url(game) -> String:
 	return "https://lichess.org/analysis/pgn/" + text.uri_encode()
 
 func _queue_position(path: String, index: int, position: Dictionary) -> void:
-	if visible and path == _queue_path and path in analysis_queue.pending():
+	if visible and not _line_active and path == _queue_path and path in analysis_queue.pending():
 		receive_position(index, position)
 
 
@@ -1231,6 +1457,10 @@ func _queue_changed() -> void:
 		_queue_was_pending = false
 		_restore_analysis()
 	_queue_was_pending = pending
+	if _line_active:
+		$Margin/Content/Progress.visible = pending and _line_progress_visible
+		$Margin/Content/Progress.value = _line_progress_value
+		return
 	var active: bool = analysis_queue.current() == _queue_path and pending
 	$Margin/Content/Progress.visible = active
 	if active:
