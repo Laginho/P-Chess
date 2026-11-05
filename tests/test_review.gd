@@ -1845,3 +1845,85 @@ func test_engine_line_click_plays_matching_game_prefix_and_replaces_side_continu
 	assert_eq(Array(review._line_moves), ["b1c3", "g8f6", "d2d4"], "click replaces moves after the cursor")
 	assert_eq(review._line_index, 3)
 	main.free()
+
+
+func test_terminal_engine_lines_have_one_message_and_never_search():
+	var main = await _session(FakeTime.new())
+	var review = main.review
+	var bridges := []
+	review.analysis_bridge_factory = func():
+		var bridge = load("res://tests/test_live_analysis.gd").FakeBridge.new()
+		bridges.append(bridge)
+		return bridge
+	review.present(Game.new(), [], SETTINGS, "")
+	var board = review.get_node("Margin/Content/ReviewBody/BoardView")
+	for move in ["f2f3", "e7e5", "g2g4", "d8h4"]:
+		assert_true(board.play(move))
+	var block = review.get_node("Margin/Content/ReviewBody/Side/EngineLines")
+	assert_eq(block.get_node("Row1/PV").get_parsed_text(), "Checkmate")
+	assert_true(not block.get_node("Row1/Score").visible and not block.get_node("Row2").visible)
+	assert_eq(bridges[0].stops, 1, "terminal position releases the ongoing search")
+	review._back_to_game()
+	# The scene's public board accepts explicit terminal FENs, as the core rules fixtures do.
+	for case in [["7k/5Q2/6K1/8/8/8/8/8 b - - 0 1", "Stalemate"],
+		["7k/8/8/8/8/8/8/K7 w - - 0 1", "Draw"],
+		["7k/8/8/8/8/8/R7/K7 w - - 100 1", "Draw"]]:
+		board.game = Game.new(case[0])
+		review.receive_position(0, {"fen": case[0], "pv": []})
+		assert_true(block.visible)
+		assert_eq(block.get_node("Row1/PV").get_parsed_text(), case[1])
+		assert_true(not block.get_node("Row1/Score").visible and not block.get_node("Row2").visible)
+	assert_eq(bridges.size(), 1, "terminal positions never create another bridge")
+	main.free()
+
+
+func test_side_line_freezes_queued_game_progress_stop_works_and_rematch_keeps_pause():
+	var queue_script = load("res://core/analysis_queue.gd")
+	var runner = load("res://tests/test_analysis_queue.gd").FakeAnalyser.new()
+	var path := "user://rev008-queue-%d.cfg" % Time.get_ticks_usec()
+	var queue = queue_script.new(runner, path)
+	var review = load("res://ui/review.tscn").instantiate()
+	review.analysis_queue = queue
+	review.analysis_bridge_factory = func(): return load("res://tests/test_live_analysis.gd").FakeBridge.new()
+	Engine.get_main_loop().root.add_child(review)
+	var game = Game.new()
+	game.play("e2e4")
+	game.play("e7e5")
+	review.present(game, [180000, 180000], SETTINGS, "")
+	review._queue_path = "fixture.pgn"
+	queue.enqueue("fixture.pgn")
+	runner.progress.emit(1, 2)
+	var progress = review.get_node("Margin/Content/Progress")
+	assert_true(progress.visible)
+	assert_eq(progress.value, 50.0)
+	review._show_ply(0)
+	assert_true(review.get_node("Margin/Content/ReviewBody/BoardView").play("d2d4"))
+	assert_true(progress.visible, "paused game's progress remains visible")
+	assert_eq(progress.value, 50.0)
+	assert_eq(queue.current(), "", "queue's real runner is cancelled")
+	assert_eq(runner.starts.size(), 1, "no background restart during exploration")
+	review._back_to_game()
+	assert_eq(runner.starts.size(), 2, "leaving resumes the queued game")
+	runner.progress.emit(1, 2)
+	assert_true(review.get_node("Margin/Content/ReviewBody/BoardView").play("d2d4"))
+	review.get_node("Margin/Content/StopAnalysis").pressed.emit()
+	assert_eq(queue.pending(), [])
+	assert_true(not progress.visible, "Stop still removes the paused game")
+	review._back_to_game()
+	review.free()
+	queue.free()
+	DirAccess.remove_absolute(path)
+	var main = await _session(FakeTime.new())
+	var bridge = load("res://tests/test_live_analysis.gd").FakeBridge.new()
+	var stop_events: Array = bridge.stop_events
+	main.review.analysis_bridge_factory = func(): return bridge
+	main.review.present(game, [180000, 180000], SETTINGS, "")
+	main.analysis_queue.resume()
+	main.review._show_ply(0)
+	assert_true(main.review.get_node("Margin/Content/ReviewBody/BoardView").play("d2d4"))
+	main.review.get_node("Margin/Content/Actions/Rematch").pressed.emit()
+	await _wait_start(main)
+	assert_true(not main.review.visible)
+	assert_eq(stop_events.size(), 1, "rematch releases the live engine")
+	assert_true(main.analysis_queue._paused, "Review hide must preserve main's gameplay pause")
+	main.free()

@@ -11,6 +11,7 @@ class FakeBridge extends Node:
 	var commands := []
 	var callbacks := []
 	var stops := 0
+	var stop_events := []
 	var searches_stopped := 0
 	func start() -> bool:
 		return starts
@@ -24,6 +25,7 @@ class FakeBridge extends Node:
 		commands.append("stop")
 	func stop() -> void:
 		stops += 1
+		stop_events.append(true)
 
 
 func test_live_search_sets_two_lines_and_max_threads_switches_without_stale_results():
