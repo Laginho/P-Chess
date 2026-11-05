@@ -1489,3 +1489,75 @@ func test_review_board_accepts_viewport_drag_and_click_click():
 			assert_eq(review._ply, 0 if move == "d2d4" else 1, "game continuation advances")
 	main.free()
 	root.size = old_size
+
+
+func _review_key(root: Window, key: Key, ctrl := false) -> void:
+	var event := InputEventKey.new()
+	event.keycode = key
+	event.ctrl_pressed = ctrl
+	event.pressed = true
+	root.push_input(event)
+	await Engine.get_main_loop().process_frame
+
+
+func test_settings_over_review_controls_arrow_and_owns_keyboard():
+	var root: Window = Engine.get_main_loop().root
+	var old_size := root.size
+	root.size = Vector2i(1280, 800)
+	var main = await _session(FakeTime.new())
+	var review = main.review
+	var game = Game.new()
+	game.play("e2e4")
+	game.play("e7e5")
+	review.present(game, [180000, 180000], SETTINGS, "")
+	review.receive_position(0, {"best_move": "e2e4"})
+	review._show_ply(0)
+	var board = review.get_node("Margin/Content/ReviewBody/BoardView")
+	var panel = main.settings_screen.get_node("Panel")
+	var form = panel.get_node("Center/Box/Form")
+	var arrow_box: CheckBox
+	for i in range(0, form.get_child_count(), 2):
+		if form.get_child(i).text == "Best move arrow":
+			arrow_box = form.get_child(i + 1)
+	assert_true(arrow_box != null, "arrow row exists")
+	# Observe rematch requests without starting a new game during the keyboard test.
+	for connection in review.rematch_requested.get_connections():
+		review.rematch_requested.disconnect(connection.callable)
+	for in_line in [false, true]:
+		if in_line:
+			assert_true(board.play("d2d4"))
+		await _review_key(root, KEY_COMMA, true)
+		assert_true(panel.visible, "Ctrl+, opens Settings over Review, line=%s" % in_line)
+		# Continue testing keyboard ownership even if opening failed.
+		if not panel.visible:
+			panel.show()
+		await Engine.get_main_loop().process_frame
+		await Engine.get_main_loop().process_frame
+		var at: Vector2 = arrow_box.global_position + arrow_box.size / 2
+		await _review_mouse_motion(root, at)
+		await _review_mouse_button(root, at, true)
+		await _review_mouse_button(root, at, false)
+		assert_eq(main.preferences.get_value("best_move_arrow"), in_line, "real row toggles setting")
+		assert_eq(board.best_move_arrow, "", "arrow clears in the game or remains absent in a line")
+		var flipped: bool = board.flipped
+		var ply: int = review._ply
+		var line_index: int = review._line_index
+		var rematches := [0]
+		var on_rematch := func(): rematches[0] += 1
+		review.rematch_requested.connect(on_rematch)
+		for key in [KEY_F, KEY_LEFT, KEY_RIGHT, KEY_SPACE]:
+			await _review_key(root, key)
+		assert_eq(board.flipped, flipped, "F stays with Settings")
+		assert_eq(review._ply, ply, "arrows stay with Settings")
+		assert_eq(review._line_index, line_index, "line cursor stays with Settings")
+		assert_eq(rematches[0], 0, "Space stays with Settings")
+		review.rematch_requested.disconnect(on_rematch)
+		await _review_key(root, KEY_ESCAPE)
+		assert_true(not panel.visible, "first Esc closes Settings")
+		assert_eq(review._line_active, in_line, "first Esc preserves the line")
+		if in_line:
+			await _review_key(root, KEY_ESCAPE)
+			assert_true(not review._line_active, "second Esc exits the line")
+			assert_eq(board.best_move_arrow, "e2e4", "updated setting appears on returning to game")
+	main.free()
+	root.size = old_size
