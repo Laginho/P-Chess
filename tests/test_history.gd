@@ -83,7 +83,7 @@ func test_history_shows_saved_names_and_renames_legacy_you_without_changing_pgn(
 			var original := FileAccess.get_file_as_string(path)
 			Engine.get_main_loop().root.add_child(main)
 			main.get_node("Home/Center/Form/History").pressed.emit()
-			var card = main.history_screen.get_node("Margin/Content/Cards/List").get_child(0)
+			var card = _history_cards(main.history_screen.get_node("Margin/Content/Cards/List"))[0]
 			assert_eq(card.get_node("Details/Thumbnail").flipped, colour == "b", "thumbnail follows HumanColor")
 			var displayed := "Current name" if legacy else "Maia 1500"
 			var text: String = card.get_node("Details/Info/Players").text
@@ -146,7 +146,7 @@ func test_confirm_delete_cancels_active_analysis_before_its_final_reply():
 	fixture.cards[path].get_node("Details/HBoxContainer/Delete").pressed.emit()
 	fixture.cards[path].get_node("Details/DeleteInline/Confirm").pressed.emit()
 	assert_true(not FileAccess.file_exists(path))
-	assert_eq(fixture.screen.get_node("Margin/Content/Cards/List").get_child_count(), 0)
+	assert_eq(fixture.screen._visible_cards().size(), 0)
 	_assert_pending_history(fixture, [])
 	assert_eq(fixture.runner.bridge.stops, 1, "stop the search before its held reply arrives")
 	fixture.runner.bridge.answer()
@@ -201,7 +201,7 @@ func test_cancel_and_failed_delete_preserve_active_analysis_and_stats():
 	assert_true(not fixture.history.error.is_empty())
 	assert_true(fixture.screen.get_node("DeleteError").visible)
 	assert_eq(fixture.screen.get_node("DeleteError").dialog_text, fixture.history.error)
-	assert_eq(fixture.screen.get_node("Margin/Content/Cards/List").get_child_count(), 1)
+	assert_eq(fixture.screen._visible_cards().size(), 1)
 	_assert_pending_history(fixture, [path])
 	assert_eq(fixture.queue.current(), path)
 	assert_eq(fixture.runner.bridge.stops, 0, "a failed deletion must leave analysis running")
@@ -234,7 +234,7 @@ func _queued_history(count := 1) -> Dictionary:
 	var cards := {}
 	var records: Array = history.games()
 	for i in records.size():
-		cards[records[i].path] = screen.get_node("Margin/Content/Cards/List").get_child(i)
+		cards[records[i].path] = _history_cards(screen.get_node("Margin/Content/Cards/List"))[i]
 	assert_eq(queue.current(), paths[0])
 	assert_eq(queue.pending(), paths)
 	return {"folder": folder, "history": history, "runner": runner, "queue": queue,
@@ -270,17 +270,17 @@ func test_history_delete_requires_confirmation():
 	Engine.get_main_loop().root.add_child(screen)
 	screen.present(history, load("res://core/settings.gd").new(folder.path_join("settings.cfg")))
 	var list = screen.get_node("Margin/Content/Cards/List")
-	var button = list.get_child(0).get_node_or_null("Details/HBoxContainer/Delete")
+	var button = _history_cards(list)[0].get_node_or_null("Details/HBoxContainer/Delete")
 	assert_true(button != null)
 	if button != null:
 		button.pressed.emit()
-		var dialog = list.get_child(0).get_node("Details/DeleteInline")
+		var dialog = _history_cards(list)[0].get_node("Details/DeleteInline")
 		assert_true(dialog.visible and FileAccess.file_exists(path))
 		dialog.get_node("Cancel").pressed.emit()
-		assert_true(FileAccess.file_exists(path) and list.get_child_count() == 1)
+		assert_true(FileAccess.file_exists(path) and _history_cards(list).size() == 1)
 		button.pressed.emit()
 		dialog.get_node("Confirm").pressed.emit()
-		assert_true(not FileAccess.file_exists(path) and list.get_child_count() == 0)
+		assert_true(not FileAccess.file_exists(path) and _history_cards(list).size() == 0)
 	screen.free()
 	HistoryStorage.clean(folder)
 
@@ -795,3 +795,8 @@ func test_main_reports_failed_game_and_stats_writes_in_the_result_ui():
 func _wait_start(main) -> void:
 	while main._starting:
 		await Engine.get_main_loop().process_frame
+
+
+# Date headings and the paging footer share the list with game cards.
+func _history_cards(list: Node) -> Array:
+	return list.get_children().filter(func(node): return node is PanelContainer)

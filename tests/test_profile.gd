@@ -36,7 +36,7 @@ func test_home_profile_rename_and_back():
 	var screen = load("res://ui/history_screen.tscn").instantiate()
 	Engine.get_main_loop().root.add_child(screen)
 	screen.present(History.new(folder), settings)
-	var text: String = screen.get_node("Margin/Content/Cards/List").get_child(0).get_node("Details/Info/Players").text
+	var text: String = _history_cards(screen.get_node("Margin/Content/Cards/List"))[0].get_node("Details/Info/Players").text
 	assert_true(text.contains("Bruno"), "History immediately uses the new name for legacy games")
 	assert_true(FileAccess.get_file_as_string(path).contains('[White "You"]'), "rename leaves saved PGN intact")
 	screen.free()
@@ -231,3 +231,8 @@ func _clean(folder: String) -> void:
 	for file in DirAccess.get_files_at(folder):
 		DirAccess.remove_absolute(folder.path_join(file))
 	DirAccess.remove_absolute(folder)
+
+
+# Date headings and the paging footer share the list with game cards.
+func _history_cards(list: Node) -> Array:
+	return list.get_children().filter(func(node): return node is PanelContainer)
