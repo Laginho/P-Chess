@@ -1618,6 +1618,10 @@ func test_settings_remain_available_in_review_after_focused_game():
 		# Direction keys can move Settings focus to another row.
 		arrow_box.grab_focus()
 		await _review_key(root, KEY_SPACE)
+		var release := InputEventKey.new()
+		release.keycode = KEY_SPACE
+		root.push_input(release)
+		await Engine.get_main_loop().process_frame
 		assert_true(review.visible and main.board_view.game == played_game, "Space stays with Settings")
 		assert_eq(board.flipped, flipped, "F stays with Settings")
 		assert_eq(board.game.moves, moves, "arrows stay with Settings")
