@@ -160,3 +160,5 @@ External evidence: [focused graphical log](/run/media/lage/New Volume/Scratch/re
 
 - 2026-11-05 Test harness correction: the new focused-game scenario must restore checkbox focus after direction keys and deliver Space release as well as press, because the CheckBox toggles on release. The existing `_review_key` helper sends only a press. These changes affect only the new test, not production behavior or the approved seam; corrected red/green evidence is recorded at handoff.
 
+- 2026-11-05 Corrected red/green proof: the committed test at `e5e5097`, with `ui/main.gd` restored to that commit's unmodified production, failed only the same three Settings-access assertions (0 passed, 1 failed; `red-final.log`). Restoring the visibility repair made the complete scenario pass (1 passed, 0 failed; `green-final.log`), including actual checkbox mouse/Space toggles, immediate arrow updates, Settings keyboard ownership, two-Esc side-line exit, both Review focus transitions and focused rematch restrictions. Logs are in `/run/media/lage/New Volume/Scratch/rev007-focus-repair/`.
+

@@ -33,7 +33,7 @@ var clock
 var settings := {}
 # The player's settings (§10), applied as they change.
 var preferences := Settings.new()
-# Their screen, over everything else; hidden in focus mode.
+# Their screen, over everything else; hidden during focused play.
 var settings_screen := SettingsScreen.instantiate()
 var review := ReviewScreen.instantiate()
 var history_screen := HistoryScreen.instantiate()
@@ -192,6 +192,7 @@ func _ready() -> void:
 	review.settings_panel = settings_screen.get_node("Panel")
 	add_child(review)
 	add_child(settings_screen)
+	review.visibility_changed.connect(func(): settings_screen.visible = not focus or review.visible)
 	review.get_node("Margin/Content/ReviewBody/BoardView").sound_requested.connect(sound_player.play)
 	add_child(history_screen)
 	add_child(name_dialog)
@@ -636,8 +637,9 @@ func _set_focus(on: bool) -> void:
 	_update_resign_button()
 	_fit_board()
 	_place_focus_clocks.call_deferred()
-	for node in [move_list, claim_draw.get_parent(), $Layout/Side/Actions, settings_screen]:
+	for node in [move_list, claim_draw.get_parent(), $Layout/Side/Actions]:
 		node.visible = not on
+	settings_screen.visible = not on or review.visible
 	# The game-over card shows the result; the side panel keeps only a history failure.
 	result_label.visible = not on and result_label.text.contains("History: ")
 	for row in [white_clock.get_parent(), black_clock.get_parent()]:
