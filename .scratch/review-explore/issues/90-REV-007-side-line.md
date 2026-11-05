@@ -1,5 +1,5 @@
 # REV-007: Side lines in the Review, and the Best move arrow setting
-Stage: to-review
+Stage: to-implement
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -57,8 +57,8 @@ Today the Review's `BoardView` already accepts moves for both sides, but nothing
 
 - 2026-11-05 Resolution: Added a disposable side line with branch navigation and exits, the default-on best-move arrow, and live Review board preferences. The full gate on commit `0f8a102` reported 528 passed, 0 failed; Lc0-dependent checks and the existing last-move pixel test skipped on this headless Linux run. A graphical Xvfb test verified the blue arrow appears and clears; disabling its draw call made the test fail. The settings test failed on the missing key before its implementation; the side-line scene test failed on missing line state before implementation.
 
-Acceptance: pending | Manual post-game and History exploration remains pending; automated and graphical checks for the reopened findings are recorded in the repair handoff below.
-Disclosure: pending | integration | Stage-3 re-review of criteria 1, 8 and 10 and manual Review exploration in both entry paths remain outstanding; see repair handoff below.
+Acceptance: pending | Criterion 8 still fails in Review opened after focused gameplay; manual post-game and History exploration remains pending. See the second Resolution below and its graphical reproduction.
+Disclosure: pending | integration | Criterion 8 still blocks integration: Ctrl+, cannot open Settings after entering Review from a focused game's result card. The open REV-007 repair is recorded in the second Resolution below.
 Gate evidence: /run/media/lage/New Volume/Scratch/rev007-review/gate-final.json
 
 
@@ -115,3 +115,37 @@ External reproduction artifacts (not required to understand or reproduce the fin
 - Manual post-game and History exploration is still pending; the graphical automated run does not claim product acceptance.
 
 Disclosure: decision | none | [Proxy receipt](/tmp/sweatshop-proxy/20261105-175641-REV-007-2bed17.json) widens Review BoardView mouse input and `ui/main.gd` Settings ordering and keyboard access for criteria 1, 2 and 8.
+
+
+#### Resolution (2026-11-05)
+Verdict: Reopen — criterion 8 still fails after opening Review from focused gameplay.
+
+Re-reviewed `2cb5235..2100187`, the previous R1/R2/R3 findings, affected callers and the repair's cross-feature interactions. No production or test changes were authored in this review. The implementation remains on `REV-007-side-line`; no merge or ledger entry was made. This is the second reopen, for the driver's foreman diagnosis before another implementation retry.
+
+**Standards:** no findings. The repair commits separate tests from production and place the `ui/main.gd` child-order change in its own commit. The `tests/test_session.gd::test_settings_shortcut_availability_and_mouse_close` update is allowed by `ticket-flow/stage2.md`'s replaced-behavior rule: criterion 8 replaces the old Review shortcut assertion, the added Esc closes that newly opened panel, and all retained-behavior assertions are unchanged. The recorded `Proxy decided (opus-5.5 xhigh)` scope expansion matches its receipt and was honored; its decision disclosure above remains valid. No concurrent change to the session's child order was present.
+
+**Spec:** one remaining P2 finding, within R2. R1 and R3 are repaired; no scope creep found.
+
+- **R2 (P2), criterion 8 ❌ — Settings is still unreachable in Review opened after a focused game.** Focus mode hides `settings_screen` in `ui/main.gd:639-640`. The result card's Review action (`ui/game_over.gd:87-89`) opens Review without restoring Settings visibility. Although Settings is now ordered above Review, Ctrl+, still requires `settings_screen.visible` (`ui/main.gd:260`), so the panel never opens in this supported entry path. This is the prior review's missed focus-mode variant of R2, rather than a new requirement.
+
+  Reproduction with real viewport input in an Xvfb graphical session: start a game, press F11, play `f3 e5 g4 Qh4#`, and click the result card's Review button. Review is visible with `focus=true` and `settings_root=false`. Show game ply 0 with stored `best_move=e2e4` (the blue arrow is present), then press Ctrl+,: `panel=false`. Play `d2d4` to enter a side line and press Ctrl+, again: `line=true`, `panel=false`. As a control, clearing focus makes the identical shortcut open the panel. The final probe completes without GDScript errors. The focused graphical tests all pass because their Settings setup never enters gameplay focus mode.
+
+  Remaining repair: make Settings reachable when Review is entered from a focused game, preserving the existing focused-game shortcut restriction and History/name-dialog covering behavior. Extend the existing focused post-game Review scenario (`test_checkmate_opens_review_with_result_and_both_sides_moves`) or equivalent coverage through the same Review-scene seam with actual Ctrl+, and the real arrow checkbox, including a side line and Settings keyboard ownership. Do not clear focus only in the test setup to bypass this entry path. Any additional Primary-file scope expansion still goes through the proxy.
+
+Numbered criterion record:
+
+1. ✅ R1 repaired: real viewport drag and click-click start the alternative line; graphical scene checks pass.
+2. ✅ The same viewport test confirms the game's own next move advances without branching, in both input modes.
+3. ✅ Retained overwrite, matching continuation and navigation-bound checks pass graphically; reviewed the `already_played` path against explicit navigation.
+4. ✅ Retained exit, History two-Esc and flip checks pass; the Settings test confirms its first Esc leaves the side line intact and the second leaves the line.
+5. ✅ Retained scene checks preserve game state, summary, graph marker and PGN; the repair adds no persistence/export path.
+6. ✅ Retained wide class-table collapse/restoration checks pass; the repair does not change compact layout.
+7. ✅ Retained scene checks preserve blank side-line evaluation and absent class/green/blue annotations.
+8. ❌ R2 remains for focused post-game entry. Normal Review Settings access, real checkbox, immediate arrow update and keyboard ownership pass graphically.
+9. ✅ Default, persistence and row placement are unchanged from the approved checks in the first review.
+10. ✅ R3 repaired: the game continuation, first side-line move and continuation retain their animation, which then finishes; the shared BoardView game-reset setter is unchanged. Live board-setting checks also pass.
+11. ✅ Reused the valid green gate receipt at `/run/media/lage/New Volume/Scratch/rev007-review/gate-final.json`: tested commit `78b9b3e`, command `godot --headless -s tests/run.gd`, exit 0, **531 passed, 0 failed**. The log's SHA-256 matches the receipt and only this tracker ticket changed after the tested commit. Lc0-dependent checks and the existing last-move pixel test skipped in that headless run. No unchanged full gate was rerun.
+
+Additional verification: **8 focused graphical checks passed, 0 failed**, including the three new repair tests, side-line navigation/exits, updated Settings availability, History/name-dialog covering and blue-arrow pixels. The separate focused-game probe exposes the remaining contract failure. Read the full repair diff and examined move/sound/tween callbacks, explicit navigation/reset, real viewport mouse/key dispatch, Settings ordering/focus/shortcut ownership, focused post-game entry, History/name-dialog/searching coverage and annotation updates. Full manual product acceptance in both entry paths, physical promotion and real engines remain unverified.
+
+External evidence: [focused graphical log](/run/media/lage/New Volume/Scratch/rev007-rereview/focused.log), [focused-game probe](/run/media/lage/New Volume/Scratch/rev007-rereview/focus-settings-probe.gd), [focused-game result](/run/media/lage/New Volume/Scratch/rev007-rereview/focus-settings-probe.log). Run the probe with `xvfb-run -a godot --path . --position 3000,3000 --rendering-method gl_compatibility -s '/run/media/lage/New Volume/Scratch/rev007-rereview/focus-settings-probe.gd'`. Its fake clock is retained locally so its callbacks remain valid; an earlier external probe harness error was corrected before the final reproduction.
