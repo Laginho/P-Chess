@@ -1,5 +1,5 @@
 # REV-007: Side lines in the Review, and the Best move arrow setting
-Stage: to-review
+Stage: to-implement
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -57,6 +57,40 @@ Today the Review's `BoardView` already accepts moves for both sides, but nothing
 
 - 2026-11-05 Resolution: Added a disposable side line with branch navigation and exits, the default-on best-move arrow, and live Review board preferences. The full gate on commit `0f8a102` reported 528 passed, 0 failed; Lc0-dependent checks and the existing last-move pixel test skipped on this headless Linux run. A graphical Xvfb test verified the blue arrow appears and clears; disabling its draw call made the test fail. The settings test failed on the missing key before its implementation; the side-line scene test failed on missing line state before implementation.
 
-Acceptance: pending | Manual post-game and History Review exploration and all exit paths remain to be checked; automated scene and arrow checks are recorded above.
-Disclosure: pending | integration | Manual Review exploration in both entry paths remains outstanding; see this ticket's Verification section.
+Acceptance: pending | Stage-3 review below reproduces failures of criteria 1, 8 and 10. Manual post-game and History exploration remains pending after those repairs.
+Disclosure: pending | integration | Criteria 1, 8 and 10 fail the user input and animation probes in the review below; repair and review again before integration. Manual Review exploration in both entry paths also remains outstanding.
 Gate evidence: /tmp/REV-007-gate.json
+
+
+#### Resolution (2026-11-05)
+Verdict: Reopen — criteria 1, 8 and 10 fail user input and animation checks.
+
+Reviewed `dca596d..4565ab7` against this ticket's numbered criteria and Primary files. No production changes were authored during this review, and the implementation commits remain on `REV-007-side-line`; no merge or ledger entry was made.
+
+**Standards:** no documented-standard breaches. All changed source/test files are Primary files, and the commits separate tests from production. The prior run log records missing-setting and missing-line-state red checks, plus a rendering-test failure when the blue-arrow draw call is disabled. A possible duplication between `_show_ply` and `_show_line` is a judgement-call heuristic, not a confirmed defect or a reason to refactor in this ticket.
+
+**Spec:** three confirmed contract failures; no scope creep found.
+
+- **R1 (P1), criterion 1 ❌ — the Review board ignores real mouse input.** `ui/review.tscn:166` leaves BoardView at `MOUSE_FILTER_IGNORE`, and Review never enables it. Reproduction: present a game beginning `e4 e5`, show ply 0, enable click-click and dispatch real viewport mouse press/release events at d2 and d4. No move is played and `_line_active` stays false. Dragging d2 to d4 also does nothing. Changing only the instantiated board's mouse filter to `MOUSE_FILTER_STOP` makes the identical inputs play `d2d4` and start the line. The new scene tests call `board.play()` and bypass the failing GUI dispatch. Add coverage through viewport input for both drag and click-click, including the game's own next move (criterion 2).
+- **R2 (P2), criterion 8 ❌ — Settings cannot be opened while Review is shown.** `ui/main.gd:258-281` rejects Ctrl+, because `_covers_settings()` sees Review above Settings. The real hotkey opens the panel during a game, but leaves it hidden in both a game position and a side line in Review. Directly calling `preferences.set_value()` proves the update callback, not the requested Settings interaction. Provide a reachable Settings panel above Review and verify the actual check row updates the blue arrow immediately. When enabling this path, check input ownership: forcibly showing the current panel and pressing Esc lets Review discard a side line before Settings handles the key. That forced-panel case is an interaction to address with the access repair, not a fourth presently reachable regression. `ui/main.gd` is currently scoped to `_apply` in Primary files; stage 2 must use the proxy if the repair needs a broader seam.
+- **R3 (P2), criterion 10 ❌ — played moves cancel their configured animation.** `_on_board_move` synchronously calls `_show_ply` or `_show_line` (`ui/review.gd:792,803`); assigning `_board_view.game` (`:854,911`) invokes the shared board setter's `_end_slide()` (`ui/board_view.gd:57`). At `animation_ms=500`, the game's own continuation, the first alternative and its continuation all have `slide_seconds=0.5` but `_slide_to=""` immediately after play. An otherwise identical standalone BoardView retains `_slide_to="d4"`. Test the observable tween behavior, not only the copied duration property, and preserve the board setter's existing game-reset behavior.
+
+Numbered criterion record:
+
+1. ❌ R1: real drag/click-click cannot enter a line; the row and sound logic only runs when play is called directly.
+2. ✅ Continuation logic advances the game without branching through the scene/API seam; actual mouse entry is blocked by R1.
+3. ✅ The retained scene tests cover overwrite, matching continuation and branch/end bounds; reviewed button/key routing. Full user exercise awaits R1.
+4. ✅ The retained scene tests cover line return, graph, First/Last, game-row selection, History's two Esc presses and F; reviewed discard on leaving Review. Full user exercise awaits R1.
+5. ✅ Reviewed separate line/game state, class/summary/graph updates and the unchanged `_pgn`/`_url` export callbacks. Scene assertions retain the game and graph marker. No new persistence path exists.
+6. ✅ Wide capture confirms class-table collapse, and scene tests confirm restoration; compact layout code retains its existing collapse behavior.
+7. ✅ Scene tests confirm blank score, class icon and both arrows on line moves. The branch cursor at index 0 still shows the actual game position's annotations, which is consistent with its position.
+8. ❌ R2: stored-position arrow selection, layering, terminal/no-analysis suppression and live callback were reviewed, but Settings is unreachable while Review is open.
+9. ✅ Default-on persisted setting and check-row placement immediately after Legal-move dots are present; retained round-trip test passes.
+10. ❌ R3: startup/live preference routing is present, but the newly started move animation is immediately cancelled.
+11. ✅ Existing gate evidence is valid for the unchanged reviewed code: `/tmp/REV-007-gate.json` tests `0f8a102`, exit 0, **528 passed, 0 failed**. Its log SHA-256 matches the receipt; the only later committed file is this tracker ticket. Lc0-dependent tests and graphical-only pixel checks are not exercised by the headless gate; the prior handoff records a separate graphical arrow test. Reused the receipt without rerunning unchanged code.
+
+Additional usability observation, outside the numbered contract: after 20 line moves at 1280×800, the selected row is below the list viewport and the list remains at scroll zero. Tracked separately as [CLEAN-014](93-CLEAN-014-review-line-scroll.md); it does not add a requirement to this repair pass.
+
+Coverage: read the full diff and affected callers; examined actual viewport mouse input, real Ctrl+, dispatch, BoardView move/sound/tween callbacks, side-line state/replacement/discard, tree selection and deferred exits, class toggling, game analysis arriving during a line, PGN/link isolation, settings startup/change callbacks and annotation draw order. Inspected captures at 1280×800 and 800×600, including a 20-move line. Not verified: physical promotion input, real Stockfish/Lc0, or complete manual product acceptance in both post-game and History entry paths.
+
+External reproduction artifacts (not required to understand or reproduce the findings above): `/run/media/lage/New Volume/Scratch/rev007-review/` contains `input-probe.gd`, `input-probe.log` (drag and click-click results), `settings-path-probe.gd`, `spec-probe.gd` and graphical `probe.gd`/`probe.log` plus captures. Run a headless probe with `godot --headless --path . -s '<absolute script path>'`; run `probe.gd` with `xvfb-run -a godot --path . --position 3000,3000 --rendering-method gl_compatibility -s '<absolute script path>'`. The final graphical run completes without script errors; earlier harness mistakes (empty PV fixture and a nonexistent Tree scrollbar accessor) were corrected only in that external probe.
