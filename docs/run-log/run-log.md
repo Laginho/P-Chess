@@ -264,3 +264,18 @@
 | 2026-11-01 15:09 | UI-034 | review | gpt-6.1-sol xhigh | 1 | merged | sweatshop/qa-layout/2026-11-01-1407 | 6m | 3.8M in (96% cached), 16k out | $0.856 | 1.270 |
 | 2026-11-01 15:16 | UI-035 | implement | gpt-6.1-terra xhigh | 1 | to-review | sweatshop/qa-layout/2026-11-01-1407 | 7m | 4.6M in (99% cached), 8k out | $0.328 | 1.294 |
 | 2026-11-01 15:21 | UI-035 | review | gpt-6.1-sol xhigh | 1 | merged | sweatshop/qa-layout/2026-11-01-1407 | 4m | 1.9M in (94% cached), 12k out | $0.536 | 1.557 |
+| 2026-11-05 17:37 | REV-007 | implement | gpt-6.1-terra xhigh | 1 | failed (incomplete handoff), blocked | sweatshop/review-explore/2026-11-05-1723 | 13m | 6.7M in (99% cached), 16k out | $0.494 | 0.751 |
+| 2026-11-05 17:49 | REV-007 | implement | gpt-6.1-terra xhigh | 1 | to-review | sweatshop/review-explore/2026-11-05-1723 | 10m | 5.7M in (99% cached), 12k out | $0.413 | 0.751 |
+| 2026-11-05 17:55 | REV-007 | review | gpt-6.1-sol xhigh | 1 | reopened | sweatshop/review-explore/2026-11-05-1723 | 6m | 4.5M in (96% cached), 22k out | $0.970 | 0.751 |
+| 2026-11-05 18:15 | REV-007 | implement | gpt-6.1-terra xhigh | 1 | to-review | sweatshop/review-explore/2026-11-05-1723 | 19m | 6.9M in (99% cached), 17k out | $0.501 | 0.501 |
+| 2026-11-05 18:20 | REV-007 | review | gpt-6.1-sol xhigh | 1 | reopened | sweatshop/review-explore/2026-11-05-1723 | 5m | 3.2M in (95% cached), 15k out | $0.788 | 0.751 |
+| 2026-11-05 18:33 | REV-007 | implement | gpt-6.1-sol xhigh | 1 | to-review | sweatshop/review-explore/2026-11-05-1723 | 12m | 4.1M in (98% cached), 17k out | $0.723 | 0.751 |
+| 2026-11-05 18:38 | REV-007 | review | gpt-6.1-sol xhigh | 1 | reopened | sweatshop/review-explore/2026-11-05-1723 | 5m | 3.3M in (96% cached), 14k out | $0.740 | 1.002 |
+| 2026-11-05 18:48 | REV-007 | implement | gpt-6.1-sol xhigh | 1 | to-review | sweatshop/review-explore/2026-11-05-1723 | 10m | 2.6M in (97% cached), 12k out | $0.504 | 1.002 |
+| 2026-11-05 18:52 | REV-007 | review | gpt-6.1-sol xhigh | 1 | merged | sweatshop/review-explore/2026-11-05-1723 | 4m | 2.3M in (94% cached), 10k out | $0.599 | 0.752 |
+| 2026-11-05 19:18 | REV-008 | implement | gpt-6.1-sol xhigh | 1 | to-review | sweatshop/review-explore/2026-11-05-1723 | 25m | 9.0M in (99% cached), 50k out | $1.618 | 0.751 |
+| 2026-11-05 19:22 | REV-008 | review | gpt-6.1-sol xhigh | 1 | merged | sweatshop/review-explore/2026-11-05-1723 | 5m | 2.7M in (94% cached), 14k out | $0.696 | 0.751 |
+| 2026-11-05 19:41 | REV-009 | implement | gpt-6.1-sol xhigh | 1 | to-review | sweatshop/review-explore/2026-11-05-1723 | 18m | 5.3M in (98% cached), 36k out | $1.048 | 2.255 |
+| 2026-11-05 19:46 | REV-009 | review | gpt-6.1-sol xhigh | 1 | reopened | sweatshop/review-explore/2026-11-05-1723 | 5m | 3.4M in (94% cached), 18k out | $0.876 | 0.751 |
+| 2026-11-05 19:59 | REV-009 | implement | gpt-6.1-sol xhigh | 1 | to-review | sweatshop/review-explore/2026-11-05-1723 | 13m | 3.2M in (98% cached), 21k out | $0.672 | 1.002 |
+| 2026-11-05 20:04 | REV-009 | review | gpt-6.1-sol xhigh | 1 | merged | sweatshop/review-explore/2026-11-05-1723 | 5m | 3.4M in (96% cached), 17k out | $0.761 | 0.751 |
