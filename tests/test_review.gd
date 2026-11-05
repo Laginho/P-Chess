@@ -1719,3 +1719,46 @@ func test_settings_open_in_review_while_focused_draw_notice_is_visible():
 				"Settings leaves the live draw notice intact, line=%s" % in_line)
 	main.free()
 	root.size = old_size
+
+
+func test_engine_lines_show_stored_white_scores_san_depth_and_compact_toggle():
+	var root: Window = Engine.get_main_loop().root
+	var old_size := root.size
+	root.size = Vector2i(800, 600)
+	var main = await _session(FakeTime.new())
+	var review = main.review
+	var game = Game.new()
+	game.play("e2e4")
+	review.present(game, [180000], SETTINGS, "")
+	var side = review.get_node("Margin/Content/ReviewBody/Side")
+	var block = side.get_node_or_null("EngineLines")
+	assert_true(block != null, "engine block exists between graph and move list")
+	if block == null:
+		main.free()
+		root.size = old_size
+		return
+	assert_true(not block.visible, "unknown game position hides the block")
+	review.receive_position(1, {"best_move": "e7e5", "pv": [
+		{"depth": 18, "cp": -80, "moves": ["e7e5", "g1f3", "b8c6"]},
+		{"depth": 18, "cp": 120, "moves": ["c7c5", "g1f3"]}]})
+	await Engine.get_main_loop().process_frame
+	await Engine.get_main_loop().process_frame
+	assert_true(block.visible)
+	assert_eq(block.get_child_count(), 2, "two rows also in compact")
+	assert_true(side.get_node("EvalGraph").get_index() < block.get_index() and block.get_index() < side.get_node("Moves").get_index())
+	assert_eq(block.get_node("Row1/Score").text, "+0.8")
+	assert_eq(block.get_node("Row2/Score").text, "-1.2")
+	assert_true(block.get_node("Row1/Score").get_theme_stylebox("normal").bg_color.get_luminance() > 0.5)
+	assert_true(block.get_node("Row2/Score").get_theme_stylebox("normal").bg_color.get_luminance() < 0.3)
+	assert_eq(block.get_node("Row1/Depth").text, "depth 18")
+	assert_true(block.get_node("Row1/PV").get_parsed_text().contains("e5"), "PV uses SAN")
+	side.get_node("ClassToggle").pressed.emit()
+	assert_true(not block.visible, "class table hides the whole block")
+	side.get_node("ClassToggle").pressed.emit()
+	assert_true(block.visible)
+	review.receive_position(1, {"pv": [{"depth": 20, "mate": -3, "moves": ["e7e5"]}]})
+	assert_eq(block.get_node("Row1/Score").text, "M3")
+	review._show_ply(0)
+	assert_true(not block.visible, "navigating to unknown position clears stored lines")
+	main.free()
+	root.size = old_size
