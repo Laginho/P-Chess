@@ -33,3 +33,16 @@ In the Review you can play your own moves from any position of the game and see 
 ## Prototype
 
 `prototype/review-engine-lines` (local branch, commit `251ff4c`, not pushed): `scripts/prototype_review_lines.gd`, three placements of the engine lines in the real Review. Captures in `/run/media/lage/New Volume/Scratch/review-lines-proto/`. Verdict: variant A; the eval bar stays next to the board.
+
+## Acceptance (session sweatshop/review-explore/2026-11-05-1723, foreman 2026-11-05)
+
+Checked against the integrated session (REV-007, REV-008, REV-009 merged). The code is identical to REV-009's gated head, so its gate evidence is reused: 554 passed, 0 failed. Graphical checks come from the stage-3 reviews under Xvfb.
+
+1. Explore a blunder with real Stockfish on Windows: **pending (Bruno)**. Only fake engines ran on Linux. Real engine output, timing, Threads = cores − 1 and CPU load are not examined.
+2. Rematch from a side line: **pass with fakes**. Evidence: `test_side_line_freezes_queued_game_progress_stop_works_and_rematch_keeps_pause`. Bruno's live check is pending.
+3. Unanalysed or queued game: **pass with fakes**. Evidence: the same test plus `test_unanalysed_side_line_settles_history_for_miss_and_prunes_replacements`. Bruno's live check is pending.
+4. Arrow setting: **pass**. Evidence: `test_settings_over_review_controls_arrow_and_owns_keyboard`, `test_settings_remain_available_in_review_after_focused_game` and `test_settings_open_in_review_while_focused_draw_notice_is_visible`, all graphical (REV-007 final review, 11/0).
+5. 800×600: **pass (agent capture)**. Evidence: `test_review_fits_an_800_by_600_window`, plus REV-008's reviewed 800×600 live capture showing both engine rows, Back to game and the navigation. Bruno's look is pending.
+
+Acceptance: pending | Scenario 1, and the live checks of 2, 3 and 5, need Bruno on Windows with real Stockfish. Scenarios 2–5 pass with fake engines.
+Disclosure: pending | integration | REV-008 and REV-009 are `Review: human`: merge the session into main only after the Windows real-Stockfish checks. Known follow-up: CLEAN-014 (long side lines do not scroll to the current row; needs-triage, no hold).
