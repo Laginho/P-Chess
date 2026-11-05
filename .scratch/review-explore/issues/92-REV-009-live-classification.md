@@ -1,5 +1,5 @@
 # REV-009: Live classes for side-line moves
-Stage: implementing
+Stage: to-review
 Status: ready-for-agent
 Blocked by: REV-008
 Review: human
@@ -70,7 +70,7 @@ Verification:
 
 Acceptance: pending | Bruno's Windows checks with real Stockfish from Verification remain: explore a Blunder until a Best move, play rapidly and watch classes arrive, and compare an explored game move with its game class. Fake-engine checks and graphical captures pass; real engine output, timing and CPU load are not validated on Linux.
 Disclosure: pending | integration | Complete Bruno's real-Stockfish Windows acceptance before merging the session into main, per [the approved test seam](../spec.md#test-seams). Automated implementation checks permit the next review stage; they do not satisfy that product check.
-Gate evidence: /run/media/lage/New Volume/Scratch/rev009/gate.json
+Initial handoff gate evidence: /run/media/lage/New Volume/Scratch/rev009/gate.json
 
 #### Resolution (2026-11-05, stage 3)
 Verdict: Reopen — criterion 2 fails on an explored continuation from a stored draw result; returning to a settled position regresses the unlimited shown-position search required by REV-008 criteria 2–4.
@@ -100,3 +100,22 @@ Coverage: examined the complete changed source and tests, stage-2 commit boundar
 
 Acceptance: pending | The two implementation findings above require repair and a new green gate after code changes. Bruno's real-Stockfish Windows scenarios from Verification remain pending before main integration.
 Disclosure: pending | integration | [REV-009 stage-3 findings](#resolution-2026-11-05-stage-3) are open on this ticket at `Stage: to-implement`; resolve both before session integration. The earlier real-Stockfish Windows acceptance condition also remains in force before merging the session into main.
+
+#### Resolution (2026-11-05, stage 2 repair)
+
+Reproduced and repaired both stage-3 findings on the retained ticket branch:
+
+1. Exploration beyond a stored agreed or claimed-repetition draw obtains usable branch PVs before searching the shown after-position. The temporary position view treats an empty terminal PV as unavailable when that position precedes an explored move. The shared classifier then supplies the square and row icons and the settled before-position supplies the green arrow. Stored game positions, classes, draw score and PGN remain unchanged. Test-only `77ab1b8` reproduces the empty-PV errors and missing icons (**0 passed, 1 failed**); production-only `7d96767` passes the same test for both draw types (**1 passed, 0 failed**).
+2. Returning to a settled FEN resumes its unlimited shown-position search while reusing frozen classification inputs. A separate per-FEN live snapshot preserves the latest PV instead of restoring the older settlement snapshot; restarted searches catch up before replacing it. Navigation and new live scores leave the class and green arrow fixed. Replacement and line disposal clear both caches. Test-only `c4ef2c5` reproduces the missing search and depth regression: controller **5 passed, 2 failed**, Review class/navigation **0 passed, 1 failed**. Production-only `7b37507` passes all **7 controller tests** and **75 Review tests**, and clarifies §15.6 without changing the approved seams.
+
+Updated prior cache-return tests distinguish reused class inputs from resumed live searches: `test_required_position_finishes_before_shown_then_cache_is_reused_and_pruned`, `test_side_class_matches_stored_game_class_and_stays_frozen`, and `test_unanalysed_side_line_settles_history_for_miss_and_prunes_replacements`. The last fixture now drains the resumed searches before returning or replacing the line. Its targeted scheduler mutation restores the old settled-FEN suppression and fails only on the missing resumed searches (**0 passed, 1 failed**, expected 5 searches, got 3). Production source was restored byte-for-byte and the working tree verified clean afterward; the full gate remains evidence for the identical committed source.
+
+Verification:
+
+- Bound gate on `7b37507bb6ba7faa09ad140b8acbc967c072e464`: `godot --headless -s tests/run.gd`, exit 0, **554 passed, 0 failed**. Receipt log SHA-256 verified. The existing last-move pixel assertion and six real-Lc0 checks skip on this headless Linux environment; three existing premove layout warnings are non-failing.
+- Red/green and mutation logs: [repair evidence directory](</run/media/lage/New Volume/Scratch/rev009-repair/>), including `draw-red.log`, `draw-green.log`, `cache-red.log`, `cache-green.log`, `return-red.log`, `review-green.log`, and `cache-navigation-mutation.log`. Durable coverage lives in the two approved test files.
+- Four repair commits preserve test-only/production-only separation and explanatory English commit bodies citing REV-009. Changes remain within Primary files. No additional refactor or proxy decision was needed. The two reported failures now have passing regressions; independent stage-3 review is the next step.
+
+Acceptance: pending | Bruno's original real-Stockfish Windows scenarios remain: explore a Blunder until a Best move, play rapidly and watch classes arrive, and compare an explored move with its game class. Automated repairs and the complete gate pass; these do not validate real engine timing or CPU load.
+Disclosure: pending | integration | Complete Bruno's real-Stockfish Windows acceptance before merging the session into main, per [the approved test seam](../spec.md#test-seams). Both prior implementation findings are addressed by the repair commits above and await stage-3 review; the manual integration condition remains.
+Gate evidence: /run/media/lage/New Volume/Scratch/rev009-repair/gate.json
