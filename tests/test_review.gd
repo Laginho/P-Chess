@@ -481,6 +481,8 @@ class FakeAnalysisBridge extends Node:
 	var engine_id := "Stockfish 19"
 	var error := ""
 	var starts := true
+	func stop() -> void:
+		pass
 	func start() -> bool:
 		return starts
 

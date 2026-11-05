@@ -68,6 +68,15 @@ func _ready() -> void:
 	status.theme_type_variation = "MutedText"
 	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	actions.add_child(status)
+	var stop_all := Button.new()
+	stop_all.name = "StopAll"
+	stop_all.text = "Stop all"
+	stop_all.visible = false
+	stop_all.custom_minimum_size.y = 40
+	stop_all.theme_type_variation = "RaisedButton"
+	_pad(stop_all, 14)
+	stop_all.pressed.connect(func(): analysis_queue.clear())
+	actions.add_child(stop_all)
 	var select_all := CheckBox.new()
 	select_all.name = "SelectAll"
 	_style_check(select_all, 12, Color("a8a49c"))
@@ -555,16 +564,19 @@ func _add_card(list: Node, record: Dictionary) -> void:
 		var analyze := Button.new()
 		analyze.name = "Analyze"
 		analyze.text = "Re-analyze" if state == "Stale" or state.begins_with("White:") else "Analyze"
-		analyze.disabled = record.path in analysis_queue.pending()
-		if analyze.disabled:
-			analyze.text = "Analysing…" if analysis_queue.current() == record.path else "Queued"
+		if record.path in analysis_queue.pending():
+			analyze.text = "Stop" if analysis_queue.current() == record.path else "Remove from queue"
 		if state == "Stale":
 			analyze.add_theme_color_override("font_color", Color("f4bf44"))
 		analyze.custom_minimum_size.y = 40
 		analyze.theme_type_variation = "RaisedButton"
 		analyze.add_theme_font_override("font", get_theme_font("font", "SemiboldText"))
 		_pad(analyze, 14)
-		analyze.pressed.connect(func(): analysis_queue.enqueue(record.path))
+		analyze.pressed.connect(func():
+			if record.path in analysis_queue.pending():
+				analysis_queue.remove(record.path)
+			else:
+				analysis_queue.enqueue(record.path))
 		actions.add_child(analyze)
 	var copy := Button.new()
 	copy.name = "Copy"
@@ -773,6 +785,7 @@ func _analyze_all() -> void:
 
 func _queue_changed() -> void:
 	var count: int = analysis_queue.pending().size()
+	$Margin/Content/BatchActions/StopAll.visible = count > 0
 	var status: Label = $Margin/Content/BatchActions/Status
 	$Margin/Content/BatchActions/Spinner.visible = count > 0 and not analysis_queue.current().is_empty()
 	status.text = ("Analysing %d of %d · %s" % [analysis_queue.batch_done + 1, analysis_queue.batch_total, preferences.get_value("analysis_threads")]) if count and preferences != null else ""
