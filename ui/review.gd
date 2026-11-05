@@ -39,6 +39,7 @@ var _ply := 0
 var _line_active := false
 var _line_moves := PackedStringArray()
 var _line_index := 0
+var _line_classes := []
 var _line_rows: Array[TreeItem] = []
 var _engine_lines: VBoxContainer
 var _live_analysis
@@ -645,16 +646,12 @@ func _pause_for_line() -> void:
 
 func _search_shown_position() -> void:
 	var fen: String = _board_view.game.board.to_fen()
-	if _live_position.get("fen", "") == fen:
-		return
-	_live_position = {"fen": fen}
-	if _board_view.game.is_over():
-		_stop_live_process()
+	if _live_position.get("fen", "") != fen:
+		_live_position = {"fen": fen}
+	var terminal: bool = _board_view.game.is_over()
+	if terminal:
 		_live_position = {"fen": fen, "pv": [], "best_move": "",
 				"terminal_score": -1000 if _board_view.game.reason == "checkmate" else 0}
-		return
-	if _live_failed:
-		return
 	if _live_analysis == null:
 		_live_bridge = analysis_bridge_factory.call()
 		add_child(_live_bridge)
@@ -666,6 +663,9 @@ func _search_shown_position() -> void:
 				_update_engine_lines()
 				_update_eval_bar()
 				_update_board_annotations())
+		_live_analysis.settled.connect(func(_fen: String, _position: Dictionary):
+			_search_shown_position()
+			_update_board_annotations())
 		_live_analysis.failed.connect(func(message: String):
 			_live_failed = true
 			_live_position = {"fen": _board_view.game.board.to_fen()}
@@ -674,7 +674,73 @@ func _search_shown_position() -> void:
 			_update_engine_lines()
 			_update_eval_bar()
 			_update_board_annotations())
-	_live_analysis.search(fen)
+	if terminal:
+		_live_analysis.remember(_live_position)
+	var positions := _line_positions()
+	var retained := []
+	for position: Dictionary in positions:
+		retained.append(position.fen)
+		if position.has("pv"):
+			_live_analysis.remember(position)
+	_live_analysis.retain(retained)
+	_refresh_line_classes()
+	var required := _line_requirements(positions)
+	if terminal and required.is_empty():
+		_live_analysis.stop(false)
+	elif not _live_failed:
+		_live_analysis.search("" if terminal else fen, required)
+
+
+# Only walk farther into game history when an earlier undecided class needs it.
+func _line_requirements(positions: Array) -> Array:
+	if _line_index == 0:
+		return []
+	var moves := _game_moves.slice(0, _ply)
+	moves.append_array(_line_moves)
+	var classes := Classification.evaluate(moves, {"positions": positions},
+			_catalog, _repertoire, _colour, _check_repertoire)
+	var first := maxi(0, _ply - 1)
+	while first > 0 and classes[first] == null and positions[first].has("pv") and positions[first + 1].has("pv"):
+		first -= 1
+	var required := []
+	for i in range(first, _ply + _line_index):
+		if not positions[i].has("pv"):
+			required.append(positions[i].fen)
+	return required
+
+
+# Keep the game prefix so Book, Repertoire, Great and Miss see the same history.
+func _line_positions() -> Array:
+	var positions := _positions.slice(0, _ply + 1).duplicate(true)
+	var board = Board.from_fen(_positions[_ply].fen)
+	for move in _line_moves:
+		board.make_move(move)
+		positions.append({"fen": board.to_fen()})
+	for i in positions.size():
+		# Agreed and claimed draws end the game, but exploration can continue.
+		# A terminal score grades the last game move, never a new continuation.
+		if i < positions.size() - 1 and positions[i].has("pv") and positions[i].pv.is_empty():
+			positions[i] = {"fen": positions[i].fen}
+		if _live_analysis != null and not positions[i].has("pv"):
+			var cached: Dictionary = _live_analysis.result(positions[i].fen)
+			if not cached.is_empty():
+				positions[i] = cached
+	return positions
+
+
+func _refresh_line_classes() -> void:
+	if not _line_active:
+		return
+	var moves := _game_moves.slice(0, _ply)
+	moves.append_array(_line_moves)
+	var classes := Classification.evaluate(moves, {"positions": _line_positions()},
+			_catalog, _repertoire, _colour, _check_repertoire)
+	_line_classes.resize(_line_moves.size())
+	for i in _line_moves.size():
+		if _line_classes[i] == null and classes[_ply + i] != null:
+			_line_classes[i] = classes[_ply + i]
+		if i < _line_rows.size() and _line_classes[i] != null:
+			_line_rows[i].set_icon(1, _class_icon(_line_classes[i].class))
 
 
 func _stop_live_process() -> void:
@@ -1014,10 +1080,12 @@ func _on_board_move(_san: String) -> void:
 		_line_active = true
 		_line_index = 0
 		_line_moves.clear()
+		_line_classes.clear()
 		_pause_for_line()
 		_resize_classes()
 	if _line_index >= _line_moves.size() or _line_moves[_line_index] != move:
 		_line_moves.resize(_line_index)
+		_line_classes.resize(_line_index)
 		_line_moves.append(move)
 	_line_index += 1
 	_build_line_rows()
@@ -1040,6 +1108,9 @@ func _build_line_rows() -> void:
 		anchor = row
 		var number := _ply + i
 		row.set_text(1, "%d%s%s" % [number / 2 + 1, ". " if number % 2 == 0 else "… ", board.san(_line_moves[i])])
+		row.set_icon_max_width(1, 18)
+		if i < _line_classes.size() and _line_classes[i] != null:
+			row.set_icon(1, _class_icon(_line_classes[i].class))
 		row.set_expand_right(1, true)
 		row.set_custom_color(1, Color("7db8ee"))
 		row.set_custom_bg_color(1, Color("263e50"), true)
@@ -1103,6 +1174,7 @@ func _discard_line() -> void:
 	_finish_line_analysis()
 	_line_index = 0
 	_line_moves.clear()
+	_line_classes.clear()
 	for row in _line_rows:
 		row.free()
 	_line_rows.clear()
@@ -1161,6 +1233,7 @@ func _positions_changed() -> void:
 			settled += 1
 	$Margin/Content/ProgressText.text = "%d of %d moves" % [settled, _game_moves.size()]
 	_refresh_classes()
+	_refresh_line_classes()
 	_update_summary()
 	_update_board_annotations()
 	_update_eval_bar()
@@ -1239,6 +1312,13 @@ func _update_board_annotations() -> void:
 	_board_view.review_icon = null
 	_board_view.best_move_arrow = ""
 	if _line_active:
+		if _line_index > 0:
+			var before: Dictionary = _line_positions()[_ply + _line_index - 1]
+			if before.has("pv"):
+				_board_view.review_arrow = before.get("best_move", "")
+			if _line_classes.size() >= _line_index and _line_classes[_line_index - 1] != null:
+				_board_view.review_square = _line_moves[_line_index - 1].substr(2, 2)
+				_board_view.review_icon = _class_icon(_line_classes[_line_index - 1].class)
 		if best_move_arrow_enabled and not _board_view.game.is_over():
 			_board_view.best_move_arrow = _live_position.get("best_move", "")
 		_board_view.queue_redraw()

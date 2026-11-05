@@ -1326,7 +1326,7 @@ func test_side_line_navigation_replacement_and_game_invariants():
 	assert_true(review._move_rows[0].get_next() == review._line_rows[0], "line follows its branch row")
 	assert_true(side.get_node("ClassToggle").visible and not side.get_node("Counts").visible)
 	assert_eq(board.best_move_arrow, "")
-	assert_eq(board.review_arrow, "")
+	assert_eq(board.review_arrow, "e7e5", "stored before-position is already settled")
 	assert_true(board.review_icon == null)
 	assert_eq(review.get_node("Margin/Content/ReviewBody/EvalBar/Score").text, "")
 	assert_eq(graph.current_ply, 1)
@@ -1775,6 +1775,7 @@ func test_live_engine_updates_only_shown_position_pauses_queue_and_restores_erro
 	review.present(game, [180000, 180000, 180000], SETTINGS, "")
 	main.analysis_queue.resume()
 	review._analysis_error("earlier game error")
+	review.receive_position(0, {"best_move": "e2e4", "pv": [{"cp": 0, "moves": ["e2e4"]}]})
 	review._show_ply(0)
 	var board = review.get_node("Margin/Content/ReviewBody/BoardView")
 	assert_true(board.play("d2d4"))
@@ -1797,6 +1798,7 @@ func test_live_engine_updates_only_shown_position_pauses_queue_and_restores_erro
 	assert_eq(board.best_move_arrow, "")
 	main.preferences.set_value("best_move_arrow", true)
 	assert_eq(board.best_move_arrow, "d7d5")
+	_rev009_settle(bridge, "d7d5", -120, "g8f6", -80)
 	assert_true(board.play("d7d5"))
 	assert_eq(board.best_move_arrow, "", "position change clears old arrow at once")
 	assert_eq(review.get_node("Margin/Content/ReviewBody/EvalBar/Score").text, "")
@@ -1824,7 +1826,9 @@ func test_engine_line_click_plays_matching_game_prefix_and_replaces_side_continu
 	for move in ["e2e4", "e7e5", "g1f3"]:
 		game.play(move)
 	review.present(game, [180000, 180000, 180000], SETTINGS, "")
-	review.receive_position(0, {"pv": [{"depth": 12, "cp": 30, "moves": ["e2e4", "e7e5", "b1c3", "b8c6"]}]})
+	review.receive_position(0, {"best_move": "e2e4", "pv": [{"depth": 12, "cp": 30, "moves": ["e2e4", "e7e5", "b1c3", "b8c6"]}]})
+	review.receive_position(1, {"best_move": "e7e5", "pv": [{"cp": 0, "moves": ["e7e5"]}]})
+	review.receive_position(2, {"best_move": "g1f3", "pv": [{"cp": 0, "moves": ["g1f3"]}]})
 	review._show_ply(0)
 	var block = review.get_node("Margin/Content/ReviewBody/Side/EngineLines")
 	block.get_node("Row1/Score").pressed.emit()
@@ -1862,7 +1866,8 @@ func test_terminal_engine_lines_have_one_message_and_never_search():
 	var block = review.get_node("Margin/Content/ReviewBody/Side/EngineLines")
 	assert_eq(block.get_node("Row1/PV").get_parsed_text(), "Checkmate")
 	assert_true(not block.get_node("Row1/Score").visible and not block.get_node("Row2").visible)
-	assert_eq(bridges[0].stops, 1, "terminal position releases the ongoing search")
+	assert_eq(bridges[0].stops, 0, "terminal move still needs the running prerequisite search")
+	assert_true(not "position fen " + board.game.board.to_fen() in bridges[0].commands, "terminal position itself is never searched")
 	review._back_to_game()
 	# The scene's public board accepts explicit terminal FENs, as the core rules fixtures do.
 	for case in [["7k/5Q2/6K1/8/8/8/8/8 b - - 0 1", "Stalemate"],
@@ -2026,3 +2031,251 @@ func test_missing_live_engine_error_survives_stopping_the_queued_game():
 	review.free()
 	queue.free()
 	DirAccess.remove_absolute(queue_file)
+
+
+func _rev009_settle(bridge, first: String, cp: int, second: String, second_cp: int) -> void:
+	bridge.callbacks.back().call("info depth 16 multipv 1 score cp %d nodes 3000000 pv %s" % [cp, first])
+	bridge.callbacks.back().call("info depth 16 multipv 2 score cp %d nodes 3000000 pv %s" % [second_cp, second])
+
+
+func test_exploration_after_stored_draw_searches_branch_without_changing_game_result():
+	var main = await _session(FakeTime.new())
+	var review = main.review
+	for reason in ["agreement", "repetition"]:
+		var bridge = load("res://tests/test_live_analysis.gd").FakeBridge.new()
+		review.analysis_bridge_factory = func(): return bridge
+		var game = Game.new()
+		if reason == "agreement":
+			game.play("e2e4")
+			game.agree_draw()
+		else:
+			for move in ["g1f3", "g8f6", "f3g1", "f6g8", "g1f3", "g8f6", "f3g1", "f6g8"]:
+				assert_true(game.play(move))
+			game.claim_draw()
+		assert_eq(game.reason, reason)
+		var clocks := []
+		clocks.resize(game.moves.size())
+		clocks.fill(180000)
+		review.present(game, clocks, SETTINGS, "Draw")
+		for i in game.moves.size():
+			review.receive_position(i, {"pv": [{"cp": 0, "moves": [game.moves[i]]}], "best_move": game.moves[i]})
+		review.receive_position(game.moves.size(), {"pv": [], "best_move": "", "terminal_score": 0})
+		var stored: Array = review._positions.duplicate(true)
+		var classes: Array = review._classes.duplicate(true)
+		var pgn: String = review._pgn
+		var branch: String = game.board.to_fen()
+		var move: String = "c7c5" if reason == "agreement" else "e2e4"
+		var alternative: String = "e7e5" if reason == "agreement" else "d2d4"
+		var reply: String = "g1f3" if reason == "agreement" else "e7e5"
+		var other_reply: String = "b1c3" if reason == "agreement" else "c7c5"
+		var board = review.get_node("Margin/Content/ReviewBody/BoardView")
+		assert_true(board.play(move), "stored draw still permits legal exploration")
+		var after: String = board.game.board.to_fen()
+		assert_true("position fen " + branch in bridge.commands, "a terminal game score cannot grade a continuation")
+		assert_true(not "position fen " + after in bridge.commands, "branch analysis comes first")
+		assert_true(board.review_icon == null)
+		assert_eq(board.review_arrow, "")
+		_rev009_settle(bridge, move, 0, alternative, -10)
+		assert_eq(board.review_arrow, move)
+		assert_true(board.review_icon == null, "after-position must also settle")
+		bridge.callbacks.back().call("bestmove " + move)
+		assert_true("position fen " + after in bridge.commands)
+		_rev009_settle(bridge, reply, 0, other_reply, -10)
+		assert_eq(board.review_icon, review._class_icon("Best"))
+		assert_eq(board.review_square, move.substr(2, 2))
+		assert_eq(review._line_rows[0].get_icon(1), review._class_icon("Best"))
+		assert_eq(review._positions, stored, "live branch data never replaces the game's draw score")
+		assert_eq(review._classes, classes)
+		assert_eq(review._pgn, pgn)
+		review._back_to_game()
+		assert_eq(review._positions, stored)
+		assert_eq(review._shown_engine_position().terminal_score, 0)
+	main.free()
+
+
+func test_side_class_matches_stored_game_class_and_stays_frozen():
+	var main = await _session(FakeTime.new())
+	var review = main.review
+	var bridge = load("res://tests/test_live_analysis.gd").FakeBridge.new()
+	review.analysis_bridge_factory = func(): return bridge
+	var reference = Game.new()
+	reference.play("e2e4")
+	reference.play("c7c5")
+	review.present(reference, [180000, 180000], SETTINGS, "")
+	var data := [
+		{"pv": [{"cp": 0, "moves": ["e2e4"]}, {"cp": -10, "moves": ["d2d4"]}], "best_move": "e2e4"},
+		{"pv": [{"cp": 0, "moves": ["c7c5"]}, {"cp": -10, "moves": ["e7e5"]}], "best_move": "c7c5"},
+		{"pv": [{"cp": 0, "moves": ["g1f3"]}, {"cp": -10, "moves": ["b1c3"]}], "best_move": "g1f3"}]
+	review.receive_positions(data)
+	var board = review.get_node("Margin/Content/ReviewBody/BoardView")
+	var expected_icon: Texture2D = board.review_icon
+	assert_eq(review._classes[1].class, "Best", "independent scripted reference")
+	var game = Game.new()
+	game.play("e2e4")
+	game.play("e7e5")
+	review.present(game, [180000, 180000], SETTINGS, "")
+	review.receive_position(0, data[0])
+	review.receive_position(1, data[1])
+	review._show_ply(1)
+	assert_true(board.play("c7c5"))
+	assert_true(board.review_icon == null and review._line_rows[0].get_icon(1) == null, "pending class has no icon")
+	_rev009_settle(bridge, "g1f3", 0, "b1c3", -10)
+	assert_eq(board.review_icon, expected_icon, "same data gives the game's class")
+	assert_eq(board.review_square, "c5")
+	assert_eq(review._line_rows[0].get_icon(1), expected_icon, "class appears beside the line move")
+	assert_eq(board.review_arrow, "c7c5", "green arrow uses settled before-position")
+	bridge.callbacks.back().call("info depth 20 multipv 1 score cp 950 nodes 4000000 pv b1c3")
+	assert_eq(board.review_icon, expected_icon, "later live score cannot change the class")
+	var block = review.get_node("Margin/Content/ReviewBody/Side/EngineLines")
+	var count: int = bridge.callbacks.size()
+	review._step(-1)
+	bridge.callbacks.back().call("bestmove b1c3")
+	review._step(1)
+	assert_eq(block.get_node("Row1/Depth").text, "depth 20", "return uses the latest live PV")
+	assert_eq(board.best_move_arrow, "b1c3")
+	bridge.callbacks.back().call("bestmove c7c5")
+	assert_eq(bridge.callbacks.size(), count + 2, "navigation resumes live searches without redoing class prerequisites")
+	bridge.callbacks.back().call("info depth 21 multipv 1 score cp -100 nodes 5000000 pv g1f3")
+	assert_eq(block.get_node("Row1/Depth").text, "depth 21")
+	assert_eq(board.best_move_arrow, "g1f3")
+	assert_eq(board.review_icon, expected_icon, "class survives renewed live scores")
+	assert_eq(review._line_rows[0].get_icon(1), expected_icon)
+	assert_eq(board.review_arrow, "c7c5")
+	main.free()
+
+
+func test_unanalysed_side_line_settles_history_for_miss_and_prunes_replacements():
+	var main = await _session(FakeTime.new())
+	var review = main.review
+	var bridge = load("res://tests/test_live_analysis.gd").FakeBridge.new()
+	review.analysis_bridge_factory = func(): return bridge
+	var game = Game.new()
+	game.play("e2e4")
+	game.play("g8f6")
+	review.present(game, [180000, 180000], SETTINGS, "")
+	review._show_ply(1)
+	var board = review.get_node("Margin/Content/ReviewBody/BoardView")
+	assert_true(board.play("e7e5"))
+	var after: String = board.game.board.to_fen()
+	var block = review.get_node("Margin/Content/ReviewBody/Side/EngineLines")
+	assert_eq(board.review_arrow, "", "green arrow waits for its before-position")
+	assert_true("position fen " + Pgn.START in bridge.commands, "missing predecessor is searched for Miss")
+	assert_true(not "position fen " + after in bridge.commands, "prerequisites finish before shown position")
+	_rev009_settle(bridge, "d2d4", 0, "g1f3", -10)
+	bridge.callbacks.back().call("bestmove d2d4")
+	assert_true("position fen " + review._positions[1].fen in bridge.commands, "unanalysed branch is searched")
+	_rev009_settle(bridge, "d7d5", 700, "c7c5", 0)
+	assert_eq(board.review_arrow, "d7d5")
+	assert_true(board.review_icon == null, "after-position is still pending")
+	assert_eq(block.get_node("Row1/PV").get_parsed_text(), "Stockfish is thinking…")
+	bridge.callbacks.back().call("bestmove d7d5")
+	assert_true("position fen " + after in bridge.commands)
+	_rev009_settle(bridge, "g1f3", 300, "b1c3", 290)
+	assert_eq(board.review_icon, review._class_icon("Miss"), "previous Blunder makes the missed win a Miss")
+	assert_eq(review._line_rows[0].get_icon(1), review._class_icon("Miss"))
+	assert_true(not review._positions[0].has("pv"), "temporary analysis never changes the game's stored data")
+	var count: int = bridge.callbacks.size()
+	review._step(-1)
+	bridge.callbacks.back().call("bestmove g1f3")
+	review._step(1)
+	bridge.callbacks.back().call("bestmove d7d5")
+	assert_eq(bridge.callbacks.size(), count + 2, "only shown positions restart; settled class prerequisites are reused")
+	assert_eq(board.review_icon, review._class_icon("Miss"))
+	review._step(-1)
+	assert_true(board.play("c7c5"))
+	assert_true(board.review_icon == null and review._line_rows[0].get_icon(1) == null, "overwriting removes the old class")
+	assert_true(review._live_analysis.result(after).is_empty(), "overwritten FEN is discarded")
+	bridge.callbacks.back().call("bestmove g1f3")
+	_rev009_settle(bridge, "g1f3", 0, "b1c3", -10)
+	assert_true(board.review_icon != null)
+	review._back_to_game()
+	assert_true(not review._line_active)
+	main.free()
+
+
+func test_terminal_side_move_settles_its_before_position_without_searching_mate():
+	var main = await _session(FakeTime.new())
+	var review = main.review
+	var bridge = load("res://tests/test_live_analysis.gd").FakeBridge.new()
+	review.analysis_bridge_factory = func(): return bridge
+	var game = Game.new()
+	for move in ["f2f3", "e7e5", "g2g4"]:
+		game.play(move)
+	review.present(game, [180000, 180000, 180000], SETTINGS, "")
+	for i in 3:
+		var best: String = ["f2f3", "e7e5", "g2g4"][i]
+		review.receive_position(i, {"best_move": best, "pv": [{"cp": 0, "moves": [best]}]})
+	var board = review.get_node("Margin/Content/ReviewBody/BoardView")
+	assert_true(board.play("d8h4"))
+	var block = review.get_node("Margin/Content/ReviewBody/Side/EngineLines")
+	assert_eq(block.get_node("Row1/PV").get_parsed_text(), "Checkmate")
+	assert_true(not "position fen " + board.game.board.to_fen() in bridge.commands, "terminal after-position needs no engine search")
+	assert_true("position fen " + review._positions[3].fen in bridge.commands, "mate still needs its unsettled before-position")
+	if not bridge.callbacks.is_empty():
+		_rev009_settle(bridge, "d8h4", 1000, "g8f6", 900)
+		assert_eq(board.review_icon, review._class_icon("Best"))
+		assert_eq(board.review_square, "h4")
+		assert_eq(board.review_arrow, "d8h4")
+		assert_eq(bridge.stops, 1, "release the process after terminal prerequisites finish")
+	main.free()
+
+
+func test_fast_side_line_waits_for_required_positions_and_classes_arrive_in_order():
+	var main = await _session(FakeTime.new())
+	var review = main.review
+	var bridge = load("res://tests/test_live_analysis.gd").FakeBridge.new()
+	review.analysis_bridge_factory = func(): return bridge
+	review.present(Game.new(), [], SETTINGS, "")
+	var board = review.get_node("Margin/Content/ReviewBody/BoardView")
+	for move in ["d2d4", "d7d5", "c2c4"]:
+		assert_true(board.play(move))
+	var block = review.get_node("Margin/Content/ReviewBody/Side/EngineLines")
+	assert_eq(bridge.callbacks.size(), 1, "keep finishing the first required position across rapid moves")
+	assert_true(board.review_icon == null and board.review_arrow.is_empty())
+	_rev009_settle(bridge, "d2d4", 0, "e2e4", -10)
+	assert_true(board.review_icon == null and board.review_arrow.is_empty())
+	assert_eq(block.get_node("Row1/PV").get_parsed_text(), "Stockfish is thinking…")
+	bridge.callbacks.back().call("bestmove d2d4")
+	_rev009_settle(bridge, "d7d5", 0, "g8f6", -10)
+	assert_eq(review._line_rows[0].get_icon(1), review._class_icon("Best"))
+	assert_true(review._line_rows[1].get_icon(1) == null and board.review_icon == null)
+	bridge.callbacks.back().call("bestmove d7d5")
+	_rev009_settle(bridge, "c2c4", 0, "g1f3", -10)
+	assert_eq(review._line_rows[1].get_icon(1), review._class_icon("Best"))
+	assert_eq(board.review_arrow, "c2c4")
+	assert_true(board.review_icon == null, "shown after-position still needs settlement")
+	bridge.callbacks.back().call("bestmove c2c4")
+	_rev009_settle(bridge, "e7e6", 0, "g8f6", -10)
+	assert_eq(board.review_icon, review._class_icon("Best"))
+	assert_eq(board.review_square, "c4")
+	assert_eq(review._line_rows[2].get_icon(1), review._class_icon("Best"))
+	main.free()
+
+
+func test_side_line_preserves_book_and_repertoire_context_from_game_prefix():
+	var main = await _session(FakeTime.new())
+	var review = main.review
+	var book = load("res://bot/book.gd").new()
+	book.load_tsv("eco\tname\tpgn\nB20\tFixture\t1. e4 c5\n")
+	assert_eq(book.entries.size(), 1)
+	var settings := SETTINGS.duplicate()
+	settings.colour = "b"
+	for label in ["Book", "Repertoire"]:
+		var bridge = load("res://tests/test_live_analysis.gd").FakeBridge.new()
+		review.analysis_bridge_factory = func(): return bridge
+		var game = Game.new()
+		game.play("e2e4")
+		game.play("e7e5")
+		review.present(game, [180000, 180000], settings, "", book.entries,
+				book.entries if label == "Repertoire" else [], label == "Repertoire")
+		review.receive_position(0, {"best_move": "e2e4", "pv": [{"cp": 0, "moves": ["e2e4"]}]})
+		review.receive_position(1, {"best_move": "d7d5", "pv": [
+			{"cp": 0, "moves": ["d7d5"]}, {"cp": -10, "moves": ["g8f6"]}]})
+		review._show_ply(1)
+		var board = review.get_node("Margin/Content/ReviewBody/BoardView")
+		assert_true(board.play("c7c5"))
+		_rev009_settle(bridge, "g1f3", 400, "b1c3", 390)
+		assert_eq(board.review_icon, review._class_icon(label), "opening mark overrides the scripted Blunder")
+		assert_eq(review._line_rows[0].get_icon(1), review._class_icon(label))
+		review._back_to_game()
+	main.free()
