@@ -32,6 +32,7 @@ var _info := PackedStringArray()
 var _callback := Callable()
 var _engine_path: String
 var _engine_name: String
+var _stop_pending := false
 
 
 func _init(engine_path := ENGINE, engine_name := "Lc0") -> void:
@@ -151,6 +152,13 @@ func request_search(commands: PackedStringArray, callback: Callable) -> void:
 func stop_search() -> void:
 	if available and _awaiting == "bestmove":
 		_stdio.store_line("stop")
+	elif available:
+		# id name can arrive before uciok. Remember cancellation of a search
+		# still queued behind the handshake, so go infinite cannot run forever.
+		for step in _steps:
+			if step[1] == "bestmove":
+				_stop_pending = true
+				break
 
 
 func poll() -> void:
@@ -203,6 +211,7 @@ func stop() -> void:
 	engine_id = ""
 	_steps.clear()
 	_awaiting = ""
+	_stop_pending = false
 	_board = null
 	_callback = Callable()
 	_info.clear()
@@ -228,6 +237,9 @@ func _send() -> void:
 		_board = step[2]
 		_callback = step[3]
 		_info.clear()
+		if _awaiting == "bestmove" and _stop_pending:
+			_stop_pending = false
+			_stdio.store_line("stop")
 
 
 # Worker thread: blocks on the pipe until it breaks. stderr (lines null) is drained so Lc0 never

@@ -74,6 +74,8 @@ func _receive(line: String, generation: int) -> void:
 	if _lines.has(number) and parsed.depth < _lines[number].depth:
 		return
 	_lines[number] = parsed
+	if not _lines.has(1):
+		return
 	var pv := []
 	for n in [1, 2]:
 		if _lines.has(n):
