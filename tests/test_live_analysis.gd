@@ -62,3 +62,65 @@ func test_live_search_sets_two_lines_and_max_threads_switches_without_stale_resu
 	assert_eq(bridge.stops, 1, "stop releases the engine process")
 	live.free()
 	bridge.free()
+
+
+# An in-memory engine endpoint on the real UCI command queue. uciok is delayed
+# independently of id name, just as the reader can deliver them on separate frames.
+class HandshakingBridge extends "res://engine/uci.gd":
+	var transcript_path := "user://rev008-handshake-%d.txt" % Time.get_ticks_usec()
+	func start(_dirs := PackedStringArray()) -> bool:
+		available = true
+		pid = OS.get_process_id()
+		_stdio = FileAccess.open(transcript_path, FileAccess.WRITE)
+		_queue(["uci"], "uciok")
+		deliver("id name Test Stockfish")
+		return true
+	func deliver(line: String) -> void:
+		_lines.append(line)
+		poll()
+		_stdio.flush()
+	func transcript() -> String:
+		_stdio.flush()
+		return FileAccess.get_file_as_string(transcript_path)
+	func stop() -> void:
+		pid = -1 # The fake endpoint has no child process to kill.
+		super.stop()
+		DirAccess.remove_absolute(transcript_path)
+
+
+func test_switch_before_uciok_still_stops_old_search_and_reaches_latest_fen():
+	var bridge := HandshakingBridge.new()
+	var live = load("res://engine/live_analysis.gd").new(bridge)
+	var updates := []
+	live.updated.connect(func(fen, position): updates.append([fen, position]))
+	assert_true(live.search(START))
+	assert_true(live.search(AFTER), "switch while old search is queued behind uciok")
+	bridge.deliver("uciok")
+	assert_true(bridge.transcript().contains("go infinite\nstop\n"), "queued old search is stopped when it finally starts")
+	bridge.deliver("info depth 8 score cp 200 pv e2e4")
+	assert_eq(updates.size(), 0)
+	bridge.deliver("bestmove e2e4")
+	assert_true(bridge.transcript().contains("position fen " + AFTER))
+	bridge.deliver("info depth 9 score cp -20 pv e7e5")
+	assert_eq(updates.back()[0], AFTER)
+	live.stop()
+	live.free()
+	bridge.free()
+
+
+func test_second_pv_first_never_becomes_the_primary_score_or_arrow():
+	var bridge := FakeBridge.new()
+	var live = load("res://engine/live_analysis.gd").new(bridge)
+	var updates := []
+	live.updated.connect(func(_fen, position): updates.append(position))
+	assert_true(live.search(START))
+	bridge.callbacks[0].call("info depth 10 multipv 2 score cp 10 pv d2d4")
+	assert_true(updates.is_empty() or updates.back().pv.is_empty(), "PV2 cannot masquerade as PV1")
+	bridge.callbacks[0].call("info depth 10 multipv 1 score cp 30 pv e2e4")
+	assert_eq(updates.back().pv[0].cp, 30)
+	assert_eq(updates.back().pv[1].cp, 10)
+	bridge.callbacks[0].call("info depth 11 multipv 1 score cp 200 lowerbound pv e2e4")
+	assert_eq(updates.back().pv[0].cp, 30, "a bound is not an exact score")
+	live.stop()
+	live.free()
+	bridge.free()
