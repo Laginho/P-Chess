@@ -646,9 +646,8 @@ func _pause_for_line() -> void:
 
 func _search_shown_position() -> void:
 	var fen: String = _board_view.game.board.to_fen()
-	if _live_position.get("fen", "") == fen:
-		return
-	_live_position = {"fen": fen}
+	if _live_position.get("fen", "") != fen:
+		_live_position = {"fen": fen}
 	if _board_view.game.is_over():
 		_stop_live_process()
 		_live_position = {"fen": fen, "pv": [], "best_move": "",
@@ -668,7 +667,7 @@ func _search_shown_position() -> void:
 				_update_eval_bar()
 				_update_board_annotations())
 		_live_analysis.settled.connect(func(_fen: String, _position: Dictionary):
-			_refresh_line_classes()
+			_search_shown_position()
 			_update_board_annotations())
 		_live_analysis.failed.connect(func(message: String):
 			_live_failed = true
@@ -678,8 +677,33 @@ func _search_shown_position() -> void:
 			_update_engine_lines()
 			_update_eval_bar()
 			_update_board_annotations())
+	var positions := _line_positions()
+	var retained := []
+	for position: Dictionary in positions:
+		retained.append(position.fen)
+		if position.has("pv"):
+			_live_analysis.remember(position)
+	_live_analysis.retain(retained)
 	_refresh_line_classes()
-	_live_analysis.search(fen)
+	_live_analysis.search(fen, _line_requirements(positions))
+
+
+# Only walk farther into game history when an earlier undecided class needs it.
+func _line_requirements(positions: Array) -> Array:
+	if _line_index == 0:
+		return []
+	var moves := _game_moves.slice(0, _ply)
+	moves.append_array(_line_moves)
+	var classes := Classification.evaluate(moves, {"positions": positions},
+			_catalog, _repertoire, _colour, _check_repertoire)
+	var first := maxi(0, _ply - 1)
+	while first > 0 and classes[first] == null and positions[first].has("pv") and positions[first + 1].has("pv"):
+		first -= 1
+	var required := []
+	for i in range(first, _ply + _line_index):
+		if not positions[i].has("pv"):
+			required.append(positions[i].fen)
+	return required
 
 
 # Keep the game prefix so Book, Repertoire, Great and Miss see the same history.
