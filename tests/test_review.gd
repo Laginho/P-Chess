@@ -1283,3 +1283,19 @@ func test_late_analysis_error_is_laid_out_in_the_card():
 		assert_true(absf(error.global_position.x - side.global_position.x) < 1, "the error starts at the column's edge at %s" % window_size)
 		main.free()
 	root.size = old_size
+
+
+func test_playing_a_different_move_starts_a_side_line_under_the_branch():
+	var main = await _session(FakeTime.new())
+	var review = main.review
+	var game = Game.new()
+	game.play("e2e4")
+	game.play("e7e5")
+	review.present(game, [180000, 180000], SETTINGS, "")
+	review._show_ply(1)
+	var board = review.get_node("Margin/Content/ReviewBody/BoardView")
+	assert_true(board.play("c7c5"))
+	assert_eq(review._ply, 1)
+	assert_eq(review._line_moves, PackedStringArray(["c7c5"]))
+	assert_true(review._move_rows[0].get_next() == review._line_rows[0], "line follows branch")
+	main.free()
