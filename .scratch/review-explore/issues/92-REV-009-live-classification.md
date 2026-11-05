@@ -1,5 +1,5 @@
 # REV-009: Live classes for side-line moves
-Stage: to-implement
+Stage: implementing
 Status: ready-for-agent
 Blocked by: REV-008
 Review: human
@@ -39,6 +39,8 @@ Spec: `.scratch/review-explore/spec.md`. Each move you play in a side line gets 
 - tests/test_review.gd: a side-line move gets an icon on its square and row once both positions settle, and keeps it as the search goes on (red: no icon); the same scripted engine data gives the game move's class; overwriting drops classes; the green arrow appears only after settling; on an unanalysed game the branch positions are searched live.
 
 ## Comments
+
+- 2026-11-05 Stage 2 repair resumes the existing branch for the two stage-3 findings only. Approved seams remain Review and the live controller with the fake UCI bridge. Read callers of `_line_positions` (class evaluation, prerequisite selection, cache retention and board arrows), `search`/`_schedule` (navigation, settlement callback, UCI drain and process loop) and cache cleanup/error paths. Regression inputs: agreed and claimed-repetition draws with legal continuations; cached positions with newer live PVs, rapid return while draining, terminal shown positions and overwritten cache entries. First repair test covers icons/arrow plus unchanged stored draw analysis, game classes and PGN.
 
 - 2026-11-05 Written from the grill (spec.md). The proxy chose MultiPV 2 for the live search (not 3) so live classes match game classes.
 

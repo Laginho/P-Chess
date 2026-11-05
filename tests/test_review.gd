@@ -2038,6 +2038,61 @@ func _rev009_settle(bridge, first: String, cp: int, second: String, second_cp: i
 	bridge.callbacks.back().call("info depth 16 multipv 2 score cp %d nodes 3000000 pv %s" % [second_cp, second])
 
 
+func test_exploration_after_stored_draw_searches_branch_without_changing_game_result():
+	var main = await _session(FakeTime.new())
+	var review = main.review
+	for reason in ["agreement", "repetition"]:
+		var bridge = load("res://tests/test_live_analysis.gd").FakeBridge.new()
+		review.analysis_bridge_factory = func(): return bridge
+		var game = Game.new()
+		if reason == "agreement":
+			game.play("e2e4")
+			game.agree_draw()
+		else:
+			for move in ["g1f3", "g8f6", "f3g1", "f6g8", "g1f3", "g8f6", "f3g1", "f6g8"]:
+				assert_true(game.play(move))
+			game.claim_draw()
+		assert_eq(game.reason, reason)
+		var clocks := []
+		clocks.resize(game.moves.size())
+		clocks.fill(180000)
+		review.present(game, clocks, SETTINGS, "Draw")
+		for i in game.moves.size():
+			review.receive_position(i, {"pv": [{"cp": 0, "moves": [game.moves[i]]}], "best_move": game.moves[i]})
+		review.receive_position(game.moves.size(), {"pv": [], "best_move": "", "terminal_score": 0})
+		var stored: Array = review._positions.duplicate(true)
+		var classes: Array = review._classes.duplicate(true)
+		var pgn: String = review._pgn
+		var branch: String = game.board.to_fen()
+		var move: String = "c7c5" if reason == "agreement" else "e2e4"
+		var alternative: String = "e7e5" if reason == "agreement" else "d2d4"
+		var reply: String = "g1f3" if reason == "agreement" else "e7e5"
+		var other_reply: String = "b1c3" if reason == "agreement" else "c7c5"
+		var board = review.get_node("Margin/Content/ReviewBody/BoardView")
+		assert_true(board.play(move), "stored draw still permits legal exploration")
+		var after: String = board.game.board.to_fen()
+		assert_true("position fen " + branch in bridge.commands, "a terminal game score cannot grade a continuation")
+		assert_true(not "position fen " + after in bridge.commands, "branch analysis comes first")
+		assert_true(board.review_icon == null)
+		assert_eq(board.review_arrow, "")
+		_rev009_settle(bridge, move, 0, alternative, -10)
+		assert_eq(board.review_arrow, move)
+		assert_true(board.review_icon == null, "after-position must also settle")
+		bridge.callbacks.back().call("bestmove " + move)
+		assert_true("position fen " + after in bridge.commands)
+		_rev009_settle(bridge, reply, 0, other_reply, -10)
+		assert_eq(board.review_icon, review._class_icon("Best"))
+		assert_eq(board.review_square, move.substr(2, 2))
+		assert_eq(review._line_rows[0].get_icon(1), review._class_icon("Best"))
+		assert_eq(review._positions, stored, "live branch data never replaces the game's draw score")
+		assert_eq(review._classes, classes)
+		assert_eq(review._pgn, pgn)
+		review._back_to_game()
+		assert_eq(review._positions, stored)
+		assert_eq(review._shown_engine_position().terminal_score, 0)
+	main.free()
+
+
 func test_side_class_matches_stored_game_class_and_stays_frozen():
 	var main = await _session(FakeTime.new())
 	var review = main.review
