@@ -1,5 +1,5 @@
 # REV-007: Side lines in the Review, and the Best move arrow setting
-Stage: implementing
+Stage: to-review
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -57,9 +57,9 @@ Today the Review's `BoardView` already accepts moves for both sides, but nothing
 
 - 2026-11-05 Resolution: Added a disposable side line with branch navigation and exits, the default-on best-move arrow, and live Review board preferences. The full gate on commit `0f8a102` reported 528 passed, 0 failed; Lc0-dependent checks and the existing last-move pixel test skipped on this headless Linux run. A graphical Xvfb test verified the blue arrow appears and clears; disabling its draw call made the test fail. The settings test failed on the missing key before its implementation; the side-line scene test failed on missing line state before implementation.
 
-Acceptance: pending | Stage-3 review below reproduces failures of criteria 1, 8 and 10. Manual post-game and History exploration remains pending after those repairs.
-Disclosure: pending | integration | Criteria 1, 8 and 10 fail the user input and animation probes in the review below; repair and review again before integration. Manual Review exploration in both entry paths also remains outstanding.
-Gate evidence: /tmp/REV-007-gate.json
+Acceptance: pending | Manual post-game and History exploration remains pending; automated and graphical checks for the reopened findings are recorded in the repair handoff below.
+Disclosure: pending | integration | Stage-3 re-review of criteria 1, 8 and 10 and manual Review exploration in both entry paths remain outstanding; see repair handoff below.
+Gate evidence: /run/media/lage/New Volume/Scratch/rev007-review/gate-final.json
 
 
 #### Resolution (2026-11-05)
@@ -103,3 +103,15 @@ External reproduction artifacts (not required to understand or reproduce the fin
 - 2026-11-05 Animation regression test failed before the fix: game continuation, first side-line move and continuation each immediately cleared the active slide.
 
 - 2026-11-05 Gate exposed an old expectation in `test_settings_shortcut_availability_and_mouse_close`: the shortcut used to be disabled in Review. Criterion 8 replaces it; the test now expects the panel and closes it before preserving the remaining focus, mouse-close and game-hotkey assertions.
+
+
+#### Repair handoff (2026-11-05)
+
+- Enabled actual Review board mouse input. Viewport tests cover drag and click-click for a game continuation and an alternative; both failed before the scene change and passed afterward.
+- Put Settings above Review and blocked Review shortcuts while the Settings panel is open. The real Ctrl+, and arrow checkbox test failed before the change and passed afterward, including Esc, F, arrows and Space. History and name-dialog covering assertions remain in the suite.
+- Retained the already-played board when updating the Review, preserving move animations without weakening the BoardView game-reset setter. The game continuation and both side-line animation checks failed before the change and passed afterward.
+- Updated `test_settings_shortcut_availability_and_mouse_close` for the replaced Review shortcut contract. Restoring the previous screen order made the updated expectation fail; restoring the repair made it pass. The rest of that test's assertions are preserved.
+- Focused interaction and animation tests passed both headless and in an Xvfb graphical session. Gate on `78b9b3e`: `godot --headless -s tests/run.gd`, 531 passed, 0 failed. The headless last-move pixel test and Lc0-dependent checks skipped; no engine was downloaded.
+- Manual post-game and History exploration is still pending; the graphical automated run does not claim product acceptance.
+
+Disclosure: decision | none | [Proxy receipt](/tmp/sweatshop-proxy/20261105-175641-REV-007-2bed17.json) widens Review BoardView mouse input and `ui/main.gd` Settings ordering and keyboard access for criteria 1, 2 and 8.
