@@ -446,6 +446,8 @@ chess.com's CAPS2 is not published.
 - **Board:** steps through the moves with ←/→. The **eval bar is on the left** of the board, and it and the graph follow the board's orientation.
 - **Graph and move list:** a clickable eval graph that jumps to the move, and a move list with a classification icon on every move.
 - **On the board:** the classification icon on the destination square, and an arrow for the best move.
+- **Side lines:** play an alternative legal move to explore one temporary line. Previous/Next and ←/→ navigate between its branch position and last move; playing a different continuation replaces the later moves. Back to game or Esc returns to the branch; choosing a game move, graph position, First or Last also discards the line. The summary, class counts, graph, PGN, links and saved files remain about the game. Until live analysis is added, side-line positions have no score, classifications or arrows. In the wide layout the class table collapses while exploring.
+- **Best move arrow:** when enabled, the shown game position's stored best move appears as a translucent blue arrow underneath the existing green arrow and drawings. The review board follows the player's board, piece, input and animation settings.
 - **Summary:** each side's accuracy, and the count of moves per class.
 - A "?" tooltip next to the accuracy and the class counts explains in plain English how each is computed and the thresholds.
 - Copy PGN and Open in Lichess stay. Rematch and New game appear only when the review was opened from the post-game panel, whose game settings are still in memory; a review opened from the history has neither, and `Space` does nothing there; it has a **Back to History** button instead, also on `Esc`. There is no coach text and no retry.
@@ -504,6 +506,7 @@ chess.com's CAPS2 is not published.
 |---|---|
 | History default tab | All |
 | Batch analysis threads | Background (1 thread) |
+| Best move arrow | on |
 | Board size (§8.7) | Fit to window |
 
 ### 15.11 Tests

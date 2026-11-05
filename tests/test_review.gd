@@ -1283,3 +1283,439 @@ func test_late_analysis_error_is_laid_out_in_the_card():
 		assert_true(absf(error.global_position.x - side.global_position.x) < 1, "the error starts at the column's edge at %s" % window_size)
 		main.free()
 	root.size = old_size
+
+
+func test_playing_a_different_move_starts_a_side_line_under_the_branch():
+	var main = await _session(FakeTime.new())
+	var review = main.review
+	var game = Game.new()
+	game.play("e2e4")
+	game.play("e7e5")
+	review.present(game, [180000, 180000], SETTINGS, "")
+	review._show_ply(1)
+	var board = review.get_node("Margin/Content/ReviewBody/BoardView")
+	assert_true(board.play("c7c5"))
+	assert_eq(review._ply, 1)
+	assert_eq(review._line_moves, PackedStringArray(["c7c5"]))
+	assert_true(review._move_rows[0].get_next() == review._line_rows[0], "line follows branch")
+	main.free()
+func test_side_line_navigation_replacement_and_game_invariants():
+	var main = await _session(FakeTime.new())
+	var review = main.review
+	var game = Game.new()
+	for move in ["e2e4", "e7e5", "g1f3", "b8c6"]:
+		game.play(move)
+	review.present(game, [180000, 180000, 180000, 180000], SETTINGS, "")
+	review.size = Vector2(1280, 800)
+	review._resize_classes()
+	review.receive_position(1, {"pv": [{"cp": 20, "moves": ["e7e5"]}], "best_move": "e7e5"})
+	review._show_ply(1)
+	var board = review.get_node("Margin/Content/ReviewBody/BoardView")
+	var side = review.get_node("Margin/Content/ReviewBody/Side")
+	var summary: String = side.get_node("Summary").text
+	var pgn: String = review._pgn
+	var graph = side.get_node("EvalGraph")
+	assert_eq(board.best_move_arrow, "e7e5")
+	assert_true(board.play("e7e5"))
+	assert_eq(review._ply, 2, "playing the game move advances without branching")
+	assert_true(not review._line_active)
+	review._show_ply(1)
+	assert_true(board.play("c7c5"))
+	assert_eq(review._ply, 1)
+	assert_eq(review._line_moves, PackedStringArray(["c7c5"]))
+	assert_true(review._move_rows[0].get_next() == review._line_rows[0], "line follows its branch row")
+	assert_true(side.get_node("ClassToggle").visible and not side.get_node("Counts").visible)
+	assert_eq(board.best_move_arrow, "")
+	assert_eq(board.review_arrow, "")
+	assert_true(board.review_icon == null)
+	assert_eq(review.get_node("Margin/Content/ReviewBody/EvalBar/Score").text, "")
+	assert_eq(graph.current_ply, 1)
+	assert_eq(side.get_node("Summary").text, summary)
+	assert_eq(review._pgn, pgn)
+	assert_true(board.play("g1f3"))
+	review._step(-1)
+	assert_eq(review._line_index, 1)
+	assert_true(board.play("b1c3"))
+	assert_eq(review._line_moves, PackedStringArray(["c7c5", "b1c3"]))
+	review._step(-1)
+	review._step(-1)
+	review._step(-1)
+	assert_eq(review._line_index, 0)
+	review._step(1)
+	assert_true(board.play("b1c3"), "replaying the next line move advances")
+	review._step(1)
+	assert_eq(review._line_index, 2)
+	review._back_to_game()
+	assert_true(not review._line_active and side.get_node("Counts").visible)
+	assert_eq(board.game.moves, PackedStringArray(["e2e4"]))
+	assert_eq(board.best_move_arrow, "e7e5")
+	assert_eq(game.moves, PackedStringArray(["e2e4", "e7e5", "g1f3", "b8c6"]))
+	main.free()
+
+
+func test_side_line_exit_paths_and_live_settings():
+	var main = await _session(FakeTime.new())
+	var review = main.review
+	var game = Game.new()
+	game.play("e2e4")
+	game.play("e7e5")
+	review.present(game, [180000, 180000], SETTINGS, "")
+	var board = review.get_node("Margin/Content/ReviewBody/BoardView")
+	var side = review.get_node("Margin/Content/ReviewBody/Side")
+	review.receive_position(0, {"best_move": "e2e4"})
+	review._show_ply(0)
+	main.preferences.set_value("best_move_arrow", false)
+	assert_eq(board.best_move_arrow, "")
+	main.preferences.set_value("best_move_arrow", true)
+	assert_eq(board.best_move_arrow, "e2e4")
+	main.preferences.set_value("click_click", true)
+	main.preferences.set_value("auto_queen", "on")
+	main.preferences.set_value("legal_dots", false)
+	main.preferences.set_value("animation_ms", 200)
+	assert_true(board.click_click and board.auto_queen == "on" and not board.show_targets)
+	assert_eq(board.slide_seconds, 0.2)
+	assert_true(board.play("d2d4"))
+	var flip := InputEventKey.new()
+	flip.pressed = true
+	flip.keycode = KEY_F
+	var old_flip: bool = board.flipped
+	review._input(flip)
+	assert_true(board.flipped != old_flip)
+	review._line_rows[-1].select(1)
+	side.get_node("Moves").item_selected.emit()
+	await Engine.get_main_loop().process_frame
+	assert_true(not review._line_active and review._ply == 0, "Back to game row")
+	assert_true(board.play("d2d4"))
+	side.get_node("EvalGraph").ply_selected.emit(2)
+	assert_true(not review._line_active and review._ply == 2)
+	review._show_ply(0)
+	assert_true(board.play("d2d4"))
+	side.get_node("Navigation/Last").pressed.emit()
+	assert_true(not review._line_active and review._ply == 2)
+	review._show_ply(0)
+	assert_true(board.play("d2d4"))
+	side.get_node("Navigation/First").pressed.emit()
+	assert_true(not review._line_active and review._ply == 0)
+	assert_true(board.play("d2d4"))
+	review._move_rows[0].select(1)
+	side.get_node("Moves").item_selected.emit()
+	await Engine.get_main_loop().process_frame
+	assert_true(not review._line_active and review._ply == 1, "clicking a game move")
+	review._show_ply(0)
+	assert_true(board.play("d2d4"))
+	var escape := InputEventKey.new()
+	escape.pressed = true
+	escape.keycode = KEY_ESCAPE
+	review._from_history = true
+	var returned := [false]
+	review.back_history_requested.connect(func(): returned[0] = true)
+	review._input(escape)
+	assert_true(not review._line_active and review._ply == 0 and not returned[0])
+	review._input(escape)
+	assert_true(returned[0])
+	main.free()
+
+
+func test_played_review_moves_keep_their_animation_until_finished():
+	var main = await _session(FakeTime.new())
+	var review = main.review
+	var game = Game.new()
+	game.play("e2e4")
+	game.play("e7e5")
+	review.present(game, [180000, 180000], SETTINGS, "")
+	main.preferences.set_value("animation_ms", 500)
+	var board = review.get_node("Margin/Content/ReviewBody/BoardView")
+	review._show_ply(0)
+	assert_true(board.play("e2e4"))
+	assert_eq(board._slide_to, "e4", "game continuation is animating")
+	review._show_ply(0)
+	assert_true(board.play("d2d4"))
+	assert_eq(board._slide_to, "d4", "first side-line move is animating")
+	assert_true(board.play("d7d5"))
+	assert_eq(board._slide_to, "d5", "side-line continuation is animating")
+	await Engine.get_main_loop().create_timer(0.65).timeout
+	assert_eq(board._slide_to, "", "animation eventually finishes")
+	main.free()
+
+
+func _review_mouse_button(root: Window, at: Vector2, down: bool) -> void:
+	var event := InputEventMouseButton.new()
+	event.button_index = MOUSE_BUTTON_LEFT
+	event.button_mask = MOUSE_BUTTON_MASK_LEFT if down else 0
+	event.pressed = down
+	event.position = at
+	root.push_input(event)
+	await Engine.get_main_loop().process_frame
+
+
+func _review_mouse_motion(root: Window, at: Vector2, held := false) -> void:
+	var event := InputEventMouseMotion.new()
+	event.position = at
+	event.button_mask = MOUSE_BUTTON_MASK_LEFT if held else 0
+	root.push_input(event)
+	await Engine.get_main_loop().process_frame
+
+
+func test_review_board_accepts_viewport_drag_and_click_click():
+	var root: Window = Engine.get_main_loop().root
+	var old_size := root.size
+	root.size = Vector2i(1280, 800)
+	var main = await _session(FakeTime.new())
+	var review = main.review
+	var game = Game.new()
+	game.play("e2e4")
+	game.play("e7e5")
+	review.present(game, [180000, 180000], SETTINGS, "")
+	var board = review.get_node("Margin/Content/ReviewBody/BoardView")
+	for click_click in [false, true]:
+		main.preferences.set_value("click_click", click_click)
+		for move in ["d2d4", "e2e4"]:
+			review._show_ply(0)
+			await Engine.get_main_loop().process_frame
+			await Engine.get_main_loop().process_frame
+			var start: Vector2 = board.global_position + board._centre(move.substr(0, 2))
+			var finish: Vector2 = board.global_position + board._centre(move.substr(2, 2))
+			await _review_mouse_motion(root, start)
+			await _review_mouse_button(root, start, true)
+			if click_click:
+				await _review_mouse_button(root, start, false)
+				await _review_mouse_motion(root, finish)
+				await _review_mouse_button(root, finish, true)
+			else:
+				await _review_mouse_motion(root, finish, true)
+			await _review_mouse_button(root, finish, false)
+			assert_eq(board.game.moves, PackedStringArray([move]), "%s via click-click=%s" % [move, click_click])
+			assert_eq(review._line_active, move == "d2d4", "only the alternative starts a line")
+			assert_eq(review._ply, 0 if move == "d2d4" else 1, "game continuation advances")
+	main.free()
+	root.size = old_size
+
+
+func _review_key(root: Window, key: Key, ctrl := false) -> void:
+	var event := InputEventKey.new()
+	event.keycode = key
+	event.ctrl_pressed = ctrl
+	event.pressed = true
+	root.push_input(event)
+	await Engine.get_main_loop().process_frame
+
+
+func test_settings_over_review_controls_arrow_and_owns_keyboard():
+	var root: Window = Engine.get_main_loop().root
+	var old_size := root.size
+	root.size = Vector2i(1280, 800)
+	var main = await _session(FakeTime.new())
+	var review = main.review
+	var game = Game.new()
+	game.play("e2e4")
+	game.play("e7e5")
+	review.present(game, [180000, 180000], SETTINGS, "")
+	review.receive_position(0, {"best_move": "e2e4"})
+	review._show_ply(0)
+	var board = review.get_node("Margin/Content/ReviewBody/BoardView")
+	var panel = main.settings_screen.get_node("Panel")
+	var form = panel.get_node("Center/Box/Form")
+	var arrow_box: CheckBox
+	for i in range(0, form.get_child_count(), 2):
+		if form.get_child(i).text == "Best move arrow":
+			arrow_box = form.get_child(i + 1)
+	assert_true(arrow_box != null, "arrow row exists")
+	# Observe rematch requests without starting a new game during the keyboard test.
+	for connection in review.rematch_requested.get_connections():
+		review.rematch_requested.disconnect(connection.callable)
+	for in_line in [false, true]:
+		if in_line:
+			assert_true(board.play("d2d4"))
+		await _review_key(root, KEY_COMMA, true)
+		assert_true(panel.visible, "Ctrl+, opens Settings over Review, line=%s" % in_line)
+		# Continue testing keyboard ownership even if opening failed.
+		if not panel.visible:
+			panel.show()
+		await Engine.get_main_loop().process_frame
+		await Engine.get_main_loop().process_frame
+		var at: Vector2 = arrow_box.global_position + arrow_box.size / 2
+		await _review_mouse_motion(root, at)
+		await _review_mouse_button(root, at, true)
+		await _review_mouse_button(root, at, false)
+		assert_eq(main.preferences.get_value("best_move_arrow"), in_line, "real row toggles setting")
+		assert_eq(board.best_move_arrow, "", "arrow clears in the game or remains absent in a line")
+		var flipped: bool = board.flipped
+		var ply: int = review._ply
+		var line_index: int = review._line_index
+		var rematches := [0]
+		var on_rematch := func(): rematches[0] += 1
+		review.rematch_requested.connect(on_rematch)
+		for key in [KEY_F, KEY_LEFT, KEY_RIGHT, KEY_SPACE]:
+			await _review_key(root, key)
+		assert_eq(board.flipped, flipped, "F stays with Settings")
+		assert_eq(review._ply, ply, "arrows stay with Settings")
+		assert_eq(review._line_index, line_index, "line cursor stays with Settings")
+		assert_eq(rematches[0], 0, "Space stays with Settings")
+		review.rematch_requested.disconnect(on_rematch)
+		await _review_key(root, KEY_ESCAPE)
+		assert_true(not panel.visible, "first Esc closes Settings")
+		assert_eq(review._line_active, in_line, "first Esc preserves the line")
+		if in_line:
+			await _review_key(root, KEY_ESCAPE)
+			assert_true(not review._line_active, "second Esc exits the line")
+			assert_eq(board.best_move_arrow, "e2e4", "updated setting appears on returning to game")
+	main.free()
+	root.size = old_size
+
+
+func test_settings_remain_available_in_review_after_focused_game():
+	var root: Window = Engine.get_main_loop().root
+	var old_size := root.size
+	root.size = Vector2i(1280, 800)
+	var time := FakeTime.new()
+	var main = await _session(time)
+	var panel = main.settings_screen.get_node("Panel")
+	await _review_key(root, KEY_F11)
+	assert_true(main.focus, "game enters focus mode")
+	await _review_key(root, KEY_COMMA, true)
+	assert_true(not panel.is_visible_in_tree(), "Settings stays unavailable during focused play")
+	main.board_view.play("f2f3")
+	main._on_maia_move("e7e5")
+	main.board_view.play("g2g4")
+	main._on_maia_move("d8h4")
+	await Engine.get_main_loop().process_frame
+	var open_review = main.board_view.get_node("GameOver/Panel/Content/Review")
+	var at: Vector2 = open_review.get_global_rect().get_center()
+	await _review_mouse_motion(root, at)
+	await _review_mouse_button(root, at, true)
+	await _review_mouse_button(root, at, false)
+	var review = main.review
+	assert_true(review.visible and main.focus, "result card opens Review without clearing focus")
+	review.receive_position(0, {"best_move": "e2e4"})
+	review.get_node("Margin/Content/ReviewBody/Side/Navigation/First").pressed.emit()
+	var board = review.get_node("Margin/Content/ReviewBody/BoardView")
+	assert_eq(board.best_move_arrow, "e2e4", "stored arrow is present before opening Settings")
+	var form = panel.get_node("Center/Box/Form")
+	var arrow_box: CheckBox
+	for i in range(0, form.get_child_count(), 2):
+		if form.get_child(i).text == "Best move arrow":
+			arrow_box = form.get_child(i + 1)
+	assert_true(arrow_box != null, "arrow row exists")
+	var played_game = main.board_view.game
+	for in_line in [false, true]:
+		if in_line:
+			assert_true(board.play("d2d4"))
+		await _review_key(root, KEY_COMMA, true)
+		assert_true(panel.is_visible_in_tree(), "Ctrl+, opens Settings after focused play, line=%s" % in_line)
+		if not panel.is_visible_in_tree() or arrow_box == null:
+			continue
+		await Engine.get_main_loop().process_frame
+		at = arrow_box.get_global_rect().get_center()
+		await _review_mouse_motion(root, at)
+		await _review_mouse_button(root, at, true)
+		await _review_mouse_button(root, at, false)
+		assert_eq(main.preferences.get_value("best_move_arrow"), false, "real checkbox turns the arrow off")
+		assert_eq(board.best_move_arrow, "", "arrow clears immediately")
+		var flipped: bool = board.flipped
+		var moves: PackedStringArray = board.game.moves.duplicate()
+		for key in [KEY_F, KEY_LEFT, KEY_RIGHT]:
+			await _review_key(root, key)
+		# Direction keys can move Settings focus to another row.
+		arrow_box.grab_focus()
+		await _review_key(root, KEY_SPACE)
+		var release := InputEventKey.new()
+		release.keycode = KEY_SPACE
+		root.push_input(release)
+		await Engine.get_main_loop().process_frame
+		assert_true(review.visible and main.board_view.game == played_game, "Space stays with Settings")
+		assert_eq(board.flipped, flipped, "F stays with Settings")
+		assert_eq(board.game.moves, moves, "arrows stay with Settings")
+		assert_eq(main.preferences.get_value("best_move_arrow"), true, "Space turns the focused checkbox back on")
+		assert_eq(board.best_move_arrow, "" if in_line else "e2e4", "arrow follows the checkbox immediately")
+		await _review_key(root, KEY_ESCAPE)
+		assert_true(not panel.visible, "first Esc closes Settings")
+		assert_eq(review._line_active, in_line, "first Esc preserves the side line")
+		if in_line:
+			await _review_key(root, KEY_ESCAPE)
+			assert_true(not review._line_active, "second Esc returns to the game")
+			assert_eq(board.best_move_arrow, "e2e4")
+	# Both focus transitions must retain Settings access while Review is visible.
+	for focused in [false, true]:
+		await _review_key(root, KEY_F11)
+		assert_eq(main.focus, focused)
+		await _review_key(root, KEY_COMMA, true)
+		assert_true(panel.is_visible_in_tree(), "Settings opens in Review with focus=%s" % focused)
+		if panel.is_visible_in_tree():
+			await _review_key(root, KEY_ESCAPE)
+	# Rematching must reinstate the focused game's shortcut restriction.
+	await _review_key(root, KEY_SPACE)
+	await _wait_start(main)
+	assert_true(main.focus and not review.visible, "rematch keeps focused gameplay")
+	assert_true(main.board_view.game != played_game)
+	await _review_key(root, KEY_COMMA, true)
+	assert_true(not panel.is_visible_in_tree(), "Settings stays unavailable after a focused rematch")
+	main.free()
+	root.size = old_size
+
+
+func test_settings_open_in_review_while_focused_draw_notice_is_visible():
+	var root: Window = Engine.get_main_loop().root
+	var old_size := root.size
+	root.size = Vector2i(1280, 800)
+	var time := FakeTime.new()
+	var main = await _session(time)
+	await _review_key(root, KEY_F11)
+	assert_true(main.focus, "game enters focus mode")
+	assert_true(main.board_view.play("e2e4"))
+	var at: Vector2 = main.draw_button.get_global_rect().get_center()
+	await _review_mouse_motion(root, at)
+	await _review_mouse_button(root, at, true)
+	await _review_mouse_button(root, at, false)
+	assert_true(main._draw_offered, "real Offer draw button sends the offer")
+	main.maia.evaluation = -2.0
+	main._on_maia_move("e7e5")
+	assert_eq(main.board_view.game.reason, "agreement")
+	assert_true(main.draw_notice.is_visible_in_tree(), "agreement notice appears in focus")
+	await Engine.get_main_loop().process_frame
+	var open_review = main.board_view.get_node("GameOver/Panel/Content/Review")
+	at = open_review.get_global_rect().get_center()
+	await _review_mouse_motion(root, at)
+	await _review_mouse_button(root, at, true)
+	await _review_mouse_button(root, at, false)
+	var review = main.review
+	assert_true(review.visible and main.focus, "result card opens Review in focus mode")
+	review.receive_position(0, {"best_move": "e2e4"})
+	review.get_node("Margin/Content/ReviewBody/Side/Navigation/First").pressed.emit()
+	var board = review.get_node("Margin/Content/ReviewBody/BoardView")
+	assert_eq(board.best_move_arrow, "e2e4", "stored arrow is present")
+	var panel = main.settings_screen.get_node("Panel")
+	var form = panel.get_node("Center/Box/Form")
+	var arrow_box: CheckBox
+	for i in range(0, form.get_child_count(), 2):
+		if form.get_child(i).text == "Best move arrow":
+			arrow_box = form.get_child(i + 1)
+	assert_true(arrow_box != null, "arrow row exists")
+	for in_line in [false, true]:
+		if in_line:
+			assert_true(board.play("d2d4"))
+		assert_true(main.draw_notice.is_visible_in_tree() and main.draw_notice_timer.time_left > 0,
+				"shortcut is tested before the notice expires, line=%s" % in_line)
+		await _review_key(root, KEY_COMMA, true)
+		assert_true(panel.is_visible_in_tree(), "Ctrl+, opens Settings during the draw notice, line=%s" % in_line)
+		if not panel.is_visible_in_tree() or arrow_box == null:
+			continue
+		await Engine.get_main_loop().process_frame
+		for enabled in [false, true]:
+			at = arrow_box.get_global_rect().get_center()
+			await _review_mouse_motion(root, at)
+			await _review_mouse_button(root, at, true)
+			await _review_mouse_button(root, at, false)
+			assert_eq(main.preferences.get_value("best_move_arrow"), enabled, "real checkbox toggles setting")
+			assert_eq(board.best_move_arrow, "e2e4" if enabled and not in_line else "",
+					"arrow follows the checkbox immediately and stays absent in a line")
+		await _review_key(root, KEY_ESCAPE)
+		assert_true(not panel.visible, "Esc closes Settings")
+		assert_eq(review._line_active, in_line, "closing Settings preserves the line")
+		if in_line:
+			await _review_key(root, KEY_ESCAPE)
+			assert_true(not review._line_active, "second Esc returns to the game")
+			assert_eq(board.best_move_arrow, "e2e4")
+		assert_true(main.draw_notice.is_visible_in_tree() and main.draw_notice_timer.time_left > 0,
+				"Settings leaves the live draw notice intact, line=%s" % in_line)
+	main.free()
+	root.size = old_size

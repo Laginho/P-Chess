@@ -16,6 +16,7 @@ const DEFAULTS := {
 	"click_click": false,
 	"auto_queen": "off",
 	"legal_dots": true,
+	"best_move_arrow": true,
 	"animation_ms": 120,
 	"board_theme": "brown",
 	"piece_theme": "cburnett",

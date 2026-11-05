@@ -21,6 +21,7 @@ const Badges = preload("res://bot/badges.gd")
 var analysis_bridge_factory: Callable = func(): return Uci.new("engine/stockfish/stockfish.exe", "Stockfish")
 var analyser_factory: Callable = func(bridge): return Analyser.new(bridge)
 var analysis_queue
+var settings_panel: Control
 var _queue_path := ""
 var _queue_was_pending := false
 var _analysis_bridge
@@ -34,6 +35,15 @@ var _pgn := ""
 var _url := ""
 var _game_moves := PackedStringArray()
 var _ply := 0
+var _line_active := false
+var _line_moves := PackedStringArray()
+var _line_index := 0
+var _line_rows: Array[TreeItem] = []
+var best_move_arrow_enabled := true:
+	set(value):
+		best_move_arrow_enabled = value
+		if is_node_ready():
+			_update_board_annotations()
 var _positions := []
 var _classes := []
 var _icons := {}
@@ -136,6 +146,7 @@ func _ready() -> void:
 	# An error can appear after layout settles: place it when it shows.
 	$Margin/Content/AnalysisError.visibility_changed.connect(_layout_review)
 	_graph.ply_selected.connect(_show_ply.bind(true))
+	_board_view.move_played.connect(_on_board_move)
 	_board_view.resized.connect(_update_player_labels)
 	_result.resized.connect(_layout_review)
 	$Margin/Content/ReviewBody/Side.resized.connect(_layout_review)
@@ -291,6 +302,7 @@ func _ready() -> void:
 	_resize_classes()
 	visibility_changed.connect(func():
 		if not visible:
+			_discard_line()
 			_cancel_analysis())
 	_moves.select_mode = Tree.SELECT_SINGLE
 	var clocks := Control.new()
@@ -312,16 +324,26 @@ func _ready() -> void:
 		var selected := _moves.get_selected()
 		if selected:
 			var ply = selected.get_metadata(_moves.get_selected_column())
-			if ply != null:
-				_show_ply(ply, true))
+			if ply is Dictionary:
+				if ply.has("back"):
+					_back_to_game.call_deferred()
+				else:
+					_show_line.call_deferred(ply.index, true)
+			elif ply != null:
+				if _line_active:
+					_show_ply.call_deferred(ply, true)
+				else:
+					_show_ply(ply, true))
+	_moves.button_clicked.connect(func(_item: TreeItem, _column: int, _id: int, _button: int):
+		_back_to_game.call_deferred())
 	_moves.set_column_title(0, "Move")
 	_moves.set_column_title(1, "White")
 	_moves.set_column_title(2, "Black")
 	_moves.set_column_expand(0, false)
 	_moves.set_column_custom_minimum_width(0, 40)
 	$Margin/Content/ReviewBody/Side/Navigation/First.pressed.connect(func(): _show_ply(0, true))
-	$Margin/Content/ReviewBody/Side/Navigation/Previous.pressed.connect(func(): _show_ply(_ply - 1, true))
-	$Margin/Content/ReviewBody/Side/Navigation/Next.pressed.connect(func(): _show_ply(_ply + 1, true))
+	$Margin/Content/ReviewBody/Side/Navigation/Previous.pressed.connect(func(): _step(-1))
+	$Margin/Content/ReviewBody/Side/Navigation/Next.pressed.connect(func(): _step(1))
 	$Margin/Content/ReviewBody/Side/Navigation/Last.pressed.connect(func(): _show_ply(_game_moves.size(), true))
 	$Margin/Content/Actions/CopyPgn.pressed.connect(func(): copy_text.call(_pgn))
 	$Margin/Content/Actions/Lichess.pressed.connect(func(): open_browser.call(_url))
@@ -515,6 +537,7 @@ func _place_rules() -> void:
 
 func _resize_classes() -> void:
 	var compact := _compact()
+	var collapsed := compact or _line_active
 	var side: Control = $Margin/Content/ReviewBody/Side
 	side.custom_minimum_size.x = 190 if compact else 220
 	# 1280 wide: a 680 board beside a 460 column, as drawn.
@@ -539,8 +562,8 @@ func _resize_classes() -> void:
 	$Margin/Content/ReviewBody/Side/Summary/AccuracyCards.columns = 2 if compact else 4
 	$Margin/Content/ReviewBody/Side/Summary.custom_minimum_size.y = 88 if compact else 44
 	var unanalysed: bool = $Margin/Content/ReviewBody/Side/UnanalysedNotice.visible
-	$Margin/Content/ReviewBody/Side/ClassToggle.visible = compact and not unanalysed
-	$Margin/Content/ReviewBody/Side/Counts.visible = not compact and not unanalysed
+	$Margin/Content/ReviewBody/Side/ClassToggle.visible = collapsed and not unanalysed
+	$Margin/Content/ReviewBody/Side/Counts.visible = not collapsed and not unanalysed
 	$Margin/Content/ReviewBody/Side/ClassHelp.visible = not unanalysed
 	$Margin/Content/ReviewBody/Side/AccuracyHelp.visible = not unanalysed
 	_moves.visible = true
@@ -717,14 +740,19 @@ func _cancel_analysis() -> void:
 
 # Handle review shortcuts before focused controls consume them as GUI input.
 func _input(event: InputEvent) -> void:
+	if settings_panel and settings_panel.visible:
+		return
 	if visible and event is InputEventKey and event.is_pressed() and not event.is_echo() \
 			and event.keycode == KEY_SPACE:
 		get_viewport().set_input_as_handled()
 		if not _from_history:
 			rematch_requested.emit()
-	elif visible and _from_history and event is InputEventKey and event.is_pressed() and not event.is_echo() and event.keycode == KEY_ESCAPE:
+	elif visible and event is InputEventKey and event.is_pressed() and not event.is_echo() and event.keycode == KEY_ESCAPE and (_line_active or _from_history):
 		get_viewport().set_input_as_handled()
-		back_history_requested.emit()
+		if _line_active:
+			_back_to_game()
+		else:
+			back_history_requested.emit()
 	elif visible and event is InputEventKey and event.is_pressed() and not event.is_echo() and event.keycode == KEY_F:
 		get_viewport().set_input_as_handled()
 		_board_view.flipped = not _board_view.flipped
@@ -732,7 +760,7 @@ func _input(event: InputEvent) -> void:
 		_update_eval_bar()
 	elif visible and event is InputEventKey and event.is_pressed() and not event.is_echo() and event.keycode in [KEY_LEFT, KEY_RIGHT]:
 		get_viewport().set_input_as_handled()
-		_show_ply(_ply + (-1 if event.keycode == KEY_LEFT else 1), true)
+		_step(-1 if event.keycode == KEY_LEFT else 1)
 
 
 func _update_player_labels() -> void:
@@ -759,22 +787,131 @@ func _update_player_labels() -> void:
 		dot.add_theme_stylebox_override("panel", style)
 
 
+# A single disposable variation branches from _ply; its cursor may also sit at the branch.
+func _on_board_move(_san: String) -> void:
+	var move: String = _board_view.game.moves[-1]
+	if not _line_active:
+		if _ply < _game_moves.size() and move == _game_moves[_ply]:
+			_show_ply(_ply + 1, false, true)
+			return
+		_line_active = true
+		_line_index = 0
+		_line_moves.clear()
+		_resize_classes()
+	if _line_index >= _line_moves.size() or _line_moves[_line_index] != move:
+		_line_moves.resize(_line_index)
+		_line_moves.append(move)
+	_line_index += 1
+	_build_line_rows()
+	_show_line(_line_index, false, true)
+
+
+func _build_line_rows() -> void:
+	for row in _line_rows:
+		row.free()
+	_line_rows.clear()
+	var root := _moves.get_root()
+	var anchor: TreeItem = _move_rows[_ply - 1] if _ply > 0 else null
+	var board = Board.from_fen(_positions[_ply].fen)
+	for i in _line_moves.size():
+		var row := _moves.create_item(root)
+		if anchor:
+			row.move_after(anchor)
+		elif root.get_first_child() != row:
+			row.move_before(root.get_first_child())
+		anchor = row
+		var number := _ply + i
+		row.set_text(1, "%d%s%s" % [number / 2 + 1, ". " if number % 2 == 0 else "… ", board.san(_line_moves[i])])
+		row.set_expand_right(1, true)
+		row.set_custom_color(1, Color("7db8ee"))
+		row.set_custom_bg_color(1, Color("263e50"), true)
+		row.set_metadata(1, {"index": i + 1})
+		for column in [0, 2]:
+			row.set_selectable(column, false)
+		_line_rows.append(row)
+		board.make_move(_line_moves[i])
+	var back := _moves.create_item(root)
+	if anchor:
+		back.move_after(anchor)
+	back.set_text(1, "Back to game")
+	back.set_custom_color(1, Color("7db8ee"))
+	back.set_metadata(1, {"back": true})
+	# The text and the adjacent button both return to the game.
+	back.add_button(2, _svg('<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7db8ee" stroke-width="2"><path d="M10 5l-7 7 7 7M3 12h12a6 6 0 0 1 0 12"/></svg>'), 0, false, "Back to game")
+	_line_rows.append(back)
+
+
+func _show_line(index: int, announce := false, already_played := false) -> void:
+	if not _line_active:
+		return
+	var before := _line_index
+	_line_index = clampi(index, 0, _line_moves.size())
+	var position = Game.new()
+	for i in _ply:
+		position.play(_game_moves[i])
+	var san := ""
+	for i in _line_index:
+		if i == _line_index - 1:
+			san = position.board.san(_line_moves[i])
+		position.play(_line_moves[i])
+	if not already_played:
+		_board_view.game = position
+	_moves.set_block_signals(true)
+	if _line_index > 0:
+		_line_rows[_line_index - 1].select(1)
+	else:
+		_moves.deselect_all()
+	_moves.set_block_signals(false)
+	if announce and before != _line_index and _line_index > 0:
+		_board_view.request_move_sounds(san)
+	_update_board_annotations()
+	_update_eval_bar()
+	_board_view.queue_redraw()
+
+
+func _step(delta: int) -> void:
+	if _line_active:
+		_show_line(_line_index + delta, true)
+	else:
+		_show_ply(_ply + delta, true)
+
+
+func _discard_line() -> void:
+	if not _line_active:
+		return
+	_line_active = false
+	_line_index = 0
+	_line_moves.clear()
+	for row in _line_rows:
+		row.free()
+	_line_rows.clear()
+	_resize_classes()
+
+
+func _back_to_game() -> void:
+	_show_ply(_ply)
+
+
 # Navigation (announce) plays the shown last move's sounds once, as the game did; opening the review is silent.
-func _show_ply(ply: int, announce := false) -> void:
+func _show_ply(ply: int, announce := false, already_played := false) -> void:
+	_discard_line()
 	var before := _ply
 	_ply = clampi(ply, 0, _game_moves.size())
+	_moves.set_block_signals(true)
 	if _ply > 0 and _ply <= _move_rows.size():
 		_move_rows[_ply - 1].select((_ply - 1) % 2 + 1)
 		_moves.ensure_cursor_is_visible.call_deferred()
 	elif _moves.get_selected() != null:
 		_moves.deselect_all()
+	_moves.set_block_signals(false)
 	var position = Game.new()
 	var san := ""
 	for i in _ply:
 		if i == _ply - 1:
 			san = position.board.san(_game_moves[i])
 		position.play(_game_moves[i])
-	_board_view.game = position
+	if not already_played:
+		_board_view.game = position
 	if announce and _ply != before and _ply > 0:
 		_board_view.request_move_sounds(san)
 	_update_board_annotations()
@@ -877,6 +1014,12 @@ func _update_board_annotations() -> void:
 	_board_view.review_square = ""
 	_board_view.review_arrow = ""
 	_board_view.review_icon = null
+	_board_view.best_move_arrow = ""
+	if _line_active and _line_index > 0:
+		_board_view.queue_redraw()
+		return
+	if best_move_arrow_enabled and not _positions.is_empty() and not _board_view.game.is_over():
+		_board_view.best_move_arrow = _positions[_ply].get("best_move", "")
 	if _ply > 0:
 		var before: Dictionary = _positions[_ply - 1]
 		_board_view.review_arrow = before.get("best_move", "")
@@ -895,7 +1038,7 @@ func _update_eval_bar() -> void:
 	_eval_bar.flipped = _board_view.flipped
 	_eval_bar.white_fraction = 0.5
 	_eval_bar.get_node("Score").text = ""
-	if _positions.is_empty() or not _positions[_ply].has("pv"):
+	if (_line_active and _line_index > 0) or _positions.is_empty() or not _positions[_ply].has("pv"):
 		return
 	var position: Dictionary = _positions[_ply]
 	var line: Dictionary = position.pv[0] if not position.pv.is_empty() else {"cp": position.get("terminal_score", 0)}
@@ -913,6 +1056,7 @@ func _update_eval_bar() -> void:
 
 func present(game, clocks: Array, settings: Dictionary, result_text: String,
 		catalog: Array = [], repertoire: Array = [], check_repertoire := false) -> void:
+	_discard_line()
 	_from_history = false
 	_queue_was_pending = false
 	$Margin/Content/ReviewBody/Side/UnanalysedNotice.hide()
