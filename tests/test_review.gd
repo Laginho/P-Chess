@@ -1613,8 +1613,11 @@ func test_settings_remain_available_in_review_after_focused_game():
 		assert_eq(board.best_move_arrow, "", "arrow clears immediately")
 		var flipped: bool = board.flipped
 		var moves: PackedStringArray = board.game.moves.duplicate()
-		for key in [KEY_F, KEY_LEFT, KEY_RIGHT, KEY_SPACE]:
+		for key in [KEY_F, KEY_LEFT, KEY_RIGHT]:
 			await _review_key(root, key)
+		# Direction keys can move Settings focus to another row.
+		arrow_box.grab_focus()
+		await _review_key(root, KEY_SPACE)
 		assert_true(review.visible and main.board_view.game == played_game, "Space stays with Settings")
 		assert_eq(board.flipped, flipped, "F stays with Settings")
 		assert_eq(board.game.moves, moves, "arrows stay with Settings")
