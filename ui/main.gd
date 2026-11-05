@@ -41,7 +41,7 @@ var name_dialog := NameDialog.instantiate()
 var analysis_queue
 var review_analysis_path := ""
 var resign_key := ResignKey.new(Time.get_ticks_msec)
-# Only the board and the clocks show (§8.7).
+# Focus keeps the board, clocks and game actions visible.
 var focus := false
 var _playing_premove := false
 var _draw_offered := false
@@ -60,7 +60,11 @@ var _maia_score := 0
 var _match_games := 0
 var _show_match_score := false
 var _resign_style := StyleBoxFlat.new()
-var _notice_before_focus := false
+# Callables keep the real window transition observable on headless DisplayServers too.
+var window_mode_get: Callable = DisplayServer.window_get_mode
+var window_mode_set: Callable = DisplayServer.window_set_mode
+var _window_mode_before_focus := DisplayServer.WINDOW_MODE_WINDOWED
+var _notice_rect_before_focus := Rect2()
 
 
 # Esc resigns on a second press within 2 s of the first (§7). The time source returns milliseconds.
@@ -153,8 +157,7 @@ func _ready() -> void:
 	$Layout/Side/Actions/NewGameButton.pressed.connect(_show_home)
 	$Layout/Side/Actions/RematchButton.pressed.connect(func(): _start(rematch(settings)))
 	draw_notice_timer.timeout.connect(func():
-		draw_notice.hide()
-		_notice_before_focus = false)
+		draw_notice.hide())
 	setup.started.connect(func(choice):
 		var saved: Dictionary = choice.duplicate()
 		saved.colour_choice = ["w", "b", "random"][setup.get_node("Center/Form/Colour").selected]
@@ -176,6 +179,7 @@ func _ready() -> void:
 	$Layout.sort_children.connect(func(): _place_focus_clocks.call_deferred())
 	board_view.resized.connect(_place_focus_clocks)
 	$FocusClocks.resized.connect(_place_focus_clocks)
+	$FocusActions.resized.connect(_place_focus_clocks)
 	$Layout/BoardView/ResizeGrip.size_requested.connect(_resize_board)
 	_fit_board()
 	if analysis_queue == null:
@@ -214,14 +218,19 @@ func _draw() -> void:
 func _process(_delta: float) -> void:
 	if clock:
 		clock.tick()
+	_update_resign_button()
+
+
+func _update_resign_button() -> void:
 	var confirming: bool = clock != null and not board_view.game.is_over() and resign_key.armed()
 	var bar: ProgressBar = resign_button.get_node("Bar")
 	bar.visible = confirming
 	if confirming:
 		bar.value = maxf(0, 2000 - (resign_key._now.call() - resign_key._armed_at))
 	# Restyled only when the state flips, not every frame.
-	if resign_button.text != ("Click again to resign" if confirming else "Resign"):
-		resign_button.text = "Click again to resign" if confirming else "Resign"
+	var resign_text := "Click again to resign" if confirming else ("" if focus else "Resign")
+	if resign_button.text != resign_text:
+		resign_button.text = resign_text
 		resign_button.clip_text = confirming
 		resign_button.add_theme_font_override("font", get_theme_font("font", "BoldText" if confirming else "SemiboldText"))
 		for state in ["normal", "hover"]:
@@ -403,7 +412,6 @@ func _start(new_settings: Dictionary) -> void:
 	draw_button.disabled = false
 	draw_notice.hide()
 	draw_notice_timer.stop()
-	_notice_before_focus = false
 	maia.clock = clock
 	maia.control = settings.control
 	maia.level = settings.level
@@ -572,9 +580,23 @@ func _set_flipped(flipped: bool) -> void:
 
 
 func _set_focus(on: bool) -> void:
-	if on and not focus:
-		_notice_before_focus = draw_notice.visible
 	if on != focus:
+		if on:
+			_notice_rect_before_focus = draw_notice.get_rect()
+			_window_mode_before_focus = window_mode_get.call()
+			window_mode_set.call(DisplayServer.WINDOW_MODE_FULLSCREEN)
+		else:
+			window_mode_set.call(_window_mode_before_focus)
+		# Move the existing controls: cooldown, confirmation and notice timers keep running.
+		for button in [draw_button, resign_button]:
+			button.reparent($FocusActions if on else $Layout/Side/Actions, false)
+		if not on:
+			$Layout/Side/Actions.move_child(draw_button, 1)
+			$Layout/Side/Actions.move_child(resign_button, 2)
+		draw_notice.reparent(self if on else $Layout/Side, false)
+		if not on:
+			draw_notice.position = _notice_rect_before_focus.position
+			draw_notice.size = _notice_rect_before_focus.size
 		var destination: Node = $FocusClocks if on else $Layout/Side
 		for row in [white_clock.get_parent(), black_clock.get_parent()]:
 			row.reparent(destination, false)
@@ -584,15 +606,18 @@ func _set_focus(on: bool) -> void:
 		destination.move_child(player, -1)
 		if not on:
 			$Layout/Side.move_child(claim_draw.get_parent(), -1)
+			$Layout/Side.move_child(draw_notice, 3)
 	focus = on
 	$Layout/Side.visible = not on
 	$Layout/BoardOffset.visible = not on
 	$Layout/BoardGap.visible = not on
 	$Layout/BoardView/ResizeGrip.visible = not on
 	$FocusClocks.visible = on
+	$FocusActions.visible = on
+	draw_button.text = String.chr(189) if on else String.chr(189) + "  Offer draw"
+	_update_resign_button()
 	_fit_board()
 	_place_focus_clocks.call_deferred()
-	draw_notice.visible = not on and _notice_before_focus
 	for node in [move_list, claim_draw.get_parent(), $Layout/Side/Actions, settings_screen]:
 		node.visible = not on
 	# The game-over card shows the result; the side panel keeps only a history failure.
@@ -612,6 +637,11 @@ func _place_focus_clocks() -> void:
 		$FocusClocks.size = $FocusClocks.get_combined_minimum_size()
 		$FocusClocks.position = Vector2(board.position.x - $FocusClocks.size.x - 40,
 				board.get_center().y - $FocusClocks.size.y / 2) - global_position
+		$FocusActions.size = $FocusActions.get_combined_minimum_size()
+		$FocusActions.position = Vector2(board.end.x + 40,
+				board.get_center().y - $FocusActions.size.y / 2) - global_position
+		draw_notice.size = Vector2($FocusActions.size.x, 50)
+		draw_notice.position = $FocusActions.position + Vector2(0, $FocusActions.size.y + 12)
 
 
 # Like _input: Maia's think-time timer can fire after its clock hit zero but before the next
@@ -626,8 +656,7 @@ func _on_maia_move(move: String) -> void:
 		var accepted := MaiaPlayer.accepts_draw(maia.evaluation, board_view.game.board,
 				clock.left(board_view.game.board.side_to_move), Clock.CONTROLS[settings.control][0])
 		draw_notice.text = "Draw agreed" if accepted else "Maia declined"
-		draw_notice.visible = not focus
-		_notice_before_focus = focus
+		draw_notice.show()
 		draw_notice_timer.start()
 		if accepted:
 			board_view.game.agree_draw()

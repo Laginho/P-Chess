@@ -690,7 +690,7 @@ func test_draw_offer_does_not_pass_through_settings_and_resets_on_rematch():
 	await _resign_and_rematch(main)
 	assert_true(not button.disabled, "new game resets cooldown")
 	main._set_focus(true)
-	assert_true(not button.is_visible_in_tree(), "focus mode hides actions")
+	assert_true(button.is_visible_in_tree(), "focus mode keeps draw available")
 	main._set_focus(false)
 	assert_true(button.is_visible_in_tree(), "actions return after focus mode")
 	main.free()
@@ -1176,7 +1176,7 @@ func test_flip_keeps_player_details_hidden_in_focus_mode():
 	main.free()
 
 
-func test_focus_centres_board_and_keeps_only_clocks_until_restored():
+func test_focus_centres_board_with_clocks_and_actions_until_restored():
 	var main = await _session(ManualWaits.new())
 	main.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
 	main.size = Vector2(1422, 800) # 1920x1080 with the project's canvas stretch.
@@ -1194,13 +1194,96 @@ func test_focus_centres_board_and_keeps_only_clocks_until_restored():
 	assert_true(bot.end.x <= board.position.x and player.end.x <= board.position.x and bot.position.y < player.position.y, "Maia above player, left of board")
 	assert_true(board.position.x - bot.end.x <= 60 and board.position.x - player.end.x <= 60, "clocks stay close to the board")
 	assert_true(absf((bot.get_center().y + player.get_center().y) / 2 - board.get_center().y) <= 1, "clocks straddle the board centre")
-	assert_true(not main.get_node("Layout/BoardView/ResizeGrip").is_visible_in_tree(), "only board and clocks show")
+	assert_true(not main.get_node("Layout/BoardView/ResizeGrip").is_visible_in_tree(), "resize grip stays hidden")
 	main.board_view.game.resign(main.human)
 	main._show_result()
 	assert_true(main.board_view.get_node("GameOver").is_visible_in_tree(), "game-over card appears in focus")
 	_key(main, KEY_F11)
 	await _laid_out(main)
 	assert_true(main.get_node("Layout/Side").is_visible_in_tree() and main.draw_notice.visible, "normal panel and notice return")
+	main.free()
+
+
+func test_focus_restores_window_mode_on_f11_and_home():
+	for prior in [DisplayServer.WINDOW_MODE_WINDOWED, DisplayServer.WINDOW_MODE_MAXIMIZED]:
+		for leave_home in [false, true]:
+			var main = await _session(ManualWaits.new())
+			var writes := []
+			main.window_mode_get = func(): return prior
+			main.window_mode_set = func(mode): writes.append(mode)
+			_key(main, KEY_F11)
+			main._set_focus(true) # Flip/rematch refresh must not overwrite saved mode.
+			assert_eq(writes, [DisplayServer.WINDOW_MODE_FULLSCREEN])
+			if leave_home:
+				main._show_home()
+			else:
+				_key(main, KEY_F11)
+			main._set_focus(false)
+			assert_eq(writes, [DisplayServer.WINDOW_MODE_FULLSCREEN, prior], "restores prior mode exactly once")
+			main.free()
+
+
+func test_focus_actions_keep_confirmation_cooldown_and_notice():
+	var main = await _session(ManualWaits.new())
+	main.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	main.size = Vector2(1422, 800)
+	await _laid_out(main)
+	var side_order := main.get_node("Layout/Side").get_children()
+	var action_order := main.get_node("Layout/Side/Actions").get_children()
+	var before := {}
+	for control in main.get_node("Layout").find_children("*", "Control"):
+		before[control] = control.get_global_rect()
+	_key(main, KEY_F11)
+	for i in 4:
+		await Engine.get_main_loop().process_frame
+	var board: Rect2 = main.board_view.get_global_rect()
+	var draw: Rect2 = main.draw_button.get_global_rect()
+	var resign: Rect2 = main.resign_button.get_global_rect()
+	assert_true(main.draw_button.is_visible_in_tree() and main.resign_button.is_visible_in_tree())
+	assert_true(draw.position.x > board.end.x and resign.position.x == draw.position.x, "actions right of board")
+	assert_true(draw.end.y < resign.position.y, "actions stacked")
+	assert_true(absf((draw.get_center().y + resign.get_center().y) / 2 - board.get_center().y) <= 1)
+	_key(main, KEY_F11)
+	for i in 4:
+		await Engine.get_main_loop().process_frame
+	assert_eq(main.get_node("Layout/Side").get_children(), side_order)
+	assert_eq(main.get_node("Layout/Side/Actions").get_children(), action_order)
+	for control in before:
+		assert_eq(control.get_global_rect(), before[control], "restored rectangle for " + control.name)
+	main._set_focus(true)
+	main.draw_button.pressed.emit()
+	assert_true(main.draw_button.disabled, "offer cooldown starts in focus")
+	assert_true(main.board_view.play("e2e4"))
+	main._on_maia_move("e7e5") # No evaluation: decline, keeping the game alive.
+	assert_eq(main.draw_notice.text, "Maia declined")
+	assert_true(main.draw_notice.is_visible_in_tree(), "notice visible in focus")
+	main.draw_notice_timer.timeout.emit()
+	assert_true(not main.draw_notice.visible, "notice expires in focus")
+	main.resign_button.pressed.emit()
+	main._process(0)
+	assert_eq(main.resign_button.text, "Click again to resign")
+	assert_true(main.resign_button.get_node("Bar").visible)
+	assert_true(main.resign_button.get_minimum_size().x <= main.resign_button.size.x)
+	_key(main, KEY_ESCAPE)
+	assert_true(main.board_view.game.is_over(), "Esc shares confirmation with focused button")
+	assert_true(main.board_view.get_node("GameOver").is_visible_in_tree())
+	main._set_focus(false)
+	main.free()
+
+
+func test_focus_agreed_draw_notice_stays_visible_with_game_over_card():
+	var main = await _session(ManualWaits.new())
+	main._set_focus(true)
+	assert_true(main.board_view.play("e2e4"))
+	main.draw_button.pressed.emit()
+	main.maia.evaluation = -2.0
+	main._on_maia_move("e7e5")
+	assert_eq(main.board_view.game.reason, "agreement")
+	assert_eq(main.draw_notice.text, "Draw agreed")
+	assert_true(main.draw_notice.is_visible_in_tree(), "agreement notice appears in focus")
+	assert_true(main.board_view.get_node("GameOver").is_visible_in_tree())
+	main._set_focus(false)
+	assert_true(main.draw_notice.is_visible_in_tree(), "agreement notice survives leaving focus")
 	main.free()
 
 
