@@ -1,5 +1,5 @@
 # REV-009: Live classes for side-line moves
-Stage: to-implement
+Stage: implementing
 Status: ready-for-agent
 Blocked by: REV-008
 Review: human
@@ -41,3 +41,5 @@ Spec: `.scratch/review-explore/spec.md`. Each move you play in a side line gets 
 ## Comments
 
 - 2026-11-05 Written from the grill (spec.md). The proxy chose MultiPV 2 for the live search (not 3) so live classes match game classes.
+
+- 2026-11-05 Stage 2: ticket-approved seams are the live controller with a fake UCI bridge and Review with `analysis_bridge_factory`. Inspected callers: search/switch/stop, Review navigation/overwrite/terminal/hide, streamed game analysis, Classification.evaluate and its Miss/Great dependencies. Degenerate inputs to cover: one legal move, terminal after-position, absent game analysis, pending earlier classes, rapid switches, cache removal and engine failure.

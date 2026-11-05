@@ -131,3 +131,33 @@ func test_second_pv_first_never_becomes_the_primary_score_or_arrow():
 	live.stop()
 	live.free()
 	bridge.free()
+
+
+func test_settled_node_result_is_frozen_and_cached_for_the_line():
+	var bridge := FakeBridge.new()
+	var live = load("res://engine/live_analysis.gd").new(bridge)
+	assert_true(live.has_method("result"), "settled positions are available by FEN")
+	if not live.has_method("result"):
+		live.free()
+		bridge.free()
+		return
+	live.search(START)
+	var budget: int = load("res://core/tunables.gd").ANALYSIS_NODES
+	bridge.callbacks[0].call("info depth 15 multipv 1 score cp 30 nodes %d pv e2e4" % (budget - 1))
+	bridge.callbacks[0].call("info depth 15 multipv 2 score cp 10 nodes %d pv d2d4" % (budget - 1))
+	assert_true(live.result(START).is_empty(), "below budget remains undecided")
+	bridge.callbacks[0].call("info depth 16 multipv 1 score cp 35 nodes %d pv e2e4" % budget)
+	assert_true(live.result(START).is_empty(), "wait for the second line of the completed depth")
+	bridge.callbacks[0].call("info depth 16 multipv 2 score cp 15 nodes %d pv d2d4" % budget)
+	var result: Dictionary = live.result(START)
+	assert_eq(result.get("fen"), START)
+	assert_eq(result.get("best_move"), "e2e4")
+	assert_eq(result.get("pv", []).size(), 2)
+	bridge.callbacks[0].call("info depth 17 multipv 1 score cp 900 nodes 4000000 pv g1f3")
+	assert_eq(live.result(START), result, "later unlimited updates do not change the class input")
+	result.clear()
+	assert_true(not live.result(START).is_empty(), "callers cannot mutate cached analysis")
+	live.stop()
+	assert_true(live.result(START).is_empty(), "leaving the line releases its cache")
+	live.free()
+	bridge.free()
