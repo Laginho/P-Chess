@@ -231,8 +231,13 @@ func _update_resign_button() -> void:
 	var resign_text := "Click again to resign" if confirming else ("" if focus else "Resign")
 	if resign_button.text != resign_text:
 		resign_button.text = resign_text
-		resign_button.clip_text = confirming
+		# Focus mode: the square widens to one line rather than wrapping inside 44 px.
+		resign_button.clip_text = confirming and not focus
 		resign_button.add_theme_font_override("font", get_theme_font("font", "BoldText" if confirming else "SemiboldText"))
+		if focus:
+			# Godot's minimum size leaves out an expanded icon, which this button still draws beside the label.
+			var label := resign_button.get_theme_font("font").get_string_size(resign_text, HORIZONTAL_ALIGNMENT_LEFT, -1, resign_button.get_theme_font_size("font_size")).x
+			resign_button.custom_minimum_size.x = label + 18 + 8 + 32 if confirming else 44.0
 		for state in ["normal", "hover"]:
 			if confirming:
 				resign_button.add_theme_stylebox_override(state, _resign_style)
@@ -590,6 +595,9 @@ func _set_focus(on: bool) -> void:
 		# Move the existing controls: cooldown, confirmation and notice timers keep running.
 		for button in [draw_button, resign_button]:
 			button.reparent($FocusActions if on else $Layout/Side/Actions, false)
+			# Small icon squares beside the board; the resign confirmation widens only its own button.
+			button.custom_minimum_size = Vector2(44, 44) if on else Vector2(0, 44)
+			button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN if on else Control.SIZE_EXPAND_FILL
 		if not on:
 			$Layout/Side/Actions.move_child(draw_button, 1)
 			$Layout/Side/Actions.move_child(resign_button, 2)
@@ -640,7 +648,7 @@ func _place_focus_clocks() -> void:
 		$FocusActions.size = $FocusActions.get_combined_minimum_size()
 		$FocusActions.position = Vector2(board.end.x + 40,
 				board.get_center().y - $FocusActions.size.y / 2) - global_position
-		draw_notice.size = Vector2($FocusActions.size.x, 50)
+		draw_notice.size = Vector2(draw_notice.get_combined_minimum_size().x, 50)
 		draw_notice.position = $FocusActions.position + Vector2(0, $FocusActions.size.y + 12)
 
 
