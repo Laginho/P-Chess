@@ -716,12 +716,15 @@ func _line_positions() -> Array:
 	for move in _line_moves:
 		board.make_move(move)
 		positions.append({"fen": board.to_fen()})
-	if _live_analysis != null:
-		for i in positions.size():
-			if not positions[i].has("pv"):
-				var cached: Dictionary = _live_analysis.result(positions[i].fen)
-				if not cached.is_empty():
-					positions[i] = cached
+	for i in positions.size():
+		# Agreed and claimed draws end the game, but exploration can continue.
+		# A terminal score grades the last game move, never a new continuation.
+		if i < positions.size() - 1 and positions[i].has("pv") and positions[i].pv.is_empty():
+			positions[i] = {"fen": positions[i].fen}
+		if _live_analysis != null and not positions[i].has("pv"):
+			var cached: Dictionary = _live_analysis.result(positions[i].fen)
+			if not cached.is_empty():
+				positions[i] = cached
 	return positions
 
 
