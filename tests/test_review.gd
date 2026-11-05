@@ -2041,7 +2041,7 @@ func test_side_class_matches_stored_game_class_and_stays_frozen():
 	var reference = Game.new()
 	reference.play("e2e4")
 	reference.play("c7c5")
-	review.present(reference, [], SETTINGS, "")
+	review.present(reference, [180000, 180000], SETTINGS, "")
 	var data := [
 		{"pv": [{"cp": 0, "moves": ["e2e4"]}, {"cp": -10, "moves": ["d2d4"]}], "best_move": "e2e4"},
 		{"pv": [{"cp": 0, "moves": ["c7c5"]}, {"cp": -10, "moves": ["e7e5"]}], "best_move": "c7c5"},
@@ -2053,7 +2053,7 @@ func test_side_class_matches_stored_game_class_and_stays_frozen():
 	var game = Game.new()
 	game.play("e2e4")
 	game.play("e7e5")
-	review.present(game, [], SETTINGS, "")
+	review.present(game, [180000, 180000], SETTINGS, "")
 	review.receive_position(0, data[0])
 	review.receive_position(1, data[1])
 	review._show_ply(1)
