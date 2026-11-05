@@ -353,6 +353,7 @@ One build, `v0.0.2`, holds all of §15. Bruno then plays it, tunes every thresho
 | Stockfish fetch and release, analysis engine, analysis files (§15.3) | CI-004, REV-001, REV-002 |
 | Move classification and accuracy, headless (§15.4, §15.5) | REV-003, REV-004 |
 | The new review screen (§15.6) | REV-005, REV-006 |
+| Review side lines, live engine and live classes (§15.6, after v0.1.0: `.scratch/review-explore/`) | REV-007, REV-008, REV-009 |
 | History screen, delete, analysis queue (§15.7) | HIST-003, HIST-004, HIST-005, HIST-006 |
 | Home screen, searching screen, your name, profile (§15.8) | UI-016, UI-017, UI-018, UI-019 |
 | Repertoire from opening names, viewer and editor (§15.9) | OPEN-005, OPEN-006, OPEN-007 |
