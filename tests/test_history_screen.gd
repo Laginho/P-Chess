@@ -69,7 +69,7 @@ func test_open_review_from_history_and_return_with_escape():
 		history_button.pressed.emit()
 		var screen = main.get_node("HistoryScreen")
 		assert_true(screen.visible)
-		var card = screen.get_node("Margin/Content/Cards/List").get_child(0)
+		var card = _history_cards(screen.get_node("Margin/Content/Cards/List"))[0]
 		card.get_node("Details/HBoxContainer/Review").pressed.emit()
 		var review = main.get_node("Review")
 		assert_true(review.visible)
@@ -112,7 +112,7 @@ func test_black_player_and_cached_analysis_appear_on_card():
 	var screen = load("res://ui/history_screen.tscn").instantiate()
 	Engine.get_main_loop().root.add_child(screen)
 	screen.present(history, Settings.new(folder.path_join("settings.cfg")))
-	var card = screen.get_node("Margin/Content/Cards/List").get_child(0)
+	var card = _history_cards(screen.get_node("Margin/Content/Cards/List"))[0]
 	var text: String = card.get_node("Details/Info/Players").text
 	assert_true(text.contains("You") and text.contains("Maia 1500"), "human name comes first with both colours")
 	assert_true(card.get_node("Details/Info/Metadata/Result").text.contains("Won"), "the game outcome is visible")
@@ -141,7 +141,7 @@ func test_history_review_uses_saved_repertoire_snapshot():
 	main.history.save(game, [60000], {"colour": "w", "level": "maia-1500", "control": "1+0"}, "", "", repertoire.lines, "w")
 	Engine.get_main_loop().root.add_child(main)
 	main.get_node("Home/Center/Form/History").pressed.emit()
-	var card = main.get_node("HistoryScreen/Margin/Content/Cards/List").get_child(0)
+	var card = _history_cards(main.get_node("HistoryScreen/Margin/Content/Cards/List"))[0]
 	card.get_node("Details/HBoxContainer/Review").pressed.emit()
 	assert_eq(_exit_rows(main.review), PackedStringArray(["Left repertoire · expected 1.e4"]), "markers come from the saved snapshot")
 	main.free()
@@ -167,10 +167,10 @@ func test_catalog_finishing_refreshes_visible_thumbnails():
 	Engine.get_main_loop().root.add_child(main)
 	main.get_node("Home/Center/Form/History").pressed.emit()
 	var list = main.get_node("HistoryScreen/Margin/Content/Cards/List")
-	assert_eq(list.get_child(0).get_node("Details/Thumbnail").game.moves.size(), 4)
+	assert_eq(_history_cards(list)[0].get_node("Details/Thumbnail").game.moves.size(), 4)
 	book.load_tsv("eco\tname\tpgn\nC20\tKing's Pawn\t1. e4 e5\n")
 	main.get_node("Setup/OpeningPicker").catalog_ready.emit("")
-	assert_eq(list.get_child(0).get_node("Details/Thumbnail").game.moves.size(), 2, "catalog completion refreshes the thumbnail")
+	assert_eq(_history_cards(list)[0].get_node("Details/Thumbnail").game.moves.size(), 2, "catalog completion refreshes the thumbnail")
 	main.free()
 	Storage.clean(folder)
 
@@ -195,13 +195,13 @@ func test_tabs_and_won_on_time_card():
 	var tabs = screen.get_node("Margin/Content/Header/Tabs")
 	assert_eq(tabs.current_tab, 1)
 	var cards = screen.get_node("Margin/Content/Cards/List")
-	assert_eq(cards.get_child_count(), 1)
-	if cards.get_child_count() > 0:
-		var text: String = cards.get_child(0).get_node("Details/Info/Players").text
+	assert_eq(_history_cards(cards).size(), 1)
+	if _history_cards(cards).size() > 0:
+		var text: String = _history_cards(cards)[0].get_node("Details/Info/Players").text
 		assert_true(text.contains("You") and text.contains("Maia 1500"))
-		assert_true(cards.get_child(0).get_node("Details/Info/Metadata/Result").text.contains("Won on time"))
+		assert_true(_history_cards(cards)[0].get_node("Details/Info/Metadata/Result").text.contains("Won on time"))
 	tabs.current_tab = 2
-	assert_eq(cards.get_child_count(), 0, "3+2 filters out 1+0")
+	assert_eq(_history_cards(cards).size(), 0, "3+2 filters out 1+0")
 	screen.free()
 	Storage.clean(folder)
 
@@ -321,7 +321,7 @@ func test_queue_progress_keeps_keyboard_focus_on_the_card():
 	Engine.get_main_loop().root.add_child(screen)
 	screen.present(history, Settings.new(folder.path_join("settings.cfg")))
 	queue.enqueue(path)
-	var review: Button = screen.get_node("Margin/Content/Cards/List").get_child(0).get_node("Details/HBoxContainer/Review")
+	var review: Button = _history_cards(screen.get_node("Margin/Content/Cards/List"))[0].get_node("Details/HBoxContainer/Review")
 	review.grab_focus()
 	runner.progress.emit(1, 2)
 	var focused = screen.get_viewport().gui_get_focus_owner()
@@ -479,7 +479,7 @@ func test_history_stale_analysis_shows_cached_accuracy_and_reason():
 	screen.analysis_queue = load("res://core/analysis_queue.gd").new(FakeQueueAnalyser.new(), folder.path_join("queue.cfg"))
 	Engine.get_main_loop().root.add_child(screen)
 	screen.present(history, Settings.new(folder.path_join("settings.cfg")))
-	var card = screen.get_node("Margin/Content/Cards/List").get_child(0)
+	var card = _history_cards(screen.get_node("Margin/Content/Cards/List"))[0]
 	var reason = card.find_child("StaleReason", true, false)
 	var white = card.find_child("WhiteAccuracy", true, false)
 	var black = card.find_child("BlackAccuracy", true, false)
@@ -498,3 +498,115 @@ func _exit_rows(review) -> PackedStringArray:
 		if row.get_text(1).begins_with("Left repertoire"):
 			rows.append(row.get_text(1))
 	return rows
+
+
+class PagingHistory extends History:
+	var records: Array = []
+	func games() -> Array:
+		return records.duplicate()
+	func thumbnail(_moves: PackedStringArray) -> Dictionary:
+		return {"ply": 0, "opening": ""}
+	func delete(path: String) -> bool:
+		records = records.filter(func(record): return record.path != path)
+		return true
+
+
+class PagingQueue extends RefCounted:
+	signal changed
+	var paths: Array = []
+	func enqueue(path: String) -> void:
+		paths.append(path)
+	func resume() -> void:
+		pass
+	func pending() -> Array:
+		return paths
+
+
+func _paging_screen():
+	var history := PagingHistory.new()
+	for index in 45:
+		var control := "60+0" if index < 42 else "180+2"
+		var days_ago := 0 if index < 8 else (1 if index < 16 else 14)
+		var today: int = Time.get_unix_time_from_datetime_string(Time.get_date_string_from_system() + "T00:00:00")
+		var date := Time.get_date_string_from_unix_time(today - days_ago * 86400)
+		history.records.append({"path": "user://paging-%02d.pgn" % index, "modified": 45 - index,
+			"game": {"headers": {"Date": date.replace("-", "."), "TimeControl": control, "White": "You", "Black": "Maia 1500"},
+			"moves": [], "result": "1-0"}})
+	# Deliberately shuffled by date and modification time; rendering restores newest first.
+	history.records.reverse()
+	var screen = load("res://ui/history_screen.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(screen)
+	screen.present(history, Settings.new("user://paging-unused-settings.cfg"))
+	return screen
+
+
+func test_date_sections_use_game_dates_and_monday_calendar_week():
+	var screen = load("res://ui/history_screen.tscn").instantiate()
+	var record := {"path": "2026-01-01.pgn", "game": {"headers": {}}}
+	for pair in [["2026.11.05", "Today"], ["2026.11.04", "Yesterday"],
+			["2026.11.02", "This week"], ["2026.11.01", "Earlier"], ["????.??.??", "Earlier"]]:
+		record.game.headers.Date = pair[0]
+		assert_eq(screen._date_group(record, "2026-11-05"), pair[1])
+	record.game.headers.Date = "2026.11.08"
+	assert_eq(screen._date_group(record, "2026-11-09"), "Yesterday", "Sunday remains Yesterday on Monday")
+	record.game.headers.Date = "2026.11.07"
+	assert_eq(screen._date_group(record, "2026-11-09"), "Earlier", "week starts Monday")
+	record.game.headers.Date = "2026.02.30"
+	assert_eq(screen._record_day(record), screen._parse_day("2026-01-01"), "invalid dates use filename")
+	screen.free()
+
+
+func test_paging_appends_preserves_cards_and_refresh_delete_keep_loaded_count():
+	var screen = _paging_screen()
+	var list = screen.get_node("Margin/Content/Cards/List")
+	assert_eq(screen._visible_cards().size(), 20)
+	var headings: Array = list.get_children().filter(func(node): return node is Label).map(func(node): return node.text)
+	assert_eq(headings, ["Today", "Yesterday", "Earlier"])
+	var original = screen._visible_cards()[0]
+	assert_eq(str(original.name), "paging-00.pgn".validate_node_name(), "game date then newest modification orders cards")
+	await Engine.get_main_loop().process_frame
+	await Engine.get_main_loop().process_frame
+	var scroll = screen.get_node("Margin/Content/Cards")
+	scroll.scroll_vertical = 100
+	var offset: int = scroll.scroll_vertical
+	list.get_node("ShowMore").pressed.emit()
+	await Engine.get_main_loop().process_frame
+	await Engine.get_main_loop().process_frame
+	assert_eq(screen._visible_cards().size(), 40)
+	assert_eq(screen._visible_cards()[0], original, "existing cards are retained")
+	assert_eq(scroll.scroll_vertical, offset, "append preserves scroll position")
+	assert_eq(list.get_children().filter(func(node): return node is Label).size(), 3, "page boundary does not repeat heading")
+	screen._refresh()
+	assert_eq(screen._visible_cards().size(), 40, "refresh retains loaded limit")
+	screen._delete_path = screen._tab_records[0].path
+	screen._confirm_delete(screen._delete_path)
+	assert_eq(screen._visible_cards().size(), 40, "delete backfills the loaded limit")
+	list.get_node("ShowMore").pressed.emit()
+	assert_eq(screen._visible_cards().size(), 44)
+	assert_true(not list.has_node("ShowMore"), "no footer after last page")
+	screen.get_node("Margin/Content/Header/Tabs").current_tab = 1
+	assert_eq(screen._visible_cards().size(), 20, "switching tabs resets the page")
+	assert_eq(screen.get_node("Margin/Content/Header/Tabs").get_tab_title(1), "1+0 41")
+	screen.free()
+
+
+func test_analyze_all_includes_unshown_games_and_selection_only_shown():
+	var screen = _paging_screen()
+	var queue := PagingQueue.new()
+	screen.analysis_queue = queue
+	var select = screen.get_node("Margin/Content/BatchActions/SelectAll")
+	select.button_pressed = true
+	assert_eq(screen._selected.size(), 20)
+	assert_eq(select.text, "20 selected")
+	screen.get_node("Margin/Content/Header/Tabs").current_tab = 1
+	assert_eq(screen._selected.size(), 0, "tab switch clears selection")
+	assert_eq(select.text, "Select shown")
+	screen.get_node("Margin/Content/BatchActions/AnalyzeAll").pressed.emit()
+	assert_eq(queue.paths.size(), 42, "Analyze all includes all matching records beyond page one")
+	assert_true(not queue.paths.has("user://paging-44.pgn"), "other tabs are excluded")
+	screen.free()
+
+
+# Date headings and the paging footer share the list with game cards.
+func _history_cards(list: Node) -> Array:
+	return list.get_children().filter(func(node): return node is PanelContainer)
