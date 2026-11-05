@@ -1,5 +1,5 @@
 # REV-007: Side lines in the Review, and the Best move arrow setting
-Stage: implementing
+Stage: to-review
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -54,3 +54,9 @@ Today the Review's `BoardView` already accepts moves for both sides, but nothing
 - 2026-11-05 Stage stopped (incomplete handoff): Stage left uncommitted work; saved for recovery. See /home/lage/Projects/P-Chess/.artifacts-build/lanes/review-explore/.scratch/run-log/REV-007-implement-20261105-172352.txt.runtime.json and run-log/recovery.txt; inspect the saved work before retrying.
 
 - 2026-11-05 Foreman: the stopped attempt never loaded `ticket-flow`. The skill was not installed for Codex on the Linux box, so the session worked as a plain coder: no ticket branch, no commits, no test-first, no handoff. That is environmental: the skills are now linked under `~/.agents/skills`, and Codex lists `ticket-flow`. Its uncommitted work is saved as stash `refs/sweatshop-recovery/95e8d923fd2e450182e6ddb1885b2a3f` (commit `a3bea32`; 8 files, +296/−14: `ui/review.gd`, `ui/board_view.gd`, `ui/main.gd`, `ui/settings.gd`, `core/settings.gd`, `docs/spec.md`, `tests/test_review.gd`, `tests/test_settings.gd`). The session said the gate passed with 526 tests, not checked. Stage 2 may reuse it (`git stash show -p a3bea32`), but under the normal flow: the tests must be seen red against the code without the fix, and the gate re-run for evidence. Back to `to-implement`.
+
+- 2026-11-05 Resolution: Added a disposable side line with branch navigation and exits, the default-on best-move arrow, and live Review board preferences. The full gate on commit `0f8a102` reported 528 passed, 0 failed; Lc0-dependent checks and the existing last-move pixel test skipped on this headless Linux run. A graphical Xvfb test verified the blue arrow appears and clears; disabling its draw call made the test fail. The settings test failed on the missing key before its implementation; the side-line scene test failed on missing line state before implementation.
+
+Acceptance: pending | Manual post-game and History Review exploration and all exit paths remain to be checked; automated scene and arrow checks are recorded above.
+Disclosure: pending | integration | Manual Review exploration in both entry paths remains outstanding; see this ticket's Verification section.
+Gate evidence: /tmp/REV-007-gate.json
