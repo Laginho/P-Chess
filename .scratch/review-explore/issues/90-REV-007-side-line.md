@@ -1,5 +1,5 @@
 # REV-007: Side lines in the Review, and the Best move arrow setting
-Stage: implementing
+Stage: to-review
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -57,10 +57,9 @@ Today the Review's `BoardView` already accepts moves for both sides, but nothing
 
 - 2026-11-05 Resolution: Added a disposable side line with branch navigation and exits, the default-on best-move arrow, and live Review board preferences. The full gate on commit `0f8a102` reported 528 passed, 0 failed; Lc0-dependent checks and the existing last-move pixel test skipped on this headless Linux run. A graphical Xvfb test verified the blue arrow appears and clears; disabling its draw call made the test fail. The settings test failed on the missing key before its implementation; the side-line scene test failed on missing line state before implementation.
 
-Acceptance: pending | Criterion 8 still fails briefly when Review opens from a focused agreed draw while DrawNotice remains visible; complete manual post-game and History exploration also remains pending. See the third Resolution below.
-Disclosure: pending | integration | The open REV-007 repair below covers the remaining criterion-8 Settings access failure during the three-second DrawNotice interval.
-Disclosure: pending | release | Complete manual post-game and History exploration remains pending; automated coverage and its limits are recorded in the Focus-mode repair handoff and third Resolution below.
-Gate evidence: /run/media/lage/New Volume/Scratch/rev007-focus-repair/gate.json
+Acceptance: pending | Automated Settings access and live arrow checks now pass during the focused agreed-draw notice interval; complete manual post-game and History exploration remains pending. See the Draw-notice repair handoff below.
+Disclosure: pending | release | Complete manual post-game and History exploration remains pending; see the Draw-notice repair handoff below for automated evidence and its limits.
+Gate evidence: /run/media/lage/New Volume/Scratch/rev007-draw-notice-repair/gate.json
 
 
 #### Resolution (2026-11-05)
@@ -210,4 +209,12 @@ Disclosure: decision | none | The recorded proxy scope expansion remains valid; 
 Disclosure: deferred | none | The stage-3 reviewer accepts retaining existing commit messages without explanatory bodies, to preserve implementation/evidence history; subjects identify REV-007 and the deviation has no runtime impact. This is recorded under Standards above.
 
 - 2026-11-05 Draw-notice repair caller analysis: `_covers_settings()` is called only by Main's Ctrl+, handler. Focus reparents the existing non-modal `draw_notice` Label after Settings; a visible notice is incorrectly classified as a covering screen. The approved Review-scene seam will cover an actual focused Offer draw/result-card Review path, Ctrl+, before the unchanged notice timeout, and the real arrow checkbox on a game position and in a side line. The boundary is distinguishing that notice from visible covering screens; retained session tests cover History, the name prompt, searching, hidden screens, and focused gameplay. No new seam or contract expansion is needed.
+
+#### Draw-notice repair handoff (2026-11-05)
+
+- Repaired the remaining R2/criterion 8 gap in production commit `3157ff0`: `_covers_settings()` excludes the existing non-modal draw-notice Label, which focus reparents after Settings. All other covering-screen checks and the focused-game restriction remain in place. The notice stays visible and its timeout is unchanged. This is within the previously approved Settings-access scope; no contract change was needed.
+- Test-only commit `b3fcd24` adds `test_settings_open_in_review_while_focused_draw_notice_is_visible`. The test uses real viewport F11, Offer draw, result-card Review, Ctrl+, and checkbox input. It verifies opening Settings and immediate arrow updates at a game position and in a side line before the natural notice timeout, plus Settings/side-line Esc behavior. Against unchanged production, it failed exactly the two Settings-opening assertions, with no script errors: **0 passed, 1 failed**. [Red log](/run/media/lage/New Volume/Scratch/rev007-draw-notice-repair/red.log).
+- With the repair, **11 focused graphical checks passed, 0 failed** under Xvfb, including the new agreed-draw path, focused checkmate entry, normal Review settings, viewport drag/click-click, side-line navigation/exits, animations, blue-arrow pixels, and History/name-dialog/searching coverage. [Graphical log](/run/media/lage/New Volume/Scratch/rev007-draw-notice-repair/graphical.log); [runner](/run/media/lage/New Volume/Scratch/rev007-draw-notice-repair/focused.gd).
+- Full bound gate on committed code `3157ff0fd317f9dea13a0adbc065c019c033c0c1`: `godot --headless -s tests/run.gd`, exit 0, **533 passed, 0 failed**. The runner reports six Lc0-dependent skips and the existing graphical-only last-move pixel skip. [Receipt](/run/media/lage/New Volume/Scratch/rev007-draw-notice-repair/gate.json); [gate log](/run/media/lage/New Volume/Scratch/rev007-draw-notice-repair/gate.log). Only this ticket changes after the tested commit.
+- Complete manual post-game and History exploration, physical promotion input and real engines remain unverified. The earlier integration-blocking draw-notice finding is repaired and awaits independent review; the manual release check remains pending above. Stage 2 hands off at `to-review` without a merge or review verdict.
 
