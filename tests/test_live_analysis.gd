@@ -161,3 +161,57 @@ func test_settled_node_result_is_frozen_and_cached_for_the_line():
 	assert_true(live.result(START).is_empty(), "leaving the line releases its cache")
 	live.free()
 	bridge.free()
+
+
+func test_completed_depths_converge_early_and_one_legal_move_needs_only_pv1():
+	for fen in [START, "7k/8/6K1/8/8/8/8/7R b - - 0 1"]:
+		var bridge := FakeBridge.new()
+		var live = load("res://engine/live_analysis.gd").new(bridge)
+		live.search(fen)
+		var forced: bool = fen != START
+		var move := "h8g8" if forced else "e2e4"
+		for depth in [10, 11, 12]:
+			bridge.callbacks[0].call("info depth %d multipv 1 score cp 30 nodes 1000 pv %s" % [depth, move])
+			assert_true(live.result(fen).is_empty() or (forced and depth == 12), "unfinished two-PV depths cannot converge")
+			if not forced:
+				bridge.callbacks[0].call("info depth %d multipv 2 score cp 10 nodes 1000 pv d2d4" % depth)
+		assert_eq(live.result(fen).get("best_move"), move, "three stable completed depths settle before the node budget")
+		assert_eq(live.result(fen).get("pv", []).size(), 1 if forced else 2)
+		live.stop()
+		live.free()
+		bridge.free()
+
+
+func test_required_position_finishes_before_shown_then_cache_is_reused_and_pruned():
+	var bridge := FakeBridge.new()
+	var live = load("res://engine/live_analysis.gd").new(bridge)
+	assert_true(live.has_method("retain"), "line replacement can drop removed FENs")
+	if not live.has_method("retain"):
+		live.free()
+		bridge.free()
+		return
+	var updates := []
+	live.updated.connect(func(fen, _position): updates.append(fen))
+	live.search(START)
+	bridge.callbacks[0].call("info depth 10 multipv 1 score cp 30 nodes 1000 pv e2e4")
+	live.search(AFTER, [START])
+	assert_eq(bridge.searches_stopped, 0, "finish the needed before-position instead of cancelling it")
+	bridge.callbacks[0].call("info depth 14 multipv 1 score cp 30 nodes 3000000 pv e2e4")
+	bridge.callbacks[0].call("info depth 14 multipv 2 score cp 10 nodes 3000000 pv d2d4")
+	assert_eq(updates, [START], "prerequisite results cannot masquerade as shown-position updates")
+	assert_eq(bridge.searches_stopped, 1)
+	bridge.callbacks[0].call("bestmove e2e4")
+	assert_eq(bridge.callbacks.size(), 2)
+	assert_true("position fen " + AFTER in bridge.commands)
+	bridge.callbacks[1].call("info depth 14 multipv 1 score cp -30 nodes 3000000 pv e7e5")
+	bridge.callbacks[1].call("info depth 14 multipv 2 score cp -40 nodes 3000000 pv c7c5")
+	live.search(START)
+	bridge.callbacks[1].call("bestmove e7e5")
+	assert_eq(bridge.callbacks.size(), 2, "returning to a settled FEN needs no new class search")
+	assert_eq(updates.back(), START, "cached PV is available on return")
+	live.retain([AFTER])
+	assert_true(live.result(START).is_empty(), "overwritten positions are dropped")
+	assert_true(not live.result(AFTER).is_empty(), "retained positions keep their results")
+	live.stop()
+	live.free()
+	bridge.free()
