@@ -1,5 +1,5 @@
 # REV-007: Side lines in the Review, and the Best move arrow setting
-Stage: to-implement
+Stage: implementing
 Status: ready-for-agent
 Blocked by: none
 Review: agent
