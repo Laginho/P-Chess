@@ -189,8 +189,9 @@ func _ready() -> void:
 	review.analysis_queue = analysis_queue
 	history_screen.analysis_queue = analysis_queue
 	settings_screen.store = preferences
-	add_child(settings_screen)
+	review.settings_panel = settings_screen.get_node("Panel")
 	add_child(review)
+	add_child(settings_screen)
 	review.get_node("Margin/Content/ReviewBody/BoardView").sound_requested.connect(sound_player.play)
 	add_child(history_screen)
 	add_child(name_dialog)
