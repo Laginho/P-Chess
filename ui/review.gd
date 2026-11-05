@@ -648,6 +648,11 @@ func _search_shown_position() -> void:
 	if _live_position.get("fen", "") == fen:
 		return
 	_live_position = {"fen": fen}
+	if _board_view.game.is_over():
+		_stop_live_process()
+		_live_position = {"fen": fen, "pv": [], "best_move": "",
+				"terminal_score": -1000 if _board_view.game.reason == "checkmate" else 0}
+		return
 	if _live_failed:
 		return
 	if _live_analysis == null:
@@ -720,8 +725,17 @@ func _update_engine_lines() -> void:
 	if _engine_lines == null or _positions.is_empty():
 		return
 	var position := _shown_engine_position()
-	_engine_lines.visible = _moves.visible and (_line_active or position.has("pv"))
+	_engine_lines.visible = _moves.visible and (_line_active or position.has("pv") or _board_view.game.is_over())
 	if not _engine_lines.visible:
+		return
+	if _board_view.game.is_over():
+		var first := _engine_lines.get_node("Row1")
+		first.show()
+		first.get_node("Score").hide()
+		first.get_node("Depth").text = ""
+		var reason: String = _board_view.game.reason
+		first.get_node("PV").text = "Checkmate" if reason == "checkmate" else ("Stalemate" if reason == "stalemate" else "Draw")
+		_engine_lines.get_node("Row2").hide()
 		return
 	var lines: Array = position.get("pv", [])
 	var white: bool = _board_view.game.board.side_to_move == "w"
