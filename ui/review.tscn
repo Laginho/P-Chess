@@ -89,6 +89,12 @@ visible = false
 layout_mode = 2
 show_percentage = false
 
+[node name="StopAnalysis" type="Button" parent="Margin/Content"]
+visible = false
+layout_mode = 0
+theme_type_variation = &"RaisedButton"
+text = "Stop"
+
 [node name="ProgressText" type="Label" parent="Margin/Content"]
 visible = false
 layout_mode = 0

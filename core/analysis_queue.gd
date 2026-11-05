@@ -100,12 +100,27 @@ func remove(path: String) -> void:
 		return
 	_items.erase(path)
 	batch_total -= 1
+	if _items.is_empty():
+		batch_total = 0
+		batch_done = 0
+		error = ""
 	if _priority == path:
 		_priority = ""
 	_save()
 	if _active_path == path:
 		_interrupt()
 	_start_next()
+
+
+# Clear before cancelling: a synchronous finished signal must not launch another game.
+func clear() -> void:
+	_items.clear()
+	_priority = ""
+	batch_total = 0
+	batch_done = 0
+	error = ""
+	_interrupt()
+	_save()
 
 
 func _interrupt() -> void:
@@ -132,7 +147,7 @@ func _finished(success: bool, message: String) -> void:
 	var path := _active_path
 	_active = false
 	_active_path = ""
-	if success:
+	if success and path in _items:
 		_items.erase(path)
 		batch_done += 1
 		if _items.is_empty():
@@ -147,6 +162,7 @@ func _finished(success: bool, message: String) -> void:
 		return
 	if not _interrupting:
 		_start_next()
+	changed.emit()
 
 
 func _progress(done: int, total: int) -> void:
@@ -202,8 +218,13 @@ class StockfishRunner extends Node:
 		return true
 
 	func cancel() -> void:
-		if analyser != null:
-			analyser.cancel()
+		if analyser == null:
+			return
+		# Cancellation needs no bestmove: release the process and suppress a late result.
+		analyser.finished.disconnect(_done)
+		analyser.cancel()
+		_cleanup()
+		finished.emit(false, "cancelled")
 
 	func _done(success: bool, message: String) -> void:
 		_cleanup()

@@ -16,6 +16,9 @@ class FakeAnalysisBridge extends Node:
 	signal stopped
 	var engine_id := "Stockfish 19"
 	var error := ""
+	var stopped_called := false
+	func stop() -> void:
+		stopped_called = true
 	func start() -> bool:
 		return true
 
@@ -79,6 +82,14 @@ func test_open_review_from_history_and_return_with_escape():
 		assert_eq(_exit_rows(review), PackedStringArray(), "no repertoire exit without a snapshot")
 		review.get_node("Margin/Content/ReviewBody/Side/Analyze").pressed.emit()
 		assert_true(fake.called and fake.maximum, "Analyze starts Max analysis")
+		assert_true(review.get_node("Margin/Content/StopAnalysis").visible)
+		review.receive_position(0, {"pv": [{"cp": 50, "moves": ["e2e4"]}], "best_move": "e2e4"})
+		review.get_node("Margin/Content/StopAnalysis").pressed.emit()
+		assert_eq(main.analysis_queue.pending(), [])
+		assert_true(not review.get_node("Margin/Content/StopAnalysis").visible)
+		assert_true(review.get_node("Margin/Content/ReviewBody/Side/Analyze").visible)
+		assert_true(not review._positions[0].has("pv"), "stop discards streamed results")
+
 		var space := InputEventKey.new()
 		space.keycode = KEY_SPACE
 		space.pressed = true
@@ -235,6 +246,13 @@ func test_review_prioritizes_a_queued_game_even_with_cached_analysis():
 	main._show_history()
 	main._review_history_game(path, main.history.games()[0].game)
 	assert_true(fake.maximum, "Review promotes even a previously analysed queued game to Max")
+	var review = main.get_node("Review")
+	var old_position: Dictionary = fixture.positions[0]
+	review.receive_position(0, {"pv": [{"cp": 999, "moves": ["e2e4"]}], "best_move": "e2e4"})
+	review.get_node("Margin/Content/StopAnalysis").pressed.emit()
+	assert_eq(review._positions[0], old_position, "Stop restores the previous complete cache")
+	assert_true(not review.get_node("Margin/Content/ReviewBody/Side/Analyze").visible)
+
 	main.free()
 	DirAccess.remove_absolute(analysis_path)
 	DirAccess.remove_absolute(folder.path_join("analysis"))
@@ -353,7 +371,7 @@ func test_counts_queue_and_inline_delete():
 	assert_true(screen.find_child("AnalyzeSelected", true, false).icon != null, "batch analysis has its trend icon")
 	assert_true(queued.find_child("QueueIcon", true, false) != null and queued.find_child("QueuePill", true, false) != null, "queued state has its clock and pill")
 	var action: Button = queued.get_node("Details/HBoxContainer/Analyze")
-	assert_true(action.disabled and action.text == "Queued", "queued action identifies its state")
+	assert_true(not action.disabled and action.text == "Remove from queue", "queued action identifies its state")
 	queued.get_node("Details/HBoxContainer/Delete").pressed.emit()
 	var confirmation = queued.find_child("DeleteInline", true, false)
 	assert_true(confirmation != null and confirmation.visible, "delete confirmation appears inside its card")
@@ -454,8 +472,25 @@ func test_history_select_all_and_active_progress():
 		var current: String = queue.current()
 		var card = screen.get_node("Margin/Content/Cards/List").get_node(current.get_file().validate_node_name())
 		var action: Button = card.find_child("Analyze", true, false)
-		assert_true(action.disabled and action.text == "Analysing…")
-		assert_true(card.find_child("AnalysisProgress", true, false) != null, "active analysis has a progress bar")
+		assert_true(not action.disabled and action.text == "Stop")
+		var waiting: String = second if current == first else first
+		var waiting_card = screen.get_node("Margin/Content/Cards/List").get_node(waiting.get_file().validate_node_name())
+		assert_eq(waiting_card.find_child("Analyze", true, false).text, "Remove from queue")
+		waiting_card.find_child("Analyze", true, false).pressed.emit()
+		assert_eq(queue.pending(), [current])
+		queue.enqueue(waiting)
+		card = screen.get_node("Margin/Content/Cards/List").get_node(current.get_file().validate_node_name())
+		card.find_child("Analyze", true, false).pressed.emit()
+		assert_eq(queue.current(), waiting, "History Stop advances to the next queued game")
+		assert_eq(queue.batch_done, 0)
+		var stop_all = screen.find_child("StopAll", true, false)
+		assert_true(stop_all.visible)
+		stop_all.pressed.emit()
+		assert_eq(queue.pending(), [])
+		assert_true(not stop_all.visible)
+		card = screen.get_node("Margin/Content/Cards/List").get_node(current.get_file().validate_node_name())
+		assert_eq(card.find_child("Analyze", true, false).text, "Analyze")
+
 	screen.free()
 	queue.free()
 	Storage.clean(folder)
@@ -498,3 +533,27 @@ func _exit_rows(review) -> PackedStringArray:
 		if row.get_text(1).begins_with("Left repertoire"):
 			rows.append(row.get_text(1))
 	return rows
+
+func test_review_stop_cancels_owned_analyser_and_engine():
+	var review = load("res://ui/review.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(review)
+	var game = Game.new()
+	game.play("e2e4")
+	game.resign("b")
+	review.present(game, [60000], {"colour": "w", "level": "maia-1500", "control": "1+0"}, "Won")
+	var bridge := FakeAnalysisBridge.new()
+	var analyser := FakeAnalyser.new()
+	review.analysis_bridge_factory = func(): return bridge
+	review.analyser_factory = func(_engine): return analyser
+	review.open_analysis("user://missing_stop_%d.json" % Time.get_ticks_usec(), false)
+	assert_true(analyser.called)
+	review.get_node("Margin/Content/StopAnalysis").pressed.emit()
+	assert_true(bridge.stopped_called, "Stop releases the owned engine immediately")
+	assert_true(review._analyser == null and review._analysis_bridge == null)
+	assert_true(review.get_node("Margin/Content/ReviewBody/Side/Analyze").visible)
+	assert_true(not review.get_node("Margin/Content/AnalysisError").visible)
+	for frame in 5:
+		await Engine.get_main_loop().process_frame
+	var footer = review.get_node("Margin/Content/ReviewBody/Side/FooterSpace")
+	assert_true(footer.custom_minimum_size.y < 100, "returning to not analysed does not grow the footer")
+	review.free()
