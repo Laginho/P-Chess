@@ -1,5 +1,5 @@
 # REV-007: Side lines in the Review, and the Best move arrow setting
-Stage: to-implement
+Stage: blocked
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -54,3 +54,5 @@ Today the Review's `BoardView` already accepts moves for both sides, but nothing
 - 2026-11-05 Stage stopped (incomplete handoff): Stage left uncommitted work; saved for recovery. See /home/lage/Projects/P-Chess/.artifacts-build/lanes/review-explore/.scratch/run-log/REV-007-implement-20261105-172352.txt.runtime.json and run-log/recovery.txt; inspect the saved work before retrying.
 
 - 2026-11-05 Foreman: the stopped attempt never loaded `ticket-flow`. The skill was not installed for Codex on the Linux box, so the session worked as a plain coder: no ticket branch, no commits, no test-first, no handoff. That is environmental: the skills are now linked under `~/.agents/skills`, and Codex lists `ticket-flow`. Its uncommitted work is saved as stash `refs/sweatshop-recovery/95e8d923fd2e450182e6ddb1885b2a3f` (commit `a3bea32`; 8 files, +296/−14: `ui/review.gd`, `ui/board_view.gd`, `ui/main.gd`, `ui/settings.gd`, `core/settings.gd`, `docs/spec.md`, `tests/test_review.gd`, `tests/test_settings.gd`). The session said the gate passed with 526 tests, not checked. Stage 2 may reuse it (`git stash show -p a3bea32`), but under the normal flow: the tests must be seen red against the code without the fix, and the gate re-run for evidence. Back to `to-implement`.
+
+- 2026-11-05 Second reopen: foreman diagnosis required before retrying. Classify new defect, earlier review miss, contract gap, or review-induced churn; record cause and next action, then return to-implement only when ready.
