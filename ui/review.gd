@@ -898,6 +898,7 @@ func _analysis_error(message: String) -> void:
 
 
 func _stop_analysis() -> void:
+	_direct_paused = false
 	if analysis_queue != null and _queue_path in analysis_queue.pending():
 		analysis_queue.remove(_queue_path)
 	else:
@@ -909,7 +910,8 @@ func _stop_analysis() -> void:
 # The analyser writes atomically on completion, so an older cache is still safe.
 func _restore_analysis() -> void:
 	$Margin/Content/Progress.hide()
-	$Margin/Content/AnalysisError.hide()
+	if not (_line_active and _live_failed):
+		$Margin/Content/AnalysisError.hide()
 	$Margin/Content/ProgressText.text = "0 of %d moves" % _game_moves.size()
 	for i in _classes.size():
 		if _classes[i] != null:
