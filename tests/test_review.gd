@@ -1436,3 +1436,56 @@ func test_played_review_moves_keep_their_animation_until_finished():
 	await Engine.get_main_loop().create_timer(0.65).timeout
 	assert_eq(board._slide_to, "", "animation eventually finishes")
 	main.free()
+
+
+func _review_mouse_button(root: Window, at: Vector2, down: bool) -> void:
+	var event := InputEventMouseButton.new()
+	event.button_index = MOUSE_BUTTON_LEFT
+	event.button_mask = MOUSE_BUTTON_MASK_LEFT if down else 0
+	event.pressed = down
+	event.position = at
+	root.push_input(event)
+	await Engine.get_main_loop().process_frame
+
+
+func _review_mouse_motion(root: Window, at: Vector2, held := false) -> void:
+	var event := InputEventMouseMotion.new()
+	event.position = at
+	event.button_mask = MOUSE_BUTTON_MASK_LEFT if held else 0
+	root.push_input(event)
+	await Engine.get_main_loop().process_frame
+
+
+func test_review_board_accepts_viewport_drag_and_click_click():
+	var root: Window = Engine.get_main_loop().root
+	var old_size := root.size
+	root.size = Vector2i(1280, 800)
+	var main = await _session(FakeTime.new())
+	var review = main.review
+	var game = Game.new()
+	game.play("e2e4")
+	game.play("e7e5")
+	review.present(game, [180000, 180000], SETTINGS, "")
+	var board = review.get_node("Margin/Content/ReviewBody/BoardView")
+	for click_click in [false, true]:
+		main.preferences.set_value("click_click", click_click)
+		for move in ["d2d4", "e2e4"]:
+			review._show_ply(0)
+			await Engine.get_main_loop().process_frame
+			await Engine.get_main_loop().process_frame
+			var start: Vector2 = board.global_position + board._centre(move.substr(0, 2))
+			var finish: Vector2 = board.global_position + board._centre(move.substr(2, 2))
+			await _review_mouse_motion(root, start)
+			await _review_mouse_button(root, start, true)
+			if click_click:
+				await _review_mouse_button(root, start, false)
+				await _review_mouse_motion(root, finish)
+				await _review_mouse_button(root, finish, true)
+			else:
+				await _review_mouse_motion(root, finish, true)
+			await _review_mouse_button(root, finish, false)
+			assert_eq(board.game.moves, PackedStringArray([move]), "%s via click-click=%s" % [move, click_click])
+			assert_eq(review._line_active, move == "d2d4", "only the alternative starts a line")
+			assert_eq(review._ply, 0 if move == "d2d4" else 1, "game continuation advances")
+	main.free()
+	root.size = old_size
