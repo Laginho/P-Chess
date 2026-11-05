@@ -21,6 +21,7 @@ const Badges = preload("res://bot/badges.gd")
 var analysis_bridge_factory: Callable = func(): return Uci.new("engine/stockfish/stockfish.exe", "Stockfish")
 var analyser_factory: Callable = func(bridge): return Analyser.new(bridge)
 var analysis_queue
+var settings_panel: Control
 var _queue_path := ""
 var _queue_was_pending := false
 var _analysis_bridge
@@ -739,6 +740,8 @@ func _cancel_analysis() -> void:
 
 # Handle review shortcuts before focused controls consume them as GUI input.
 func _input(event: InputEvent) -> void:
+	if settings_panel and settings_panel.visible:
+		return
 	if visible and event is InputEventKey and event.is_pressed() and not event.is_echo() \
 			and event.keycode == KEY_SPACE:
 		get_viewport().set_input_as_handled()
