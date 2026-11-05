@@ -17,6 +17,7 @@ const PREMOVE_DARK := Color("#b75e56")
 const CHECK := Color(1, 0, 0, 0.6)
 const TARGET := Color(0.08, 0.33, 0.12, 0.5)
 const DRAWING := Color(0.12, 0.65, 0.22, 0.75)
+const BEST_MOVE_COLOR := Color(0.247, 0.580, 0.878, 0.65)
 
 # How long a move that was not dragged (the bot's, a premove) slides; 0 is instant.
 @export var slide_seconds := 0.12
@@ -103,6 +104,7 @@ var _promoting := ""
 # Square pairs, independent of board orientation/size. Equal endpoints represent a circle.
 var review_square := ""
 var review_arrow := ""
+var best_move_arrow := ""
 var review_icon: Texture2D
 var drawings: Array[PackedStringArray] = []
 var _drawing_from := ""
@@ -219,6 +221,8 @@ func _draw() -> void:
 		_draw_piece(game.board.piece_at(_slide_to), _slide_pos - cell / 2, cell)
 	if _drag_from:
 		_draw_piece(_held_piece, _drag_pos - cell / 2, cell)
+	if best_move_arrow.length() >= 4:
+		_draw_annotation(best_move_arrow.substr(0, 2), best_move_arrow.substr(2, 2), cell.x, BEST_MOVE_COLOR)
 	if review_arrow.length() >= 4:
 		_draw_annotation(review_arrow.substr(0, 2), review_arrow.substr(2, 2), cell.x)
 	if review_icon and review_square.length() == 2:
@@ -232,17 +236,17 @@ func _draw() -> void:
 		_draw_annotation(_drawing_from, _drawing_to, cell.x)
 
 
-func _draw_annotation(from: String, to: String, cell: float) -> void:
+func _draw_annotation(from: String, to: String, cell: float, color := DRAWING) -> void:
 	var start := _centre(from)
 	var end := _centre(to)
 	if from == to:
-		draw_arc(start, cell * 0.43, 0, TAU, 64, DRAWING, cell * 0.07, true)
+		draw_arc(start, cell * 0.43, 0, TAU, 64, color, cell * 0.07, true)
 	else:
 		var direction := (end - start).normalized()
 		var base := end - direction * cell * 0.3
 		var wing := direction.orthogonal() * cell * 0.2
-		draw_line(start, base, DRAWING, cell * 0.12, true)
-		draw_colored_polygon(PackedVector2Array([end, base + wing, base - wing]), DRAWING)
+		draw_line(start, base, color, cell * 0.12, true)
+		draw_colored_polygon(PackedVector2Array([end, base + wing, base - wing]), color)
 
 
 # Files along the bottom edge, ranks along the left edge, in the other square colour.

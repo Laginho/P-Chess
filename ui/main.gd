@@ -504,6 +504,7 @@ func _on_engine_stopped() -> void:
 
 # One setting to whatever reads it; the next move, sound or game picks it up.
 func _apply(key: String, value) -> void:
+	var review_board = review.get_node("Margin/Content/ReviewBody/BoardView")
 	match key:
 		"analysis_threads":
 			analysis_queue.maximum = value == "Max"
@@ -511,16 +512,24 @@ func _apply(key: String, value) -> void:
 			board_view.premove_style = value
 		"click_click":
 			board_view.click_click = value
+			review_board.click_click = value
 		"auto_queen":
 			board_view.auto_queen = value
+			review_board.auto_queen = value
 		"legal_dots":
 			board_view.show_targets = value
+			review_board.show_targets = value
+		"best_move_arrow":
+			review.best_move_arrow_enabled = value
 		"animation_ms":
 			board_view.slide_seconds = value / 1000.0
+			review_board.slide_seconds = value / 1000.0
 		"board_theme":
 			board_view.set_board_theme(value)
+			review_board.set_board_theme(value)
 		"piece_theme":
 			board_view.set_piece_theme(value)
+			review_board.set_piece_theme(value)
 		"sound_theme":
 			sound_player.select_theme(value)
 		"volume":
