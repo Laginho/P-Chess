@@ -279,8 +279,9 @@ func _unhandled_key_input(event: InputEvent) -> void:
 
 # Ctrl+, must not open the panel behind a screen drawn above Settings.
 func _covers_settings() -> bool:
+	# Focus reparents the non-modal draw notice here; it must not block Settings.
 	return get_children().slice(settings_screen.get_index() + 1).any(
-			func(screen): return (screen is Control or screen is Window) and screen.visible)
+			func(screen): return screen != draw_notice and (screen is Control or screen is Window) and screen.visible)
 
 
 func _resign() -> void:
