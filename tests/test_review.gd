@@ -2026,3 +2026,44 @@ func test_missing_live_engine_error_survives_stopping_the_queued_game():
 	review.free()
 	queue.free()
 	DirAccess.remove_absolute(queue_file)
+
+
+func _rev009_settle(bridge, first: String, cp: int, second: String, second_cp: int) -> void:
+	bridge.callbacks.back().call("info depth 16 multipv 1 score cp %d nodes 3000000 pv %s" % [cp, first])
+	bridge.callbacks.back().call("info depth 16 multipv 2 score cp %d nodes 3000000 pv %s" % [second_cp, second])
+
+
+func test_side_class_matches_stored_game_class_and_stays_frozen():
+	var main = await _session(FakeTime.new())
+	var review = main.review
+	var bridge = load("res://tests/test_live_analysis.gd").FakeBridge.new()
+	review.analysis_bridge_factory = func(): return bridge
+	var reference = Game.new()
+	reference.play("e2e4")
+	reference.play("c7c5")
+	review.present(reference, [], SETTINGS, "")
+	var data := [
+		{"pv": [{"cp": 0, "moves": ["e2e4"]}, {"cp": -10, "moves": ["d2d4"]}], "best_move": "e2e4"},
+		{"pv": [{"cp": 0, "moves": ["c7c5"]}, {"cp": -10, "moves": ["e7e5"]}], "best_move": "c7c5"},
+		{"pv": [{"cp": 0, "moves": ["g1f3"]}, {"cp": -10, "moves": ["b1c3"]}], "best_move": "g1f3"}]
+	review.receive_positions(data)
+	var board = review.get_node("Margin/Content/ReviewBody/BoardView")
+	var expected_icon: Texture2D = board.review_icon
+	assert_eq(review._classes[1].class, "Best", "independent scripted reference")
+	var game = Game.new()
+	game.play("e2e4")
+	game.play("e7e5")
+	review.present(game, [], SETTINGS, "")
+	review.receive_position(0, data[0])
+	review.receive_position(1, data[1])
+	review._show_ply(1)
+	assert_true(board.play("c7c5"))
+	assert_true(board.review_icon == null and review._line_rows[0].get_icon(1) == null, "pending class has no icon")
+	_rev009_settle(bridge, "g1f3", 0, "b1c3", -10)
+	assert_eq(board.review_icon, expected_icon, "same data gives the game's class")
+	assert_eq(board.review_square, "c5")
+	assert_eq(review._line_rows[0].get_icon(1), expected_icon, "class appears beside the line move")
+	assert_eq(board.review_arrow, "c7c5", "green arrow uses settled before-position")
+	bridge.callbacks.back().call("info depth 20 multipv 1 score cp 950 nodes 4000000 pv b1c3")
+	assert_eq(board.review_icon, expected_icon, "later live score cannot change the class")
+	main.free()
