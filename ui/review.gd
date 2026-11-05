@@ -39,6 +39,7 @@ var _line_active := false
 var _line_moves := PackedStringArray()
 var _line_index := 0
 var _line_rows: Array[TreeItem] = []
+var _engine_lines: VBoxContainer
 var best_move_arrow_enabled := true:
 	set(value):
 		best_move_arrow_enabled = value
@@ -72,6 +73,7 @@ const CLASS_NAMES := ["Brilliant", "Great", "Best", "Excellent", "Good", "Book",
 
 
 func _ready() -> void:
+	_create_engine_lines()
 	if analysis_queue != null:
 		analysis_queue.position_ready.connect(_queue_position)
 		analysis_queue.changed.connect(_queue_changed)
@@ -297,6 +299,7 @@ func _ready() -> void:
 		side.get_node("AccuracyHelp").visible = not expanded
 		side.get_node("EvalGraph").visible = not expanded
 		side.get_node("Moves").visible = not expanded
+		_update_engine_lines()
 		_update_summary())
 	resized.connect(_resize_classes)
 	_resize_classes()
@@ -568,7 +571,100 @@ func _resize_classes() -> void:
 	$Margin/Content/ReviewBody/Side/AccuracyHelp.visible = not unanalysed
 	_moves.visible = true
 	_graph.visible = not unanalysed
+	_update_engine_lines()
 	_update_summary()
+
+
+# Both layouts keep two fixed-height rows; the SAN text yields width to score and depth.
+func _create_engine_lines() -> void:
+	var side := $Margin/Content/ReviewBody/Side
+	_engine_lines = VBoxContainer.new()
+	_engine_lines.name = "EngineLines"
+	_engine_lines.add_theme_constant_override("separation", 2)
+	side.add_child(_engine_lines)
+	side.move_child(_engine_lines, side.get_node("Moves").get_index())
+	for number in [1, 2]:
+		var row := HBoxContainer.new()
+		row.name = "Row%d" % number
+		row.add_theme_constant_override("separation", 6)
+		_engine_lines.add_child(row)
+		var chip := Button.new()
+		chip.name = "Score"
+		chip.custom_minimum_size = Vector2(48, 24)
+		chip.add_theme_font_size_override("font_size", 12)
+		row.add_child(chip)
+		var pv := RichTextLabel.new()
+		pv.name = "PV"
+		pv.bbcode_enabled = true
+		pv.scroll_active = false
+		pv.custom_minimum_size.y = 24
+		pv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		pv.add_theme_font_size_override("normal_font_size", 12)
+		row.add_child(pv)
+		var depth := Label.new()
+		depth.name = "Depth"
+		depth.add_theme_font_size_override("font_size", 10)
+		depth.theme_type_variation = "MutedText"
+		depth.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		depth.visible = number == 1
+		row.add_child(depth)
+	_engine_lines.resized.connect(_update_engine_lines)
+	_engine_lines.hide()
+
+
+func _shown_engine_position() -> Dictionary:
+	return _positions[_ply] if not _positions.is_empty() else {}
+
+
+func _update_engine_lines() -> void:
+	if _engine_lines == null or _positions.is_empty():
+		return
+	var position := _shown_engine_position()
+	_engine_lines.visible = _moves.visible and position.has("pv")
+	if not _engine_lines.visible:
+		return
+	var lines: Array = position.get("pv", [])
+	var white: bool = _board_view.game.board.side_to_move == "w"
+	for i in 2:
+		var row := _engine_lines.get_child(i)
+		row.show()
+		var chip: Button = row.get_node("Score")
+		var pv: RichTextLabel = row.get_node("PV")
+		var depth: Label = row.get_node("Depth")
+		depth.text = ""
+		pv.text = ""
+		chip.visible = i < lines.size()
+		if i >= lines.size():
+			continue
+		var line: Dictionary = lines[i]
+		var score: int = line.get("cp", 1000 if line.get("mate", 0) > 0 else -1000)
+		if not white:
+			score = -score
+		chip.text = "M%d" % absi(int(line.mate)) if line.has("mate") else ("+" if score > 0 else "") + "%.1f" % (score / 100.0)
+		var style := StyleBoxFlat.new()
+		style.bg_color = Color("ece9e4") if score >= 0 else Color("30302d")
+		style.set_corner_radius_all(3)
+		for state in ["normal", "hover", "pressed", "focus"]:
+			chip.add_theme_stylebox_override(state, style)
+		for state in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+			chip.add_theme_color_override(state, Color("242321") if score >= 0 else Color("ece9e4"))
+		if i == 0:
+			depth.text = "depth %d" % int(line.get("depth", 0))
+		var board = _board_view.game.board.copy()
+		var text := ""
+		var font := pv.get_theme_font("normal_font")
+		var width := maxf(0, _engine_lines.size.x - 48 - 12 - (depth.get_minimum_size().x if i == 0 else 0))
+		for move: String in line.get("moves", []):
+			if not move in board.legal_moves():
+				break
+			var san: String = board.san(move)
+			var next := text + (" " if not text.is_empty() else "") + san
+			if font.get_string_size(next + " …", HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x > width:
+				text += " …"
+				break
+			text = next
+			board.make_move(move)
+		pv.text = text.strip_edges()
 
 
 func _class_help() -> String:
@@ -917,6 +1013,7 @@ func _show_ply(ply: int, announce := false, already_played := false) -> void:
 	_update_board_annotations()
 	_board_view.queue_redraw()
 	_update_eval_bar()
+	_update_engine_lines()
 
 
 func receive_position(index: int, position: Dictionary) -> void:
@@ -942,6 +1039,7 @@ func _positions_changed() -> void:
 	_update_summary()
 	_update_board_annotations()
 	_update_eval_bar()
+	_update_engine_lines()
 
 
 func _update_summary() -> void:
