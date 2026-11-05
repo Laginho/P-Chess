@@ -35,7 +35,7 @@ func _draw() -> void:
 	var font_size := get_theme_font_size("font_size")
 	var label := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
 	var width := float(get_theme_constant("icon_max_width")) if icon else 0.0
-	var gap := float(get_theme_constant("h_separation")) if icon else 0.0
+	var gap := float(get_theme_constant("h_separation")) if icon and text else 0.0
 	if clip_text and label + width + gap > size.x - 16:
 		# Two 14 px lines fit above the confirmation's 4 px progress bar.
 		font_size = 14
@@ -59,7 +59,7 @@ func placement() -> Vector3:
 	var font_size := get_theme_font_size("font_size")
 	var label := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
 	var width := float(get_theme_constant("icon_max_width")) if icon else 0.0
-	var gap := float(get_theme_constant("h_separation")) if icon else 0.0
+	var gap := float(get_theme_constant("h_separation")) if icon and text else 0.0
 	if icon and icon_left >= 0:
 		while font_size > 12 and (size.x - label) / 2 - gap - width < icon_left:
 			font_size -= 1

@@ -100,12 +100,27 @@ func remove(path: String) -> void:
 		return
 	_items.erase(path)
 	batch_total -= 1
+	if _items.is_empty():
+		batch_total = 0
+		batch_done = 0
+		error = ""
 	if _priority == path:
 		_priority = ""
 	_save()
 	if _active_path == path:
 		_interrupt()
 	_start_next()
+
+
+# Clear before cancelling: a synchronous finished signal must not launch another game.
+func clear() -> void:
+	_items.clear()
+	_priority = ""
+	batch_total = 0
+	batch_done = 0
+	error = ""
+	_interrupt()
+	_save()
 
 
 func _interrupt() -> void:
@@ -132,7 +147,7 @@ func _finished(success: bool, message: String) -> void:
 	var path := _active_path
 	_active = false
 	_active_path = ""
-	if success:
+	if success and path in _items:
 		_items.erase(path)
 		batch_done += 1
 		if _items.is_empty():
@@ -147,6 +162,7 @@ func _finished(success: bool, message: String) -> void:
 		return
 	if not _interrupting:
 		_start_next()
+	changed.emit()
 
 
 func _progress(done: int, total: int) -> void:
@@ -183,13 +199,14 @@ class StockfishRunner extends Node:
 		var positions: Array = Analyser.positions_from_game(game)
 		if positions.is_empty():
 			return false
-		bridge = Uci.new("engine/stockfish/stockfish.exe", "Stockfish")
-		add_child(bridge)
-		if not bridge.start():
-			bridge.queue_free()
-			bridge = null
-			return false
-		bridge.stopped.connect(_stopped)
+		if bridge == null:
+			bridge = Uci.new("engine/stockfish/stockfish.exe", "Stockfish")
+			add_child(bridge)
+			if not bridge.start():
+				bridge.queue_free()
+				bridge = null
+				return false
+			bridge.stopped.connect(_stopped)
 		analyser = Analyser.new(bridge)
 		add_child(analyser)
 		analyser.progress.connect(func(done, total): progress.emit(done, total))
@@ -202,23 +219,31 @@ class StockfishRunner extends Node:
 		return true
 
 	func cancel() -> void:
-		if analyser != null:
-			analyser.cancel()
+		if analyser == null:
+			return
+		# Cancellation needs no bestmove: release the process and suppress a late result.
+		analyser.finished.disconnect(_done)
+		analyser.cancel()
+		_cleanup()
+		finished.emit(false, "cancelled")
 
 	func _done(success: bool, message: String) -> void:
-		_cleanup()
+		# bestmove has drained the search; new_game resets the reused engine next time.
+		_cleanup(false)
 		finished.emit(success, message)
 
 	func _stopped() -> void:
 		var message: String = bridge.error
+		var was_analysing: bool = analyser != null
 		_cleanup()
-		finished.emit(false, message)
+		if was_analysing:
+			finished.emit(false, message)
 
-	func _cleanup() -> void:
+	func _cleanup(stop_engine := true) -> void:
 		if analyser != null:
 			analyser.queue_free()
 			analyser = null
-		if bridge != null:
+		if stop_engine and bridge != null:
 			bridge.stop()
 			bridge.queue_free()
 			bridge = null

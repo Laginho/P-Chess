@@ -8,6 +8,7 @@ const BoardView = preload("res://ui/board_view.tscn")
 const Analyser = preload("res://engine/analyser.gd")
 const Accuracy = preload("res://core/accuracy.gd")
 const Tunables = preload("res://core/tunables.gd")
+const PAGE_SIZE := 20
 const TABS := ["All", "1+0", "3+2", "5+0"]
 const CONTROLS := {"60+0": "1+0", "180+2": "3+2", "300+0": "5+0"}
 const TREND_ICON := '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141412" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-6 4 4 8-9"/></svg>'
@@ -21,6 +22,11 @@ var preferences
 var copy_text: Callable = DisplayServer.clipboard_set
 var _delete_path := ""
 var _compact := false
+var _queue_state := []
+var _shown_limit := PAGE_SIZE
+var _tab_records: Array = []
+var _shown_count := 0
+var _last_group := ""
 
 
 func _ready() -> void:
@@ -62,11 +68,20 @@ func _ready() -> void:
 	status.theme_type_variation = "MutedText"
 	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	actions.add_child(status)
+	var stop_all := Button.new()
+	stop_all.name = "StopAll"
+	stop_all.text = "Stop all"
+	stop_all.visible = false
+	stop_all.custom_minimum_size.y = 40
+	stop_all.theme_type_variation = "RaisedButton"
+	_pad(stop_all, 14)
+	stop_all.pressed.connect(func(): analysis_queue.clear())
+	actions.add_child(stop_all)
 	var select_all := CheckBox.new()
 	select_all.name = "SelectAll"
 	_style_check(select_all, 12, Color("a8a49c"))
 	select_all.toggled.connect(func(on):
-		for card in $Margin/Content/Cards/List.get_children():
+		for card in _visible_cards():
 			card.get_node("Details/Select").button_pressed = on)
 	actions.add_child(select_all)
 	actions.move_child(select_all, 0)
@@ -124,7 +139,11 @@ func _ready() -> void:
 			tabs.draw_string(count_font, at, title.substr(label.length()), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("a8a49c")))
 	for tab in TABS:
 		tabs.add_tab(tab)
-	$Margin/Content/Header/Tabs.tab_changed.connect(func(_index): _refresh())
+	$Margin/Content/Header/Tabs.tab_changed.connect(func(_index):
+		_shown_limit = PAGE_SIZE
+		_selected.clear()
+		$Margin/Content/Cards.scroll_vertical = 0
+		_refresh())
 	$Margin/Content/Header/Back.pressed.connect(func(): back_requested.emit())
 
 
@@ -140,6 +159,7 @@ func present(store, settings) -> void:
 	preferences = settings
 	$Margin/Content/Header/Tabs.current_tab = TABS.find(settings.get_value("history_tab"))
 	show()
+	_queue_state = []
 	if analysis_queue != null:
 		_queue_changed()
 	else:
@@ -150,13 +170,20 @@ func _refresh() -> void:
 	if history == null:
 		return
 	var list = $Margin/Content/Cards/List
-	# Queue progress rebuilds the cards; keep keyboard focus on the same control of the same game.
+	# Keep keyboard focus on the same control of the same game after a rebuild.
 	var focus := get_viewport().gui_get_focus_owner()
 	var focus_path := list.get_path_to(focus) if focus != null and list.is_ancestor_of(focus) else NodePath()
 	for child in list.get_children():
 		list.remove_child(child)
 		child.queue_free()
 	var records: Array = history.games()
+	# PGN dates define the sections; retain the store's newest-first order within a day.
+	records.sort_custom(func(a, b):
+		var a_day := _record_day(a)
+		var b_day := _record_day(b)
+		if a_day != b_day:
+			return a_day > b_day
+		return a.modified > b.modified if a.modified != b.modified else a.path > b.path)
 	var counts := [records.size(), 0, 0, 0]
 	for record in records:
 		var index := TABS.find(CONTROLS.get(record.game.headers.get("TimeControl", ""), ""))
@@ -165,18 +192,117 @@ func _refresh() -> void:
 	for index in TABS.size():
 		$Margin/Content/Header/Tabs.set_tab_title(index, "%s %d" % [TABS[index], counts[index]])
 	var selected: String = TABS[$Margin/Content/Header/Tabs.current_tab]
+	_tab_records = []
 	for record in records:
 		var game: Dictionary = record.game
 		var control: String = CONTROLS.get(game.headers.get("TimeControl", ""), "")
 		if selected != "All" and selected != control:
 			continue
-		_add_card(list, record)
+		_tab_records.append(record)
+	_shown_count = 0
+	_last_group = ""
+	_append_page()
+	# Selection belongs to cards currently shown in this tab.
+	var shown_paths := {}
+	for record in _tab_records.slice(0, _shown_count):
+		shown_paths[record.path] = true
+	for path in _selected.keys():
+		if not shown_paths.has(path):
+			_selected.erase(path)
 	_update_selection()
 	$Margin/Content/BatchActions/AnalyzeAll.text = "Analyze all in “%s”" % selected
 	_pad($Margin/Content/BatchActions/AnalyzeAll, 16)
 	_fit_tray.call_deferred()
 	if not focus_path.is_empty() and list.has_node(focus_path):
 		list.get_node(focus_path).grab_focus()
+
+
+# Only cards participate in selection and inline deletion; headings and the footer are siblings.
+func _visible_cards() -> Array:
+	return $Margin/Content/Cards/List.get_children().filter(func(child): return child.has_node("Details/Select"))
+
+
+func _append_page() -> void:
+	var list := $Margin/Content/Cards/List
+	var more := list.get_node_or_null("ShowMore")
+	if more != null:
+		list.remove_child(more)
+		more.queue_free()
+	var end := mini(_shown_limit, _tab_records.size())
+	for index in range(_shown_count, end):
+		var record: Dictionary = _tab_records[index]
+		var group := _date_group(record)
+		if group != _last_group:
+			var heading := Label.new()
+			heading.name = group.replace(" ", "")
+			heading.text = group
+			heading.theme_type_variation = "MutedText"
+			heading.add_theme_font_override("font", get_theme_font("font", "SemiboldText"))
+			heading.add_theme_font_size_override("font_size", 13)
+			heading.custom_minimum_size.y = 32
+			heading.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			list.add_child(heading)
+			_last_group = group
+		_add_card(list, record)
+	_shown_count = end
+	if end < _tab_records.size():
+		var button := Button.new()
+		button.name = "ShowMore"
+		button.text = "Show 20 more"
+		button.theme_type_variation = "RaisedButton"
+		button.custom_minimum_size.y = 44
+		button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		button.pressed.connect(func():
+			# Appending leaves existing cards and the scroll offset untouched.
+			_shown_limit += PAGE_SIZE
+			_append_page()
+			_update_selection())
+		list.add_child(button)
+
+
+# Calendar dates are represented as UTC midnights solely for day arithmetic (no DST drift).
+func _record_day(record: Dictionary) -> int:
+	var date := str(record.game.headers.get("Date", "")).replace(".", "-")
+	var day := _parse_day(date)
+	if day >= 0:
+		return day
+	day = _parse_day(record.path.get_file().left(10))
+	if day >= 0:
+		return day
+	var local := Time.get_datetime_dict_from_unix_time(int(record.get("modified", 0)) + Time.get_time_zone_from_system().bias * 60)
+	return _parse_day("%04d-%02d-%02d" % [local.year, local.month, local.day])
+
+
+func _parse_day(date: String) -> int:
+	var fields := date.split("-")
+	if fields.size() != 3:
+		return -1
+	for field in fields:
+		if not field.is_valid_int():
+			return -1
+	var year := int(fields[0])
+	var month := int(fields[1])
+	var day := int(fields[2])
+	if year < 1970 or month < 1 or month > 12:
+		return -1
+	var days := [31, 29 if year % 4 == 0 and (year % 100 != 0 or year % 400 == 0) else 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+	if day < 1 or day > days[month - 1]:
+		return -1
+	return Time.get_unix_time_from_datetime_string("%04d-%02d-%02dT00:00:00" % [year, month, day])
+
+
+func _date_group(record: Dictionary, today := "") -> String:
+	if today.is_empty():
+		today = Time.get_date_string_from_system()
+	var now := _parse_day(today)
+	var day := _record_day(record)
+	if day == now:
+		return "Today"
+	if day == now - 86400:
+		return "Yesterday"
+	var weekday := int(Time.get_datetime_dict_from_unix_time(now).weekday)
+	var monday := now - ((weekday + 6) % 7) * 86400
+	return "This week" if day >= monday and day < now else "Earlier"
 
 
 func _add_card(list: Node, record: Dictionary) -> void:
@@ -438,16 +564,19 @@ func _add_card(list: Node, record: Dictionary) -> void:
 		var analyze := Button.new()
 		analyze.name = "Analyze"
 		analyze.text = "Re-analyze" if state == "Stale" or state.begins_with("White:") else "Analyze"
-		analyze.disabled = record.path in analysis_queue.pending()
-		if analyze.disabled:
-			analyze.text = "Analysing…" if analysis_queue.current() == record.path else "Queued"
+		if record.path in analysis_queue.pending():
+			analyze.text = "Stop" if analysis_queue.current() == record.path else "Remove from queue"
 		if state == "Stale":
 			analyze.add_theme_color_override("font_color", Color("f4bf44"))
 		analyze.custom_minimum_size.y = 40
 		analyze.theme_type_variation = "RaisedButton"
 		analyze.add_theme_font_override("font", get_theme_font("font", "SemiboldText"))
 		_pad(analyze, 14)
-		analyze.pressed.connect(func(): analysis_queue.enqueue(record.path))
+		analyze.pressed.connect(func():
+			if record.path in analysis_queue.pending():
+				analysis_queue.remove(record.path)
+			else:
+				analysis_queue.enqueue(record.path))
 		actions.add_child(analyze)
 	var copy := Button.new()
 	copy.name = "Copy"
@@ -462,7 +591,7 @@ func _add_card(list: Node, record: Dictionary) -> void:
 	delete.tooltip_text = "Delete game"
 	delete.custom_minimum_size = Vector2(40, 40)
 	delete.pressed.connect(func():
-		for other in list.get_children():
+		for other in _visible_cards():
 			other.get_node("Details/DeleteInline").hide()
 			other.get_node("Details/HBoxContainer").show()
 		_delete_path = record.path
@@ -565,8 +694,9 @@ func _update_selection() -> void:
 		if _selected[path]:
 			count += 1
 	var box: CheckBox = $Margin/Content/BatchActions/SelectAll
-	box.text = "%d selected" % count
-	var cards = $Margin/Content/Cards/List.get_children()
+	box.text = "%d selected" % count if count else "Select shown"
+	box.tooltip_text = "Select all shown games in this tab"
+	var cards = _visible_cards()
 	var checked := not cards.is_empty()
 	for card in cards:
 		checked = checked and card.get_node("Details/Select").button_pressed
@@ -655,6 +785,7 @@ func _analyze_all() -> void:
 
 func _queue_changed() -> void:
 	var count: int = analysis_queue.pending().size()
+	$Margin/Content/BatchActions/StopAll.visible = count > 0
 	var status: Label = $Margin/Content/BatchActions/Status
 	$Margin/Content/BatchActions/Spinner.visible = count > 0 and not analysis_queue.current().is_empty()
 	status.text = ("Analysing %d of %d · %s" % [analysis_queue.batch_done + 1, analysis_queue.batch_total, preferences.get_value("analysis_threads")]) if count and preferences != null else ""
@@ -662,4 +793,16 @@ func _queue_changed() -> void:
 	if count and not analysis_queue.error.is_empty() and analysis_queue.current().is_empty():
 		status.text = "Analysis failed: %s · Analyze all to retry" % analysis_queue.error
 	if visible:
-		_refresh()
+		var state := [analysis_queue.pending(), analysis_queue.current(), analysis_queue.error]
+		if state != _queue_state:
+			_queue_state = state
+			_refresh()
+		else:
+			var card := $Margin/Content/Cards/List.get_node_or_null(NodePath(analysis_queue.current().get_file().validate_node_name())) if not analysis_queue.current().is_empty() else null
+			if card != null:
+				var percent := card.find_child("AnalysisPercent", true, false) as Label
+				var progress := card.find_child("AnalysisProgress", true, false) as ProgressBar
+				if percent != null:
+					percent.text = "%d%%" % analysis_queue.percent
+				if progress != null:
+					progress.value = analysis_queue.percent

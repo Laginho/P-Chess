@@ -377,6 +377,13 @@ layout_mode = 0
 mouse_filter = 2
 theme_override_constants/separation = 0
 
+[node name="FocusActions" type="VBoxContainer" parent="."]
+visible = false
+custom_minimum_size = Vector2(44, 0)
+layout_mode = 0
+mouse_filter = 2
+theme_override_constants/separation = 12
+
 [node name="Setup" parent="." instance=ExtResource("4")]
 visible = false
 layout_mode = 1

@@ -22,6 +22,7 @@ var analysis_bridge_factory: Callable = func(): return Uci.new("engine/stockfish
 var analyser_factory: Callable = func(bridge): return Analyser.new(bridge)
 var analysis_queue
 var _queue_path := ""
+var _queue_was_pending := false
 var _analysis_bridge
 var _analyser
 var _waiting_engine := false
@@ -125,7 +126,9 @@ func _ready() -> void:
 		black.custom_minimum_size.x = 56
 		black.add_theme_font_size_override("font_size", 13)
 		table.add_child(black)
+	$Margin/Content/StopAnalysis.pressed.connect(_stop_analysis)
 	$Margin/Content/Progress.visibility_changed.connect(func():
+		$Margin/Content/StopAnalysis.visible = $Margin/Content/Progress.visible
 		$Margin/Content/ProgressText.visible = $Margin/Content/Progress.visible
 		$Margin/Content/ProgressTitle.visible = $Margin/Content/Progress.visible
 		$Margin/Content/ProgressNote.visible = $Margin/Content/Progress.visible
@@ -365,6 +368,8 @@ func _ready() -> void:
 	description.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	notice.add_child(description)
 	notice.resized.connect(_fit_notice)
+	# Wrapped text finishes measuring after the hidden notice is shown again.
+	description.minimum_size_changed.connect(_fit_notice)
 	var analyze := Button.new()
 	analyze.name = "Analyze"
 	analyze.custom_minimum_size = Vector2(124, 48)
@@ -375,7 +380,7 @@ func _ready() -> void:
 	analyze.add_theme_font_size_override("font_size", 16)
 	analyze.pressed.connect(func():
 		analyze.hide()
-		open_analysis(_analysis_path, _history_draw))
+		open_analysis(_analysis_path, _history_draw if _from_history else _draw_at_end))
 	$Margin/Content/ReviewBody/Side.add_child(analyze)
 	$Margin/Content/ReviewBody/Side.move_child(analyze, $Margin/Content/ReviewBody/Side/Moves.get_index())
 	# The card's 24 px padding below the button, then 16 px before the move list.
@@ -457,7 +462,10 @@ func _layout_review() -> void:
 	progress_text.position = Vector2(at.x, top + 2 + count_line)
 	progress_text.size = Vector2(side.size.x, 20)
 	progress.position = Vector2(at.x, top + 30 + count_line)
-	progress.size = Vector2(side.size.x, 10)
+	progress.size = Vector2(side.size.x - 74, 10)
+	var stop: Button = $Margin/Content/StopAnalysis
+	stop.position = Vector2(at.x + side.size.x - 64, progress.position.y - 10)
+	stop.size = Vector2(64, 32)
 	var note: Label = $Margin/Content/ProgressNote
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	note.position = Vector2(at.x, top + 46 + count_line)
@@ -477,7 +485,9 @@ func _layout_review() -> void:
 	actions.size = Vector2(side.size.x, actions_height)
 	actions.position = Vector2(at.x, content.size.y - 14 - actions_height)
 	# The navigation ends 8 px above the actions.
-	$Margin/Content/ReviewBody/Side/FooterSpace.custom_minimum_size.y = maxf(0, at.y + side.size.y - actions.position.y + 4)
+	# A state change can temporarily overflow the side's minimum height. Using that
+	# inflated height here would grow the spacer again on every container sort.
+	$Margin/Content/ReviewBody/Side/FooterSpace.custom_minimum_size.y = maxf(0, content.size.y + body.offset_bottom - actions.position.y + 4)
 	$Margin/Content/ReviewBody/CardGap.custom_minimum_size.x = 8 if compact else 24
 
 
@@ -591,8 +601,7 @@ func open_analysis(path: String, draw_at_end: bool) -> void:
 	_draw_at_end = draw_at_end
 	# A current cache needs no engine, so a missing or broken Stockfish cannot hide it.
 	if current_cache:
-		for i in positions.size():
-			receive_position(i, positions[i])
+		receive_positions(positions)
 		return
 	$Margin/Content/Progress.value = 0
 	$Margin/Content/Progress.show()
@@ -619,8 +628,7 @@ func _check_engine() -> void:
 	if cached.state == "analysed":
 		var saved: Array = cached.data.positions
 		if saved.size() == _positions.size():
-			for i in saved.size():
-				receive_position(i, saved[i])
+			receive_positions(saved)
 			$Margin/Content/Progress.hide()
 			return
 	_analyser = analyser_factory.call(_analysis_bridge)
@@ -651,13 +659,58 @@ func _analysis_error(message: String) -> void:
 	$Margin/Content/AnalysisError.show()
 
 
+func _stop_analysis() -> void:
+	if analysis_queue != null and _queue_path in analysis_queue.pending():
+		analysis_queue.remove(_queue_path)
+	else:
+		_cancel_analysis()
+		_restore_analysis()
+
+
+# Rebuild from FENs so streamed PVs and classifications cannot survive a stop.
+# The analyser writes atomically on completion, so an older cache is still safe.
+func _restore_analysis() -> void:
+	$Margin/Content/Progress.hide()
+	$Margin/Content/AnalysisError.hide()
+	$Margin/Content/ProgressText.text = "0 of %d moves" % _game_moves.size()
+	for i in _classes.size():
+		if _classes[i] != null:
+			var column := i % 2 + 1
+			var tooltip: String = _move_rows[i].get_tooltip_text(column)
+			_move_rows[i].set_tooltip_text(column, tooltip.trim_prefix(_classes[i].class + ": "))
+	for i in _positions.size():
+		_positions[i] = {"fen": _positions[i].fen}
+	var cached := Analyser.read_analysis(_analysis_path, "Stockfish 19", Tunables.ANALYSIS_NODES)
+	var positions = cached.get("data", {}).get("positions", [])
+	var complete: bool = cached.state == "analysed" and positions is Array and positions.size() == _positions.size()
+	if complete:
+		for i in positions.size():
+			if not positions[i] is Dictionary or not positions[i].has("pv") or positions[i].get("fen") != _positions[i].fen:
+				complete = false
+				break
+	$Margin/Content/ReviewBody/Side/UnanalysedNotice.visible = not complete
+	$Margin/Content/ReviewBody/Side/Analyze.visible = not complete
+	if complete:
+		receive_positions(positions)
+	else:
+		_refresh_classes()
+		_update_summary()
+		_update_board_annotations()
+		_update_eval_bar()
+	_resize_classes()
+
+
 func _cancel_analysis() -> void:
 	_waiting_engine = false
 	if _analyser != null:
+		for event in ["position_ready", "progress", "finished"]:
+			for connection in _analyser.get_signal_connection_list(event):
+				_analyser.disconnect(event, connection.callable)
 		_analyser.cancel()
 		_analyser.queue_free()
 		_analyser = null
 	if _analysis_bridge != null:
+		_analysis_bridge.stop()
 		_analysis_bridge.queue_free()
 		_analysis_bridge = null
 
@@ -733,6 +786,16 @@ func receive_position(index: int, position: Dictionary) -> void:
 	if index < 0 or index >= _positions.size():
 		return
 	_positions[index].merge(position, true)
+	_positions_changed()
+
+
+func receive_positions(positions: Array) -> void:
+	for i in mini(positions.size(), _positions.size()):
+		_positions[i].merge(positions[i], true)
+	_positions_changed()
+
+
+func _positions_changed() -> void:
 	var settled := 0
 	for i in range(1, _positions.size()):
 		if _positions[i - 1].has("pv") and _positions[i].has("pv"):
@@ -779,7 +842,6 @@ func _update_summary() -> void:
 
 
 func _refresh_classes() -> void:
-	# ponytail: reevaluate all plies as positions land; incremental classification if long games stutter.
 	_classes = Classification.evaluate(_game_moves, {"positions": _positions}, _catalog, _repertoire, _colour, _check_repertoire)
 	for i in _classes.size():
 		var icon: Texture2D = _class_icon("Pending" if _classes[i] == null else _classes[i].class)
@@ -852,6 +914,7 @@ func _update_eval_bar() -> void:
 func present(game, clocks: Array, settings: Dictionary, result_text: String,
 		catalog: Array = [], repertoire: Array = [], check_repertoire := false) -> void:
 	_from_history = false
+	_queue_was_pending = false
 	$Margin/Content/ReviewBody/Side/UnanalysedNotice.hide()
 	_resize_classes()
 	$Margin/Content/Actions/Rematch.show()
@@ -949,8 +1012,7 @@ func present_history(path: String, analysis_path: String, draw_at_end: bool) -> 
 	var cached := Analyser.read_analysis(analysis_path, "Stockfish 19", Tunables.ANALYSIS_NODES)
 	var positions = cached.get("data", {}).get("positions", [])
 	if cached.state == "analysed" and positions is Array and positions.size() == _positions.size():
-		for i in positions.size():
-			receive_position(i, positions[i])
+		receive_positions(positions)
 	else:
 		$Margin/Content/ReviewBody/Side/Analyze.show()
 		$Margin/Content/ReviewBody/Side/UnanalysedNotice.show()
@@ -1013,22 +1075,21 @@ static func lichess_url(game) -> String:
 	return "https://lichess.org/analysis/pgn/" + text.uri_encode()
 
 func _queue_position(path: String, index: int, position: Dictionary) -> void:
-	if visible and path == _queue_path:
+	if visible and path == _queue_path and path in analysis_queue.pending():
 		receive_position(index, position)
 
 
 func _queue_changed() -> void:
 	if not visible or analysis_queue == null or _queue_path.is_empty():
 		return
-	var active: bool = analysis_queue.current() == _queue_path
+	var pending: bool = _queue_path in analysis_queue.pending()
+	if _queue_was_pending and not pending:
+		_queue_was_pending = false
+		_restore_analysis()
+	_queue_was_pending = pending
+	var active: bool = analysis_queue.current() == _queue_path and pending
 	$Margin/Content/Progress.visible = active
 	if active:
 		$Margin/Content/Progress.value = analysis_queue.percent
-	elif not _queue_path in analysis_queue.pending():
-		var cached := Analyser.read_analysis(_analysis_path, "Stockfish 19", Tunables.ANALYSIS_NODES)
-		var positions = cached.get("data", {}).get("positions", [])
-		if positions is Array and positions.size() == _positions.size():
-			for i in positions.size():
-				receive_position(i, positions[i])
-	if not analysis_queue.error.is_empty():
+	if pending and not analysis_queue.error.is_empty():
 		_analysis_error(analysis_queue.error)
