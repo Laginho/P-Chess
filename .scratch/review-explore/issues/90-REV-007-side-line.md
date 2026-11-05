@@ -1,5 +1,5 @@
 # REV-007: Side lines in the Review, and the Best move arrow setting
-Stage: to-implement
+Stage: implementing
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -153,4 +153,6 @@ External evidence: [focused graphical log](/run/media/lage/New Volume/Scratch/re
 - 2026-11-05 Second reopen: foreman diagnosis required before retrying. Classify new defect, earlier review miss, contract gap, or review-induced churn; record cause and next action, then return to-implement only when ready.
 
 - 2026-11-05 Reopen diagnosis: the repair was incomplete, and round 1's review also missed something. No contract gap and no churn. Evidence: round 1's R2 (`2cb5235`) reported "Settings cannot be opened while Review is shown" through `_covers_settings()` only. The repair (`a532ce9`, `1ba9575`, `da1a076`) fixed that ordering path and tested Review entered with focus off. Round 2 (`a3dab24`) reproduced the remaining entry path, Review opened from a focused game's result card. There, `ui/main.gd` `_set_focus` hides `settings_screen` and `ui/game_over.gd` Review never restores it. Round 2 calls this "the prior review's missed focus-mode variant of R2", not a new requirement. Round 2 already covered the affected paths (normal, focused post-game and History entry; name dialog; searching), so it serves as the consolidated review. Round 2's earlier fixes (R1, R3) passed with no regressions from the review's advice. Next action: stage 2 on the hard model (two `Verdict: Reopen`). Repair as round 2's Resolution says: Settings reachable in a Review entered from a focused game, with the focused-game shortcut restriction kept, and covered through the focused post-game Review scenario with a real Ctrl+, and the real checkbox, including a side line. Back to `to-implement`.
+
+- 2026-11-05 Focus repair seam and caller analysis: the approved Review scene seam will exercise F11, the focused game's result-card Review button, Ctrl+, and the actual Best move arrow checkbox through viewport input. Review visibility changes through `present`/`present_history`/`open_analysis`, result preparation, rematch, Home/Setup and History; `_set_focus` is called by F11, Home and player-row refresh. Boundaries covered by the new scenario are entering Review without clearing focus, game and side-line Settings keyboard ownership, toggling focus while Review remains visible, and leaving Review through a focused rematch. Existing session tests retain History, name-dialog and searching coverage. The repair remains within the already-approved `ui/main.gd` Settings access scope; no new seam or contract expansion is needed.
 

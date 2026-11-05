@@ -1561,3 +1561,86 @@ func test_settings_over_review_controls_arrow_and_owns_keyboard():
 			assert_eq(board.best_move_arrow, "e2e4", "updated setting appears on returning to game")
 	main.free()
 	root.size = old_size
+
+
+func test_settings_remain_available_in_review_after_focused_game():
+	var root: Window = Engine.get_main_loop().root
+	var old_size := root.size
+	root.size = Vector2i(1280, 800)
+	var time := FakeTime.new()
+	var main = await _session(time)
+	var panel = main.settings_screen.get_node("Panel")
+	await _review_key(root, KEY_F11)
+	assert_true(main.focus, "game enters focus mode")
+	await _review_key(root, KEY_COMMA, true)
+	assert_true(not panel.is_visible_in_tree(), "Settings stays unavailable during focused play")
+	main.board_view.play("f2f3")
+	main._on_maia_move("e7e5")
+	main.board_view.play("g2g4")
+	main._on_maia_move("d8h4")
+	await Engine.get_main_loop().process_frame
+	var open_review = main.board_view.get_node("GameOver/Panel/Content/Review")
+	var at: Vector2 = open_review.get_global_rect().get_center()
+	await _review_mouse_motion(root, at)
+	await _review_mouse_button(root, at, true)
+	await _review_mouse_button(root, at, false)
+	var review = main.review
+	assert_true(review.visible and main.focus, "result card opens Review without clearing focus")
+	review.receive_position(0, {"best_move": "e2e4"})
+	review.get_node("Margin/Content/ReviewBody/Side/Navigation/First").pressed.emit()
+	var board = review.get_node("Margin/Content/ReviewBody/BoardView")
+	assert_eq(board.best_move_arrow, "e2e4", "stored arrow is present before opening Settings")
+	var form = panel.get_node("Center/Box/Form")
+	var arrow_box: CheckBox
+	for i in range(0, form.get_child_count(), 2):
+		if form.get_child(i).text == "Best move arrow":
+			arrow_box = form.get_child(i + 1)
+	assert_true(arrow_box != null, "arrow row exists")
+	var played_game = main.board_view.game
+	for in_line in [false, true]:
+		if in_line:
+			assert_true(board.play("d2d4"))
+		await _review_key(root, KEY_COMMA, true)
+		assert_true(panel.is_visible_in_tree(), "Ctrl+, opens Settings after focused play, line=%s" % in_line)
+		if not panel.is_visible_in_tree() or arrow_box == null:
+			continue
+		await Engine.get_main_loop().process_frame
+		at = arrow_box.get_global_rect().get_center()
+		await _review_mouse_motion(root, at)
+		await _review_mouse_button(root, at, true)
+		await _review_mouse_button(root, at, false)
+		assert_eq(main.preferences.get_value("best_move_arrow"), false, "real checkbox turns the arrow off")
+		assert_eq(board.best_move_arrow, "", "arrow clears immediately")
+		var flipped: bool = board.flipped
+		var moves: PackedStringArray = board.game.moves.duplicate()
+		for key in [KEY_F, KEY_LEFT, KEY_RIGHT, KEY_SPACE]:
+			await _review_key(root, key)
+		assert_true(review.visible and main.board_view.game == played_game, "Space stays with Settings")
+		assert_eq(board.flipped, flipped, "F stays with Settings")
+		assert_eq(board.game.moves, moves, "arrows stay with Settings")
+		assert_eq(main.preferences.get_value("best_move_arrow"), true, "Space turns the focused checkbox back on")
+		assert_eq(board.best_move_arrow, "" if in_line else "e2e4", "arrow follows the checkbox immediately")
+		await _review_key(root, KEY_ESCAPE)
+		assert_true(not panel.visible, "first Esc closes Settings")
+		assert_eq(review._line_active, in_line, "first Esc preserves the side line")
+		if in_line:
+			await _review_key(root, KEY_ESCAPE)
+			assert_true(not review._line_active, "second Esc returns to the game")
+			assert_eq(board.best_move_arrow, "e2e4")
+	# Both focus transitions must retain Settings access while Review is visible.
+	for focused in [false, true]:
+		await _review_key(root, KEY_F11)
+		assert_eq(main.focus, focused)
+		await _review_key(root, KEY_COMMA, true)
+		assert_true(panel.is_visible_in_tree(), "Settings opens in Review with focus=%s" % focused)
+		if panel.is_visible_in_tree():
+			await _review_key(root, KEY_ESCAPE)
+	# Rematching must reinstate the focused game's shortcut restriction.
+	await _review_key(root, KEY_SPACE)
+	await _wait_start(main)
+	assert_true(main.focus and not review.visible, "rematch keeps focused gameplay")
+	assert_true(main.board_view.game != played_game)
+	await _review_key(root, KEY_COMMA, true)
+	assert_true(not panel.is_visible_in_tree(), "Settings stays unavailable after a focused rematch")
+	main.free()
+	root.size = old_size
