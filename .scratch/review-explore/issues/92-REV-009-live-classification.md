@@ -1,5 +1,5 @@
 # REV-009: Live classes for side-line moves
-Stage: to-review
+Stage: done
 Status: ready-for-agent
 Blocked by: REV-008
 Review: human
@@ -99,7 +99,7 @@ Numbered criterion record:
 Coverage: examined the complete changed source and tests, stage-2 commit boundaries, the analyser parser and convergence shape, Classification's Miss/Great/Book/Repertoire/Forced dependencies, required-position backtracking, multi-PV completion, forced and terminal positions, rapid navigation, replacement and cache retention, UCI handshake/callback/drain ordering, engine failure and cached-result lifetime, Review exit/hide/Rematch and queue/direct-analysis pause/resume callers, game exports/summary/graph isolation, and the retained REV-008 live-search contract. The two probes ran headless at the already approved fake-bridge seams. Real Stockfish output/timing, CPU load, Bruno's Windows acceptance, graphical rendering and physical input were not independently exercised during this review; prior captures remain stage-2 evidence.
 
 Acceptance: pending | The two implementation findings above require repair and a new green gate after code changes. Bruno's real-Stockfish Windows scenarios from Verification remain pending before main integration.
-Disclosure: pending | integration | [REV-009 stage-3 findings](#resolution-2026-11-05-stage-3) are open on this ticket at `Stage: to-implement`; resolve both before session integration. The earlier real-Stockfish Windows acceptance condition also remains in force before merging the session into main.
+Disclosure: decision | none | The [first stage-3 findings](#resolution-2026-11-05-stage-3) required reopening at that review. Both are now resolved by the repair commits and independently approved in the [stage-3 re-review](#resolution-2026-11-05-stage-3-re-review). The separate real-Stockfish Windows integration condition remains pending.
 
 #### Resolution (2026-11-05, stage 2 repair)
 
@@ -119,3 +119,33 @@ Verification:
 Acceptance: pending | Bruno's original real-Stockfish Windows scenarios remain: explore a Blunder until a Best move, play rapidly and watch classes arrive, and compare an explored move with its game class. Automated repairs and the complete gate pass; these do not validate real engine timing or CPU load.
 Disclosure: pending | integration | Complete Bruno's real-Stockfish Windows acceptance before merging the session into main, per [the approved test seam](../spec.md#test-seams). Both prior implementation findings are addressed by the repair commits above and await stage-3 review; the manual integration condition remains.
 Gate evidence: /run/media/lage/New Volume/Scratch/rev009-repair/gate.json
+
+#### Resolution (2026-11-05, stage 3 re-review)
+Verdict: Approve
+
+Re-reviewed the two prior findings and the entire repair diff `adaf1d4...e480ca4`, including all five repair/handoff commits. Independent `code-review` agents `review_standards` and `review_spec` reviewed the Standards and Spec axes. The reviewer authored no source or test changes. Rebase onto the session changed nothing. Integrated into `sweatshop/review-explore/2026-11-05-1723` with merge commit `b0f31e1de7dc70b9d7b2a966f3cb958a3a2e1be8`; its tree exactly matches the reviewed ticket branch.
+
+**Standards:** zero findings. Production, tests and specification changes stay within Primary files; ticket metadata is permitted. The two repair cycles preserve test-only/production-only commits, conventional English subjects citing REV-009 and explanatory bodies. Examined the recorded failing draw/cache/return tests, their passing repairs and the adjusted cache-navigation test's mutation evidence. Separate frozen-class and evolving-live caches have distinct purposes; their short parallel pruning operations do not warrant a cleanup ticket.
+
+**Spec:** zero confirmed findings or scope creep. The first repair supplies usable live before-position PVs for continuations beyond an agreed or claimed-repetition draw while leaving the stored game analysis, classes, result and PGN unchanged. The second resumes unlimited shown-position searches on return, preserves the latest live PV until a restarted search catches up, and keeps class inputs frozen. Both prior implementation findings are closed.
+
+Investigated draw/Miss context with an additional probe: an original game move graded Excellent against its terminal draw score can grade Blunder in the hypothetical continued line after fresh branch analysis, allowing the explored reply to be Miss. This follows criterion 2's full-prefix `Classification.evaluate` and criterion 8's identical-engine-data rule; the original game's displayed class stays unchanged. Requiring the temporary evaluation to reuse the original displayed predecessor class would add an unstated requirement, so this is not a new finding or contract change.
+
+Numbered criterion record:
+
+1. ✅ Per-FEN settlement remains frozen at the node budget or completed-depth convergence; forced/terminal shapes and line lifetime are retained. Both frozen and live caches prune removed positions.
+2. ✅ Shared full-prefix classification retains opening context, pending Miss dependencies and immutable side-line classes. Legal continuations after stored draws now receive usable before-position data, resolving prior finding 1.
+3. ✅ Missing branch/predecessor history settles before the shown position; the draw branch is also treated as unavailable for continuation until usable PVs settle.
+4. ✅ The agreed/repetition-draw regressions verify square and row icons after settlement. The return regression verifies that renewed live scores leave both icons unchanged.
+5. ✅ Prerequisite ordering and thinking placeholders remain intact. Returning to a cached FEN resumes its unlimited shown-position search, resolving prior finding 2.
+6. ✅ The green arrow uses the settled before-position, waits while that input is missing, and remains fixed during renewed live analysis.
+7. ✅ Returning reuses class inputs while restarting only the shown live search. Replacement removes discarded classes and both caches; rapid return during Stop/drain remains valid.
+8. ✅ Stored/live scripted equality and full-prefix Book/Repertoire/Miss behavior remain intact; separate live updates do not replace frozen classification inputs.
+9. ✅ Reused the valid bound gate on `7b37507bb6ba7faa09ad140b8acbc967c072e464`: `godot --headless -s tests/run.gd`, exit 0, **554 passed, 0 failed**. Independently verified log SHA-256, tested-commit ancestry, identical production afterward and the helper's `Assert-GateEvidence`. The existing last-move pixel check and six real-Lc0 checks skip in this environment. No unchanged full gate was rerun.
+
+Additional verification: independently ran seven focused committed regressions for prerequisite/cache ordering, latest-live-PV return, both stored draw types, immutable icons, unanalysed Miss/replacement, terminal prerequisites and rapid exploration: **7 passed, 0 failed**, with script errors collected. Evidence: [focused.gd](</run/media/lage/New Volume/Scratch/rev009-review2/focused.gd>), [focused.log](</run/media/lage/New Volume/Scratch/rev009-review2/focused.log>). Independent probes additionally pass rapid return while draining, cache-preserving `stop(false)`/restart and terminal handling: [navigation probe](</run/media/lage/New Volume/Scratch/rev009-review2-spec/navigation.gd>), [log](</run/media/lage/New Volume/Scratch/rev009-review2-spec/navigation.log>). Draw/Miss interpretation evidence: [probe](</run/media/lage/New Volume/Scratch/rev009-review2-spec/draw-miss.gd>), [log](</run/media/lage/New Volume/Scratch/rev009-review2-spec/draw-miss.log>).
+
+Coverage: examined the complete repair diff, `_line_positions` consumers (class evaluation, requirement selection, cache retention and board annotations), search/schedule/settlement callback ordering, UCI drain and generation checks, forced/terminal/error paths, rapid navigation, latest-PV preservation, cache pruning/disposal, stored draw analysis and exports, and retained REV-008 unlimited shown-search behavior. The original review's broader cross-feature coverage remains recorded above. Real Stockfish output/timing, CPU load, Windows product acceptance, graphical rendering and physical input were not independently exercised in this re-review. There are no new proxy decisions; the existing MultiPV-2 grilling choice remains unchanged.
+
+Acceptance: pending | Bruno's real-Stockfish Windows scenarios remain: explore a Blunder until a Best move, play rapidly and watch classes arrive, and compare an explored game move with its game class. Automated implementation approval permits session integration; it does not establish this product acceptance.
+Disclosure: pending | integration | Complete Bruno's real-Stockfish Windows acceptance before merging the session into main, per [the approved test seam](../spec.md#test-seams). Both prior implementation findings are resolved and approved; the manual integration condition remains.
