@@ -221,13 +221,9 @@ func games() -> Array:
 
 
 func thumbnail(moves: PackedStringArray) -> Dictionary:
-	var endings := {}
-	var positions := {}
-	if book != null:
-		for entry in book.entries:
-			for key in entry.positions:
-				positions[key] = true
-			endings[entry.positions[-1]] = entry.name
+	var index: Dictionary = preload("res://bot/badges.gd").catalog_index(book.entries if book != null else [])
+	var endings: Dictionary = index.endings
+	var positions: Dictionary = index.positions
 	var game = Game.new()
 	var match_ply := 0
 	var opening := ""

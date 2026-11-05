@@ -23,6 +23,7 @@ var _setup := PackedStringArray()
 var _waiting_for_engine := false
 var _draw_at_end := false
 var _search_active := false
+var _only_legal_move := false
 
 
 func _init(bridge = null) -> void:
@@ -129,6 +130,7 @@ func _next() -> void:
 		return
 	var board = Board.from_fen(_fens[_index])
 	var legal: PackedStringArray = board.legal_moves()
+	_only_legal_move = legal.size() == 1
 	if (_draw_at_end and _index == _fens.size() - 1) or legal.is_empty() or board.halfmove_clock >= 100 or (board.cannot_mate("w") and board.cannot_mate("b")):
 		# Terminal scores use the side to move, just like UCI scores.
 		_positions[_index] = {"fen": _fens[_index], "pv": [], "best_move": "",
@@ -159,8 +161,7 @@ func _on_line(line: String) -> void:
 		for number in [1, 2]:
 			if _lines.has(number):
 				pv.append(_lines[number])
-		var legal: PackedStringArray = Board.from_fen(_fens[_index]).legal_moves()
-		if legal.size() == 1 and pv.size() > 1:
+		if _only_legal_move and pv.size() > 1:
 			pv.resize(1)
 		_positions[_index] = {"fen": _fens[_index], "pv": pv,
 				"best_move": line.split(" ", false)[1]}
@@ -179,7 +180,7 @@ func _on_line(line: String) -> void:
 				_depths[parsed.depth].cp = parsed.cp
 			else:
 				_depths[parsed.depth].mate = parsed.mate
-		var completed: bool = number == 2 or Board.from_fen(_fens[_index]).legal_moves().size() == 1
+		var completed: bool = number == 2 or _only_legal_move
 		if completed and _depths.has(parsed.depth):
 			_completed[parsed.depth] = _depths[parsed.depth]
 			var depths := _completed.keys()

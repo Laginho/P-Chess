@@ -591,8 +591,7 @@ func open_analysis(path: String, draw_at_end: bool) -> void:
 	_draw_at_end = draw_at_end
 	# A current cache needs no engine, so a missing or broken Stockfish cannot hide it.
 	if current_cache:
-		for i in positions.size():
-			receive_position(i, positions[i])
+		receive_positions(positions)
 		return
 	$Margin/Content/Progress.value = 0
 	$Margin/Content/Progress.show()
@@ -619,8 +618,7 @@ func _check_engine() -> void:
 	if cached.state == "analysed":
 		var saved: Array = cached.data.positions
 		if saved.size() == _positions.size():
-			for i in saved.size():
-				receive_position(i, saved[i])
+			receive_positions(saved)
 			$Margin/Content/Progress.hide()
 			return
 	_analyser = analyser_factory.call(_analysis_bridge)
@@ -733,6 +731,16 @@ func receive_position(index: int, position: Dictionary) -> void:
 	if index < 0 or index >= _positions.size():
 		return
 	_positions[index].merge(position, true)
+	_positions_changed()
+
+
+func receive_positions(positions: Array) -> void:
+	for i in mini(positions.size(), _positions.size()):
+		_positions[i].merge(positions[i], true)
+	_positions_changed()
+
+
+func _positions_changed() -> void:
 	var settled := 0
 	for i in range(1, _positions.size()):
 		if _positions[i - 1].has("pv") and _positions[i].has("pv"):
@@ -779,7 +787,6 @@ func _update_summary() -> void:
 
 
 func _refresh_classes() -> void:
-	# ponytail: reevaluate all plies as positions land; incremental classification if long games stutter.
 	_classes = Classification.evaluate(_game_moves, {"positions": _positions}, _catalog, _repertoire, _colour, _check_repertoire)
 	for i in _classes.size():
 		var icon: Texture2D = _class_icon("Pending" if _classes[i] == null else _classes[i].class)
@@ -949,8 +956,7 @@ func present_history(path: String, analysis_path: String, draw_at_end: bool) -> 
 	var cached := Analyser.read_analysis(analysis_path, "Stockfish 19", Tunables.ANALYSIS_NODES)
 	var positions = cached.get("data", {}).get("positions", [])
 	if cached.state == "analysed" and positions is Array and positions.size() == _positions.size():
-		for i in positions.size():
-			receive_position(i, positions[i])
+		receive_positions(positions)
 	else:
 		$Margin/Content/ReviewBody/Side/Analyze.show()
 		$Margin/Content/ReviewBody/Side/UnanalysedNotice.show()
@@ -1028,7 +1034,6 @@ func _queue_changed() -> void:
 		var cached := Analyser.read_analysis(_analysis_path, "Stockfish 19", Tunables.ANALYSIS_NODES)
 		var positions = cached.get("data", {}).get("positions", [])
 		if positions is Array and positions.size() == _positions.size():
-			for i in positions.size():
-				receive_position(i, positions[i])
+			receive_positions(positions)
 	if not analysis_queue.error.is_empty():
 		_analysis_error(analysis_queue.error)

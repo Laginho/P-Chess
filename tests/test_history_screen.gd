@@ -325,7 +325,7 @@ func test_queue_progress_keeps_keyboard_focus_on_the_card():
 	review.grab_focus()
 	runner.progress.emit(1, 2)
 	var focused = screen.get_viewport().gui_get_focus_owner()
-	assert_true(focused != null and focused != review and focused.name == "Review", "the rebuilt card's Review keeps focus")
+	assert_true(focused == review, "progress preserves the focused Review button")
 	screen.free()
 	queue.free()
 	Storage.clean(folder)

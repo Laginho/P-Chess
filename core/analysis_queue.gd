@@ -183,13 +183,14 @@ class StockfishRunner extends Node:
 		var positions: Array = Analyser.positions_from_game(game)
 		if positions.is_empty():
 			return false
-		bridge = Uci.new("engine/stockfish/stockfish.exe", "Stockfish")
-		add_child(bridge)
-		if not bridge.start():
-			bridge.queue_free()
-			bridge = null
-			return false
-		bridge.stopped.connect(_stopped)
+		if bridge == null:
+			bridge = Uci.new("engine/stockfish/stockfish.exe", "Stockfish")
+			add_child(bridge)
+			if not bridge.start():
+				bridge.queue_free()
+				bridge = null
+				return false
+			bridge.stopped.connect(_stopped)
 		analyser = Analyser.new(bridge)
 		add_child(analyser)
 		analyser.progress.connect(func(done, total): progress.emit(done, total))
@@ -206,19 +207,22 @@ class StockfishRunner extends Node:
 			analyser.cancel()
 
 	func _done(success: bool, message: String) -> void:
-		_cleanup()
+		# bestmove has drained the search; new_game resets the reused engine next time.
+		_cleanup(false)
 		finished.emit(success, message)
 
 	func _stopped() -> void:
 		var message: String = bridge.error
+		var was_analysing: bool = analyser != null
 		_cleanup()
-		finished.emit(false, message)
+		if was_analysing:
+			finished.emit(false, message)
 
-	func _cleanup() -> void:
+	func _cleanup(stop_engine := true) -> void:
 		if analyser != null:
 			analyser.queue_free()
 			analyser = null
-		if bridge != null:
+		if stop_engine and bridge != null:
 			bridge.stop()
 			bridge.queue_free()
 			bridge = null

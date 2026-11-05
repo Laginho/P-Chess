@@ -21,6 +21,7 @@ var preferences
 var copy_text: Callable = DisplayServer.clipboard_set
 var _delete_path := ""
 var _compact := false
+var _queue_state := []
 
 
 func _ready() -> void:
@@ -140,6 +141,7 @@ func present(store, settings) -> void:
 	preferences = settings
 	$Margin/Content/Header/Tabs.current_tab = TABS.find(settings.get_value("history_tab"))
 	show()
+	_queue_state = []
 	if analysis_queue != null:
 		_queue_changed()
 	else:
@@ -150,7 +152,7 @@ func _refresh() -> void:
 	if history == null:
 		return
 	var list = $Margin/Content/Cards/List
-	# Queue progress rebuilds the cards; keep keyboard focus on the same control of the same game.
+	# Keep keyboard focus on the same control of the same game after a rebuild.
 	var focus := get_viewport().gui_get_focus_owner()
 	var focus_path := list.get_path_to(focus) if focus != null and list.is_ancestor_of(focus) else NodePath()
 	for child in list.get_children():
@@ -662,4 +664,16 @@ func _queue_changed() -> void:
 	if count and not analysis_queue.error.is_empty() and analysis_queue.current().is_empty():
 		status.text = "Analysis failed: %s · Analyze all to retry" % analysis_queue.error
 	if visible:
-		_refresh()
+		var state := [analysis_queue.pending(), analysis_queue.current(), analysis_queue.error]
+		if state != _queue_state:
+			_queue_state = state
+			_refresh()
+		else:
+			var card := $Margin/Content/Cards/List.get_node_or_null(NodePath(analysis_queue.current().get_file().validate_node_name())) if not analysis_queue.current().is_empty() else null
+			if card != null:
+				var percent := card.find_child("AnalysisPercent", true, false) as Label
+				var progress := card.find_child("AnalysisProgress", true, false) as ProgressBar
+				if percent != null:
+					percent.text = "%d%%" % analysis_queue.percent
+				if progress != null:
+					progress.value = analysis_queue.percent

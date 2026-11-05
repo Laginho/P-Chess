@@ -44,7 +44,7 @@ func load_repertoire(lines: Array, side: String) -> void:
 
 
 func load_catalog(folder := "res://data/openings") -> void:
-	entries.clear()
+	entries = []
 	errors.clear()
 	volume_counts.clear()
 	roots.clear()
