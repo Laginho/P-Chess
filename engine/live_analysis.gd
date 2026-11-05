@@ -19,17 +19,17 @@ var _generation := 0
 var _results := {}
 var _depths := {}
 var _only_legal_move := false
+var _required := []
 
 
 func _init(bridge) -> void:
 	_bridge = bridge
 
 
-func search(fen: String) -> bool:
-	if fen == _fen and _started:
-		return true
+# Required FENs are ordered class prerequisites. Only the shown FEN emits live PVs.
+func search(fen: String, required: Array = []) -> bool:
 	_fen = fen
-	_lines.clear()
+	_required = required.duplicate()
 	if not _started:
 		if not _bridge.start():
 			failed.emit(_bridge.error)
@@ -37,30 +37,61 @@ func search(fen: String) -> bool:
 		_started = true
 		_bridge.stopped.connect(_engine_stopped)
 		_bridge.new_game()
-	if not _search_fen.is_empty():
-		if not _draining:
-			_draining = true
-			_bridge.stop_search()
-	else:
-		_begin_search()
+	if _results.has(fen):
+		updated.emit(fen, result(fen))
+	_schedule()
 	return true
 
 
+func retain(fens: Array) -> void:
+	for fen in _results.keys():
+		if not fen in fens:
+			_results.erase(fen)
+
+
+# Terminal results are supplied by Review's game state, including repetition draws.
+func remember(position: Dictionary) -> void:
+	if not _results.has(position.fen):
+		_results[position.fen] = position.duplicate(true)
+
+
 func _process(_delta: float) -> void:
-	if _started and _search_fen.is_empty() and not _fen.is_empty():
-		_begin_search()
+	if _started:
+		_schedule()
 
 
-func _begin_search() -> void:
+func _next_fen() -> String:
+	for fen: String in _required:
+		if not _results.has(fen):
+			return fen
+	return _fen if not _results.has(_fen) else ""
+
+
+func _schedule() -> void:
+	if _draining:
+		return
+	var next := _next_fen()
+	if not _search_fen.is_empty():
+		# Keep the unlimited shown search running after its class settles.
+		if next == _search_fen or (next.is_empty() and _search_fen == _fen):
+			return
+		_draining = true
+		_bridge.stop_search()
+	elif not next.is_empty():
+		_begin_search(next)
+
+
+func _begin_search(fen: String) -> void:
 	if _bridge.engine_id.is_empty():
 		return
-	_search_fen = _fen
+	_search_fen = fen
+	_lines.clear()
 	_depths.clear()
-	_only_legal_move = Board.from_fen(_fen).legal_moves().size() == 1
+	_only_legal_move = Board.from_fen(fen).legal_moves().size() == 1
 	_generation += 1
 	_bridge.request_search(PackedStringArray([
 			"setoption name Threads value %d" % maxi(1, OS.get_processor_count() - 1),
-			"setoption name MultiPV value 2", "position fen " + _fen, "go infinite"]),
+			"setoption name MultiPV value 2", "position fen " + fen, "go infinite"]),
 			_receive.bind(_generation))
 
 
@@ -69,11 +100,10 @@ func _receive(line: String, generation: int) -> void:
 		return
 	if line.begins_with("bestmove"):
 		_search_fen = ""
-		if _draining:
-			_draining = false
-			_begin_search()
+		_draining = false
+		_schedule()
 		return
-	if _draining or _search_fen != _fen:
+	if _draining:
 		return
 	var parsed := Analyser._parse_info(line)
 	if parsed.is_empty():
@@ -90,8 +120,10 @@ func _receive(line: String, generation: int) -> void:
 	for n in [1, 2]:
 		if _lines.has(n):
 			pv.append(_lines[n].duplicate(true))
-	updated.emit(_fen, {"fen": _fen, "pv": pv,
-			"best_move": _lines[1].moves[0] if _lines.has(1) else ""})
+	if _search_fen == _fen:
+		updated.emit(_fen, {"fen": _fen, "pv": pv,
+				"best_move": _lines[1].moves[0]})
+	_schedule()
 
 
 # Classification reads immutable completed depths, never the evolving live PVs.
@@ -132,17 +164,19 @@ func _record_depth(number: int, parsed: Dictionary) -> void:
 
 func _engine_stopped() -> void:
 	var message: String = _bridge.error
-	stop()
+	stop(false)
 	failed.emit(message)
 
 
-func stop() -> void:
+func stop(clear_results := true) -> void:
 	_generation += 1
 	_fen = ""
 	_search_fen = ""
 	_draining = false
 	_lines.clear()
-	_results.clear()
+	if clear_results:
+		_results.clear()
+	_required.clear()
 	_depths.clear()
 	if _started:
 		_started = false
