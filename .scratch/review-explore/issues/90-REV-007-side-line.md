@@ -1,5 +1,5 @@
 # REV-007: Side lines in the Review, and the Best move arrow setting
-Stage: to-implement
+Stage: implementing
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -208,4 +208,6 @@ Coverage: examined Review visibility callbacks and their callers (`present`, `op
 
 Disclosure: decision | none | The recorded proxy scope expansion remains valid; the latest visibility repair and remaining R2 repair stay inside the approved Review Settings-access scope. See the proxy receipt linked above.
 Disclosure: deferred | none | The stage-3 reviewer accepts retaining existing commit messages without explanatory bodies, to preserve implementation/evidence history; subjects identify REV-007 and the deviation has no runtime impact. This is recorded under Standards above.
+
+- 2026-11-05 Draw-notice repair caller analysis: `_covers_settings()` is called only by Main's Ctrl+, handler. Focus reparents the existing non-modal `draw_notice` Label after Settings; a visible notice is incorrectly classified as a covering screen. The approved Review-scene seam will cover an actual focused Offer draw/result-card Review path, Ctrl+, before the unchanged notice timeout, and the real arrow checkbox on a game position and in a side line. The boundary is distinguishing that notice from visible covering screens; retained session tests cover History, the name prompt, searching, hidden screens, and focused gameplay. No new seam or contract expansion is needed.
 

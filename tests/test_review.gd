@@ -1651,3 +1651,71 @@ func test_settings_remain_available_in_review_after_focused_game():
 	assert_true(not panel.is_visible_in_tree(), "Settings stays unavailable after a focused rematch")
 	main.free()
 	root.size = old_size
+
+
+func test_settings_open_in_review_while_focused_draw_notice_is_visible():
+	var root: Window = Engine.get_main_loop().root
+	var old_size := root.size
+	root.size = Vector2i(1280, 800)
+	var time := FakeTime.new()
+	var main = await _session(time)
+	await _review_key(root, KEY_F11)
+	assert_true(main.focus, "game enters focus mode")
+	assert_true(main.board_view.play("e2e4"))
+	var at: Vector2 = main.draw_button.get_global_rect().get_center()
+	await _review_mouse_motion(root, at)
+	await _review_mouse_button(root, at, true)
+	await _review_mouse_button(root, at, false)
+	assert_true(main._draw_offered, "real Offer draw button sends the offer")
+	main.maia.evaluation = -2.0
+	main._on_maia_move("e7e5")
+	assert_eq(main.board_view.game.reason, "agreement")
+	assert_true(main.draw_notice.is_visible_in_tree(), "agreement notice appears in focus")
+	await Engine.get_main_loop().process_frame
+	var open_review = main.board_view.get_node("GameOver/Panel/Content/Review")
+	at = open_review.get_global_rect().get_center()
+	await _review_mouse_motion(root, at)
+	await _review_mouse_button(root, at, true)
+	await _review_mouse_button(root, at, false)
+	var review = main.review
+	assert_true(review.visible and main.focus, "result card opens Review in focus mode")
+	review.receive_position(0, {"best_move": "e2e4"})
+	review.get_node("Margin/Content/ReviewBody/Side/Navigation/First").pressed.emit()
+	var board = review.get_node("Margin/Content/ReviewBody/BoardView")
+	assert_eq(board.best_move_arrow, "e2e4", "stored arrow is present")
+	var panel = main.settings_screen.get_node("Panel")
+	var form = panel.get_node("Center/Box/Form")
+	var arrow_box: CheckBox
+	for i in range(0, form.get_child_count(), 2):
+		if form.get_child(i).text == "Best move arrow":
+			arrow_box = form.get_child(i + 1)
+	assert_true(arrow_box != null, "arrow row exists")
+	for in_line in [false, true]:
+		if in_line:
+			assert_true(board.play("d2d4"))
+		assert_true(main.draw_notice.is_visible_in_tree() and main.draw_notice_timer.time_left > 0,
+				"shortcut is tested before the notice expires, line=%s" % in_line)
+		await _review_key(root, KEY_COMMA, true)
+		assert_true(panel.is_visible_in_tree(), "Ctrl+, opens Settings during the draw notice, line=%s" % in_line)
+		if not panel.is_visible_in_tree() or arrow_box == null:
+			continue
+		await Engine.get_main_loop().process_frame
+		for enabled in [false, true]:
+			at = arrow_box.get_global_rect().get_center()
+			await _review_mouse_motion(root, at)
+			await _review_mouse_button(root, at, true)
+			await _review_mouse_button(root, at, false)
+			assert_eq(main.preferences.get_value("best_move_arrow"), enabled, "real checkbox toggles setting")
+			assert_eq(board.best_move_arrow, "e2e4" if enabled and not in_line else "",
+					"arrow follows the checkbox immediately and stays absent in a line")
+		await _review_key(root, KEY_ESCAPE)
+		assert_true(not panel.visible, "Esc closes Settings")
+		assert_eq(review._line_active, in_line, "closing Settings preserves the line")
+		if in_line:
+			await _review_key(root, KEY_ESCAPE)
+			assert_true(not review._line_active, "second Esc returns to the game")
+			assert_eq(board.best_move_arrow, "e2e4")
+		assert_true(main.draw_notice.is_visible_in_tree() and main.draw_notice_timer.time_left > 0,
+				"Settings leaves the live draw notice intact, line=%s" % in_line)
+	main.free()
+	root.size = old_size
