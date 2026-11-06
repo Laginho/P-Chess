@@ -1111,9 +1111,12 @@ func test_cached_history_keeps_final_move_visible_after_layout():
 		clocks.fill(180000)
 		var path: String = main.history.save(game, clocks, SETTINGS)
 		var positions := []
+		var board = load("res://core/board.gd").from_fen(Pgn.START)
 		for i in game.moves.size() + 1:
-			var best: String = game.moves[i] if i < game.moves.size() else ""
-			positions.append({"best_move": best, "pv": [{"cp": 0, "moves": [best] if not best.is_empty() else []}]})
+			var best: String = game.moves[i] if i < game.moves.size() else board.legal_moves()[0]
+			positions.append({"fen": board.to_fen(), "best_move": best, "pv": [{"cp": 0, "moves": [best]}]})
+			if i < game.moves.size():
+				board.make_move(best)
 		DirAccess.make_dir_recursive_absolute(main.history.analysis_folder())
 		var cache := FileAccess.open(main.history.analysis_folder().path_join(path.get_file() + ".json"), FileAccess.WRITE)
 		cache.store_string(JSON.stringify({"engine_version": "Stockfish 19", "node_budget": Tunables.ANALYSIS_NODES, "positions": positions}))

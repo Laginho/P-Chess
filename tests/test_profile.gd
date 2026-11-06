@@ -201,6 +201,10 @@ func test_profile_skips_incomplete_or_corrupt_analysis_and_handles_one_point():
 	_write(folder.path_join("games/legacy.pgn"), '[White "You"]\n[Black "Maia 1500"]\n[Date "2026.10.01"]\n[Result "0-1"]\n\n1. e4 0-1\n')
 	for stem in ["partial", "corrupt", "missing-fields"]:
 		_write_game(folder, stem, "2026.10.02", "w", "1. e4", analysis_dir, [0])
+	_write_game(folder, "wrong-fen", "2026.10.02", "w", "1. e4", analysis_dir, [0, 0])
+	var wrong_fen: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(analysis_dir.path_join("wrong-fen.pgn.json")))
+	wrong_fen.positions[1].fen = wrong_fen.positions[0].fen
+	_write(analysis_dir.path_join("wrong-fen.pgn.json"), JSON.stringify(wrong_fen))
 	_write(analysis_dir.path_join("corrupt.pgn.json"), '{"engine_version":"Stockfish 19","node_budget":3000000,"positions":[null,null]}')
 	_write(analysis_dir.path_join("missing-fields.pgn.json"), '{"engine_version":"Stockfish 19","node_budget":3000000,"positions":[{},{}]}')
 	var profile = load("res://ui/profile.tscn").instantiate()
@@ -233,9 +237,13 @@ func _write_game(folder: String, stem: String, date: String, human: String, move
 	if scores.is_empty():
 		return
 	var positions := []
-	for score in scores:
-		positions.append({"pv": [{"cp": score}]})
-	positions[0].fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+	var game: Dictionary = load("res://core/pgn.gd").parse(FileAccess.get_file_as_string(folder.path_join("games/" + stem + ".pgn"))).games[0]
+	var board = load("res://core/board.gd").from_fen(load("res://core/pgn.gd").START)
+	for i in scores.size():
+		var best: String = game.moves[i].uci if i < game.moves.size() else board.legal_moves()[0]
+		positions.append({"fen": board.to_fen(), "best_move": best, "pv": [{"cp": scores[i], "moves": [best]}]})
+		if i < game.moves.size():
+			board.make_move(best)
 	_write(analysis_dir.path_join(stem + ".pgn.json"), JSON.stringify({
 			"engine_version": "Stockfish 19", "node_budget": 3000000, "positions": positions}))
 

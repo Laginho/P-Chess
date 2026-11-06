@@ -43,14 +43,14 @@ func test_reverse_order_progress_persistence_and_staleness():
 	bridge.answer()
 	assert_eq(progress, [[1, 2], [2, 2]])
 	assert_eq(landed, [[1, "e7e5"], [0, "e7e5"]])
-	var result: Dictionary = Analyser.read_analysis(path, "Stockfish 19", 3000000)
+	var result: Dictionary = Analyser.read_analysis(path, "Stockfish 19", 3000000, [START, AFTER])
 	assert_eq(result.state, "analysed")
 	assert_eq(result.data.positions[1].best_move, "e7e5")
 	assert_eq(result.data.positions[1].pv.size(), 2)
-	assert_eq(Analyser.read_analysis(path, "Stockfish 20", 3000000).state, "stale")
-	assert_eq(Analyser.read_analysis(path, "Stockfish 19", 1).state, "stale")
+	assert_eq(Analyser.read_analysis(path, "Stockfish 20", 3000000, [START, AFTER]).state, "stale")
+	assert_eq(Analyser.read_analysis(path, "Stockfish 19", 1, [START, AFTER]).state, "stale")
 	DirAccess.remove_absolute(path)
-	assert_eq(Analyser.read_analysis(path, "Stockfish 19", 3000000).state, "not analysed")
+	assert_eq(Analyser.read_analysis(path, "Stockfish 19", 3000000, [START, AFTER]).state, "not analysed")
 	analyser.free()
 
 
@@ -58,6 +58,7 @@ func test_incomplete_cache_is_stale():
 	var path := _path("rev010-shape")
 	var valid: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/analysis/rev003-opening.json"))
 	valid.engine_version = "Stockfish 19"
+	var fens: Array = valid.positions.map(func(position): return position.fen)
 	var invalid := [null, {}, {"fen": START, "pv": []},
 			{"fen": START, "best_move": "e2e4", "pv": [{"moves": ["e2e4"]}]},
 			{"fen": START, "best_move": "e2e4", "pv": [{"cp": "bad", "moves": ["e2e4"]}]},
@@ -71,11 +72,21 @@ func test_incomplete_cache_is_stale():
 		var file := FileAccess.open(path, FileAccess.WRITE)
 		file.store_string(JSON.stringify(data))
 		file.close()
-		assert_eq(Analyser.read_analysis(path, "Stockfish 19", 3000000), {"state": "stale"}, str(position))
+		assert_eq(Analyser.read_analysis(path, "Stockfish 19", 3000000, fens), {"state": "stale"}, str(position))
 	var file := FileAccess.open(path, FileAccess.WRITE)
 	file.store_string(JSON.stringify(valid))
 	file.close()
-	assert_eq(Analyser.read_analysis(path, "Stockfish 19", 3000000).state, "analysed")
+	assert_eq(Analyser.read_analysis(path, "Stockfish 19", 3000000, fens).state, "analysed")
+	valid.positions[-1].pv = []
+	file = FileAccess.open(path, FileAccess.WRITE)
+	file.store_string(JSON.stringify(valid))
+	file.close()
+	assert_eq(Analyser.read_analysis(path, "Stockfish 19", 3000000, fens), {"state": "stale"}, "missing terminal score")
+	valid.positions[-1].terminal_score = 0
+	file = FileAccess.open(path, FileAccess.WRITE)
+	file.store_string(JSON.stringify(valid))
+	file.close()
+	assert_eq(Analyser.read_analysis(path, "Stockfish 19", 3000000, fens).state, "analysed", "draw with legal moves")
 	DirAccess.remove_absolute(path)
 
 
@@ -83,6 +94,7 @@ func test_cache_must_match_every_expected_position():
 	var path := _path("rev010-fens")
 	var valid: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/analysis/rev003-opening.json"))
 	valid.engine_version = "Stockfish 19"
+	var fens: Array = valid.positions.map(func(position): return position.fen)
 	for kind in ["short", "long", "fen"]:
 		var data := valid.duplicate(true)
 		if kind == "short":
@@ -94,7 +106,8 @@ func test_cache_must_match_every_expected_position():
 		var file := FileAccess.open(path, FileAccess.WRITE)
 		file.store_string(JSON.stringify(data))
 		file.close()
-		assert_eq(Analyser.read_analysis(path, "Stockfish 19", 3000000), {"state": "stale"}, kind)
+		assert_eq(Analyser.read_analysis(path, "Stockfish 19", 3000000, fens), {"state": "stale"}, kind)
+	assert_eq(Analyser.read_analysis(path, "Stockfish 19", 3000000, []), {"state": "stale"}, "no expected positions")
 	DirAccess.remove_absolute(path)
 
 
@@ -131,7 +144,7 @@ func test_recorded_stockfish_transcript_keeps_both_lines():
 	var lines := FileAccess.get_file_as_string("res://tests/fixtures/analysis/stockfish19-start.txt").split("\n", false)
 	for line in lines:
 		bridge.callback.call(line)
-	var data: Dictionary = Analyser.read_analysis(path, "Stockfish 19", 3000000).data
+	var data: Dictionary = Analyser.read_analysis(path, "Stockfish 19", 3000000, [START]).data
 	assert_eq(data.positions[0].best_move, "e2e4")
 	assert_eq(data.positions[0].pv[0].cp, 19)
 	assert_eq(data.positions[0].pv[1].moves[0], "d2d4")
@@ -178,7 +191,7 @@ func test_terminal_and_forced_positions_are_recorded():
 	assert_true(analyser.analyse([forced, mate], path, false))
 	assert_eq(bridge.searches.size(), 1, "terminal position is not sent")
 	bridge.answer()
-	var positions: Array = Analyser.read_analysis(path, "Stockfish 19", 3000000).data.positions
+	var positions: Array = Analyser.read_analysis(path, "Stockfish 19", 3000000, [forced, mate]).data.positions
 	assert_eq(positions[1].pv, [])
 	assert_eq(positions[1].terminal_score, -1000)
 	assert_eq(positions[0].pv.size(), 1)
@@ -203,7 +216,7 @@ func test_drawn_game_has_terminal_zero_even_when_moves_remain():
 	var path := _path("rev002-draw")
 	assert_true(analyser.analyse([START], path, true, true))
 	assert_true(bridge.searches.is_empty())
-	var data: Dictionary = Analyser.read_analysis(path, "Stockfish 19", 3000000).data
+	var data: Dictionary = Analyser.read_analysis(path, "Stockfish 19", 3000000, [START]).data
 	assert_eq(data.positions[0].terminal_score, 0)
 	assert_eq(data.positions[0].pv, [])
 	DirAccess.remove_absolute(path)
