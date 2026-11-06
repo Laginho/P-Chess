@@ -60,6 +60,8 @@ func test_incomplete_cache_is_stale():
 	valid.engine_version = "Stockfish 19"
 	var fens: Array = valid.positions.map(func(position): return position.fen)
 	var invalid := [null, {}, {"fen": START, "pv": []},
+			{"fen": {}, "best_move": "e2e4", "pv": [{"cp": 0, "moves": ["e2e4"]}]},
+			{"fen": 1, "best_move": "e2e4", "pv": [{"cp": 0, "moves": ["e2e4"]}]},
 			{"fen": START, "best_move": "e2e4", "pv": [{"moves": ["e2e4"]}]},
 			{"fen": START, "best_move": "e2e4", "pv": [{"cp": "bad", "moves": ["e2e4"]}]},
 			{"fen": START, "best_move": "e2e4", "pv": [{"cp": 0, "moves": []}]},
