@@ -1,5 +1,5 @@
 # HIST-009: A malformed analysis queue repairs itself on load
-Stage: to-implement
+Stage: to-review
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -37,3 +37,6 @@ Spec: `.scratch/audit-fixes/spec.md`. Audit finding 5. `_init` assigns the persi
 - 2026-11-06 Written from the grill ([spec](../spec.md)).
 - Proxy decided (opus-5.5 xhigh): 9 settled, 2 escalated (receipt C:\Users\bruno\AppData\Local\Temp\sweatshop-proxy\20261106-141649-audit-fixes-c4b5e4.json)
 - Proxy decided (opus-5.5 xhigh): 5 settled, 0 escalated (receipt C:\Users\bruno\AppData\Local\Temp\sweatshop-proxy\20261106-142124-audit-fixes-9f40af.json)
+- Red: focused queue tests failed against the original code, including invalid types, inconsistent counters and activation without a game. Green: 10 focused tests passed after the fix.
+- Gate: 569 passed, 0 failed, exit 0. One graphical pixel check and six live Lc0 checks were skipped because the display or engine was unavailable.
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\HIST-009-gate.json

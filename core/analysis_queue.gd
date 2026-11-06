@@ -23,10 +23,31 @@ func _init(runner = null, file := "user://analysis_queue.cfg") -> void:
 	_file = file
 	var config := ConfigFile.new()
 	if config.load(_file) == OK:
-		_items = config.get_value("queue", "games", [])
-		_priority = config.get_value("queue", "priority", "")
-		batch_total = config.get_value("queue", "total", _items.size())
-		batch_done = config.get_value("queue", "done", 0)
+		var repaired := false
+		var games = config.get_value("queue", "games", [])
+		if games is Array:
+			for game in games:
+				if game is String and not game.is_empty():
+					_items.append(game)
+				else:
+					repaired = true
+		else:
+			repaired = true
+		var priority = config.get_value("queue", "priority", "")
+		if priority is String:
+			_priority = priority
+		else:
+			repaired = true
+		var total = config.get_value("queue", "total", _items.size())
+		var done = config.get_value("queue", "done", 0)
+		if total is int and done is int and done >= 0 and total >= done and total - done >= _items.size():
+			batch_total = total
+			batch_done = done
+		else:
+			batch_total = _items.size()
+			repaired = true
+		if repaired:
+			push_warning("Repaired malformed analysis queue: %s" % _file)
 	if _runner != null:
 		_runner.finished.connect(_finished)
 		_runner.progress.connect(_progress)
@@ -133,8 +154,10 @@ func _interrupt() -> void:
 func _start_next() -> void:
 	if _active or _paused or _runner == null or _items.is_empty():
 		return
-	_active = true
 	_active_path = _items[0]
+	if _active_path.is_empty():
+		return
+	_active = true
 	percent = 0
 	error = ""
 	if not _runner.start(_active_path, _active_path == _priority or maximum):
