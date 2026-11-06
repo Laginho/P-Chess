@@ -46,6 +46,21 @@ func test_corrupt_queue_can_start_a_new_game():
 	queue.free()
 	DirAccess.remove_absolute(file)
 
+func test_queue_rejects_non_array_games_and_never_activates_an_empty_path():
+	var file := "user://test_analysis_bad_games_%d.cfg" % Time.get_ticks_usec()
+	var config := ConfigFile.new()
+	config.set_value("queue", "games", 42)
+	config.save(file)
+	var runner := FakeAnalyser.new()
+	var queue = load("res://core/analysis_queue.gd").new(runner, file)
+	assert_eq(queue.pending(), [])
+	queue.enqueue("")
+	assert_eq(queue.current(), "")
+	assert_true(not queue._active)
+	assert_eq(runner.starts, [])
+	queue.free()
+	DirAccess.remove_absolute(file)
+
 func test_queue_load_preserves_valid_counters_and_resets_inconsistent_ones():
 	var file := "user://test_analysis_counters_%d.cfg" % Time.get_ticks_usec()
 	var config := ConfigFile.new()
