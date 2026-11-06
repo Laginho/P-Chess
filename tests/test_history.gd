@@ -174,7 +174,8 @@ func test_confirm_delete_removes_waiting_game_without_cancelling_active_analysis
 	assert_eq(fixture.queue.current(), "", "the deleted waiting game never starts")
 	_assert_pending_history(fixture, [])
 	assert_eq(fixture.runner.analyser.read_analysis(
-			fixture.folder.path_join("analysis").path_join(active.get_file() + ".json"), "Stockfish 19", 3000000).state, "analysed")
+			fixture.folder.path_join("analysis").path_join(active.get_file() + ".json"), "Stockfish 19", 3000000,
+			fixture.runner.analyser.positions_from_game(Pgn.parse(FileAccess.get_file_as_string(active)).games[0])).state, "analysed")
 	fixture.queue._process(1.1)
 	assert_true(not FileAccess.file_exists(fixture.folder.path_join("analysis").path_join(waiting.get_file() + ".json")))
 	_clean_queued_history(fixture)
@@ -210,7 +211,8 @@ func test_cancel_and_failed_delete_preserve_active_analysis_and_stats():
 	fixture.runner.bridge.answer()
 	_assert_pending_history(fixture, [])
 	assert_eq(fixture.runner.analyser.read_analysis(
-			path.get_base_dir().get_base_dir().path_join("analysis").path_join(path.get_file() + ".json"), "Stockfish 19", 3000000).state, "analysed")
+			path.get_base_dir().get_base_dir().path_join("analysis").path_join(path.get_file() + ".json"), "Stockfish 19", 3000000,
+			fixture.runner.analyser.positions_from_game(Pgn.parse(FileAccess.get_file_as_string(path)).games[0])).state, "analysed")
 	_clean_queued_history(fixture)
 
 
@@ -371,6 +373,68 @@ func _check_delete_rollback(failure: String) -> void:
 	assert_true(not FileAccess.file_exists(temp))
 	DirAccess.remove_absolute(folder.path_join("analysis"))
 	HistoryStorage.clean(folder)
+
+
+func test_failed_stats_save_rolls_back_game_and_counts():
+	for outcome in ["win", "loss", "draw"]:
+		var folder := _folder()
+		var history = History.new(folder)
+		var initial = Game.new()
+		initial.flag("b")
+		assert_true(not history.save(initial, [], SETTINGS, "", "line-1").is_empty())
+		var expected: Dictionary = history.stats("maia-1500", "3+2")
+		var stats_path := folder.path_join("stats.cfg")
+		assert_eq(DirAccess.rename_absolute(stats_path, stats_path + ".backup"), OK)
+		assert_eq(DirAccess.make_dir_absolute(stats_path), OK)
+		var game = Game.new()
+		if outcome == "draw":
+			game.agree_draw()
+		else:
+			game.flag("b" if outcome == "win" else "w")
+		var repertoire = load("res://bot/repertoire.gd").new()
+		assert_eq(repertoire.parse("1. e4 e5 *", "w"), "")
+		assert_eq(history.save(game, [], SETTINGS, "", "line-1", repertoire.lines, "w"), "")
+		assert_true(history.error.contains("stats"))
+		assert_eq(history.stats("maia-1500", "3+2"), expected, outcome)
+		assert_eq(history.practice_counts().get("line-1"), 1)
+		assert_eq(DirAccess.get_files_at(folder.path_join("games")).size(), 1, "no failed PGN or snapshot")
+		assert_eq(DirAccess.remove_absolute(stats_path), OK)
+		assert_eq(DirAccess.rename_absolute(stats_path + ".backup", stats_path), OK)
+		var reloaded = History.new(folder)
+		assert_eq(reloaded.games().size(), 1)
+		assert_eq(reloaded.stats("maia-1500", "3+2"), expected)
+		assert_eq(reloaded.practice_counts().get("line-1"), 1)
+		assert_true(not history.save(game, [], SETTINGS, "", "line-1").is_empty())
+		var after = History.new(folder)
+		assert_eq(after.games().size(), 2)
+		var updated := expected.duplicate()
+		updated[{"win": "wins", "loss": "losses", "draw": "draws"}[outcome]] += 1
+		if outcome != "draw":
+			updated["flag_wins" if outcome == "win" else "flag_losses"] += 1
+		assert_eq(after.stats("maia-1500", "3+2"), updated)
+		assert_eq(after.practice_counts().get("line-1"), 2)
+		HistoryStorage.clean(folder)
+
+
+func test_failed_stats_save_reports_both_file_removal_failures():
+	var folder := _folder()
+	var history = FailingSaveRemoval.new(folder)
+	assert_eq(DirAccess.make_dir_recursive_absolute(folder.path_join("stats.cfg")), OK)
+	var game = Game.new()
+	game.flag("b")
+	var repertoire = load("res://bot/repertoire.gd").new()
+	assert_eq(repertoire.parse("1. e4 e5 *", "w"), "")
+	assert_eq(history.save(game, [], SETTINGS, "", "line-1", repertoire.lines, "w"), "")
+	assert_true(history.error.contains("stats"))
+	assert_true(history.error.contains(".pgn"), "reports PGN removal")
+	assert_true(history.error.contains(".repertoire.json"), "reports snapshot removal")
+	DirAccess.remove_absolute(folder.path_join("stats.cfg"))
+	HistoryStorage.clean(folder)
+
+
+class FailingSaveRemoval extends "res://core/history.gd":
+	func _remove(_path: String) -> Error:
+		return ERR_CANT_OPEN
 
 
 func test_games_is_empty_before_the_first_save():
@@ -823,3 +887,35 @@ func _wait_start(main) -> void:
 # Date headings and the paging footer share the list with game cards.
 func _history_cards(list: Node) -> Array:
 	return list.get_children().filter(func(node): return node is PanelContainer)
+
+func test_changed_sized_pgn_is_reloaded_within_same_second():
+	var folder := _folder()
+	var games_dir := folder.path_join("games")
+	DirAccess.make_dir_recursive_absolute(games_dir)
+	var path := games_dir.path_join("game.pgn")
+	var history = History.new(folder)
+	var same_second := false
+	for attempt in 10:
+		var file := FileAccess.open(path, FileAccess.WRITE)
+		file.store_string('[White "Original"]\n\n1. e4 *')
+		file.close()
+		var before: Array = history.games()
+		var modified := FileAccess.get_modified_time(path)
+		file = FileAccess.open(path, FileAccess.WRITE)
+		file.store_string('[White "Changed Player"]\n\n1. d4 *')
+		file.close()
+		if modified == FileAccess.get_modified_time(path):
+			same_second = true
+			assert_eq(before[0].game.headers.White, "Original")
+			break
+	assert_true(same_second, "fixture must change inside one timestamp second")
+	if same_second:
+		assert_eq(history.games()[0].game.headers.White, "Changed Player")
+		assert_eq(History.new(folder).games()[0].game.headers.White, "Changed Player", "persisted cache is refreshed")
+	assert_eq(DirAccess.remove_absolute(path), OK)
+	assert_eq(history.games(), [], "deleted game disappears")
+	var file := FileAccess.open(games_dir.path_join("added.pgn"), FileAccess.WRITE)
+	file.store_string('[White "Added"]\n\n1. e4 *')
+	file.close()
+	assert_eq(history.games()[0].game.headers.White, "Added", "new game appears")
+	HistoryStorage.clean(folder)

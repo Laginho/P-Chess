@@ -87,11 +87,8 @@ func refresh(history, analysis_dir := "") -> void:
 		if game.moves.is_empty():
 			continue
 		var cached := Analyser.read_analysis(analysis_dir.path_join(record.path.get_file() + ".json"),
-				"Stockfish 19", Tunables.ANALYSIS_NODES)
+				"Stockfish 19", Tunables.ANALYSIS_NODES, Analyser.positions_from_game(game))
 		if cached.state != "analysed":
-			continue
-		var positions = cached.data.get("positions")
-		if not _complete_analysis(positions, game.moves.size() + 1):
 			continue
 		var values := Accuracy.evaluate(cached.data)
 		var value = values.white if History.human_colour(game.headers) == "w" else values.black
@@ -109,28 +106,6 @@ func refresh(history, analysis_dir := "") -> void:
 	for sample in series:
 		total_accuracy += sample.accuracy
 	%AccuracyValue.text = "–" if series.is_empty() else "%.1f" % (total_accuracy / series.size())
-
-
-# Cache metadata alone does not guarantee that every scored position was written.
-func _complete_analysis(positions, count: int) -> bool:
-	if not positions is Array or positions.size() != count:
-		return false
-	for position in positions:
-		if not position is Dictionary or not position.get("pv") is Array:
-			return false
-		var score = position.get("terminal_score")
-		if not position.pv.is_empty():
-			var line = position.pv[0]
-			if not line is Dictionary:
-				return false
-			score = line.get("cp", line.get("mate"))
-		if not (score is int or score is float) or not is_finite(float(score)):
-			return false
-	var fen = positions[0].get("fen")
-	if not fen is String:
-		return false
-	var fields: PackedStringArray = fen.split(" ")
-	return fields.size() >= 2 and fields[1] in ["w", "b"]
 
 
 func _fit_headers() -> void:
@@ -182,6 +157,7 @@ func _save_name() -> void:
 		_show_name(value)
 		%NameError.hide()
 	else:
+		%NameError.text = "Please enter a name." if value.is_empty() else "Could not save your name. Please try again."
 		%NameError.show()
 
 

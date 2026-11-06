@@ -78,6 +78,7 @@ func save(game, clocks: Array, settings: Dictionary, opening_name := "", target_
 			if status != OK:
 				error = "Could not write repertoire snapshot (%s)." % error_string(status)
 	var counts := stats(settings.level, settings.control)
+	var previous := counts.duplicate()
 	if game.result == "1/2-1/2":
 		counts.draws += 1
 	else:
@@ -91,9 +92,15 @@ func save(game, clocks: Array, settings: Dictionary, opening_name := "", target_
 		_results.set_value("practice", target_id, practiced + 1)
 	status = _results.save(_root.path_join("stats.cfg"))
 	if status != OK:
+		_results.set_value(settings.level, settings.control, previous)
 		if not target_id.is_empty():
 			_results.set_value("practice", target_id, practiced)
 		error += ("\n" if not error.is_empty() else "") + "Could not save history stats (%s)." % error_string(status)
+		for item in [path, path.trim_suffix(".pgn") + ".repertoire.json"]:
+			if FileAccess.file_exists(item):
+				var removal := _remove(item)
+				if removal != OK:
+					error += "\nCould not remove %s (%s)." % [item, error_string(removal)]
 		return ""
 	return path
 
@@ -204,7 +211,7 @@ func _restore_deleted_files(paths: Array, contents: Dictionary) -> void:
 				file.close()
 
 
-# Parsed games by file name with the PGN's modified time, also kept on disk: parsing a PGN replays
+# Parsed games by file name, modified time and size, also kept on disk: parsing a PGN replays
 # its moves, so each saved game is parsed once, not on every History visit or refresh.
 var _parsed = null
 
@@ -230,11 +237,13 @@ func games() -> Array:
 			continue
 		var path := folder.path_join(file)
 		var modified := FileAccess.get_modified_time(path)
+		var source := FileAccess.open(path, FileAccess.READ)
+		var size := source.get_length() if source != null else -1
 		seen[file] = true
 		var entry = _parsed.get(file)
-		if not (entry is Dictionary and entry.get("modified") == modified and (entry.get("game") == null or entry.get("game") is Dictionary)):
+		if not (entry is Dictionary and entry.get("modified") == modified and size >= 0 and entry.get("size") == size and (entry.get("game") == null or entry.get("game") is Dictionary)):
 			var parsed := Pgn.parse(FileAccess.get_file_as_string(path))
-			entry = {"modified": modified, "game": parsed.games[0] if parsed.error.is_empty() and parsed.games.size() == 1 else null}
+			entry = {"modified": modified, "size": size, "game": parsed.games[0] if parsed.error.is_empty() and parsed.games.size() == 1 else null}
 			_parsed[file] = entry
 			changed = true
 		if entry.game != null:

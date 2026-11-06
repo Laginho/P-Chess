@@ -853,44 +853,15 @@ func _update_engine_lines() -> void:
 		pv.text = markup.strip_edges()
 
 
-func _class_help() -> String:
-	return _wrap_help(("One final class per move. Forced: only legal move. Repertoire: your line; Book: catalog opening. "
-			+ "Best: engine's first choice; Brilliant: best move sacrifices material; Great: only good move (second choice loses at least %s).\n"
-			+ "By expected-points loss: Excellent ≤ %s, Good ≤ %s, Inaccuracy ≤ %s, Mistake ≤ %s, Blunder above %s. "
-			+ "Miss replaces a mistake or blunder after the opponent's mistake or blunder when expected points fall from at least %s to at most %s with loss at least %s.\n"
-			+ "A blunder is Good when still ahead by %s cp or already behind by %s cp. Mate rules: winning mate up to %s moves slower is Excellent, otherwise Good; lost mate grades Excellent/Good/Inaccuracy/Mistake at %s/%s/%s/%s cp. Allowing mate in ≤ %s is Blunder, ≤ %s Mistake, otherwise Inaccuracy. "
-			+ "Great and Brilliant require at least %s expected points afterwards and a second line below %s cp; moves made while in check, promotions, free captures and recaptures are excluded.") % [
-			Tunables.CLASSIFICATION_GREAT_LOSS, Tunables.CLASSIFICATION_EXCELLENT_LOSS, Tunables.CLASSIFICATION_GOOD_LOSS,
-			Tunables.CLASSIFICATION_INACCURACY_LOSS, Tunables.CLASSIFICATION_MISTAKE_LOSS, Tunables.CLASSIFICATION_MISTAKE_LOSS,
-			Tunables.CLASSIFICATION_MISS_BEFORE_EP, Tunables.CLASSIFICATION_MISS_AFTER_EP, Tunables.CLASSIFICATION_MISS_LOSS,
-			Tunables.CLASSIFICATION_LENIENT_CP, Tunables.CLASSIFICATION_LENIENT_CP, Tunables.CLASSIFICATION_MATE_SLOWER,
-			Tunables.CLASSIFICATION_MATE_EXCELLENT_CP, Tunables.CLASSIFICATION_MATE_GOOD_CP, Tunables.CLASSIFICATION_MATE_INACCURACY_CP,
-			Tunables.CLASSIFICATION_MATE_MISTAKE_CP, Tunables.CLASSIFICATION_MATE_BLUNDER_MOVES, Tunables.CLASSIFICATION_MATE_MISTAKE_MOVES,
-			Tunables.CLASSIFICATION_MIN_EP, Tunables.CLASSIFICATION_GREAT_PV2_CP])
-
-
-func _wrap_help(text: String) -> String:
-	var lines := PackedStringArray()
-	for paragraph in text.split("\n"):
-		var line := ""
-		for word in paragraph.split(" "):
-			if line.length() + word.length() + 1 > 65:
-				lines.append(line)
-				line = ""
-			line += (" " if not line.is_empty() else "") + word
-		lines.append(line)
-	return "\n".join(lines)
-
-
 func open_analysis(path: String, draw_at_end: bool) -> void:
 	show()
 	$Margin/Content/ReviewBody/Side/UnanalysedNotice.hide()
 	$Margin/Content/ReviewBody/Side/Analyze.hide()
 	_resize_classes()
 	_update_summary()
-	var cached := Analyser.read_analysis(path, "Stockfish 19", Tunables.ANALYSIS_NODES)
-	var positions = cached.get("data", {}).get("positions", [])
-	var current_cache: bool = cached.state == "analysed" and positions is Array and positions.size() == _positions.size()
+	var cached := Analyser.read_analysis(path, "Stockfish 19", Tunables.ANALYSIS_NODES,
+			_positions.map(func(position): return position.fen))
+	var current_cache: bool = cached.state == "analysed"
 	if analysis_queue != null:
 		# The analysis folder sits beside the games folder: <root>/analysis/x.pgn.json -> <root>/games/x.pgn.
 		var game_path := _queue_path if _from_history else path.get_base_dir().get_base_dir().path_join("games").path_join(path.get_file().trim_suffix(".json"))
@@ -906,7 +877,7 @@ func open_analysis(path: String, draw_at_end: bool) -> void:
 	_draw_at_end = draw_at_end
 	# A current cache needs no engine, so a missing or broken Stockfish cannot hide it.
 	if current_cache:
-		receive_positions(positions)
+		receive_positions(cached.data.positions)
 		return
 	$Margin/Content/Progress.value = 0
 	$Margin/Content/Progress.show()
@@ -929,13 +900,12 @@ func _check_engine() -> void:
 	if _analysis_bridge == null or _analysis_bridge.engine_id.is_empty():
 		return
 	_waiting_engine = false
-	var cached := Analyser.read_analysis(_analysis_path, _analysis_bridge.engine_id, Tunables.ANALYSIS_NODES)
+	var fens := _positions.map(func(position): return position.fen)
+	var cached := Analyser.read_analysis(_analysis_path, _analysis_bridge.engine_id, Tunables.ANALYSIS_NODES, fens)
 	if cached.state == "analysed":
-		var saved: Array = cached.data.positions
-		if saved.size() == _positions.size():
-			receive_positions(saved)
-			$Margin/Content/Progress.hide()
-			return
+		receive_positions(cached.data.positions)
+		$Margin/Content/Progress.hide()
+		return
 	_analyser = analyser_factory.call(_analysis_bridge)
 	add_child(_analyser)
 	_analyser.position_ready.connect(receive_position)
@@ -945,9 +915,6 @@ func _check_engine() -> void:
 		$Margin/Content/Progress.hide()
 		if not success:
 			_analysis_error(error))
-	var fens := []
-	for position in _positions:
-		fens.append(position.fen)
 	if not _analyser.analyse(fens, _analysis_path, true, _draw_at_end):
 		_analysis_error("Could not start analysis")
 
@@ -987,18 +954,13 @@ func _restore_analysis() -> void:
 			_move_rows[i].set_tooltip_text(column, tooltip.trim_prefix(_classes[i].class + ": "))
 	for i in _positions.size():
 		_positions[i] = {"fen": _positions[i].fen}
-	var cached := Analyser.read_analysis(_analysis_path, "Stockfish 19", Tunables.ANALYSIS_NODES)
-	var positions = cached.get("data", {}).get("positions", [])
-	var complete: bool = cached.state == "analysed" and positions is Array and positions.size() == _positions.size()
-	if complete:
-		for i in positions.size():
-			if not positions[i] is Dictionary or not positions[i].has("pv") or positions[i].get("fen") != _positions[i].fen:
-				complete = false
-				break
+	var cached := Analyser.read_analysis(_analysis_path, "Stockfish 19", Tunables.ANALYSIS_NODES,
+			_positions.map(func(position): return position.fen))
+	var complete: bool = cached.state == "analysed"
 	$Margin/Content/ReviewBody/Side/UnanalysedNotice.visible = not complete
 	$Margin/Content/ReviewBody/Side/Analyze.visible = not complete
 	if complete:
-		receive_positions(positions)
+		receive_positions(cached.data.positions)
 	else:
 		_refresh_classes()
 		_update_summary()
@@ -1469,10 +1431,10 @@ func present_history(path: String, analysis_path: String, draw_at_end: bool) -> 
 	$Margin/Content/Actions/Rematch.hide()
 	$Margin/Content/Actions/Setup.hide()
 	$Margin/Content/Actions/BackHistory.show()
-	var cached := Analyser.read_analysis(analysis_path, "Stockfish 19", Tunables.ANALYSIS_NODES)
-	var positions = cached.get("data", {}).get("positions", [])
-	if cached.state == "analysed" and positions is Array and positions.size() == _positions.size():
-		receive_positions(positions)
+	var cached := Analyser.read_analysis(analysis_path, "Stockfish 19", Tunables.ANALYSIS_NODES,
+			_positions.map(func(position): return position.fen))
+	if cached.state == "analysed":
+		receive_positions(cached.data.positions)
 	else:
 		$Margin/Content/ReviewBody/Side/Analyze.show()
 		$Margin/Content/ReviewBody/Side/UnanalysedNotice.show()

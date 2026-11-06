@@ -276,13 +276,14 @@ func test_home_restores_quick_play_size_when_engine_warning_is_hidden():
 func test_searching_keeps_long_player_name_inside_card_at_minimum_window():
 	var main = MainScene.instantiate()
 	var folder := "user://test_home_long_name_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
 	main.history = load("res://core/history.gd").new(folder)
 	main.uci.free()
 	main.uci = Session.HeldBridge.new()
 	main.maia = main.MaiaPlayer.new(main.uci)
 	main.preferences = main.Settings.new(folder.path_join("settings.cfg"))
 	var name := "Alexandria Catherine Montgomery de Albuquerque"
-	main.preferences.set_value("player_name", name)
+	assert_true(main.preferences.set_value("player_name", name))
 	Engine.get_main_loop().root.add_child(main)
 	var screen: Control = main.searching
 	screen.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
