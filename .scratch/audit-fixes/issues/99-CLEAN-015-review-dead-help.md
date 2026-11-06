@@ -1,5 +1,5 @@
 # CLEAN-015: Delete Review's unused help builders
-Stage: to-implement
+Stage: to-review
 Status: ready-for-agent
 Blocked by: REV-010
 Review: agent
@@ -27,6 +27,9 @@ Spec: `.scratch/audit-fixes/spec.md`. Audit finding 6 (P3). Nothing calls `_clas
 - None. This is a deletion with no change in behaviour, so a passing gate is the check. Record the search in Comments.
 
 ## Comments
+
+- 2026-11-06: Repository-wide `rg` found no references to either removed function outside historical Markdown records. The legend built in `_ready()` is unchanged. Gate: 569 passed, 0 failed, exit 0; no new test per ticket.
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\p-chess-clean-015-gate.json
 
 - 2026-11-06 Written from the grill ([spec](../spec.md)).
 - Proxy decided (opus-5.5 xhigh): 9 settled, 2 escalated (receipt C:\Users\bruno\AppData\Local\Temp\sweatshop-proxy\20261106-141649-audit-fixes-c4b5e4.json)
