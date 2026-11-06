@@ -599,6 +599,32 @@ func test_review_fits_an_800_by_600_window():
 	root.size = old_size
 
 
+func test_eval_bar_hugs_the_board_at_both_sizes():
+	var root = Engine.get_main_loop().root
+	var old_size: Vector2i = root.size
+	# 1920x1080 is a 1422x800 canvas: the board is height-bound, so its column is wider than the board.
+	for window in [Vector2i(1920, 1080), Vector2i(800, 600)]:
+		root.size = window
+		var main = await _session(FakeTime.new())
+		var game = Game.new()
+		game.play("e2e4")
+		main.review.present(game, [180000, 180000], SETTINGS, "")
+		main.review.receive_position(1, {"pv": [{"cp": 0, "moves": ["e7e5"]}]})
+		main.review.receive_position(0, {"pv": [{"cp": 0, "moves": ["e2e4"]}], "best_move": "e2e4"})
+		await Engine.get_main_loop().process_frame
+		await Engine.get_main_loop().process_frame
+		var board: Control = main.review.get_node("Margin/Content/ReviewBody/BoardView")
+		var bar: Control = main.review.get_node("Margin/Content/ReviewBody/EvalBar")
+		var side := minf(board.size.x, board.size.y)
+		var board_rect := Rect2(board.global_position + (board.size - Vector2.ONE * side) / 2, Vector2.ONE * side)
+		var bar_rect := bar.get_global_rect()
+		assert_eq(board_rect.position.x - bar_rect.end.x, 8.0, "%s: the bar sits 8 px left of the board" % window)
+		assert_eq(bar_rect.position.y, board_rect.position.y, "%s: the bar starts at the board's top" % window)
+		assert_eq(bar_rect.size.y, side, "%s: the bar is as tall as the board" % window)
+		main.free()
+	root.size = old_size
+
+
 func test_review_help_popups_fit_minimum_window():
 	var tree = Engine.get_main_loop()
 	var root = tree.root
