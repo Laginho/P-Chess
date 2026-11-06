@@ -1,5 +1,5 @@
 # REV-010: Only a complete analysis cache counts as analysed
-Stage: to-implement
+Stage: implementing
 Status: ready-for-agent
 Blocked by: none
 Review: agent

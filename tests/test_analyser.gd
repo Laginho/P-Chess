@@ -54,6 +54,31 @@ func test_reverse_order_progress_persistence_and_staleness():
 	analyser.free()
 
 
+func test_incomplete_cache_is_stale():
+	var path := _path("rev010-shape")
+	var valid: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/analysis/rev003-opening.json"))
+	valid.engine_version = "Stockfish 19"
+	var invalid := [null, {}, {"fen": START, "pv": []},
+			{"fen": START, "best_move": "e2e4", "pv": [{"moves": ["e2e4"]}]},
+			{"fen": START, "best_move": "e2e4", "pv": [{"cp": "bad", "moves": ["e2e4"]}]},
+			{"fen": START, "best_move": "e2e4", "pv": [{"cp": 0, "moves": []}]},
+			{"fen": START, "best_move": "e2e4", "pv": [{"cp": 0, "moves": [null]}]},
+			{"fen": START, "best_move": "e2e4", "pv": [{"cp": 0, "moves": ["e2e4"]}, null]},
+			{"fen": START, "pv": [], "terminal_score": 0}]
+	for position in invalid:
+		var data := valid.duplicate(true)
+		data.positions[0] = position
+		var file := FileAccess.open(path, FileAccess.WRITE)
+		file.store_string(JSON.stringify(data))
+		file.close()
+		assert_eq(Analyser.read_analysis(path, "Stockfish 19", 3000000), {"state": "stale"}, str(position))
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	file.store_string(JSON.stringify(valid))
+	file.close()
+	assert_eq(Analyser.read_analysis(path, "Stockfish 19", 3000000).state, "analysed")
+	DirAccess.remove_absolute(path)
+
+
 func test_invalid_fen_sends_nothing_and_cancellation_writes_nothing():
 	var bridge := FakeBridge.new()
 	var analyser = Analyser.new(bridge)
