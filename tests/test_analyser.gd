@@ -79,6 +79,25 @@ func test_incomplete_cache_is_stale():
 	DirAccess.remove_absolute(path)
 
 
+func test_cache_must_match_every_expected_position():
+	var path := _path("rev010-fens")
+	var valid: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/analysis/rev003-opening.json"))
+	valid.engine_version = "Stockfish 19"
+	for kind in ["short", "long", "fen"]:
+		var data := valid.duplicate(true)
+		if kind == "short":
+			data.positions.pop_back()
+		elif kind == "long":
+			data.positions.append(data.positions[-1])
+		else:
+			data.positions[1].fen = START
+		var file := FileAccess.open(path, FileAccess.WRITE)
+		file.store_string(JSON.stringify(data))
+		file.close()
+		assert_eq(Analyser.read_analysis(path, "Stockfish 19", 3000000), {"state": "stale"}, kind)
+	DirAccess.remove_absolute(path)
+
+
 func test_invalid_fen_sends_nothing_and_cancellation_writes_nothing():
 	var bridge := FakeBridge.new()
 	var analyser = Analyser.new(bridge)

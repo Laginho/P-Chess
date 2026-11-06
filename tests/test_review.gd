@@ -580,6 +580,44 @@ func test_review_reuses_current_analysis_and_reanalyses_stale_file():
 		DirAccess.remove_absolute(path)
 
 
+func test_saved_game_rejects_incomplete_cache_without_starting_engine():
+	for kind in ["valid", "score", "terminal", "pv", "position", "fen", "short"]:
+		var main = await _session(FakeTime.new())
+		var started := []
+		main.review.analysis_bridge_factory = func():
+			started.append(true)
+			var bridge := FakeAnalysisBridge.new()
+			bridge.starts = false
+			return bridge
+		var game = Game.new()
+		game.play("e2e4")
+		game.play("e7e5")
+		game.resign("w")
+		var path: String = main.history.save(game, [180000, 180000], SETTINGS)
+		var fixture: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/analysis/rev003-opening.json"))
+		fixture.engine_version = "Stockfish 19"
+		match kind:
+			"score": fixture.positions[0].pv[0].erase("cp")
+			"terminal": fixture.positions[-1].pv = []
+			"pv": fixture.positions[0].pv = []
+			"position": fixture.positions[1] = null
+			"fen": fixture.positions[1].fen = Pgn.START
+			"short": fixture.positions.pop_back()
+		var analysis_path: String = main.history.analysis_folder().path_join(path.get_file() + ".json")
+		DirAccess.make_dir_recursive_absolute(analysis_path.get_base_dir())
+		var file := FileAccess.open(analysis_path, FileAccess.WRITE)
+		file.store_string(JSON.stringify(fixture))
+		file.close()
+		main._show_history()
+		main._review_history_game(path, Pgn.parse(FileAccess.get_file_as_string(path)).games[0])
+		var side = main.review.get_node("Margin/Content/ReviewBody/Side")
+		assert_eq(side.get_node("UnanalysedNotice").visible, kind != "valid", kind)
+		assert_eq(side.get_node("Analyze").visible, kind != "valid", kind)
+		assert_eq(side.get_node("Summary").visible, kind == "valid", kind)
+		assert_eq(started, [], "opening saved " + kind + " cache starts no engine")
+		main.free()
+
+
 func test_review_fits_an_800_by_600_window():
 	var root = Engine.get_main_loop().root
 	var old_size: Vector2i = root.size
