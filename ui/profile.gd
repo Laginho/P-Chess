@@ -182,6 +182,7 @@ func _save_name() -> void:
 		_show_name(value)
 		%NameError.hide()
 	else:
+		%NameError.text = "Please enter a name." if value.is_empty() else "Could not save your name. Please try again."
 		%NameError.show()
 
 

@@ -77,7 +77,9 @@ func _unhandled_key_input(event: InputEvent) -> void:
 func _check(key: String, label: String) -> void:
 	var box := CheckBox.new()
 	box.button_pressed = store.get_value(key)
-	box.toggled.connect(func(on: bool) -> void: store.set_value(key, on))
+	box.toggled.connect(func(on: bool) -> void:
+		if not store.set_value(key, on):
+			box.set_pressed_no_signal(store.get_value(key)))
 	_row(label, box)
 
 
@@ -88,7 +90,9 @@ func _spin(key: String, label: String, step: float, scale := 1.0) -> void:
 	spin.max_value = Settings.RANGES[key][1] * scale
 	spin.step = step
 	spin.value = store.get_value(key) * scale
-	spin.value_changed.connect(func(value: float) -> void: store.set_value(key, value / scale))
+	spin.value_changed.connect(func(value: float) -> void:
+		if not store.set_value(key, value / scale):
+			spin.set_value_no_signal(store.get_value(key) * scale))
 	_spins[key] = [spin, scale]
 	_row(label, spin)
 
@@ -109,7 +113,9 @@ func _choice(key: String, label: String, items: Array) -> void:
 	for item in items:
 		button.add_item(item)
 	button.selected = items.find(current)
-	button.item_selected.connect(func(index: int) -> void: store.set_value(key, button.get_item_text(index)))
+	button.item_selected.connect(func(index: int) -> void:
+		if not store.set_value(key, button.get_item_text(index)):
+			button.select(items.find(store.get_value(key))))
 	button.get_popup().window_input.connect(_popup_input.bind(button.get_popup()))
 	_row(label, button)
 

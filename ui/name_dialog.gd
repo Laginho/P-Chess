@@ -2,6 +2,7 @@ extends AcceptDialog
 
 var store
 var shade: ColorRect
+var _name_error: Label
 
 
 func _ready() -> void:
@@ -28,6 +29,12 @@ func _ready() -> void:
 	get_ok_button().add_theme_font_override("font", get_theme_font("font", "ExtraBoldText"))
 	get_ok_button().add_theme_font_size_override("font_size", 16)
 	$Content/NameLabel.add_theme_font_override("font", get_theme_font("font", "SemiboldText"))
+	_name_error = Label.new()
+	_name_error.name = "NameError"
+	_name_error.text = "Could not save your name. Please try again."
+	_name_error.add_theme_color_override("font_color", Color("ee7a72"))
+	_name_error.hide()
+	$Content.add_child(_name_error)
 	confirmed.connect(_confirm)
 	$Content/Name.text_submitted.connect(func(_text): _confirm())
 	$Content/Name.text_changed.connect(func(text): get_ok_button().disabled = text.strip_edges().is_empty())
@@ -47,3 +54,5 @@ func present(preferences) -> void:
 func _confirm() -> void:
 	if store.set_value("player_name", $Content/Name.text.strip_edges()):
 		hide()
+	else:
+		_name_error.show()
