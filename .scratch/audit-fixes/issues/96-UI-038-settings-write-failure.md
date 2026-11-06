@@ -1,5 +1,5 @@
 # UI-038: A setting that fails to save is not reported as saved
-Stage: implementing
+Stage: to-review
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -40,3 +40,10 @@ Spec: `.scratch/audit-fixes/spec.md`. Audit finding 4. `set_value` ignores the r
 - 2026-11-06 Written from the grill ([spec](../spec.md)).
 - Proxy decided (opus-5.5 xhigh): 9 settled, 2 escalated (receipt C:\Users\bruno\AppData\Local\Temp\sweatshop-proxy\20261106-141649-audit-fixes-c4b5e4.json)
 - Proxy decided (opus-5.5 xhigh): 5 settled, 0 escalated (receipt C:\Users\bruno\AppData\Local\Temp\sweatshop-proxy\20261106-142124-audit-fixes-9f40af.json)
+
+- 2026-11-06 Stage 2: `_resize_board` writes only through `set_value`; `_fit_board` runs on the `changed` signal, so a failed save leaves the displayed board size unchanged.
+- Red/green: failed writes and UI recovery were tested before their respective fixes. The first full gate exposed `test_searching_keeps_long_player_name_inside_card_at_minimum_window` using a nonexistent settings folder; its test setup now creates the folder and asserts the write succeeds. Focused Home: 13 passed, 0 failed.
+- Verification: final gate 561 passed, 0 failed, exit 0. One graphical pixel check and six live Lc0 checks skipped (no display / no engine). Log: C:/Users/bruno/AppData/Local/Temp/UI-038-gate-final.log.
+- Acceptance: pending | Graphical inspection of inline errors and live Lc0 checks were not run.
+
+Gate evidence: C:/Users/bruno/AppData/Local/Temp/UI-038-gate-final.json
