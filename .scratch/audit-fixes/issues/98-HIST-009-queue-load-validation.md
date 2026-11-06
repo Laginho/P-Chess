@@ -1,5 +1,5 @@
 # HIST-009: A malformed analysis queue repairs itself on load
-Stage: to-implement
+Stage: implementing
 Status: ready-for-agent
 Blocked by: none
 Review: agent
