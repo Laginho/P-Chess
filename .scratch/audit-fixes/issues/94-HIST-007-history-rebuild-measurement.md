@@ -1,5 +1,5 @@
 # HIST-007: Measure History's rebuild during analysis, fix only if it stalls
-Stage: implementing
+Stage: to-review
 Status: ready-for-agent
 Blocked by: HIST-008, REV-010
 Review: agent
@@ -157,3 +157,7 @@ func run_probe() -> void:
 ```
 
 Disclosure: deferred | release | C:\Users\bruno\AppData\Local\Temp\hist007-probe-results.txt: History rebuilds still block for about 0.8?0.9 s with saved games and up to about 1.6 s with this legacy fixture on each queue state change; see [HIST-010](100-HIST-010-history-card-build-stall.md).
+
+- Gate: 565 passed, 0 failed; exit 0. Six live Lc0-dependent checks were skipped because `engine/lc0/lc0.exe` is absent.
+Acceptance: pending | [HIST-010](100-HIST-010-history-card-build-stall.md) tracks the remaining measured rebuild stall before release.
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\hist007-gate.json
