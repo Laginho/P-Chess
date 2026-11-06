@@ -174,7 +174,8 @@ func test_confirm_delete_removes_waiting_game_without_cancelling_active_analysis
 	assert_eq(fixture.queue.current(), "", "the deleted waiting game never starts")
 	_assert_pending_history(fixture, [])
 	assert_eq(fixture.runner.analyser.read_analysis(
-			fixture.folder.path_join("analysis").path_join(active.get_file() + ".json"), "Stockfish 19", 3000000).state, "analysed")
+			fixture.folder.path_join("analysis").path_join(active.get_file() + ".json"), "Stockfish 19", 3000000,
+			fixture.runner.analyser.positions_from_game(Pgn.parse(FileAccess.get_file_as_string(active)).games[0])).state, "analysed")
 	fixture.queue._process(1.1)
 	assert_true(not FileAccess.file_exists(fixture.folder.path_join("analysis").path_join(waiting.get_file() + ".json")))
 	_clean_queued_history(fixture)
@@ -210,7 +211,8 @@ func test_cancel_and_failed_delete_preserve_active_analysis_and_stats():
 	fixture.runner.bridge.answer()
 	_assert_pending_history(fixture, [])
 	assert_eq(fixture.runner.analyser.read_analysis(
-			path.get_base_dir().get_base_dir().path_join("analysis").path_join(path.get_file() + ".json"), "Stockfish 19", 3000000).state, "analysed")
+			path.get_base_dir().get_base_dir().path_join("analysis").path_join(path.get_file() + ".json"), "Stockfish 19", 3000000,
+			fixture.runner.analyser.positions_from_game(Pgn.parse(FileAccess.get_file_as_string(path)).games[0])).state, "analysed")
 	_clean_queued_history(fixture)
 
 

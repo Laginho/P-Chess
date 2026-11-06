@@ -888,9 +888,9 @@ func open_analysis(path: String, draw_at_end: bool) -> void:
 	$Margin/Content/ReviewBody/Side/Analyze.hide()
 	_resize_classes()
 	_update_summary()
-	var cached := Analyser.read_analysis(path, "Stockfish 19", Tunables.ANALYSIS_NODES)
-	var positions = cached.get("data", {}).get("positions", [])
-	var current_cache: bool = cached.state == "analysed" and positions is Array and positions.size() == _positions.size()
+	var cached := Analyser.read_analysis(path, "Stockfish 19", Tunables.ANALYSIS_NODES,
+			_positions.map(func(position): return position.fen))
+	var current_cache: bool = cached.state == "analysed"
 	if analysis_queue != null:
 		# The analysis folder sits beside the games folder: <root>/analysis/x.pgn.json -> <root>/games/x.pgn.
 		var game_path := _queue_path if _from_history else path.get_base_dir().get_base_dir().path_join("games").path_join(path.get_file().trim_suffix(".json"))
@@ -906,7 +906,7 @@ func open_analysis(path: String, draw_at_end: bool) -> void:
 	_draw_at_end = draw_at_end
 	# A current cache needs no engine, so a missing or broken Stockfish cannot hide it.
 	if current_cache:
-		receive_positions(positions)
+		receive_positions(cached.data.positions)
 		return
 	$Margin/Content/Progress.value = 0
 	$Margin/Content/Progress.show()
@@ -929,13 +929,12 @@ func _check_engine() -> void:
 	if _analysis_bridge == null or _analysis_bridge.engine_id.is_empty():
 		return
 	_waiting_engine = false
-	var cached := Analyser.read_analysis(_analysis_path, _analysis_bridge.engine_id, Tunables.ANALYSIS_NODES)
+	var fens := _positions.map(func(position): return position.fen)
+	var cached := Analyser.read_analysis(_analysis_path, _analysis_bridge.engine_id, Tunables.ANALYSIS_NODES, fens)
 	if cached.state == "analysed":
-		var saved: Array = cached.data.positions
-		if saved.size() == _positions.size():
-			receive_positions(saved)
-			$Margin/Content/Progress.hide()
-			return
+		receive_positions(cached.data.positions)
+		$Margin/Content/Progress.hide()
+		return
 	_analyser = analyser_factory.call(_analysis_bridge)
 	add_child(_analyser)
 	_analyser.position_ready.connect(receive_position)
@@ -945,9 +944,6 @@ func _check_engine() -> void:
 		$Margin/Content/Progress.hide()
 		if not success:
 			_analysis_error(error))
-	var fens := []
-	for position in _positions:
-		fens.append(position.fen)
 	if not _analyser.analyse(fens, _analysis_path, true, _draw_at_end):
 		_analysis_error("Could not start analysis")
 
@@ -987,18 +983,13 @@ func _restore_analysis() -> void:
 			_move_rows[i].set_tooltip_text(column, tooltip.trim_prefix(_classes[i].class + ": "))
 	for i in _positions.size():
 		_positions[i] = {"fen": _positions[i].fen}
-	var cached := Analyser.read_analysis(_analysis_path, "Stockfish 19", Tunables.ANALYSIS_NODES)
-	var positions = cached.get("data", {}).get("positions", [])
-	var complete: bool = cached.state == "analysed" and positions is Array and positions.size() == _positions.size()
-	if complete:
-		for i in positions.size():
-			if not positions[i] is Dictionary or not positions[i].has("pv") or positions[i].get("fen") != _positions[i].fen:
-				complete = false
-				break
+	var cached := Analyser.read_analysis(_analysis_path, "Stockfish 19", Tunables.ANALYSIS_NODES,
+			_positions.map(func(position): return position.fen))
+	var complete: bool = cached.state == "analysed"
 	$Margin/Content/ReviewBody/Side/UnanalysedNotice.visible = not complete
 	$Margin/Content/ReviewBody/Side/Analyze.visible = not complete
 	if complete:
-		receive_positions(positions)
+		receive_positions(cached.data.positions)
 	else:
 		_refresh_classes()
 		_update_summary()
@@ -1469,10 +1460,10 @@ func present_history(path: String, analysis_path: String, draw_at_end: bool) -> 
 	$Margin/Content/Actions/Rematch.hide()
 	$Margin/Content/Actions/Setup.hide()
 	$Margin/Content/Actions/BackHistory.show()
-	var cached := Analyser.read_analysis(analysis_path, "Stockfish 19", Tunables.ANALYSIS_NODES)
-	var positions = cached.get("data", {}).get("positions", [])
-	if cached.state == "analysed" and positions is Array and positions.size() == _positions.size():
-		receive_positions(positions)
+	var cached := Analyser.read_analysis(analysis_path, "Stockfish 19", Tunables.ANALYSIS_NODES,
+			_positions.map(func(position): return position.fen))
+	if cached.state == "analysed":
+		receive_positions(cached.data.positions)
 	else:
 		$Margin/Content/ReviewBody/Side/Analyze.show()
 		$Margin/Content/ReviewBody/Side/UnanalysedNotice.show()

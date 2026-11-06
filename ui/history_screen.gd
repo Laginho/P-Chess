@@ -419,14 +419,15 @@ func _add_card(list: Node, record: Dictionary) -> void:
 	outcome.add_theme_color_override("font_color", result_color)
 	metadata.add_child(outcome)
 	metadata.move_child(move_count, metadata.get_child_count() - 1)
-	var state := _analysis_text(record.path, moves.size() + 1)
+	var fens := Analyser.positions_from_game(game)
+	var state := _analysis_text(record.path, fens)
 
 	var status := VBoxContainer.new()
 	status.name = "AnalysisStatus"
 	status.custom_minimum_size.x = 105 if _compact else 232
 	status.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	details.add_child(status)
-	var cached := _cached_accuracy(record.path, moves.size() + 1)
+	var cached := _cached_accuracy(record.path, fens)
 	if not cached.is_empty() and not state.begins_with("Analysing") and state != "Queued":
 		var heading := Label.new()
 		heading.text = "Accuracy"
@@ -727,45 +728,25 @@ func _result_text(game: Dictionary, colour: String) -> String:
 	return outcome + (" on time" if why == "time" else " by " + why)
 
 
-func _analysis_text(path: String, count := -1) -> String:
+func _analysis_text(path: String, fens: Array) -> String:
 	if analysis_queue != null and path in analysis_queue.pending():
 		return "Analysing %d%%" % analysis_queue.percent if analysis_queue.current() == path else "Queued"
 	var analysis_path: String = history.analysis_folder().path_join(path.get_file() + ".json")
-	var analysis := Analyser.read_analysis(analysis_path, "Stockfish 19", Tunables.ANALYSIS_NODES)
+	var analysis := Analyser.read_analysis(analysis_path, "Stockfish 19", Tunables.ANALYSIS_NODES, fens)
 	if analysis.state != "analysed":
 		return analysis.state.capitalize()
-	var accuracy := _cached_accuracy(path, count)
-	if accuracy.is_empty():
-		return "Stale"
+	var accuracy := Accuracy.evaluate(analysis.data)
 	return "White: %s  Black: %s" % [_accuracy(accuracy.white), _accuracy(accuracy.black)]
 
 
-func _cached_accuracy(path: String, count: int) -> Dictionary:
+func _cached_accuracy(path: String, fens: Array) -> Dictionary:
 	var analysis_path: String = history.analysis_folder().path_join(path.get_file() + ".json")
 	var data = JSON.parse_string(FileAccess.get_file_as_string(analysis_path)) if FileAccess.file_exists(analysis_path) else null
-	if not data is Dictionary:
+	if not data is Dictionary or not data.get("engine_version") is String or not (data.get("node_budget") is int or data.get("node_budget") is float):
 		return {}
-	var positions = data.get("positions")
-	if not positions is Array or (count >= 0 and positions.size() != count) or positions.is_empty():
-		return {}
-	for position in positions:
-		if not position is Dictionary or not position.get("pv") is Array:
-			return {}
-		var score = position.get("terminal_score")
-		if not position.pv.is_empty():
-			var line = position.pv[0]
-			if not line is Dictionary:
-				return {}
-			score = line.get("cp", line.get("mate"))
-		if not (score is int or score is float) or not is_finite(float(score)):
-			return {}
-	var fen = positions[0].get("fen")
-	if not fen is String:
-		return {}
-	var fields: PackedStringArray = fen.split(" ")
-	if fields.size() < 2 or fields[1] not in ["w", "b"]:
-		return {}
-	return Accuracy.evaluate(data)
+	# Keep old-engine accuracy visible while offering re-analysis, after the same completeness check.
+	var cached := Analyser.read_analysis(analysis_path, data.engine_version, int(data.node_budget), fens)
+	return Accuracy.evaluate(cached.data) if cached.state == "analysed" else {}
 
 
 func _accuracy(value) -> String:
@@ -777,7 +758,7 @@ func _analyze_all() -> void:
 	var tab: String = TABS[$Margin/Content/Header/Tabs.current_tab]
 	for record in history.games():
 		var control: String = CONTROLS.get(record.game.headers.get("TimeControl", ""), "")
-		if (tab == "All" or tab == control) and _analysis_text(record.path, record.game.moves.size() + 1) in ["Not Analysed", "Stale"]:
+		if (tab == "All" or tab == control) and _analysis_text(record.path, Analyser.positions_from_game(record.game)) in ["Not Analysed", "Stale"]:
 			analysis_queue.enqueue(record.path)
 	# Also the retry after a failed analysis, which stays queued.
 	analysis_queue.resume()
