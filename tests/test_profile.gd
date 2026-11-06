@@ -46,6 +46,27 @@ func test_home_profile_rename_and_back():
 	_clean(folder)
 
 
+
+func test_profile_reports_a_failed_name_save():
+	var folder := "user://test_profile_failure_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var path := folder.path_join("settings.cfg")
+	var settings = Settings.new(path)
+	assert_true(settings.set_value("player_name", "Bruno"))
+	var profile = load("res://ui/profile.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(profile)
+	profile.present(settings)
+	assert_eq(DirAccess.rename_absolute(path, path + ".bak"), OK)
+	assert_eq(DirAccess.make_dir_absolute(path), OK)
+	profile.find_child("PlayerName", true, false).text = "New"
+	profile.find_child("SaveName", true, false).pressed.emit()
+	var error = profile.find_child("NameError", true, false)
+	assert_true(error.visible and error.text != "Please enter a name.", "save failure is explained")
+	assert_eq(settings.get_value("player_name"), "Bruno")
+	assert_eq(profile.find_child("DisplayName", true, false).text, "Bruno")
+	profile.free()
+	_clean(folder)
+
 func test_profile_table_matches_stats_and_omits_empty_rows():
 	var folder := "user://test_profile_stats_%d" % Time.get_ticks_usec()
 	DirAccess.make_dir_recursive_absolute(folder)

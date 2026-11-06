@@ -112,6 +112,50 @@ func test_name_dialog_requires_a_nonempty_choice_and_stays_closed_after_restart(
 	DirAccess.remove_absolute(PATH)
 
 
+
+func test_name_dialog_reports_a_failed_save():
+	var path := _fresh()
+	assert_eq(DirAccess.make_dir_absolute(path), OK)
+	var store = Settings.new(path)
+	var dialog = load("res://ui/name_dialog.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(dialog)
+	dialog.present(store)
+	var input = dialog.find_child("Name", true, false)
+	input.text = "Bruno"
+	dialog.get_ok_button().pressed.emit()
+	var error = dialog.find_child("NameError", true, false)
+	assert_true(error != null and error.visible, "save failure is shown inline")
+	assert_true(dialog.visible, "failed save keeps the dialog open")
+	assert_eq(store.get_value("player_name"), "You")
+	assert_true(not store.has_player_name())
+	dialog.free()
+	DirAccess.remove_absolute(path)
+
+
+func test_settings_controls_restore_the_saved_value_after_failed_write():
+	var path := _fresh()
+	assert_eq(DirAccess.make_dir_absolute(path), OK)
+	var store = Settings.new(path)
+	var screen = load("res://ui/settings.tscn").instantiate()
+	screen.store = store
+	Engine.get_main_loop().root.add_child(screen)
+	var form = screen.get_node("Panel/Center/Box/Form")
+	var controls := {}
+	for i in range(0, form.get_child_count(), 2):
+		controls[form.get_child(i).text] = form.get_child(i + 1)
+	var check: CheckBox = controls["Click-click moves"]
+	check.button_pressed = true
+	assert_true(not check.button_pressed, "checkbox reverts")
+	var spin: SpinBox = controls["Volume (%)"]
+	spin.value = 50
+	assert_eq(spin.value, 20, "spinbox reverts")
+	var choice: OptionButton = controls["Premove style"]
+	choice.select(0)
+	choice.item_selected.emit(0)
+	assert_eq(choice.get_item_text(choice.selected), "Chess.com", "choice reverts")
+	screen.free()
+	DirAccess.remove_absolute(path)
+
 func test_board_size_defaults_round_trips_and_rejects_invalid_values():
 	var store = Settings.new(_fresh())
 	assert_eq(store.get_value("board_size"), 0, "zero means fit to window")
