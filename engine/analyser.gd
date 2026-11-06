@@ -67,18 +67,18 @@ func cancel() -> void:
 			_bridge.stop_search()
 
 
-static func read_analysis(path: String, version: String, budget: int) -> Dictionary:
+static func read_analysis(path: String, version: String, budget: int, fens: Array) -> Dictionary:
 	if not FileAccess.file_exists(path):
 		return {"state": "not analysed"}
 	var data = JSON.parse_string(FileAccess.get_file_as_string(path))
 	if not data is Dictionary or data.get("engine_version", "") != version or data.get("node_budget", 0) != budget:
 		return {"state": "stale"}
 	var positions = data.get("positions")
-	if not positions is Array or positions.is_empty():
+	if not positions is Array or positions.is_empty() or positions.size() != fens.size():
 		return {"state": "stale"}
 	for i in positions.size():
 		var position = positions[i]
-		if not position is Dictionary or not position.get("fen") is String or not position.get("pv") is Array:
+		if not position is Dictionary or position.get("fen") != fens[i] or not position.get("pv") is Array:
 			return {"state": "stale"}
 		if not position.get("best_move") is String:
 			return {"state": "stale"}
