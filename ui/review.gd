@@ -167,6 +167,7 @@ func _ready() -> void:
 	resized.connect(_layout_review)
 	_layout_review.call_deferred()
 	$Margin/Content/ReviewBody/Side.sort_children.connect(_place_rules)
+	$Margin/Content/ReviewBody.sort_children.connect(_hug_eval_bar)
 	$Margin/Content/ReviewBody/Side/Counts.sort_children.connect(_place_rules)
 	var track := StyleBoxFlat.new()
 	track.bg_color = Color("1f1e1c")
@@ -1044,6 +1045,15 @@ func _input(event: InputEvent) -> void:
 	elif visible and event is InputEventKey and event.is_pressed() and not event.is_echo() and event.keycode in [KEY_LEFT, KEY_RIGHT]:
 		get_viewport().set_input_as_handled()
 		_step(-1 if event.keycode == KEY_LEFT else 1)
+
+
+# The board is square and centred in its column; the bar sits beside the board, as tall as it.
+func _hug_eval_bar() -> void:
+	var side: float = minf(_board_view.size.x, _board_view.size.y)
+	var corner: Vector2 = (_board_view.size - Vector2.ONE * side) / 2.0
+	var gap: int = $Margin/Content/ReviewBody.get_theme_constant("separation")
+	_eval_bar.position = _board_view.position + Vector2(corner.x - gap - _eval_bar.size.x, corner.y)
+	_eval_bar.size.y = side
 
 
 func _update_player_labels() -> void:
