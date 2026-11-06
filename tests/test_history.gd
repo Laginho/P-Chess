@@ -887,3 +887,35 @@ func _wait_start(main) -> void:
 # Date headings and the paging footer share the list with game cards.
 func _history_cards(list: Node) -> Array:
 	return list.get_children().filter(func(node): return node is PanelContainer)
+
+func test_changed_sized_pgn_is_reloaded_within_same_second():
+	var folder := _folder()
+	var games_dir := folder.path_join("games")
+	DirAccess.make_dir_recursive_absolute(games_dir)
+	var path := games_dir.path_join("game.pgn")
+	var history = History.new(folder)
+	var same_second := false
+	for attempt in 10:
+		var file := FileAccess.open(path, FileAccess.WRITE)
+		file.store_string('[White "Original"]\n\n1. e4 *')
+		file.close()
+		var before: Array = history.games()
+		var modified := FileAccess.get_modified_time(path)
+		file = FileAccess.open(path, FileAccess.WRITE)
+		file.store_string('[White "Changed Player"]\n\n1. d4 *')
+		file.close()
+		if modified == FileAccess.get_modified_time(path):
+			same_second = true
+			assert_eq(before[0].game.headers.White, "Original")
+			break
+	assert_true(same_second, "fixture must change inside one timestamp second")
+	if same_second:
+		assert_eq(history.games()[0].game.headers.White, "Changed Player")
+		assert_eq(History.new(folder).games()[0].game.headers.White, "Changed Player", "persisted cache is refreshed")
+	assert_eq(DirAccess.remove_absolute(path), OK)
+	assert_eq(history.games(), [], "deleted game disappears")
+	var file := FileAccess.open(games_dir.path_join("added.pgn"), FileAccess.WRITE)
+	file.store_string('[White "Added"]\n\n1. e4 *')
+	file.close()
+	assert_eq(history.games()[0].game.headers.White, "Added", "new game appears")
+	HistoryStorage.clean(folder)
