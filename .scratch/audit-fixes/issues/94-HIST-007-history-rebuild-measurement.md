@@ -1,5 +1,5 @@
 # HIST-007: Measure History's rebuild during analysis, fix only if it stalls
-Stage: to-implement
+Stage: implementing
 Status: ready-for-agent
 Blocked by: HIST-008, REV-010
 Review: agent
@@ -38,6 +38,6 @@ Spec: `.scratch/audit-fixes/spec.md`. Audit finding 1. The audit measured 3,857 
 
 ## Comments
 
-- 2026-11-06 Written from the grill ([spec](../spec.md)). Both endings are valid: measurement-only (≤ 200 ms) or the cache.
+- 2026-11-06 Written from the grill ([spec](../spec.md)). Both endings are valid: measurement-only (â‰¤ 200 ms) or the cache.
 - Proxy decided (opus-5.5 xhigh): 9 settled, 2 escalated (receipt C:\Users\bruno\AppData\Local\Temp\sweatshop-proxy\20261106-141649-audit-fixes-c4b5e4.json)
 - Proxy decided (opus-5.5 xhigh): 5 settled, 0 escalated (receipt C:\Users\bruno\AppData\Local\Temp\sweatshop-proxy\20261106-142124-audit-fixes-9f40af.json)
