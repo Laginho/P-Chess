@@ -78,7 +78,7 @@ static func read_analysis(path: String, version: String, budget: int, fens: Arra
 		return {"state": "stale"}
 	for i in positions.size():
 		var position = positions[i]
-		if not position is Dictionary or position.get("fen") != fens[i] or not position.get("pv") is Array:
+		if not position is Dictionary or not position.get("fen") is String or position.fen != fens[i] or not position.get("pv") is Array:
 			return {"state": "stale"}
 		if not position.get("best_move") is String:
 			return {"state": "stale"}
