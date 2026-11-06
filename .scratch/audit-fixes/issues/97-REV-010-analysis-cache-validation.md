@@ -1,5 +1,5 @@
 # REV-010: Only a complete analysis cache counts as analysed
-Stage: to-review
+Stage: done
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -60,3 +60,28 @@ Acceptance: passed | The agreed automated seams in [spec](../spec.md) passed: di
 Disclosure: pending | none | [Gate log](C:/Users/bruno/AppData/Local/Temp/REV-010-gate-20261106.log): graphical pixels and live Lc0 were skipped; no graphical or real-engine acceptance is claimed. The ticket's verification uses the agreed automated seams.
 
 Gate evidence: C:/Users/bruno/AppData/Local/Temp/REV-010-gate-20261106.json
+
+#### Resolution (2026-11-06)
+Verdict: Approve
+
+- Reviewed the complete nine-file diff `601b778...d312c7d` and all eight implementation commits. No production fixes were authored during review. Test-only and production-only commits are separate; `tests/test_history.gd` is a permitted test-only adaptation to the replaced interface.
+- Examined the analyser writer and shared reader; all four Review reads (including engine-id lookup and stop/queue restoration), both History reads and Profile; Classification, Accuracy and graph consumers; terminal draws, stale metadata, malformed positions/PVs/scores/FENs, saved-game opening and incremental/live side-line interactions.
+
+##### Standards
+
+No actionable findings. Repository guidance and the baseline smell review pass; the shared validator replaces duplicate shape checks, and caller changes propagate the expected-FEN contract.
+
+##### Spec
+
+No actionable findings or scope creep. Numbered criteria:
+
+1. ✅ Exact count, matching FEN strings and required finite scores/PV structure are checked at `read_analysis`; missing files and stale metadata keep their existing states.
+2. ✅ Every production read supplies expected FENs; duplicate checks are removed, and `_check_engine` retains its bridge engine id. History retains validated old-engine accuracy beside the stale state.
+3. ✅ Saved-game tests reject malformed scores, terminal scores, PVs, positions, FENs and position counts, show the analysis offer and start no engine. The runner reports no script errors.
+4. ✅ Valid saved caches load without an engine start; existing History/Profile accuracy tests pass in the verified gate.
+5. ✅ Incremental receipt and live side-line paths are unchanged; their Review regression tests pass.
+6. ✅ The existing gate receipt was validated against the tested commit, log hash, exit marker and unchanged code: 564 passed, 0 failed, exit 0 at `f7dc4a8`. The receipt remains valid after the conflict-free session integration; the gate was not rerun.
+
+- Independently reran focused files, one at a time: Analyser 13 passed and Review 77 passed, zero failures or script errors. Logs: C:/Users/bruno/AppData/Local/Temp/REV-010-stage3-analyser.log and C:/Users/bruno/AppData/Local/Temp/REV-010-stage3-review.log, both exit 0. Inspected the recorded red failures for incomplete shapes, position count/FEN mismatch and invalid FEN types, and their later green gate evidence. `git diff --check` passed.
+- Not examined here: graphical pixel behavior, real-engine acceptance, export/CI and History performance measurement (the latter remains HIST-007). The existing graphical/Lc0 skip disclosure and automated acceptance boundary remain in force.
+- Integrated into `sweatshop/audit-fixes/2026-11-06-1433` with merge commit `0bc8bda7ba535867b37f0b2202e7d4884e773ccb`; no PR or push in this stage. Standards: 0 findings; Spec: 0 findings.
