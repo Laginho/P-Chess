@@ -8,7 +8,7 @@ The audit ran at d0920a0 (2026-11-02), before PR #41 (History pages, stop analys
 
 | Audit finding | State at 52985b2 | Ticket |
 |---|---|---|
-| 1. History rebuilds on every progress event | Progress now updates the active card in place (`ui/history_screen.gd` `_queue_changed`); a full `_refresh()` still reparses every PGN once per started/finished game | HIST-007 (measure first) |
+| 1. History rebuilds on every progress event | Progress updates the active card in place; `_refresh()` runs for queue state changes. Parsed PGNs are cached (HIST-007 added size to the key), but building visible cards took 0.8?0.9 s for saved games and about 1.6 s for a legacy fixture | HIST-007 (measurement and cache key), HIST-010 (card build) |
 | 2. Failed stats write leaves PGN and counters inconsistent | Present (`core/history.gd` `save`) | HIST-008 |
 | 3. Review merges a cache checked only by metadata and length | Present (`engine/analyser.gd` `read_analysis`, `ui/review.gd`) | REV-010 |
 | 4. `Settings.set_value` ignores a failed save and returns true | Present (`core/settings.gd`) | UI-038 |
