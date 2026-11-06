@@ -33,7 +33,7 @@ var clock
 var settings := {}
 # The player's settings (§10), applied as they change.
 var preferences := Settings.new()
-# Their screen, over everything else; hidden in focus mode.
+# Their screen, over everything else; hidden during focused play.
 var settings_screen := SettingsScreen.instantiate()
 var review := ReviewScreen.instantiate()
 var history_screen := HistoryScreen.instantiate()
@@ -189,8 +189,10 @@ func _ready() -> void:
 	review.analysis_queue = analysis_queue
 	history_screen.analysis_queue = analysis_queue
 	settings_screen.store = preferences
-	add_child(settings_screen)
+	review.settings_panel = settings_screen.get_node("Panel")
 	add_child(review)
+	add_child(settings_screen)
+	review.visibility_changed.connect(func(): settings_screen.visible = not focus or review.visible)
 	review.get_node("Margin/Content/ReviewBody/BoardView").sound_requested.connect(sound_player.play)
 	add_child(history_screen)
 	add_child(name_dialog)
@@ -277,8 +279,9 @@ func _unhandled_key_input(event: InputEvent) -> void:
 
 # Ctrl+, must not open the panel behind a screen drawn above Settings.
 func _covers_settings() -> bool:
+	# Focus reparents the non-modal draw notice here; it must not block Settings.
 	return get_children().slice(settings_screen.get_index() + 1).any(
-			func(screen): return (screen is Control or screen is Window) and screen.visible)
+			func(screen): return screen != draw_notice and (screen is Control or screen is Window) and screen.visible)
 
 
 func _resign() -> void:
@@ -504,6 +507,7 @@ func _on_engine_stopped() -> void:
 
 # One setting to whatever reads it; the next move, sound or game picks it up.
 func _apply(key: String, value) -> void:
+	var review_board = review.get_node("Margin/Content/ReviewBody/BoardView")
 	match key:
 		"analysis_threads":
 			analysis_queue.maximum = value == "Max"
@@ -511,16 +515,24 @@ func _apply(key: String, value) -> void:
 			board_view.premove_style = value
 		"click_click":
 			board_view.click_click = value
+			review_board.click_click = value
 		"auto_queen":
 			board_view.auto_queen = value
+			review_board.auto_queen = value
 		"legal_dots":
 			board_view.show_targets = value
+			review_board.show_targets = value
+		"best_move_arrow":
+			review.best_move_arrow_enabled = value
 		"animation_ms":
 			board_view.slide_seconds = value / 1000.0
+			review_board.slide_seconds = value / 1000.0
 		"board_theme":
 			board_view.set_board_theme(value)
+			review_board.set_board_theme(value)
 		"piece_theme":
 			board_view.set_piece_theme(value)
+			review_board.set_piece_theme(value)
 		"sound_theme":
 			sound_player.select_theme(value)
 		"volume":
@@ -626,8 +638,9 @@ func _set_focus(on: bool) -> void:
 	_update_resign_button()
 	_fit_board()
 	_place_focus_clocks.call_deferred()
-	for node in [move_list, claim_draw.get_parent(), $Layout/Side/Actions, settings_screen]:
+	for node in [move_list, claim_draw.get_parent(), $Layout/Side/Actions]:
 		node.visible = not on
+	settings_screen.visible = not on or review.visible
 	# The game-over card shows the result; the side panel keeps only a history failure.
 	result_label.visible = not on and result_label.text.contains("History: ")
 	for row in [white_clock.get_parent(), black_clock.get_parent()]:

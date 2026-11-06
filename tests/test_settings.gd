@@ -270,3 +270,11 @@ func test_analysis_threads_defaults_and_choices():
 	assert_eq(Settings.new(PATH).get_value("analysis_threads"), "Max")
 	assert_true(not settings.set_value("analysis_threads", "other"))
 	DirAccess.remove_absolute(PATH)
+
+
+func test_best_move_arrow_defaults_on_and_round_trips():
+	var store = Settings.new(_fresh())
+	assert_eq(store.get_value("best_move_arrow"), true)
+	assert_true(store.set_value("best_move_arrow", false))
+	assert_eq(Settings.new(PATH).get_value("best_move_arrow"), false)
+	DirAccess.remove_absolute(PATH)

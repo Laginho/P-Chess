@@ -22,6 +22,7 @@ func _ready() -> void:
 	_check("click_click", "Click-click moves")
 	_choice("auto_queen", "Auto-queen", Settings.CHOICES.auto_queen)
 	_check("legal_dots", "Legal-move dots")
+	_check("best_move_arrow", "Best move arrow")
 	_spin("animation_ms", "Animation length (ms)", 10)
 	_choice("board_theme", "Board", _themes("boards"))
 	_choice("piece_theme", "Pieces", _themes("pieces"))

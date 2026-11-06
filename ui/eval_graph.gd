@@ -7,6 +7,9 @@ const Tunables = preload("res://core/tunables.gd")
 
 const COLOURS := {"Inaccuracy": Color("f4bf44"), "Mistake": Color("e28c28"), "Miss": Color("ff7769"), "Blunder": Color("c93230")}
 
+const LOWER_DARK := Color("2b2926")
+const LOWER_LIGHT := Color("c9c5be")
+
 var positions: Array = []
 var classes: Array = []
 var current_ply := 0
@@ -23,6 +26,14 @@ func _draw() -> void:
 	card.bg_color = Color("403d39")
 	card.set_corner_radius_all(6)
 	draw_style_box(card, Rect2(Vector2.ZERO, size))
+	# Below the midline both shades are dimmer, so the half where Black leads reads apart.
+	var mid := size.y / 2
+	var lower := StyleBoxFlat.new()
+	lower.bg_color = LOWER_DARK
+	lower.corner_radius_bottom_left = 6
+	lower.corner_radius_bottom_right = 6
+	draw_style_box(lower, Rect2(0, mid, size.x, size.y - mid))
+	var halves := [[_rect_polygon(Rect2(0, 0, size.x, mid)), Color("ece9e4")], [_rect_polygon(Rect2(0, mid, size.x, size.y - mid)), LOWER_LIGHT]]
 	var dots := []
 	var previous := Vector2.ZERO
 	var have_previous := false
@@ -40,7 +51,10 @@ func _draw() -> void:
 		var fraction := 1.0 / (1.0 + exp(-Tunables.CLASSIFICATION_EP_FACTOR * clampi(score, -Tunables.CLASSIFICATION_CP_LIMIT, Tunables.CLASSIFICATION_CP_LIMIT)))
 		var point := Vector2(size.x * i / maxi(positions.size() - 1, 1), size.y * (1.0 - fraction))
 		if have_previous:
-			draw_colored_polygon(PackedVector2Array([previous, point, Vector2(point.x, size.y), Vector2(previous.x, size.y)]), Color("ece9e4"))
+			var area := PackedVector2Array([previous, point, Vector2(point.x, size.y), Vector2(previous.x, size.y)])
+			for half in halves:
+				for piece in Geometry2D.intersect_polygons(area, half[0]):
+					draw_colored_polygon(piece, half[1])
 		if i > 0 and i <= classes.size() and classes[i - 1] != null and COLOURS.has(classes[i - 1].class):
 			dots.append([point, COLOURS[classes[i - 1].class]])
 		previous = point
@@ -53,3 +67,7 @@ func _draw() -> void:
 	for dot in dots:
 		draw_circle(dot[0], 4.5, Color("141412"))
 		draw_circle(dot[0], 3.5, dot[1])
+
+
+static func _rect_polygon(rect: Rect2) -> PackedVector2Array:
+	return PackedVector2Array([rect.position, Vector2(rect.end.x, rect.position.y), rect.end, Vector2(rect.position.x, rect.end.y)])

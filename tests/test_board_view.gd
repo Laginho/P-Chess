@@ -291,3 +291,28 @@ func test_last_move_uses_the_two_design_colours():
 	assert_eq(image.get_pixel(205, 305).to_html(false), "cdd26a", "light e2")
 	assert_eq(image.get_pixel(205, 255).to_html(false), "aaa23a", "dark e3")
 	board.free()
+
+
+func test_best_move_arrow_is_drawn_only_when_set():
+	var board = preload("res://ui/board_view.tscn").instantiate()
+	board.game = preload("res://core/game.gd").new()
+	Engine.get_main_loop().root.add_child(board)
+	assert_eq(board.get("best_move_arrow"), "", "no arrow by default")
+	if DisplayServer.get_name() != "headless":
+		board.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+		board.size = Vector2(400, 400)
+		await Engine.get_main_loop().process_frame
+		await RenderingServer.frame_post_draw
+		var before = board.get_viewport().get_texture().get_image().get_pixel(225, 275)
+		board.set("best_move_arrow", "e2e4")
+		board.queue_redraw()
+		await Engine.get_main_loop().process_frame
+		await RenderingServer.frame_post_draw
+		var with_arrow = board.get_viewport().get_texture().get_image().get_pixel(225, 275)
+		assert_true(with_arrow != before and with_arrow.b > before.b, "blue arrow covers e3")
+		board.set("best_move_arrow", "")
+		board.queue_redraw()
+		await Engine.get_main_loop().process_frame
+		await RenderingServer.frame_post_draw
+		assert_eq(board.get_viewport().get_texture().get_image().get_pixel(225, 275), before)
+	board.free()
