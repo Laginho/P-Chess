@@ -1,5 +1,5 @@
 # HIST-008: A failed stats write leaves no trace of the game
-Stage: to-implement
+Stage: to-review
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -34,3 +34,8 @@ Spec: `.scratch/audit-fixes/spec.md`. Audit finding 2. Today `save()` writes the
 - 2026-11-06 Written from the grill ([spec](../spec.md)).
 - Proxy decided (opus-5.5 xhigh): 9 settled, 2 escalated (receipt C:\Users\bruno\AppData\Local\Temp\sweatshop-proxy\20261106-141649-audit-fixes-c4b5e4.json)
 - Proxy decided (opus-5.5 xhigh): 5 settled, 0 escalated (receipt C:\Users\bruno\AppData\Local\Temp\sweatshop-proxy\20261106-142124-audit-fixes-9f40af.json)
+
+- 2026-11-06: Red focused run: 27 passed, 2 failed, exposing retained files, changed counters and missing removal errors. Green focused run: 29 passed, 0 failed. Gate: 557 passed, 0 failed, exit 0; graphical pixels and six Lc0 checks skipped (headless / engine absent).
+- Snapshot-only write failure remains reported while PGN and stats save by inspection; it was not injected dynamically. Crash-safe multi-file recovery is outside the spec.
+- Acceptance: pending | Stage 3 review; snapshot-only failure inspected but not injected.
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\hist-008-gate.json
