@@ -8,3 +8,7 @@ HIST-007 measured one visible `_refresh()` with 50 finished 40-ply PGNs, 20 visi
 For the grill (not decided): cache derived per-record data with the parsed record keyed by path, modified time and size; update affected cards in `_queue_changed` instead of rebuilding; or combine both. Candidate bar: a rebuild at most 200 ms on the HIST-007 probe, without a timing assertion in the gate.
 
 Links: [HIST-007](94-HIST-007-history-rebuild-measurement.md), [REV-010](97-REV-010-analysis-cache-validation.md), audit finding 1.
+
+## Comments
+
+- 2026-11-06 Foreman measured one queue-state rebuild (HIST-007 probe trimmed: 50 finished 40-ply games, 20 cards, fake runner, headless, rendering excluded, 3 runs each, Windows i5-12400F): main f6daf32 438/460/450 ms; session adf06bf 773/792/800 ms. REV-010 adds about 340 ms (positions_from_game per card); main already exceeds the 200 ms bar. Reopen attribution row: session-review, REV-010.
