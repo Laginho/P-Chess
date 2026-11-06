@@ -71,16 +71,22 @@ func has_player_name() -> bool:
 			and valid("player_name", _config.get_value(SECTION, "player_name"))
 
 
-# False, with nothing changed, for an unknown key or a value out of range.
+# False, with nothing changed, for an invalid value or a failed save.
 func set_value(key: String, value) -> bool:
 	if not valid(key, value):
 		return false
-	_values[key] = type_convert(value, typeof(DEFAULTS[key]))
-	for k in _values:
+	var values := _values.duplicate()
+	values[key] = type_convert(value, typeof(DEFAULTS[key]))
+	var config := ConfigFile.new()
+	config.parse(_config.encode_to_text())
+	for k in values:
 		if k == "player_name" and key != "player_name" and not has_player_name():
 			continue
-		_config.set_value(SECTION, k, _values[k])
-	_config.save(path)
+		config.set_value(SECTION, k, values[k])
+	if config.save(path) != OK:
+		return false
+	_values = values
+	_config = config
 	changed.emit(key, _values[key])
 	return true
 
@@ -91,8 +97,13 @@ func last_game() -> Dictionary:
 
 
 func save_last_game(value: Dictionary) -> void:
-	_config.set_value("game", "last", value.duplicate(true))
-	_config.save(path)
+	var config := ConfigFile.new()
+	config.parse(_config.encode_to_text())
+	config.set_value("game", "last", value.duplicate(true))
+	if config.save(path) != OK:
+		push_warning("Could not save the last game settings")
+		return
+	_config = config
 
 
 # Numbers may be int or float; NaN fails both bounds. A theme must exist now, bundled or user's,
