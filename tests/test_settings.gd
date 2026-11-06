@@ -35,6 +35,27 @@ func test_player_name_is_chosen_once_and_survives_restart():
 	DirAccess.remove_absolute(PATH)
 
 
+
+func test_failed_write_keeps_previous_settings_and_last_game():
+	var store = Settings.new(_fresh())
+	assert_true(store.set_value("player_name", "Bruno"))
+	store.save_last_game({"level": "old"})
+	var changes := []
+	store.changed.connect(func(key, value): changes.append([key, value]))
+	assert_eq(DirAccess.rename_absolute(PATH, PATH + ".bak"), OK)
+	assert_eq(DirAccess.make_dir_absolute(PATH), OK)
+	assert_true(not store.set_value("player_name", "New"), "failed write is rejected")
+	assert_eq(changes, [])
+	assert_eq(store.get_value("player_name"), "Bruno")
+	assert_true(store.has_player_name())
+	store.save_last_game({"level": "new"})
+	assert_eq(store.last_game(), {"level": "old"})
+	DirAccess.remove_absolute(PATH)
+	assert_eq(DirAccess.rename_absolute(PATH + ".bak", PATH), OK)
+	assert_eq(Settings.new(PATH).get_value("player_name"), "Bruno")
+	assert_eq(Settings.new(PATH).last_game(), {"level": "old"})
+	DirAccess.remove_absolute(PATH)
+
 func _fresh() -> String:
 	DirAccess.remove_absolute(PATH)
 	return PATH
