@@ -373,6 +373,68 @@ func _check_delete_rollback(failure: String) -> void:
 	HistoryStorage.clean(folder)
 
 
+func test_failed_stats_save_rolls_back_game_and_counts():
+	for outcome in ["win", "loss", "draw"]:
+		var folder := _folder()
+		var history = History.new(folder)
+		var initial = Game.new()
+		initial.flag("b")
+		assert_true(not history.save(initial, [], SETTINGS, "", "line-1").is_empty())
+		var expected: Dictionary = history.stats("maia-1500", "3+2")
+		var stats_path := folder.path_join("stats.cfg")
+		assert_eq(DirAccess.rename_absolute(stats_path, stats_path + ".backup"), OK)
+		assert_eq(DirAccess.make_dir_absolute(stats_path), OK)
+		var game = Game.new()
+		if outcome == "draw":
+			game.agree_draw()
+		else:
+			game.flag("b" if outcome == "win" else "w")
+		var repertoire = load("res://bot/repertoire.gd").new()
+		assert_eq(repertoire.parse("1. e4 e5 *", "w"), "")
+		assert_eq(history.save(game, [], SETTINGS, "", "line-1", repertoire.lines, "w"), "")
+		assert_true(history.error.contains("stats"))
+		assert_eq(history.stats("maia-1500", "3+2"), expected, outcome)
+		assert_eq(history.practice_counts().get("line-1"), 1)
+		assert_eq(DirAccess.get_files_at(folder.path_join("games")).size(), 1, "no failed PGN or snapshot")
+		assert_eq(DirAccess.remove_absolute(stats_path), OK)
+		assert_eq(DirAccess.rename_absolute(stats_path + ".backup", stats_path), OK)
+		var reloaded = History.new(folder)
+		assert_eq(reloaded.games().size(), 1)
+		assert_eq(reloaded.stats("maia-1500", "3+2"), expected)
+		assert_eq(reloaded.practice_counts().get("line-1"), 1)
+		assert_true(not history.save(game, [], SETTINGS, "", "line-1").is_empty())
+		var after = History.new(folder)
+		assert_eq(after.games().size(), 2)
+		var updated := expected.duplicate()
+		updated[{"win": "wins", "loss": "losses", "draw": "draws"}[outcome]] += 1
+		if outcome != "draw":
+			updated["flag_wins" if outcome == "win" else "flag_losses"] += 1
+		assert_eq(after.stats("maia-1500", "3+2"), updated)
+		assert_eq(after.practice_counts().get("line-1"), 2)
+		HistoryStorage.clean(folder)
+
+
+func test_failed_stats_save_reports_both_file_removal_failures():
+	var folder := _folder()
+	var history = FailingSaveRemoval.new(folder)
+	assert_eq(DirAccess.make_dir_recursive_absolute(folder.path_join("stats.cfg")), OK)
+	var game = Game.new()
+	game.flag("b")
+	var repertoire = load("res://bot/repertoire.gd").new()
+	assert_eq(repertoire.parse("1. e4 e5 *", "w"), "")
+	assert_eq(history.save(game, [], SETTINGS, "", "line-1", repertoire.lines, "w"), "")
+	assert_true(history.error.contains("stats"))
+	assert_true(history.error.contains(".pgn"), "reports PGN removal")
+	assert_true(history.error.contains(".repertoire.json"), "reports snapshot removal")
+	DirAccess.remove_absolute(folder.path_join("stats.cfg"))
+	HistoryStorage.clean(folder)
+
+
+class FailingSaveRemoval extends "res://core/history.gd":
+	func _remove(_path: String) -> Error:
+		return ERR_CANT_OPEN
+
+
 func test_games_is_empty_before_the_first_save():
 	var folder := _folder()
 	assert_eq(History.new(folder).games(), [])

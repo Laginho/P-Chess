@@ -1,5 +1,5 @@
-# HIST-008: A failed stats write leaves no trace of the game
-Stage: to-implement
+﻿# HIST-008: A failed stats write leaves no trace of the game
+Stage: implementing
 Status: ready-for-agent
 Blocked by: none
 Review: agent
