@@ -9,14 +9,24 @@ func test_continue_advances_to_the_next_unit_after_mastery():
 	var file := FileAccess.open(index, FileAccess.WRITE)
 	file.store_string(JSON.stringify({"stages": [{"min_rating": 0, "max_rating": 3500, "units": ["first.json", "second.json"]}]}))
 	file = FileAccess.open(folder.path_join("first.json"), FileAccess.WRITE)
-	file.store_string(JSON.stringify({"id": "first", "positions": []}))
+	file.store_string(JSON.stringify({"id": "first", "positions": [{"id": "one", "pool": "practice"}], "playouts": [{"id": "a"}]}))
 	file = FileAccess.open(folder.path_join("second.json"), FileAccess.WRITE)
 	file.store_string(JSON.stringify({"id": "second", "positions": []}))
 	file = FileAccess.open(progress, FileAccess.WRITE)
 	file.store_string(JSON.stringify({"rating": {"number": 1000, "site": "chess.com"}, "units": {"first": {"mastered_date": "2026-01-01"}}}))
 	file = null
 	var course = load("res://core/course.gd").new(progress, index)
-	var target: Dictionary = course.continue_target(int(Time.get_unix_time_from_datetime_string("2026-01-02T00:00:00")))
+	var now := int(Time.get_unix_time_from_datetime_string("2026-01-02T00:00:00"))
+	var target: Dictionary = course.continue_target(now)
+	assert_eq(target.get("kind"), "theory", "mastery does not skip unfinished parts")
+	assert_eq(target.get("unit", {}).get("id"), "first")
+	var first: Dictionary = course.units()[0]
+	assert_true(course.open_theory(first))
+	assert_eq(course.continue_target(now).get("kind"), "solving")
+	assert_true(course.record_commit(first, first.positions[0], true))
+	assert_eq(course.continue_target(now).get("kind"), "playouts")
+	assert_true(course.record_playout_pass(first, first.playouts[0]))
+	target = course.continue_target(now)
 	assert_eq(target.get("kind"), "theory")
 	assert_eq(target.get("unit", {}).get("id"), "second")
 	for name in ["course.json", "first.json", "second.json", "progress.json"]:
@@ -61,7 +71,7 @@ func test_continue_prefers_game_positions_then_unfinished_parts():
 func test_continue_offers_review_checks_at_seven_and_thirty_days():
 	var path := "user://course_continue_%d.json" % Time.get_ticks_usec()
 	var file := FileAccess.open(path, FileAccess.WRITE)
-	file.store_string(JSON.stringify({"rating": {"number": 1000, "site": "chess.com"}, "units": {"rook": {"mastered_date": "2026-01-01"}}}))
+	file.store_string(JSON.stringify({"rating": {"number": 1000, "site": "chess.com"}, "units": {"rook": {"mastered_date": "2026-01-01", "from_your_game": [{"id": "game"}]}}}))
 	file = null
 	var course = load("res://core/course.gd").new(path, "res://tests/fixtures/course/course.json")
 	assert_true(course.has_method("continue_target"), "course chooses Continue")
@@ -74,8 +84,19 @@ func test_continue_offers_review_checks_at_seven_and_thirty_days():
 		assert_eq(review.get("kind"), "review")
 		assert_eq(review.get("day"), 7)
 		assert_eq(review.get("positions", []).size(), 3)
+		var ids := []
+		for position in review.get("positions", []):
+			assert_true(position.pool in ["practice", "test"])
+			assert_true(position.id not in ids, "review positions are distinct")
+			ids.append(position.id)
 		var day15: int = Time.get_unix_time_from_datetime_string("2026-01-16T00:00:00")
 		assert_eq(course.continue_target(day15).get("elapsed_days"), 15, "late checks report the actual age of mastery")
+		assert_true(course.has_method("local_calendar_time"), "review checks use the local calendar date")
+		if course.has_method("local_calendar_time"):
+			var utc_before: int = Time.get_unix_time_from_datetime_string("2026-01-08T02:59:00")
+			var utc_after: int = Time.get_unix_time_from_datetime_string("2026-01-08T03:00:00")
+			assert_true(course.continue_target(course.local_calendar_time(utc_before, -180)).get("kind") != "review")
+			assert_eq(course.continue_target(course.local_calendar_time(utc_after, -180)).get("kind"), "review")
 		assert_true(course.record_review_check(review.unit, 7, false))
 		assert_eq(course.unit_progress(review.unit).status, "needs review")
 		assert_eq(JSON.parse_string(FileAccess.get_file_as_string(path)).units.rook.mastered_date, "2026-01-01")

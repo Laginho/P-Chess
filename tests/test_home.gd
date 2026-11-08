@@ -20,12 +20,14 @@ func test_continue_starts_course_and_opens_the_next_part():
 	assert_true(card != null, "Home offers Continue")
 	if card != null:
 		assert_true("Start the course" in card.text)
+		assert_eq(card.get_node("UnitTitle").text, "Start the course")
 		card.pressed.emit()
 		assert_true(main.rating_dialog.visible)
 		main.rating_dialog.hide()
 		assert_true(main.course.save_rating(1600, "chess.com"))
 		main._show_home()
 		assert_true("Rook endgames" in card.text)
+		assert_eq(card.get_node("UnitTitle").text, "Rook endgames")
 		card.pressed.emit()
 		assert_true(main.theory_pointer.visible, "Continue opens the theory pointer")
 		assert_true(not main.get_node("Home").visible)
@@ -54,6 +56,8 @@ func test_continue_shows_and_opens_the_due_review_position():
 	if card != null:
 		assert_true("REVIEW CHECK" in card.text)
 		assert_true("3 positions" in card.text)
+		assert_eq(card.get_node("Eyebrow").text, "REVIEW CHECK")
+		assert_true("3 positions" in card.get_node("Detail").text)
 		var expected: String = home.target.positions[0].fen
 		assert_eq(home.get_node("Center/Board").game.start_fen, expected)
 		card.pressed.emit()
@@ -62,6 +66,35 @@ func test_continue_shows_and_opens_the_due_review_position():
 			assert_eq(main.solving.board.game.start_fen, expected, "the card opens the displayed position")
 	else:
 		assert_true(false, "Home offers Continue")
+	main.free()
+	Session.HistoryStorage.clean(folder)
+
+
+func test_continue_refreshes_after_profile_changes_the_stage():
+	var folder := "user://test_continue_profile_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var main = MainScene.instantiate()
+	main.course = load("res://core/course.gd").new(folder.path_join("course.json"), "res://tests/fixtures/course/course.json")
+	assert_true(main.course.save_rating(1000, "chess.com"))
+	main.history = load("res://core/history.gd").new(folder)
+	main.uci.free()
+	main.uci = Session.HeldBridge.new()
+	main.maia = main.MaiaPlayer.new(main.uci)
+	main.preferences = main.Settings.new(folder.path_join("settings.cfg"))
+	main.preferences.set_value("player_name", "You")
+	Engine.get_main_loop().root.add_child(main)
+	var home = main.get_node("Home")
+	var title: Label = home.get_node("Center/Form/Continue/UnitTitle")
+	assert_eq(title.text, "Rook endings")
+	home.get_node("Center/Form/Profile").pressed.emit()
+	var profile = home.get_node("Profile")
+	var rating: LineEdit = profile.find_child("RatingNumber", true, false)
+	rating.text = "1500"
+	rating.text_changed.emit(rating.text)
+	profile.find_child("SaveRating", true, false).pressed.emit()
+	profile.find_child("Back", true, false).pressed.emit()
+	assert_eq(title.text, "Club unit")
+	assert_eq(home.target.get("unit", {}).get("id"), "club")
 	main.free()
 	Session.HistoryStorage.clean(folder)
 

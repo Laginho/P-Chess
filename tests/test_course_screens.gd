@@ -33,6 +33,12 @@ func test_review_check_grades_three_positions_once_and_keeps_mastery():
 	main._continue_course({"kind": "review", "unit": unit, "day": 7, "positions": positions})
 	assert_true(main.solving.visible, "review opens on the solving board")
 	if main.solving.visible:
+		main.solving.board._commit("c6c4", false)
+		main.solving.find_child("Commit", true, false).pressed.emit()
+		assert_eq(main.course.unit_progress(unit).status, "needs review", "a miss is saved immediately")
+		main.solving.find_child("Back", true, false).pressed.emit()
+		assert_eq(main.course.unit_progress(unit).status, "needs review", "leaving does not discard a miss")
+		main._continue_course({"kind": "review", "unit": unit, "day": 7, "positions": positions})
 		for i in 3:
 			main.solving.board._commit("c6c4" if i == 0 else "c6c5", false)
 			main.solving.find_child("Commit", true, false).pressed.emit()
