@@ -1,5 +1,5 @@
 # LEARN-010: The tablebase probe (Fathom helper)
-Stage: to-implement
+Stage: blocked
 Blocked by: CI-005
 Review: agent
 Difficulty: hard
@@ -97,3 +97,5 @@ The one probe that grading, play-out checks, the perfect opponent and the review
   - Running the game from the editor on Bruno's Windows machine needs a C compiler (VS Build Tools) to build the helper.
 
 - Draft application: `export_presets.cfg` is included in Primary files because criterion 9 explicitly requires those export exclusions. The helper's startup error is for no tables loaded, allowing criterion 8's KRvK-only smoke fixture; the application's adapter still requires all 40 files under criterion 3. The spec distinguishes that Windows smoke fixture from the full real-file suite. These reconcile supporting files and verification wording in the approved draft. Fathom source/API details and the static-CRT build remain to be verified by stage 2; this ticket does not claim those checks have run.
+
+- 2026-11-08 Second reopen: foreman diagnosis required before retrying. Classify new defect, earlier review miss, contract gap, or review-induced churn; record cause and next action, then return to-implement only when ready.
