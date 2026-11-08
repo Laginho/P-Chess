@@ -441,6 +441,12 @@ func test_queue_replacement_preserves_selection_focus_paging_and_delete_confirma
 			assert_true(is_instance_valid(siblings[sibling_index]) and siblings[sibling_index] == list.get_child(sibling_index), "other cards, headings and paging footer are untouched")
 	assert_eq(screen._visible_cards().size(), 40, "loaded pages are retained")
 	assert_eq(screen.get_node("Margin/Content/BatchActions/SelectAll").text, "1 selected")
+	var active = card
+	queue.enqueue(screen._tab_records[44].path)
+	assert_true(active == list.get_node(record.path.get_file().validate_node_name()), "enqueueing another game keeps the active card")
+	queue.remove(screen._tab_records[44].path)
+	assert_true(active == list.get_node(record.path.get_file().validate_node_name()), "removing another game keeps the active card")
+	card = list.get_node(record.path.get_file().validate_node_name())
 	card.get_node("Details/HBoxContainer/Delete").pressed.emit()
 	card.get_node("Details/DeleteInline/Cancel").grab_focus()
 	runner.finished.emit(false, "Stockfish crashed")
@@ -459,7 +465,7 @@ func test_queue_replacement_preserves_selection_focus_paging_and_delete_confirma
 	queue.enqueue(screen._tab_records[44].path)
 	await Engine.get_main_loop().process_frame
 	await Engine.get_main_loop().process_frame
-	assert_eq(list.get_children(), siblings, "off-page queue changes leave the loaded page intact")
+	assert_true(list.get_children() == siblings, "off-page queue changes leave the loaded page intact")
 	assert_eq(scroll.scroll_vertical, offset)
 	screen.hide()
 	runner.finished.emit(true, "")
