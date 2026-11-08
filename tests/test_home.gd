@@ -33,6 +33,39 @@ func test_continue_starts_course_and_opens_the_next_part():
 	Session.HistoryStorage.clean(folder)
 
 
+func test_continue_shows_and_opens_the_due_review_position():
+	var folder := "user://test_continue_review_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var path := folder.path_join("course.json")
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	file.store_string(JSON.stringify({"rating": {"number": 1600, "site": "chess.com"}, "units": {"rook-endgames": {"mastered_date": "2000-01-01"}}}))
+	file = null
+	var main = MainScene.instantiate()
+	main.course = load("res://core/course.gd").new(path)
+	main.history = load("res://core/history.gd").new(folder)
+	main.uci.free()
+	main.uci = Session.HeldBridge.new()
+	main.maia = main.MaiaPlayer.new(main.uci)
+	main.preferences = main.Settings.new(folder.path_join("settings.cfg"))
+	main.preferences.set_value("player_name", "You")
+	Engine.get_main_loop().root.add_child(main)
+	var home = main.get_node("Home")
+	var card = home.get_node_or_null("Center/Form/Continue")
+	if card != null:
+		assert_true("REVIEW CHECK" in card.text)
+		assert_true("3 positions" in card.text)
+		var expected: String = home.target.positions[0].fen
+		assert_eq(home.get_node("Center/Board").game.start_fen, expected)
+		card.pressed.emit()
+		assert_true(main.solving.visible)
+		if main.solving.visible:
+			assert_eq(main.solving.board.game.start_fen, expected, "the card opens the displayed position")
+	else:
+		assert_true(false, "Home offers Continue")
+	main.free()
+	Session.HistoryStorage.clean(folder)
+
+
 func test_launch_opens_home():
 	var main = MainScene.instantiate()
 	var folder := "user://test_home_%d" % Time.get_ticks_usec()
