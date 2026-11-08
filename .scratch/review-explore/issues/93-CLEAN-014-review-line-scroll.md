@@ -1,5 +1,5 @@
 # CLEAN-014: Keep the current Review side-line move visible
-Stage: to-implement
+Stage: to-review
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -40,7 +40,7 @@ One reproduction line is `1. d4 d5 2. c4 e6 3. Nc3 Nf6 4. Bg5 Be7 5. e3 O-O 6. N
 - Proxy decided (opus-5.5 xhigh): 5 settled, 0 escalated (receipt /tmp/sweatshop-proxy/20261108-125958-HIST-010-b9505f.json)
 - Proxy decided (opus-5.5 xhigh): 3 settled, 0 escalated (receipt /tmp/sweatshop-proxy/20261108-130224-HIST-010-5b620a.json)
 
-Acceptance: pending | Scroll behavior awaits stage-1 specification and implementation.
+Acceptance: passed | Headless viewport test covers navigation and scroll preservation at 1280x800 and 800x600; gate 682 passed, 0 failed. Manual visual verification was not performed.
 Disclosure: pending | none | Non-blocking usability follow-up to REV-007; no integration or release hold imposed by this observation.
 
 - 2026-11-08 Attempt 1 failed: exit 0. Log tail: O CLEAN-014 foi implementado e permanece em **`implementing`**: a passagem para revisão depende de um gate verde. /  / A lista agora mantém a jogada selecionada visível e mostra “Back to game” no fim da linha, inclusive quando a navegação começa abaixo dela. O teste focado passou nos dois tamanhos previstos. /  / O gate completo terminou com **681 testes aprovados e 1 falha**, fora de Review. O teste de tablebase falhou com o fixture em CRLF neste checkout Windows; uma cópia isolada do teste passou ao remover os finais de linha. A regra do repositório permite repetir o gate somente após mudança de código, então não há recibo verde nem handoff para revisão. Registrei o resultado no [ticket](<C:/Users/bruno/Desktop/Pastinha/Programas/Projects/P-Chess/.artifacts-build/lanes/review-explore/.scratch/review-explore/issues/93-CLEAN-014-review-line-scroll.md>). /  / Não fiz verificação gráfica manual; o gate também pulou verificações que exigem display e tablebases Linux. /  /
@@ -98,3 +98,11 @@ Disclosure: pending | none | Non-blocking usability follow-up to REV-007; no int
 - 2026-11-08 Attempt 2 stopped to ask (its commits are on branch `recovery/asked/20261108-143633/CLEAN-014`): O **CLEAN-014 está bloqueado**, com a implementação e os testes recuperados na branch `CLEAN-014` e a árvore limpa. Também preservei o [CLEAN-021](<C:/Users/bruno/Desktop/Pastinha/Programas/Projects/P-Chess/.artifacts-build/lanes/review-explore/.scratch/review-explore/issues/94-CLEAN-021-tablebase-fixture-line-endings.md>) para tratar a portabilidade do fixture. /  / O gate anterior registrou **681 testes aprovados e 1 falha** no teste de tablebase com o fixture em CRLF. O fixture agora está em LF, mas o código continua igual ao testado e ainda não há recibo de gate verde. A aprovação do teste focado é um resultado relatado pela tentativa anterior; não o executei novamente nesta retomada. /  / Você autoriza executar o gate uma vez com o fixture corrigido, sem outra mudança de código? /  / Preciso da autorização porque o `AGENTS.md` fornecido determina **“Rode de novo só depois de mudar código”**, enquanto a skill [ticket-flow](<C:/Users/bruno/.agents/skills/ticket-flow/SKILL.md>) exige gate verde para entregar o ticket à revisão. /  / Não repeti o gate nem fiz verificação gráfica manual; a falha de fixture também pode ocorrer em outros checkouts Windows.
 
 - 2026-11-08 Foreman: Bruno chose to fix the root cause. `main` 6559a09 (merged into this session) makes `test_tablebase.gd` strip CR from the fixture, so the gate passes on a CRLF checkout. That is a code change: run the gate once on it. Resume from `recovery/asked/20261108-143633/CLEAN-014`. CLEAN-021 (opened on the recovery branches) is covered by 6559a09; drop it.
+
+- 2026-11-08 Stage 2 criteria check (independent read-only subagent):
+  - 1. ? `ui/review.gd:1140`, `ui/review.gd:1151`; `tests/test_review.gd:1093` checks both rows at both sizes and from below. The original red logs showed the rows outside the viewport.
+  - 2. ? `ui/review.gd:1155`, via `ui/review.gd:1160`; `tests/test_review.gd:1123` checks Previous. The original red and mutant logs showed the selected row outside the viewport.
+  - 3. ? `ui/review.gd:1140`, `ui/review.gd:1152`, and `ui/review.gd:746`; `tests/test_review.gd:1136` checks unchanged offsets. This preserves existing behavior, so removing the new code alone does not make these assertions fail.
+  - 4. ? Gate exit 0, 682 passed, 0 failed; log `C:\Users\bruno\AppData\Local\Temp\clean014-resume-gate.log`. Graphical pixel checks and Linux tablebase checks were skipped by the suite.
+
+Gate evidence: C:\Users\bruno\AppData\Local\Temp\clean014-resume-gate.json

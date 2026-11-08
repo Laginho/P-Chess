@@ -1090,6 +1090,66 @@ func test_long_review_keeps_selected_move_visible():
 	main.free()
 	root.size = old_size
 
+func test_side_line_navigation_keeps_current_and_exit_rows_visible():
+	var root = Engine.get_main_loop().root
+	var old_size: Vector2i = root.size
+	for window_size in [Vector2i(1280, 800), Vector2i(800, 600)]:
+		root.size = window_size
+		var main = await _session(FakeTime.new())
+		var review = main.review
+		var game = Game.new()
+		game.play("e2e4")
+		var rng := RandomNumberGenerator.new()
+		rng.seed = 260026
+		while game.moves.size() < 80 and not game.is_over():
+			var legal = game.board.legal_moves()
+			game.play(legal[rng.randi_range(0, legal.size() - 1)])
+		var clocks := []
+		clocks.resize(game.moves.size())
+		clocks.fill(180000)
+		review.present(game, clocks, SETTINGS, "")
+		review._show_ply(0)
+		for i in 3:
+			await root.get_tree().process_frame
+		var board = review.get_node("Margin/Content/ReviewBody/BoardView")
+		var list: Tree = review.get_node("Margin/Content/ReviewBody/Side/Moves")
+		for move in ["d2d4", "d7d5", "c2c4", "e7e6", "b1c3", "g8f6", "c1g5", "f8e7", "e2e3", "e8g8", "g1f3", "h7h6", "g5h4", "b7b6", "c4d5", "e6d5", "f1d3", "c8b7", "e1g1", "b8d7"]:
+			assert_true(board.play(move), "legal line move %s" % move)
+			await root.get_tree().process_frame
+		await root.get_tree().process_frame
+		for row in [list.get_selected(), review._line_rows[-1]]:
+			var rect := list.get_item_area_rect(row, 1)
+			assert_true(rect.position.y >= 0 and rect.end.y <= list.size.y, "line end row visible at %s: %s in %s" % [window_size, rect, list.size])
+		list.scroll_to_item(review._line_rows[0])
+		await root.get_tree().process_frame
+		review.get_node("Margin/Content/ReviewBody/Side/Navigation/Previous").pressed.emit()
+		await root.get_tree().process_frame
+		var rect := list.get_item_area_rect(list.get_selected(), 1)
+		assert_true(rect.position.y >= 0 and rect.end.y <= list.size.y, "previous row visible at %s: %s" % [window_size, rect])
+		list.scroll_to_item(review._move_rows[-1])
+		await root.get_tree().process_frame
+		review.get_node("Margin/Content/ReviewBody/Side/Navigation/Next").pressed.emit()
+		await root.get_tree().process_frame
+		for row in [list.get_selected(), review._line_rows[-1]]:
+			rect = list.get_item_area_rect(row, 1)
+			assert_true(rect.position.y >= 0 and rect.end.y <= list.size.y, "line end visible after scrolling below at %s: %s" % [window_size, rect])
+		list.scroll_to_item(review._line_rows[0])
+		await root.get_tree().process_frame
+		var offset := list.get_scroll()
+		review._refresh_line_classes()
+		await root.get_tree().process_frame
+		assert_eq(list.get_scroll(), offset, "classification does not scroll")
+		list.scroll_to_item(review._line_rows[-1])
+		await root.get_tree().process_frame
+		offset = list.get_scroll()
+		assert_true(offset.y > 0, "index zero check starts away from the top")
+		review._show_line(0)
+		await root.get_tree().process_frame
+		assert_eq(list.get_scroll(), offset, "line index zero does not scroll")
+		main.free()
+	root.size = old_size
+
+
 func test_cached_history_keeps_final_move_visible_after_layout():
 	var root = Engine.get_main_loop().root
 	var old_size: Vector2i = root.size
