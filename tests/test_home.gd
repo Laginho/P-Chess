@@ -66,6 +66,63 @@ func test_continue_shows_and_opens_the_due_review_position():
 	Session.HistoryStorage.clean(folder)
 
 
+func test_continue_opens_each_course_target_and_done_opens_custom():
+	var folder := "user://test_continue_targets_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var path := folder.path_join("course.json")
+	var unit: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/course/rook-endgames.json"))
+	var position: Dictionary = unit.positions[0].duplicate(true)
+	position.id = "game"
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	file.store_string(JSON.stringify({"rating": {"number": 1600, "site": "chess.com"}, "units": {unit.id: {"theory_opened": true, "from_your_game": [position]}}}))
+	file = null
+	var main = MainScene.instantiate()
+	main.course = load("res://core/course.gd").new(path)
+	main.history = load("res://core/history.gd").new(folder)
+	main.uci.free()
+	main.uci = Session.HeldBridge.new()
+	main.maia = main.MaiaPlayer.new(main.uci)
+	main.preferences = main.Settings.new(folder.path_join("settings.cfg"))
+	main.preferences.set_value("player_name", "You")
+	Engine.get_main_loop().root.add_child(main)
+	var home = main.get_node("Home")
+	var card: Button = home.get_node("Center/Form/Continue")
+	assert_true("FROM YOUR GAME" in card.text)
+	card.pressed.emit()
+	assert_true(main.solving.visible and main.solving.position_data.get("id") == "game")
+	assert_true(main.course.record_commit(unit, position, true))
+	main._show_home()
+	assert_true("Solving" in card.text)
+	var next_fen: String = home.target.position.fen
+	assert_eq(home.get_node("Center/Board").game.start_fen, next_fen)
+	card.pressed.emit()
+	assert_true(main.solving.visible and main.solving.position_data.get("fen") == next_fen)
+	for item in unit.positions:
+		if item.pool == "practice":
+			assert_true(main.course.record_commit(unit, item, true))
+	main._show_home()
+	var playout_fen: String = home.target.position.fen
+	assert_eq(home.get_node("Center/Board").game.start_fen, playout_fen)
+	card.pressed.emit()
+	assert_true(main.playout.visible, "Continue opens play-out start")
+	for item in unit.playouts:
+		assert_true(main.course.record_playout_pass(unit, item))
+	main._show_home()
+	card.pressed.emit()
+	assert_true(main.pass_test.visible, "Continue opens test start")
+	var answers := []
+	for i in 6:
+		answers.append({"solved": true})
+	assert_true(main.course.record_test_attempt(unit, answers, [true, true], Time.get_date_string_from_system()))
+	main._show_home()
+	assert_true("Unit done, go play some slow games" in card.text)
+	assert_eq(home.get_node("Center/Board").game.start_fen, load("res://core/game.gd").START)
+	card.pressed.emit()
+	assert_true(main.setup.visible, "completed course opens Custom")
+	main.free()
+	Session.HistoryStorage.clean(folder)
+
+
 func test_launch_opens_home():
 	var main = MainScene.instantiate()
 	var folder := "user://test_home_%d" % Time.get_ticks_usec()
