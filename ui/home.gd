@@ -61,7 +61,7 @@ func _layout_home() -> void:
 	form.get_node("Continue").position = Vector2(0, 65)
 	form.get_node("Continue").size = Vector2(width, card_height)
 	var card: Button = form.get_node("Continue")
-	var text_y := maxf(6, (card_height - 92) / 2)
+	var text_y := maxf(4, (card_height - 92) / 2)
 	for item in [["Eyebrow", 0, 19], ["UnitTitle", 20, 30], ["Detail", 51, 22], ["Progress", 80, 5]]:
 		var child: Control = card.get_node(item[0])
 		child.position = Vector2(22, text_y + item[1])
