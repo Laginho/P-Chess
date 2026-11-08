@@ -17,8 +17,12 @@ func _read() -> Dictionary:
 	var file := FileAccess.open(path, FileAccess.READ)
 	if file == null:
 		return {"ok": false, "data": {}}
+	var length := file.get_length()
+	var bytes := file.get_buffer(length)
+	if file.get_error() != OK or bytes.size() != length:
+		return {"ok": false, "data": {}}
 	var json := JSON.new()
-	if json.parse(file.get_as_text()) != OK or not json.data is Dictionary:
+	if json.parse(bytes.get_string_from_utf8()) != OK or not json.data is Dictionary:
 		return {"ok": false, "data": {}}
 	return {"ok": true, "data": json.data}
 
@@ -52,7 +56,7 @@ func maia_level() -> String:
 func save_rating(number, site: String) -> bool:
 	if not valid_rating(number, site):
 		return false
-	# Read again so a failed read or a concurrent update cannot silently discard progress.
+	# Read again so a failed read or a prior update cannot silently discard progress.
 	var result := _read()
 	if not result.ok:
 		return false
