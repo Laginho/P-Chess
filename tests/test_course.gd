@@ -58,3 +58,21 @@ func test_existing_progress_survives_rating_change_and_read_failure():
 	assert_true(DirAccess.dir_exists_absolute(path))
 	DirAccess.remove_absolute(path)
 	DirAccess.remove_absolute(folder)
+
+
+func test_stage_follows_converted_rating_and_loads_units():
+	var path := "user://course_stage_%d.json" % Time.get_ticks_usec()
+	var script = load("res://core/course.gd")
+	var existing = script.new(path)
+	assert_true(existing.has_method("stage"), "course selects a stage")
+	if not existing.has_method("stage"):
+		return
+	var course = script.new(path, "res://tests/fixtures/course/course.json")
+	assert_eq(course.stage(), {})
+	assert_true(course.save_rating(1499, "lichess"))
+	assert_eq(course.stage().get("name"), "Foundation")
+	assert_eq(course.units().size(), 1)
+	assert_eq(course.units()[0].get("title"), "Rook endings")
+	assert_true(course.save_rating(1500, "lichess"))
+	assert_eq(course.stage().get("name"), "Club")
+	DirAccess.remove_absolute(path)
