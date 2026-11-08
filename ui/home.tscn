@@ -50,6 +50,10 @@ text = "P-Chess"
 horizontal_alignment = 1
 vertical_alignment = 1
 
+[node name="Course" type="Button" parent="Center/Form"]
+theme_type_variation = &"PrimaryButton"
+text = "Course"
+
 [node name="QuickLabel" type="Label" parent="Center/Form"]
 theme_type_variation = &"SectionLabel"
 text = "QUICK PLAY"

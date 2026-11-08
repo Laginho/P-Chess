@@ -2,12 +2,14 @@ extends Control
 
 signal started(settings: Dictionary)
 signal custom_requested
+signal course_requested
 signal history_requested
 signal settings_requested
 
 const Setup = preload("res://ui/setup.gd")
 const Profile = preload("res://ui/profile.tscn")
 var store
+var course
 
 
 func _ready() -> void:
@@ -32,19 +34,21 @@ func _layout_home() -> void:
 	var row := (width - 12) / 2
 	var missing: Label = form.get_node("Missing")
 	# Landscape tiles in Main.png's 210:160 proportion: a narrow panel gets shorter tiles, not tall thin ones.
-	var large := minf(minf(160, row * 160 / 210), (form.size.y - 282) / 2)
+	var large := minf(minf(160, row * 160 / 210), (form.size.y - 306) / 2)
 	if missing.visible:
-		large = minf(large, maxf(36, (form.size.y - 424) / 2))
+		large = minf(large, maxf(36, (form.size.y - 448) / 2))
 	form.get_node("Title").position = Vector2(0, 8)
 	form.get_node("Title").size = Vector2(width, 60)
-	form.get_node("QuickLabel").position = Vector2(0, 100)
+	form.get_node("Course").position = Vector2(0, 65)
+	form.get_node("Course").size = Vector2(width, 44)
+	form.get_node("QuickLabel").position = Vector2(0, 124)
 	form.get_node("QuickLabel").size = Vector2(row, 36)
 	# A chip as wide as its label, at the row's right end.
 	var level: OptionButton = form.get_node("Level")
 	level.size = Vector2(level.get_combined_minimum_size().x, 36)
-	level.position = Vector2(width - level.size.x, 100)
+	level.position = Vector2(width - level.size.x, 124)
 	var quick: Control = form.get_node("Quick")
-	quick.position = Vector2(0, 156)
+	quick.position = Vector2(0, 180)
 	quick.size = Vector2(width, large * 2 + 12)
 	for i in 3:
 		var button: Button = quick.get_child(i)
@@ -55,18 +59,19 @@ func _layout_home() -> void:
 	var custom: Button = form.get_node("Custom")
 	custom.add_theme_font_size_override("font_size", 18 if width < 320 else 24)
 	custom.add_theme_constant_override("icon_max_width", 18 if width < 320 else 24)
-	custom.position = Vector2(row + 12, 156 + large + 12)
+	custom.position = Vector2(row + 12, 180 + large + 12)
 	custom.size = Vector2(row, large)
 	for i in 4:
 		var button: Button = form.get_node(["History", "Profile", "Settings", "Quit"][i])
 		button.position = Vector2((i % 2) * (row + 12), form.size.y - 106 + (i / 2) * 58)
 		button.size = Vector2(row, 48)
-	missing.position = Vector2(0, 156 + large * 2 + 20)
+	missing.position = Vector2(0, 180 + large * 2 + 20)
 	missing.size = Vector2(width, maxf(0, form.size.y - 114 - missing.position.y))
 
 
-func configure(preferences) -> void:
+func configure(preferences, course_store = null) -> void:
 	store = preferences
+	course = course_store
 	for key in ["board_theme", "piece_theme"]:
 		_apply_board_theme(key, store.get_value(key))
 	store.changed.connect(_apply_board_theme)
@@ -91,6 +96,7 @@ func configure(preferences) -> void:
 			saved.opening = saved.get("opening", "Free")
 			saved.control = button.text
 			started.emit(saved))
+	$Center/Form/Course.pressed.connect(func(): course_requested.emit())
 	$Center/Form/Custom.pressed.connect(func(): custom_requested.emit())
 	$Center/Form/History.pressed.connect(func(): history_requested.emit())
 	$Center/Form/Profile.pressed.connect(_show_profile)

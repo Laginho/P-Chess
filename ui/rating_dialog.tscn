@@ -1,0 +1,39 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://ui/rating_dialog.gd" id="1"]
+
+[node name="RatingDialog" type="AcceptDialog"]
+borderless = true
+unresizable = true
+exclusive = true
+dialog_hide_on_ok = false
+dialog_close_on_escape = false
+script = ExtResource("1")
+
+[node name="Content" type="VBoxContainer" parent="."]
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="Content"]
+theme_type_variation = &"ExtraBoldText"
+theme_override_font_sizes/font_size = 22
+text = "Your rapid rating"
+
+[node name="Sentence" type="Label" parent="Content"]
+text = "I'm rated"
+
+[node name="RatingNumber" type="LineEdit" parent="Content"]
+custom_minimum_size = Vector2(350, 42)
+placeholder_text = "Rating (100–3500)"
+
+[node name="SiteLabel" type="Label" parent="Content"]
+text = "in rapid on"
+
+[node name="RatingSite" type="OptionButton" parent="Content"]
+custom_minimum_size = Vector2(0, 40)
+
+[node name="ScaleHint" type="Label" parent="Content"]
+theme_type_variation = &"MutedText"
+
+[node name="Error" type="Label" parent="Content"]
+visible = false
+text = "Could not save your rating. Please try again."

@@ -17,6 +17,8 @@ const History = preload("res://core/history.gd")
 const AnalysisQueue = preload("res://core/analysis_queue.gd")
 const ReviewScreen = preload("res://ui/review.tscn")
 const HistoryScreen = preload("res://ui/history_screen.tscn")
+const Course = preload("res://core/course.gd")
+const RatingDialog = preload("res://ui/rating_dialog.tscn")
 const NameDialog = preload("res://ui/name_dialog.tscn")
 
 const WINNERS := {"1-0": "White wins", "0-1": "Black wins", "1/2-1/2": "Draw"}
@@ -38,6 +40,8 @@ var settings_screen := SettingsScreen.instantiate()
 var review := ReviewScreen.instantiate()
 var history_screen := HistoryScreen.instantiate()
 var name_dialog := NameDialog.instantiate()
+var rating_dialog := RatingDialog.instantiate()
+var course = Course.new()
 var analysis_queue
 var review_analysis_path := ""
 var resign_key := ResignKey.new(Time.get_ticks_msec)
@@ -162,7 +166,12 @@ func _ready() -> void:
 		var saved: Dictionary = choice.duplicate()
 		saved.colour_choice = ["w", "b", "random"][setup.get_node("Center/Form/Colour").selected]
 		_start(saved))
-	$Home.configure(preferences)
+	$Home.configure(preferences, course)
+	rating_dialog.name = "RatingDialog"
+	add_child(rating_dialog)
+	$Home.course_requested.connect(func():
+		if course.rating().is_empty():
+			rating_dialog.present(course))
 	$Home.started.connect(_start)
 	$Home.custom_requested.connect(_show_setup)
 	$Home.history_requested.connect(_show_history)
