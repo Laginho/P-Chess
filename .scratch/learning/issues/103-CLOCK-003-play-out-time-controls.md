@@ -1,5 +1,5 @@
 # CLOCK-003: Play-out time controls: 5+5 and no clock
-Stage: to-implement
+Stage: implementing
 Blocked by: none
 Review: agent
 Difficulty: normal

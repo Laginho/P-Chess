@@ -53,6 +53,18 @@ func test_increment_is_added_after_each_timed_move():
 	assert_eq(clock.left("w"), 181000, "White's clock stopped while Black thought")
 
 
+func test_play_out_clock_starts_at_five_minutes_and_adds_five_seconds():
+	var time := FakeTime.new()
+	var clock = _running("5+5", time)
+	assert_eq([clock.left("w"), clock.left("b")], [300000, 300000])
+	time.now += 1000
+	clock.moved("w")
+	assert_eq(clock.left("w"), 304000)
+	time.now += 500
+	clock.moved("b")
+	assert_eq(clock.left("b"), 304500)
+
+
 func test_low_time_fires_once_at_the_threshold_of_each_control():
 	# 10% of the starting time or 10 s, whichever is lower.
 	var thresholds := {"1+0": 6000, "3+2": 10000, "5+0": 10000}
