@@ -329,6 +329,7 @@ func test_course_requires_a_valid_rating_before_starting():
 	main.maia = main.MaiaPlayer.new(main.uci)
 	main.preferences = main.Settings.new(folder.path_join("settings.cfg"))
 	main.preferences.set_value("player_name", "You")
+	main.preferences.save_last_game({"level": "maia-1300"})
 	Engine.get_main_loop().root.add_child(main)
 	var button = main.get_node_or_null("Home/Center/Form/Course")
 	assert_true(button != null, "Home offers Course")
@@ -340,8 +341,14 @@ func test_course_requires_a_valid_rating_before_starting():
 	var dialog = main.get_node_or_null("RatingDialog")
 	assert_true(dialog != null and dialog.visible, "Course opens the rating dialog")
 	if dialog:
-		Session.new()._push_key(main.get_viewport(), KEY_ESCAPE)
-		assert_true(dialog.visible, "Escape does not dismiss the dialog")
+		Session.new()._push_key(dialog, KEY_ESCAPE)
+		var click := InputEventMouseButton.new()
+		click.button_index = MOUSE_BUTTON_LEFT
+		click.pressed = true
+		click.position = Vector2(1, 1)
+		main.get_viewport().push_input(click, true)
+		await Engine.get_main_loop().process_frame
+		assert_true(dialog.visible, "Escape and an outside click do not dismiss the dialog")
 		assert_true(dialog.exclusive and not dialog.dialog_close_on_escape, "outside click cannot dismiss the dialog")
 		var number: LineEdit = dialog.find_child("RatingNumber", true, false)
 		var site: OptionButton = dialog.find_child("RatingSite", true, false)
@@ -365,6 +372,13 @@ func test_course_requires_a_valid_rating_before_starting():
 		assert_eq(load("res://core/course.gd").new(folder.path_join("course.json")).rating(), {"number": 1400, "site": "lichess"})
 		button.pressed.emit()
 		assert_true(not dialog.visible, "saved rating skips dialog")
+		assert_eq(main.preferences.last_game().get("level"), "maia-1300", "course rating does not change the sandbox level")
+		assert_eq(main.get_node("Home/Center/Form/Level").get_item_text(main.get_node("Home/Center/Form/Level").selected), "Maia 1300")
+		main.get_node("Home/Center/Form/Profile").pressed.emit()
+		var profile = main.get_node("Home/Profile")
+		assert_eq(profile.find_child("RatingNumber", true, false).text, "1400")
+		var saved_site: OptionButton = profile.find_child("RatingSite", true, false)
+		assert_eq(saved_site.get_item_text(saved_site.selected), "lichess")
 	main.free()
 	Session.HistoryStorage.clean(folder)
 
