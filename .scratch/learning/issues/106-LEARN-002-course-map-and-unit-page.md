@@ -1,5 +1,5 @@
 # LEARN-002: Course map and unit page
-Stage: to-implement
+Stage: implementing
 Blocked by: LEARN-001
 Review: agent
 Difficulty: normal

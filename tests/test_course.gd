@@ -140,6 +140,19 @@ func test_passed_test_and_failed_review_determine_mastery():
 	DirAccess.remove_absolute(path)
 
 
+func test_pending_review_does_not_clear_failed_completed_review():
+	var path := "user://course_review_%d.json" % Time.get_ticks_usec()
+	var checks := [{"done": true, "missed": true}, {"done": false, "missed": false}]
+	var unit = JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/course/rook.json"))
+	for example in [[checks, "needs review"], [[checks[0], {"done": true, "missed": false}], "mastered"], [[{"done": false, "passed": true}, checks[0], {"done": false, "passed": true}], "needs review"]]:
+		var file := FileAccess.open(path, FileAccess.WRITE)
+		file.store_string(JSON.stringify({"units": {"rook": {"mastered_date": "2026-11-01", "review_checks": example[0]}}}))
+		file = null
+		var course = load("res://core/course.gd").new(path, "res://tests/fixtures/course/course.json")
+		assert_eq(course.unit_progress(unit).status, example[1])
+	DirAccess.remove_absolute(path)
+
+
 func test_failed_playout_is_in_progress():
 	var path := "user://course_playout_%d.json" % Time.get_ticks_usec()
 	var file := FileAccess.open(path, FileAccess.WRITE)
