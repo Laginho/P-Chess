@@ -1,5 +1,5 @@
 # REV-011: The from-your-game marker in Review
-Stage: blocked
+Stage: to-implement
 Blocked by: LEARN-006, LEARN-009
 Review: agent
 Difficulty: normal
@@ -43,3 +43,22 @@ When Review shows a game that reached rook and pawn against rook, each of your m
 - 2026-11-07 Written from `.scratch/learning/spec.md` §L10.
 
 - 2026-11-08 Attempt 1 stopped to ask (its commits are on branch `recovery/asked/20261108-062806/REV-011`): O REV-011 está **bloqueado** na branch `ticket/REV-011`. Preservei um teste para impedir posições duplicadas por FEN, mas a execução foi interrompida antes de verificar a falha esperada; a implementação ainda não começou. /  / Qual deve ser o comprimento padrão das linhas para posições “From your game”? A unidade atual não define um padrão; suas posições usam 2, 3 e 4 movimentos. Minha sugestão é definir **3 movimentos** explicitamente nos dados da unidade. /  / O proxy do fluxo falhou sem retornar uma decisão. A [skill ticket-flow](/home/lage/.agents/skills/ticket-flow/SKILL.md) determina que, nessa situação, se registre `Stage: blocked` e, em sessão acompanhada, se apresente a falha ao usuário. A pergunta e o trabalho preservado estão no [ticket REV-011](/home/lage/Projects/P-Chess/.artifacts-build/lanes/learning/.scratch/learning/issues/114-REV-011-from-your-game-marker.md).
+
+- 2026-11-08 Proxy decided (opus-5.5 xhigh): add `"default_line_length": 3` to the unit file `data/course/rook-endgames.json` and use it for every "From your game" position. Three is in the middle of the unit's 2–4 range, and the design for a "From your game" position (`docs/design/learning/SolvingEntry.dc.html`, the `fromGame` chip) shows "Enter 3 of your moves". (receipt /tmp/sweatshop-proxy/20261108-062810-REV-011-ebb3e4.json)
+  > Decision: add `"default_line_length": 3` to the unit file `data/course/rook-endgames.json` and use it for every "From your game" position. Three is in the middle of the unit's 2–4 range, and the design for a "From your game" position (`docs/design/learning/SolvingEntry.dc.html`, the `fromGame` chip) shows "Enter 3 of your moves".
+  > 
+  > **Evidence**
+  > - Spec §L10 and criterion 5 both say "the unit's default line length". §L1 lists what a unit file holds but has no such field, so the spec never defined it. This decision fills that gap.
+  > - The unit's positions use 2, 3 and 4 moves, and `tests/test_course.gd:453` only allows lengths of 2–4. Three fits that range.
+  > - The test checking the unit's data (`tests/test_course.gd:425`) only looks at positions, not at keys on the unit itself, so adding a new key there breaks nothing.
+  > 
+  > **Drafts for the caller to apply** (contract edits are yours to make)
+  > - **Spec §L1:** after "the line length in your moves, and its pool (practice or test);" add: "the default line length for from-your-game positions (`default_line_length`, 3 for rook endgames);".
+  > - **REV-011 Primary files:** add `data/course/rook-endgames.json` (the new `default_line_length` key). Criterion 5 stays as written.
+  > - **Implementation:** Review or the scan builds the position with `line_length = unit.default_line_length` and passes it to `course.add_from_game`. The test kept on `recovery/asked/20261108-062806/REV-011` (commit `ff03584`) already passes a full position with `line_length: 3`, so it needs no change. Any course fixture that reaches `add_from_game` through the unit should set the key too.
+  > 
+  > **Impact:** one new key in one data file and one sentence in the spec. Nothing in other lanes reads it, saved progress is unaffected, and no public API changes.
+  > 
+  > **Next:** record this under REV-011 `## Comments`, apply the two drafts, set `Stage: 2`, and rerun stage 2 starting from the kept commit `ff03584`. That run still has to confirm the expected red failure, which attempt 1 never checked.
+  > 
+  > I did not run the gate or check the test in `ff03584`.
