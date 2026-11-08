@@ -1,6 +1,6 @@
 # CLEAN-018: Keep the play-out hold rule text in sync with its tunable
 Stage: to-implement
-Status: needs-triage
+Status: ready-for-agent
 Blocked by: none
 Review: agent
 Difficulty: normal
@@ -28,5 +28,7 @@ The start screen currently advertises a literal "30 moves", while the judge uses
 - `tests/test_course_screens.gd`: at the existing play-out start-screen boundary, check the advertised hold limit against the configured rule; prove sensitivity by temporarily changing the tunable during verification. Before the production correction, the hardcoded copy stays at 30. Restore the shipped value after verification.
 
 ## Comments
+
+- Triage by the driver: ready-for-agent — deriving the displayed limit from the judge's tunable removes a real maintenance mismatch while preserving the shipped rule.
 
 - 2026-11-08 Opened by the LEARN-007 stage-3 Standards review, [original ticket](111-LEARN-007-play-outs.md). Nonblocking cleanup: the current value and numbered LEARN-007 contract both require 30, so there is no current implementation failure or release condition. No `Escaped-from` line: this is a maintainability suggestion, not a defect shipped by a previously closed ticket.
