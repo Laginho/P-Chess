@@ -5,6 +5,155 @@ const Session = preload("res://tests/test_session.gd")
 const Tunables = preload("res://core/tunables.gd")
 
 
+func test_pass_test_runs_positions_and_playouts_and_lists_misses():
+	var folder := "user://pass_screen_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var main = MainScene.instantiate()
+	main.course = load("res://core/course.gd").new(folder.path_join("course.json"))
+	main.course.save_rating(1600, "chess.com")
+	main.history = load("res://core/history.gd").new(folder)
+	main.uci.free()
+	main.uci = Session.HeldBridge.new()
+	main.maia = main.MaiaPlayer.new(main.uci)
+	main.preferences = main.Settings.new(folder.path_join("settings.cfg"))
+	main.preferences.set_value("player_name", "You")
+	var sample = load("res://tests/test_grader.gd")
+	var probe = sample.FakeProbe.new()
+	probe.answers[sample.FEN] = sample.answer("win", "c6c5", {"c6c5": {"result": "win", "dtz": 1}, "c6c4": {"result": "draw", "dtz": 0}})
+	var convert := "7k/P7/5K2/8/8/8/8/8 w - - 0 1"
+	var hold := "4k3/8/8/8/8/8/4p2R/K7 w - - 0 1"
+	probe.answers[convert] = sample.answer("win", "a7a8q", {"a7a8q": {"result": "win", "dtz": 1}})
+	probe.answers[hold] = sample.answer("draw", "h2e2", {"h2e2": {"result": "draw", "dtz": 0}})
+	main.tablebase.free()
+	main.tablebase = LifecycleProbe.new(probe, [])
+	Engine.get_main_loop().root.add_child(main)
+	var positions := []
+	for i in 12:
+		positions.append({"id": str(i), "pool": "test", "fen": sample.FEN, "side": "b", "line_length": 1, "goal": "win"})
+	var unit := {"id": "rook-endgames", "title": "Rook endings", "positions": positions, "test_playouts": [
+		{"id": "convert", "fen": convert, "side": "w", "goal": "convert"},
+		{"id": "hold", "fen": hold, "side": "w", "goal": "hold"}]}
+	main._show_unit(unit)
+	main.unit_page.part_requested.emit(unit, "test")
+	var screen = main.get_node_or_null("PassTest")
+	assert_true(screen != null and screen.visible, "unit opens test start")
+	if screen == null:
+		main.free()
+		Session.HistoryStorage.clean(folder)
+		return
+	var step_texts = screen.start_steps.find_children("*", "Label", true, false)
+	assert_true(step_texts.any(func(label): return label.text.contains("6 positions")))
+	assert_true(step_texts.any(func(label): return label.text.contains("2 play-outs")))
+	screen.find_child("Start", true, false).pressed.emit()
+	for i in 6:
+		assert_true(main.solving.visible)
+		main.solving.board._commit("c6c4" if i < 2 else "c6c5", false)
+		main.solving.find_child("Commit", true, false).pressed.emit()
+		assert_true(not main.solving.find_child("Feedback", true, false).visible)
+	assert_eq(main.board_view.game.start_fen, convert)
+	assert_true(main.board_view.play("a7a8q"))
+	assert_eq(main.board_view.game.start_fen, hold)
+	assert_true(main.board_view.play("h2e2"))
+	assert_true(screen.visible)
+	assert_true(screen.find_child("Heading", true, false).text.contains("Not passed yet"))
+	assert_true(screen.find_child("Results", true, false).text.contains("Rc4"))
+	assert_true(screen.find_child("Results", true, false).text.contains("Rc5"))
+	assert_eq(screen.find_child("Boards", true, false).get_child_count(), 6)
+	assert_true(screen.boards.get_child(0).get_child(1).text.contains("✗"))
+	assert_true(screen.boards.get_child(2).get_child(1).text.contains("✓"))
+	assert_true(screen.find_child("Results", true, false).text.contains("Convert: Passed"))
+	assert_true(screen.find_child("Results", true, false).text.contains("Hold: Passed"))
+	assert_true(screen.find_child("Retry", true, false).visible)
+	assert_eq(main.course.test_attempts(unit).size(), 1)
+	assert_true(main.clock == null, "test games leave no active game clock behind the result")
+	var session = Session.new()
+	for key in [KEY_ESCAPE, KEY_ESCAPE, KEY_SPACE]:
+		session._key(main, key)
+	assert_true(main.history.games().is_empty())
+	screen.find_child("Retry", true, false).pressed.emit()
+	assert_true(main.solving.visible, "Retry starts another set")
+	main.solving.find_child("Back", true, false).pressed.emit()
+	main.unit_page.part_requested.emit(unit, "test")
+	screen.find_child("Back", true, false).pressed.emit()
+	for key in [KEY_ESCAPE, KEY_ESCAPE, KEY_SPACE]:
+		session._key(main, key)
+	assert_true(main.history.games().is_empty())
+	assert_true(not main._starting)
+	main.unit_page.part_requested.emit(unit, "test")
+	assert_true(screen.find_child("Details", true, false).text.contains("4 of 6"))
+	assert_true(screen.find_child("Details", true, false).text.contains(Time.get_date_string_from_system()))
+	var previous: Array = main.course.test_attempts(unit)[0].positions
+	screen.find_child("Start", true, false).pressed.emit()
+	for position in main.solving.positions:
+		assert_true(not previous.any(func(result): return result.position.id == position.id), "retry prefers fresh positions")
+	for i in 6:
+		main.solving.board._commit("c6c5", false)
+		main.solving.find_child("Commit", true, false).pressed.emit()
+	assert_true(main.board_view.play("a7a8q"))
+	assert_true(main.board_view.play("h2e2"))
+	assert_eq(screen.find_child("Heading", true, false).text, "Unit mastered")
+	assert_true(screen.find_child("Details", true, false).text.contains("7 and 30 days"))
+	assert_true(not screen.find_child("Retry", true, false).visible)
+	var saved_attempts: Array = main.course.test_attempts(unit)
+	assert_eq(saved_attempts.size(), 2)
+	assert_eq(saved_attempts[0].positions.size(), 6)
+	assert_eq(saved_attempts[0].playouts, [true, true])
+	assert_true(not saved_attempts[0].passed and saved_attempts[1].passed)
+	screen.find_child("Back", true, false).pressed.emit()
+	assert_true(main.unit_page.find_child("Title", true, false).text.contains("Mastered"))
+	main._show_course_map()
+	var labels = main.course_map.find_children("*", "Label", true, false)
+	assert_true(labels.any(func(label): return label.text.contains("Mastered")), "course map shows mastery")
+	main.free()
+	Session.HistoryStorage.clean(folder)
+
+
+func test_test_playout_uses_tablebase_best_move_without_maia():
+	var session = Session.new()
+	var main = await session._session(Session.ManualWaits.new(), false)
+	var folder: String = main.history._root
+	main.course = load("res://core/course.gd").new(folder.path_join("course.json"))
+	var sample = load("res://tests/test_grader.gd")
+	var probe = sample.FakeProbe.new()
+	probe.answers[sample.FEN] = sample.answer("win", "c6c5", {"c6c5": {"result": "win", "dtz": 3}})
+	var after = load("res://core/board.gd").from_fen(sample.FEN)
+	after.make_move("c6c5")
+	probe.answers[after.to_fen()] = sample.answer("loss", "e1f2", {"e1f2": {"result": "loss", "dtz": 2}})
+	main.tablebase.queue_free()
+	var adapter = LifecycleProbe.new(probe, [])
+	main.tablebase = adapter
+	main.solving.probe = adapter
+	main.add_child(adapter)
+	var positions := []
+	for i in 6:
+		positions.append({"id": str(i), "pool": "test", "fen": sample.FEN, "side": "b", "line_length": 1, "goal": "win"})
+	var play := {"id": "convert", "fen": sample.FEN, "side": "b", "goal": "convert"}
+	var unit := {"id": "rook", "positions": positions, "test_playouts": [play, play]}
+	main._show_unit(unit)
+	main.unit_page.part_requested.emit(unit, "test")
+	main.pass_test.find_child("Start", true, false).pressed.emit()
+	for i in 6:
+		main.solving.board._commit("c6c5", false)
+		main.solving.find_child("Commit", true, false).pressed.emit()
+	assert_eq(main.settings.control, "none")
+	assert_true(main.board_view.play("c6c5"))
+	assert_eq(main.board_view.game.moves, PackedStringArray(["c6c5", "e1f2"]))
+	assert_eq(main.uci.requests.size(), 0, "the perfect opponent uses the tablebase, not Maia")
+	assert_true(main.history.games().is_empty())
+	assert_true(main.board_view.play("c5c4"))
+	assert_true(main.pass_test.visible, "probe error is shown to the player")
+	assert_true(main.pass_test.find_child("Details", true, false).text.contains("Missing scripted table"))
+	assert_true(main.pass_test.find_child("Retry", true, false).visible, "the interrupted play-out can be restarted")
+	assert_true(main.course.test_attempts(unit).is_empty(), "a probe error is not a failed attempt")
+	main.pass_test.find_child("Retry", true, false).pressed.emit()
+	assert_true(not main.pass_test.visible and main._playout_active, "retry returns to the play-out")
+	assert_eq(main.board_view.game.start_fen, sample.FEN, "retry restarts the interrupted play-out")
+	assert_true(main.board_view.game.moves.is_empty())
+	assert_eq(main.course.test_attempts(unit).size(), 0)
+	assert_eq(main._test_results.size(), 6, "previous answers survive a probe failure")
+	main.free()
+
+
 func test_black_first_line_pairs_san_by_side_after_undo_and_clear():
 	var screen = load("res://ui/solving.tscn").instantiate()
 	Engine.get_main_loop().root.add_child(screen)
@@ -118,8 +267,13 @@ func test_course_navigation_unit_progress_and_clock():
 		var playout = main.get_node_or_null("Playout")
 		if playout != null and playout.visible:
 			playout.find_child("Back", true, false).pressed.emit()
+		var test_screen = main.get_node_or_null("PassTest")
+		if requests[-1][1] == "test":
+			assert_true(test_screen != null and test_screen.visible, "test opens its start screen")
+		if test_screen != null and test_screen.visible:
+			test_screen.find_child("Back", true, false).pressed.emit()
 	assert_eq(requests, [["rook-endgames", "theory"], ["rook-endgames", "solving"], ["rook-endgames", "playouts"], ["rook-endgames", "test"]])
-	assert_true(unit.visible, "a part without a screen leaves the unit visible")
+	assert_true(unit.visible, "returning from each part restores the unit")
 	unit.find_child("NoClock", true, false).pressed.emit()
 	assert_eq(load("res://core/course.gd").new(path).clock_choice(), "none")
 	unit.present(load("res://core/course.gd").new(path), main.course.units()[0])

@@ -26,6 +26,7 @@ const UnitPage = preload("res://ui/unit_page.tscn")
 const TheoryPointer = preload("res://ui/theory_pointer.tscn")
 const Solving = preload("res://ui/solving.tscn")
 const Playout = preload("res://ui/playout.tscn")
+const PassTest = preload("res://ui/pass_test.tscn")
 const PlayoutJudge = preload("res://core/playout_judge.gd")
 
 const WINNERS := {"1-0": "White wins", "0-1": "Black wins", "1/2-1/2": "Draw"}
@@ -55,6 +56,12 @@ var unit_page = UnitPage.instantiate()
 var theory_pointer = TheoryPointer.instantiate()
 var solving = Solving.instantiate()
 var playout = Playout.instantiate()
+var pass_test = PassTest.instantiate()
+var _test_active := false
+var _test_unit := {}
+var _test_positions := []
+var _test_results := []
+var _test_playouts := []
 var _playout_unit := {}
 var _playout_index := 0
 var _playout_active := false
@@ -183,7 +190,11 @@ func _ready() -> void:
 		_show_result())
 	resign_button.pressed.connect(_resign)
 	draw_button.pressed.connect(_offer_draw)
-	$Layout/Side/Actions/NewGameButton.pressed.connect(_show_home)
+	$Layout/Side/Actions/NewGameButton.pressed.connect(func():
+		if _test_active:
+			_show_unit(_test_unit)
+		else:
+			_show_home())
 	$Layout/Side/Actions/RematchButton.pressed.connect(func(): _start(rematch(settings)))
 	draw_notice_timer.timeout.connect(func():
 		draw_notice.hide())
@@ -237,6 +248,16 @@ func _ready() -> void:
 	add_child(theory_pointer)
 	add_child(solving)
 	add_child(playout)
+	add_child(pass_test)
+	pass_test.back_requested.connect(func(): _show_unit(_test_unit))
+	pass_test.start_requested.connect(_begin_test)
+	pass_test.retry_requested.connect(func():
+		if _test_active:
+			pass_test.hide()
+			_start_test_playout()
+		else:
+			_begin_test())
+	solving.test_graded.connect(_test_position_graded)
 	playout.back_requested.connect(func(): _show_unit(_playout_unit))
 	playout.start_requested.connect(_start_playout)
 	playout.retry_requested.connect(func(): _show_playout(_playout_index))
@@ -485,6 +506,7 @@ func _start(new_settings: Dictionary) -> void:
 	resign_button.visible = not _playout_active
 	draw_button.visible = not _playout_active
 	$Layout/Side/Actions/NewGameButton.hide()
+	$Layout/Side/Actions/NewGameButton.text = "New game"
 	$Layout/Side/Actions/RematchButton.hide()
 	_draw_offered = false
 	_draw_moves_left = 0
@@ -523,6 +545,8 @@ func _show_setup() -> void:
 
 
 func _show_home() -> void:
+	_test_active = false
+	pass_test.hide()
 	_cancel_playout()
 	playout.hide()
 	solving.hide()
@@ -536,6 +560,8 @@ func _show_home() -> void:
 
 
 func _show_course_map() -> void:
+	_test_active = false
+	pass_test.hide()
 	_cancel_playout()
 	playout.hide()
 	solving.hide()
@@ -546,6 +572,8 @@ func _show_course_map() -> void:
 
 
 func _show_unit(unit: Dictionary) -> void:
+	_test_active = false
+	pass_test.hide()
 	_cancel_playout()
 	playout.hide()
 	solving.hide()
@@ -569,6 +597,101 @@ func _show_course_part(unit: Dictionary, part: String) -> void:
 				index = i
 				break
 		_show_playout(index)
+	elif part == "test":
+		_test_unit = unit
+		unit_page.hide()
+		pass_test.present_start(course, unit)
+
+
+func _begin_test() -> void:
+	_test_positions = course.draw_test_positions(_test_unit)
+	if _test_positions.size() != preload("res://core/tunables.gd").COURSE_TEST_POSITIONS or _test_unit.get("test_playouts", []).size() != 2:
+		pass_test.details.text = "This unit does not have enough test positions."
+		return
+	_test_results = []
+	_test_playouts = []
+	_test_active = true
+	pass_test.hide()
+	solving.present_test(course, _test_unit, _test_positions, 0, preferences)
+
+
+func _test_position_graded(position: Dictionary, grade: Dictionary) -> void:
+	if not _test_active:
+		return
+	var result := {"position": position, "solved": grade.solved}
+	if not grade.solved:
+		result.your_move = grade.plies[grade.failed_ply].san
+		result.best_move = grade.correct[0].san if not grade.correct.is_empty() else "unavailable"
+	_test_results.append(result)
+	if _test_results.size() < _test_positions.size():
+		solving.present_test(course, _test_unit, _test_positions, _test_results.size(), preferences)
+	else:
+		solving.hide()
+		_start_test_playout()
+
+
+func _start_test_playout() -> void:
+	var position: Dictionary = _test_unit.test_playouts[_test_playouts.size()]
+	_playout_unit = {"playouts": _test_unit.test_playouts}
+	_playout_index = _test_playouts.size()
+	_playout_active = true
+	_playout_generation += 1
+	_playout_previous_fen = position.fen
+	_playout_moves = 0
+	_playout_flagged = ""
+	human = position.side
+	settings = {"colour": human, "level": course.maia_level(), "control": "none", "opening": "Free", "start_fen": position.fen}
+	board_view.game = Game.new(position.fen)
+	board_view.human_side = human
+	move_list.reset()
+	result_label.text = "Pass test · %s · %s" % ["Convert" if position.goal == "convert" else "Hold", "No clock"]
+	result_label.show()
+	claim_draw.disabled = true
+	resign_button.hide()
+	draw_button.hide()
+	$Layout/Side/Actions/NewGameButton.text = "Back to the unit"
+	$Layout/Side/Actions/NewGameButton.show()
+	$Layout/Side/Actions/RematchButton.hide()
+	clock = Clock.new("none", Time.get_ticks_msec)
+	clock.flagged.connect(_on_flagged)
+	white_clock.clock = clock
+	black_clock.clock = clock
+	_set_flipped(human == "b")
+	_next_turn()
+
+
+func _finish_test_playout(passed: bool) -> void:
+	_playout_generation += 1
+	_playout_active = false
+	clock.stop()
+	clock = null
+	white_clock.clock = null
+	black_clock.clock = null
+	board_view.cancel_premoves()
+	board_view.mouse_filter = MOUSE_FILTER_IGNORE
+	_test_playouts.append(passed)
+	if _test_playouts.size() < 2:
+		_start_test_playout()
+		return
+	var date := Time.get_date_string_from_system()
+	if not course.record_test_attempt(_test_unit, _test_results, _test_playouts, date):
+		pass_test.present_start(course, _test_unit)
+		pass_test.details.text = "Could not save your attempt. Please try again."
+	else:
+		pass_test.present_result(course.test_attempts(_test_unit).back())
+	_test_active = false
+
+
+func _test_playout_error(message: String) -> void:
+	_playout_generation += 1
+	_playout_active = false
+	clock.stop()
+	clock = null
+	white_clock.clock = null
+	black_clock.clock = null
+	board_view.cancel_premoves()
+	board_view.mouse_filter = MOUSE_FILTER_IGNORE
+	pass_test.present_error(message)
 
 
 func _cancel_playout() -> void:
@@ -611,6 +734,9 @@ func _playout_start_failed(message: String) -> void:
 
 
 func _finish_playout(title: String, message: String, failed_move := "") -> void:
+	if _test_active:
+		_finish_test_playout(title in ["Converted", "Held"])
+		return
 	_playout_generation += 1
 	_playout_active = false
 	clock.stop()
@@ -752,7 +878,7 @@ func _set_flipped(flipped: bool) -> void:
 	bot.get_parent().move_child(bot, 0)
 	player.get_parent().move_child(player, -1)
 	$Layout/Side.move_child(claim_draw.get_parent(), -1)
-	bot.get_node("Name").text = "Maia"
+	bot.get_node("Name").text = "Perfect opponent" if _test_active else "Maia"
 	bot.get_node("Name/Colour").hide()
 	# The player's name and colour centre as a pair; Maia's name alone.
 	bot.get_node("Name").vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -890,7 +1016,10 @@ func _on_move_played(san: String) -> void:
 				if not _playout_active or generation != _playout_generation:
 					return
 				if not result.get("ok", false):
-					_finish_playout("Play-out failed", result.get("error", "Tablebase probe failed."))
+					if _test_active:
+						_test_playout_error(result.get("error", "Tablebase probe failed."))
+					else:
+						_finish_playout("Play-out failed", result.get("error", "Tablebase probe failed."))
 				elif result.state == "failed":
 					var before = preload("res://core/board.gd").from_fen(previous)
 					var best: String = result.get("best", "")
@@ -983,6 +1112,20 @@ func _next_turn() -> void:
 	var maia_to_move: bool = not game.is_over() and game.board.side_to_move != human
 	board_view.mouse_filter = MOUSE_FILTER_STOP
 	if maia_to_move:
+		if _test_active and _playout_active:
+			board_view.mouse_filter = MOUSE_FILTER_IGNORE
+			var generation := _playout_generation
+			if tablebase.has_method("start"):
+				tablebase.start()
+			tablebase.probe(game.board.to_fen(), func(answer: Dictionary):
+				if not _playout_active or not _test_active or generation != _playout_generation:
+					return
+				var move: String = answer.get("best", "")
+				if not answer.get("ok", false) or move not in game.board.legal_moves():
+					_test_playout_error(answer.get("error", "Tablebase probe failed."))
+				else:
+					board_view.play(move))
+			return
 		var start_time: int = Clock.CONTROLS[settings.control][0] if Clock.CONTROLS.has(settings.control) else Clock.PLAY_OUT_CONTROLS[settings.control][0]
 		maia.think(game, clock.left(game.board.side_to_move), start_time)
 	elif not game.is_over():

@@ -40,3 +40,5 @@ const COURSE_DTZ_MARGIN := 1
 
 # Number of the player's moves needed to hold a course play-out.
 const COURSE_HOLD_MOVES := 30
+const COURSE_TEST_POSITIONS := 6
+const COURSE_TEST_PASS := 5
