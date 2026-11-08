@@ -568,3 +568,80 @@ func test_feedback_replays_legal_hold_line_through_material_and_fifty_move_draws
 		assert_eq(screen.board.game.moves, PackedStringArray(example[1]), "playback follows every legal entry ply even after a drawn position")
 		assert_eq(screen.board.game.board.to_fen(), example[2])
 		_feedback_cleanup(fixture)
+
+
+class LifecycleProbe extends Node:
+	var delegate
+	var events: Array
+	func _init(scripted, lifecycle: Array):
+		delegate = scripted
+		events = lifecycle
+	func start() -> bool:
+		events.append("started")
+		return true
+	func probe(fen: String, callback: Callable) -> void:
+		delegate.probe(fen, callback)
+	func _notification(what: int) -> void:
+		if what == NOTIFICATION_PREDELETE:
+			events.append("freed")
+
+
+func test_main_owns_starts_injects_and_frees_the_solving_probe():
+	var sample = load("res://tests/test_grader.gd")
+	var folder := "user://main_probe_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var main = MainScene.instantiate()
+	assert_eq(main.tablebase.get_script(), load("res://engine/tablebase.gd"), "Main constructs the shared tablebase adapter")
+	main.tablebase.free()
+	var events := []
+	var scripted = sample.winning_probe()
+	var probe := LifecycleProbe.new(scripted, events)
+	main.tablebase = probe
+	main.course = load("res://core/course.gd").new(folder.path_join("course.json"))
+	main.history = load("res://core/history.gd").new(folder)
+	main.uci.free()
+	main.uci = Session.HeldBridge.new()
+	main.maia = main.MaiaPlayer.new(main.uci)
+	main.preferences = main.Settings.new(folder.path_join("settings.cfg"))
+	main.preferences.set_value("player_name", "You")
+	Engine.get_main_loop().root.add_child(main)
+	assert_eq(main.get_node_or_null("Tablebase"), probe)
+	assert_eq(main.solving.probe, probe)
+	var unit := {"id": "main-probe", "positions": [sample.position()]}
+	main._show_unit(unit)
+	main._show_course_part(unit, "solving")
+	for move in sample.LINE:
+		main.solving.board._commit(move, false)
+	main.solving.find_child("Commit", true, false).pressed.emit()
+	assert_eq(events, ["started"], "Commit starts the owned adapter")
+	assert_eq(scripted.requests.size(), 3)
+	assert_true(main.solving.find_child("Feedback", true, false).visible)
+	main.free()
+	assert_eq(events, ["started", "freed"], "probe is freed with the other engine nodes")
+	if is_instance_valid(probe):
+		probe.free()
+	Session.HistoryStorage.clean(folder)
+
+
+func test_feedback_shows_better_defence_beside_the_opponent_move():
+	var sample = load("res://tests/test_grader.gd")
+	var probe = sample.winning_probe()
+	var board = load("res://core/board.gd").from_fen(sample.FEN)
+	board.make_move("c6c5")
+	probe.answers[board.to_fen()] = sample.answer("loss", "e1d2", {
+		"e1d2": {"result": "loss", "dtz": 9}, "e1f2": {"result": "loss", "dtz": 4}})
+	var fixture := _feedback_setup(probe)
+	if fixture.is_empty():
+		return
+	var screen = fixture.screen
+	for move in sample.LINE:
+		screen.board._commit(move, false)
+	screen.find_child("Commit", true, false).pressed.emit()
+	for i in 3:
+		screen.get_node("Playback").timeout.emit()
+	var rows = screen.find_child("FeedbackMoves", true, false)
+	assert_true(rows.get_child(1).text.contains("Kf2"))
+	assert_true(rows.get_child(1).text.contains("Better defence: Kd2"))
+	assert_true(not rows.get_child(1).text.contains("✗"))
+	assert_eq(screen.find_child("BannerTitle", true, false).text, "Solved, first try")
+	_feedback_cleanup(fixture)
