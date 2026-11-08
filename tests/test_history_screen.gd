@@ -348,6 +348,139 @@ func test_queue_progress_keeps_keyboard_focus_on_the_card():
 	queue.free()
 	Storage.clean(folder)
 
+func test_queue_finish_updates_only_affected_visible_cards():
+	var folder := "user://history_incremental_%d" % Time.get_ticks_usec()
+	var history = History.new(folder)
+	var game = Game.new()
+	game.play("e2e4")
+	game.play("e7e5")
+	game.resign("w")
+	var paths := []
+	for index in 4:
+		paths.append(history.save(game, [60000, 60000], {"colour": "w", "level": "maia-1500", "control": "1+0"}))
+	var runner := FakeQueueAnalyser.new()
+	var queue = load("res://core/analysis_queue.gd").new(runner, folder.path_join("queue.cfg"))
+	for index in [0, 1, 3]:
+		queue.enqueue(paths[index])
+	var screen = load("res://ui/history_screen.tscn").instantiate()
+	screen.analysis_queue = queue
+	Engine.get_main_loop().root.add_child(screen)
+	screen.present(history, Settings.new(folder.path_join("settings.cfg")))
+	var list = screen.get_node("Margin/Content/Cards/List")
+	var unrelated = list.get_node(paths[2].get_file().validate_node_name())
+	var waiting = list.get_node(paths[3].get_file().validate_node_name())
+	var heading = list.get_child(0)
+	var titles := []
+	var tabs = screen.get_node("Margin/Content/Header/Tabs")
+	for index in tabs.tab_count:
+		titles.append(tabs.get_tab_title(index))
+	var analysis_path: String = folder.path_join("analysis").path_join(paths[0].get_file() + ".json")
+	DirAccess.make_dir_recursive_absolute(analysis_path.get_base_dir())
+	var fixture: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/analysis/rev003-opening.json"))
+	fixture.engine_version = "Stockfish 19"
+	var file := FileAccess.open(analysis_path, FileAccess.WRITE)
+	file.store_string(JSON.stringify(fixture))
+	file.close()
+	runner.finished.emit(true, "")
+	await Engine.get_main_loop().process_frame
+	await Engine.get_main_loop().process_frame
+	var finished_card = list.get_node(paths[0].get_file().validate_node_name())
+	assert_true(finished_card.find_child("WhiteAccuracy", true, false) != null, "finished game shows accuracy")
+	assert_eq(finished_card.find_child("WhiteAccuracy", true, false).text, "100.0%")
+	var active = list.get_node(paths[1].get_file().validate_node_name())
+	assert_true(active.find_child("AnalysisProgress", true, false) != null, "next game shows Analysing")
+	assert_eq(active.find_child("Analyze", true, false).text, "Stop")
+	assert_true(is_instance_valid(unrelated) and unrelated == list.get_node(paths[2].get_file().validate_node_name()), "unrelated card survives the transition")
+	assert_true(is_instance_valid(waiting) and waiting == list.get_node(paths[3].get_file().validate_node_name()), "still-queued card is not rebuilt")
+	assert_true(is_instance_valid(heading) and heading == list.get_child(0), "date heading is retained")
+	var queued = list.get_node(paths[3].get_file().validate_node_name())
+	var labels = queued.find_child("QueuePill", true, false).find_children("*", "Label", true, false)
+	assert_eq(labels[0].text, "Queued · 1st in line", "queue position updates without rebuilding")
+	for index in tabs.tab_count:
+		assert_eq(tabs.get_tab_title(index), titles[index], "tab counts stay unchanged")
+	screen.free()
+	queue.free()
+	DirAccess.remove_absolute(analysis_path)
+	DirAccess.remove_absolute(analysis_path.get_base_dir())
+	Storage.clean(folder)
+
+
+func test_queue_replacement_preserves_selection_focus_paging_and_delete_confirmation():
+	var folder := "user://history_incremental_focus_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var screen = _paging_screen()
+	var runner := FakeQueueAnalyser.new()
+	var queue = load("res://core/analysis_queue.gd").new(runner, folder.path_join("queue.cfg"))
+	screen.analysis_queue = queue
+	queue.changed.connect(screen._queue_changed)
+	screen.present(screen.history, screen.preferences)
+	var list = screen.get_node("Margin/Content/Cards/List")
+	list.get_node("ShowMore").pressed.emit()
+	await Engine.get_main_loop().process_frame
+	await Engine.get_main_loop().process_frame
+	var record: Dictionary = screen._tab_records[10]
+	var card = list.get_node(record.path.get_file().validate_node_name())
+	var index: int = card.get_index()
+	card.get_node("Details/Select").button_pressed = true
+	card.get_node("Details/HBoxContainer/Review").grab_focus()
+	var scroll = screen.get_node("Margin/Content/Cards")
+	scroll.scroll_vertical = 100
+	var offset: int = scroll.scroll_vertical
+	assert_true(offset > 0, "fixture has a scrollable list")
+	var siblings: Array = list.get_children()
+	queue.enqueue(record.path)
+	await Engine.get_main_loop().process_frame
+	await Engine.get_main_loop().process_frame
+	card = list.get_node(record.path.get_file().validate_node_name())
+	assert_eq(card.get_index(), index, "rebuilt card keeps its list position")
+	assert_true(card.get_node("Details/Select").button_pressed, "rebuilt card stays selected")
+	assert_eq(screen.get_viewport().gui_get_focus_owner(), card.get_node("Details/HBoxContainer/Review"), "focus follows the rebuilt Review button")
+	assert_eq(scroll.scroll_vertical, offset, "replacement preserves scroll offset after layout")
+	for sibling_index in siblings.size():
+		if sibling_index != index:
+			assert_true(is_instance_valid(siblings[sibling_index]) and siblings[sibling_index] == list.get_child(sibling_index), "other cards, headings and paging footer are untouched")
+	assert_eq(screen._visible_cards().size(), 40, "loaded pages are retained")
+	assert_eq(screen.get_node("Margin/Content/BatchActions/SelectAll").text, "1 selected")
+	var active = card
+	queue.enqueue(screen._tab_records[44].path)
+	assert_true(active == list.get_node(record.path.get_file().validate_node_name()), "enqueueing another game keeps the active card")
+	queue.remove(screen._tab_records[44].path)
+	assert_true(active == list.get_node(record.path.get_file().validate_node_name()), "removing another game keeps the active card")
+	card = list.get_node(record.path.get_file().validate_node_name())
+	card.get_node("Details/HBoxContainer/Delete").pressed.emit()
+	card.get_node("Details/DeleteInline/Cancel").grab_focus()
+	runner.finished.emit(false, "Stockfish crashed")
+	card = list.get_node(record.path.get_file().validate_node_name())
+	assert_true(card.get_node("Details/DeleteInline").visible, "failure preserves inline confirmation")
+	assert_true(card.get_node("Details/Select").button_pressed)
+	assert_eq(screen.get_viewport().gui_get_focus_owner(), card.get_node("Details/DeleteInline/Cancel"), "failure keeps confirmation focus")
+	queue.resume()
+	queue.remove(record.path)
+	card = list.get_node(record.path.get_file().validate_node_name())
+	assert_true(card.get_node("Details/DeleteInline").visible, "retry and removal keep inline confirmation")
+	assert_eq(screen.get_viewport().gui_get_focus_owner(), card.get_node("Details/DeleteInline/Cancel"))
+	assert_eq(card.get_node("Details/HBoxContainer/Analyze").text, "Analyze", "removed game is no longer queued")
+	card.get_node("Details/DeleteInline/Cancel").pressed.emit()
+	siblings = list.get_children()
+	queue.enqueue(screen._tab_records[44].path)
+	await Engine.get_main_loop().process_frame
+	await Engine.get_main_loop().process_frame
+	assert_true(list.get_children() == siblings, "off-page queue changes leave the loaded page intact")
+	assert_eq(scroll.scroll_vertical, offset)
+	screen.hide()
+	runner.finished.emit(true, "")
+	screen.present(screen.history, screen.preferences)
+	assert_eq(screen._visible_cards().size(), 40, "present still performs a full refresh of loaded pages")
+	assert_true(list.get_child(index) != card, "present replaces the previous cards")
+	screen.history.records.clear()
+	screen.present(screen.history, screen.preferences)
+	queue.enqueue("user://off-page.pgn")
+	assert_eq(screen._visible_cards().size(), 0, "queue changes work with an empty History")
+	screen.free()
+	queue.free()
+	Storage.clean(folder)
+
+
 func test_counts_queue_and_inline_delete():
 	var folder := "user://history_redo_%d" % Time.get_ticks_usec()
 	var history = History.new(folder)

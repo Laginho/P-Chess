@@ -222,6 +222,23 @@ func _visible_cards() -> Array:
 	return $Margin/Content/Cards/List.get_children().filter(func(child): return child.has_node("Details/Select"))
 
 
+func _replace_card(record: Dictionary) -> void:
+	var list := $Margin/Content/Cards/List
+	var card := list.get_node(NodePath(record.path.get_file().validate_node_name()))
+	var index := card.get_index()
+	var focus := get_viewport().gui_get_focus_owner()
+	var focus_path := card.get_path_to(focus) if focus != null and card.is_ancestor_of(focus) else NodePath()
+	var scroll: int = $Margin/Content/Cards.scroll_vertical
+	list.remove_child(card)
+	card.queue_free()
+	_add_card(list, record)
+	card = list.get_child(list.get_child_count() - 1)
+	list.move_child(card, index)
+	if not focus_path.is_empty() and card.has_node(focus_path):
+		card.get_node(focus_path).grab_focus()
+	$Margin/Content/Cards.scroll_vertical = scroll
+
+
 func _append_page() -> void:
 	var list := $Margin/Content/Cards/List
 	var more := list.get_node_or_null("ShowMore")
@@ -531,6 +548,7 @@ func _add_card(list: Node, record: Dictionary) -> void:
 		clock.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		row.add_child(clock)
 		var label := Label.new()
+		label.name = "QueuePosition"
 		var place: int = analysis_queue.pending().find(record.path) + (1 if analysis_queue.current().is_empty() else 0)
 		label.text = "Queued · %d%s in line" % [place, _ordinal(place)]
 		label.theme_type_variation = "SemiboldText"
@@ -775,9 +793,21 @@ func _queue_changed() -> void:
 		status.text = "Analysis failed: %s · Analyze all to retry" % analysis_queue.error
 	if visible:
 		var state := [analysis_queue.pending(), analysis_queue.current(), analysis_queue.error]
-		if state != _queue_state:
+		if _queue_state.is_empty():
 			_queue_state = state
 			_refresh()
+		elif state != _queue_state:
+			var previous := _queue_state
+			_queue_state = state
+			for record in _tab_records.slice(0, _shown_count):
+				var path: String = record.path
+				var current_changed: bool = previous[1] != state[1] and path in [previous[1], state[1]]
+				if (path in previous[0]) != (path in state[0]) or current_changed:
+					_replace_card(record)
+				if path in state[0] and path != state[1]:
+					var card := $Margin/Content/Cards/List.get_node(NodePath(path.get_file().validate_node_name()))
+					var place: int = state[0].find(path) + (1 if state[1].is_empty() else 0)
+					card.find_child("QueuePosition", true, false).text = "Queued · %d%s in line" % [place, _ordinal(place)]
 		else:
 			var card := $Margin/Content/Cards/List.get_node_or_null(NodePath(analysis_queue.current().get_file().validate_node_name())) if not analysis_queue.current().is_empty() else null
 			if card != null:
