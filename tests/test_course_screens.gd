@@ -44,6 +44,10 @@ func test_course_navigation_unit_progress_and_clock():
 		var theory = main.get_node_or_null("Theory")
 		if theory != null and theory.visible:
 			assert_true(theory.find_child("ReadCard", true, false).visible, "populated books section is visible")
+			var without_books: Dictionary = main.course.units()[0].duplicate(true)
+			without_books.theory.books = []
+			theory.present(main.course, without_books)
+			assert_true(not theory.find_child("ReadCard", true, false).visible, "empty books section is hidden")
 			theory.find_child("Back", true, false).pressed.emit()
 	assert_eq(requests, [["rook-endgames", "theory"], ["rook-endgames", "solving"], ["rook-endgames", "playouts"], ["rook-endgames", "test"]])
 	assert_true(unit.visible, "a part without a screen leaves the unit visible")
