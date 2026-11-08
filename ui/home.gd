@@ -114,7 +114,7 @@ func _show_profile() -> void:
 		profile.queue_free()
 		$Center.show()
 		$Center/Form/Profile.grab_focus())
-	profile.present(store)
+	profile.present(store, course)
 
 
 func show_missing(message: String) -> void:

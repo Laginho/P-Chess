@@ -24,7 +24,7 @@ func present(store) -> void:
 
 func _update() -> void:
 	var text: String = $Content/RatingNumber.text
-	var valid := text.is_valid_int() and text == str(int(text)) and int(text) >= 100 and int(text) <= 3500
+	var valid := text.is_valid_int() and int(text) >= 100 and int(text) <= 3500
 	get_ok_button().disabled = not valid
 	var hint: Label = $Content/ScaleHint
 	hint.visible = $Content/RatingSite.selected == 1 and valid
