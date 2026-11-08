@@ -69,15 +69,20 @@ func _layout_home() -> void:
 	card.get_node("Chevron").position = Vector2(width - 52, (card_height - 30) / 2)
 	card.get_node("Chevron").size = Vector2(30, 30)
 	_fit_continue_title()
+	_fit_continue_detail()
 	form.get_node("Course").position = Vector2(0, 75 + card_height)
-	form.get_node("Course").size = Vector2(width, 44)
-	form.get_node("Course/Icon").position = Vector2(16, 12)
+	var summary_label: Label = form.get_node("Course/Summary")
+	var summary_width := maxf(0, width - 132)
+	var summary_height := summary_label.get_theme_font("font").get_multiline_string_size(summary_label.text, HORIZONTAL_ALIGNMENT_RIGHT, summary_width, summary_label.get_theme_font_size("font_size"), -1, summary_label.autowrap_mode).y
+	var course_height := maxf(44, summary_height + 12)
+	form.get_node("Course").size = Vector2(width, course_height)
+	form.get_node("Course/Icon").position = Vector2(16, (course_height - 20) / 2)
 	form.get_node("Course/Icon").size = Vector2(20, 20)
 	form.get_node("Course/Title").position = Vector2(48, 0)
-	form.get_node("Course/Title").size = Vector2(62, 44)
+	form.get_node("Course/Title").size = Vector2(62, course_height)
 	form.get_node("Course/Summary").position = Vector2(116, 0)
-	form.get_node("Course/Summary").size = Vector2(maxf(0, width - 132), 44)
-	var play_y := 130 + card_height
+	form.get_node("Course/Summary").size = Vector2(summary_width, course_height)
+	var play_y := 130 + card_height + course_height - 44
 	form.get_node("QuickLabel").position = Vector2(0, play_y)
 	form.get_node("QuickLabel").size = Vector2(row, 36)
 	# A chip as wide as its label, at the row's right end.
@@ -111,12 +116,12 @@ func _layout_home() -> void:
 		var artwork: TextureRect = button.get_node("Artwork")
 		artwork.position = Vector2((tile_width - icon_size) / 2, top)
 		artwork.size = Vector2(icon_size, icon_size)
-		artwork.modulate.a = 0.4 if button.disabled else 1.0
+		artwork.modulate.a = 0.4 if missing.visible and button != custom else 1.0
 		var caption: Label = button.get_node("Caption")
 		caption.add_theme_font_size_override("font_size", caption_size)
 		caption.position = Vector2(0, top + icon_size + spacing)
 		caption.size = Vector2(tile_width, caption_height)
-		caption.modulate.a = 0.4 if button.disabled else 1.0
+		caption.modulate.a = 0.4 if missing.visible and button != custom else 1.0
 	for i in 4:
 		var button: Button = form.get_node(["History", "Profile", "Settings", "Quit"][i])
 		button.position = Vector2((i % 2) * (row + 12), form.size.y - 106 + (i / 2) * 58)
@@ -176,6 +181,7 @@ func refresh_continue() -> void:
 		if count > 0:
 			summary += " · %d %s" % [count, status]
 	$Center/Form/Course/Summary.text = summary
+	_layout_home()
 	var now: int = course.local_calendar_time(int(Time.get_unix_time_from_system()), int(Time.get_time_zone_from_system().bias))
 	target = {"kind": "rating"} if course.rating().is_empty() else course.continue_target(now)
 	var kind: String = target.kind
@@ -207,6 +213,7 @@ func refresh_continue() -> void:
 	$Center/Form/Continue/UnitTitle.text = title
 	_fit_continue_title()
 	$Center/Form/Continue/Detail.text = detail
+	_fit_continue_detail()
 	var bar: ProgressBar = $Center/Form/Continue/Progress
 	bar.visible = kind == "solving"
 	if bar.visible:
@@ -233,6 +240,15 @@ func _fit_continue_title() -> void:
 	var font := label.get_theme_font("font")
 	var font_size := 16 if target.get("kind") == "done" else 26
 	while font_size > 10 and font.get_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > label.size.x:
+		font_size -= 1
+	label.add_theme_font_size_override("font_size", font_size)
+
+
+func _fit_continue_detail() -> void:
+	var label: Label = $Center/Form/Continue/Detail
+	var font := label.get_theme_font("font")
+	var font_size := 16
+	while font_size > 9 and font.get_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > label.size.x:
 		font_size -= 1
 	label.add_theme_font_size_override("font_size", font_size)
 

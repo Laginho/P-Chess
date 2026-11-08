@@ -121,8 +121,7 @@ theme_override_font_sizes/font_size = 14
 text = "0 units"
 horizontal_alignment = 2
 vertical_alignment = 1
-text_overrun_behavior = 3
-clip_text = true
+autowrap_mode = 3
 
 [node name="QuickLabel" type="Label" parent="Center/Form"]
 theme_type_variation = &"SectionLabel"
