@@ -516,3 +516,17 @@ chess.com's CAPS2 is not published.
 
 - **Classification and accuracy:** headless tests on fixed engine output (fixture JSON). CI has no Stockfish.
 - **Also covered:** the convergence rule, the draw rule, the history thumbnail ply, and deleting a game from the stats.
+
+## 16. Learning course (after v0.1.0)
+
+P-Chess becomes a staged learning app (`docs/adr/0001-pivot-to-a-staged-learning-app.md`). The behaviour of the first unit, rook endgames, is specified in `.scratch/learning/spec.md`; the design is `docs/design/learning/`; the vocabulary is `CONTEXT.md`. Where that spec and this file disagree about the course, that spec wins.
+
+| Content | Tickets |
+|---|---|
+| Tablebase and Maia spike, tablebase files | RES-001, CI-005 |
+| Games from a FEN, play-out clocks | CORE-007, CLOCK-003 |
+| Rating sentence, course map, unit page, theory pointer, content | LEARN-001, LEARN-002, LEARN-003, LEARN-004 |
+| Solving, grading, play-outs, pass test | LEARN-005, LEARN-006, LEARN-007, LEARN-008 |
+| New Home and Continue, from-your-game marker | LEARN-009, REV-011 |
+
+Tickets live in `.scratch/learning/issues/`.

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Unit: Rook endgames</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700;800&amp;display=swap">
+<style>
+body{margin:0}
+button,input{font-family:inherit}
+a{color:inherit;text-decoration:none}
+</style>
+</helmet>
+<div style="width: 1280px; height: 800px; box-sizing: border-box; padding: 32px 40px 40px; display: flex; flex-direction: column; gap: 28px; background: #1f1e1c; color: #ece9e4; font-family: 'Noto Sans', system-ui, sans-serif">
+  <div style="display: flex; align-items: center; gap: 16px">
+    <a href="CourseMap.dc.html" aria-label="Back to Course" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: #2b2a27; border: 1px solid #45423d; border-radius: 8px">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ece9e4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+    </a>
+    <div style="display: flex; flex-direction: column; gap: 2px">
+      <h1 style="margin: 0; font-size: 30px; font-weight: 800; line-height: 1.1">Rook endgames</h1>
+      <span style="font-size: 15px; color: #a8a49c">Lucena and Philidor · rook and pawn against rook</span>
+    </div>
+    <span style="margin-left: 8px; height: 26px; padding: 0 10px; display: inline-flex; align-items: center; border-radius: 13px; background: #45423d; font-size: 13px; font-weight: 700">In progress</span>
+  </div>
+
+  <div style="flex: 1 1 0; min-height: 0; display: flex; gap: 32px">
+    <div style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 12px">
+      <sc-for list="{{parts}}" as="p" hint-placeholder-count="4">
+        <div style="flex: 1 1 0; display: flex; align-items: center; gap: 20px; padding: 0 20px; background: #2b2a27; border: {{p.border}}; border-radius: 10px">
+          <span style="width: 40px; height: 40px; flex: none; display: flex; align-items: center; justify-content: center; border-radius: 20px; background: {{p.dotBg}}; color: {{p.dotFg}}; font-size: 17px; font-weight: 800">{{p.mark}}</span>
+          <div style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 4px">
+            <span style="font-size: 19px; font-weight: 800">{{p.name}}</span>
+            <span style="font-size: 14px; color: #a8a49c">{{p.desc}}</span>
+          </div>
+          <span style="width: 150px; text-align: right; font-size: 15px; font-weight: 700; color: {{p.statusColor}}">{{p.status}}</span>
+          <a href="{{p.href}}" style="width: 120px; height: 44px; flex: none; display: flex; align-items: center; justify-content: center; border-radius: 8px; background: {{p.btnBg}}; color: {{p.btnFg}}; border: {{p.btnBorder}}; font-size: 15px; font-weight: 700">{{p.btn}}</a>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="width: 340px; flex: none; display: flex; flex-direction: column; gap: 16px">
+      <dc-import name="Board" fen="1K1k4/1P6/8/8/8/8/r7/2R5" size="340" marks="" hint-size="340px,340px"></dc-import>
+      <div style="display: flex; flex-direction: column; gap: 4px; padding: 16px; background: #2b2a27; border: 1px solid #45423d; border-radius: 10px">
+        <span style="font-size: 13px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: #a8a49c">First-try rate</span>
+        <span style="font-size: 30px; font-weight: 800; line-height: 1.15">75%</span>
+        <span style="font-size: 14px; color: #a8a49c">3 of 4 positions solved on the first commit</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px; padding: 16px; background: #2b2a27; border: 1px solid #45423d; border-radius: 10px">
+        <span id="clock-label" style="font-size: 13px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: #a8a49c">Play-out clock</span>
+        <div role="group" aria-labelledby="clock-label" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; padding: 3px; background: #1f1e1c; border: 1px solid #45423d; border-radius: 8px">
+          <button aria-pressed="{{clockOn}}" onClick="{{setOn}}" style="height: 38px; border: 0; border-radius: 6px; background: {{onBg}}; color: {{onFg}}; font-size: 15px; font-weight: 700; cursor: pointer">5+5</button>
+          <button aria-pressed="{{clockOff}}" onClick="{{setOff}}" style="height: 38px; border: 0; border-radius: 6px; background: {{offBg}}; color: {{offFg}}; font-size: 15px; font-weight: 700; cursor: pointer">No clock</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const on = (this.state && this.state.clock) !== 'off';
+    const base = { border: '1px solid #45423d', dotBg: '#363430', dotFg: '#ece9e4', statusColor: '#a8a49c', btn: 'Open', btnBg: '#363430', btnFg: '#ece9e4', btnBorder: '1px solid #45423d' };
+    const parts = [
+      { ...base, mark: '✓', dotBg: '#7fa650', dotFg: '#141412', name: 'Theory pointer', desc: 'Search terms and book chapters to read first', status: 'Done', statusColor: '#7fa650', href: 'Theory.dc.html' },
+      { ...base, mark: '2', border: '2px solid #7fa650', name: 'Solving', desc: '12 positions · win some, hold some', status: '4/12 solved', statusColor: '#ece9e4', btn: 'Continue', btnBg: '#7fa650', btnFg: '#141412', btnBorder: '0', href: 'SolvingEntry.dc.html' },
+      { ...base, mark: '3', name: 'Play-outs', desc: '2 to convert, 2 to hold · against Maia 1900', status: '0/4 passed', href: 'PlayoutStart.dc.html' },
+      { ...base, mark: '4', name: 'Pass test', desc: '6 new positions and 2 play-outs against a perfect opponent', status: 'Not taken', href: 'TestStart.dc.html' }
+    ];
+    return {
+      parts,
+      clockOn: on, clockOff: !on,
+      onBg: on ? '#7fa650' : 'transparent', onFg: on ? '#141412' : '#a8a49c',
+      offBg: on ? 'transparent' : '#7fa650', offFg: on ? '#a8a49c' : '#141412',
+      setOn: () => this.setState({ clock: 'on' }),
+      setOff: () => this.setState({ clock: 'off' })
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Board</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700;800&amp;display=swap">
+<style>body{margin:0}</style>
+</helmet>
+<div role="img" aria-label="Chess board" style="position: relative; width: {{px}}; height: {{px}}; flex: none; font-family: 'Noto Sans', system-ui, sans-serif">
+  <div style="position: absolute; inset: 0; display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); grid-template-rows: repeat(8, minmax(0, 1fr))">
+    <sc-for list="{{squares}}" as="sq" hint-placeholder-count="64">
+      <div style="position: relative; background: {{sq.bg}}">
+        <sc-if value="{{sq.showRank}}" hint-placeholder-val="{{ false }}">
+          <span style="position: absolute; top: 2px; left: 3px; font-size: {{coordSize}}; line-height: 1; font-weight: 700; color: {{sq.coordColor}}">{{sq.rank}}</span>
+        </sc-if>
+        <sc-if value="{{sq.showFile}}" hint-placeholder-val="{{ false }}">
+          <span style="position: absolute; right: 3px; bottom: 2px; font-size: {{coordSize}}; line-height: 1; font-weight: 700; color: {{sq.coordColor}}">{{sq.file}}</span>
+        </sc-if>
+      </div>
+    </sc-for>
+  </div>
+  <sc-for list="{{marks}}" as="m" hint-placeholder-count="0">
+    <div style="position: absolute; left: {{m.left}}; top: {{m.top}}; width: 12.5%; height: 12.5%; background: {{m.bg}}; box-shadow: 0 0 {{m.glow}} {{m.glowColor}}; pointer-events: none"></div>
+  </sc-for>
+  <div style="position: absolute; inset: 0; display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); grid-template-rows: repeat(8, minmax(0, 1fr)); pointer-events: none">
+    <sc-for list="{{squares}}" as="sq" hint-placeholder-count="64">
+      <div style="position: relative">
+        <sc-if value="{{sq.hasPiece}}" hint-placeholder-val="{{ false }}">
+          <img src="{{sq.img}}" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%; display: block">
+        </sc-if>
+      </div>
+    </sc-for>
+  </div>
+  <sc-if value="{{hasArrow}}" hint-placeholder-val="{{ false }}">
+    <svg viewBox="0 0 8 8" aria-hidden="true" style="position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none">
+      <line x1="{{arrow.x1}}" y1="{{arrow.y1}}" x2="{{arrow.x2}}" y2="{{arrow.y2}}" stroke="#98bc49" stroke-width="0.16" stroke-linecap="round" opacity="0.85"></line>
+      <polygon points="{{arrow.head}}" fill="#98bc49" opacity="0.85"></polygon>
+    </svg>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"fen":{"editor":"text","default":"1K1k4/1P6/8/8/8/8/r7/2R5"},"size":{"editor":"int","default":480,"min":64,"max":900},"flipped":{"editor":"boolean","default":false},"last":{"editor":"text","default":""},"coords":{"editor":"boolean","default":true},"arrow":{"editor":"text","default":""},"marks":{"editor":"text","default":"c1 d1 d8 e7 b8 c7 a2 c2 c7 b6"},"$preview":{"width":480,"height":480}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const P = {
+      K: '/_blob/dc55bdd68940e57308def03deea138c7', Q: '/_blob/6afd1418021adc6728364117a8e7ceb0',
+      R: '/_blob/acefb5b35905e0985887911119ad1e37', B: '/_blob/78850bf73f751c35b2779d578eb60e8b',
+      N: '/_blob/aeca6003412232f86c76aea4b934a92c', P: '/_blob/a6267f1869659a4a4f8c1357b82b6e02',
+      k: '/_blob/c1673a9a723ed019cbd2e2df8a1f86f9', q: '/_blob/82a21cf9660284a792bf58b96cc854a2',
+      r: '/_blob/13bb71748af7df78c3af5c53c3fc11f2', b: '/_blob/d503159379004cc1f63e95a36d92c698',
+      n: '/_blob/c92e4e24b1e5ab2e5b24c3833b1d11f6', p: '/_blob/5f083a5720f2fd1b0d914d4b8a30d559'
+    };
+    const fen = this.props.fen ?? '1K1k4/1P6/8/8/8/8/r7/2R5';
+    const size = Number(this.props.size ?? 480);
+    const flipped = this.props.flipped === true || this.props.flipped === 'true';
+    const coords = !(this.props.coords === false || this.props.coords === 'false');
+    const last = this.props.last ?? '';
+    const grid = fen.split(' ')[0].split('/').map((row) => {
+      const out = [];
+      for (const ch of row) {
+        if (/[1-8]/.test(ch)) for (let i = 0; i < Number(ch); i++) out.push(null);
+        else out.push(ch);
+      }
+      return out;
+    });
+    const hl = [last.slice(0, 2), last.slice(2, 4)];
+    const squares = [];
+    for (let dr = 0; dr < 8; dr++) {
+      for (let dc = 0; dc < 8; dc++) {
+        const r = flipped ? 7 - dr : dr;
+        const c = flipped ? 7 - dc : dc;
+        const file = 'abcdefgh'[c];
+        const rank = String(8 - r);
+        const light = (r + c) % 2 === 0;
+        const lit = hl.includes(file + rank);
+        const piece = grid[r] && grid[r][c];
+        squares.push({
+          bg: lit ? (light ? '#cdd26a' : '#aaa23a') : (light ? '#f0d9b5' : '#b58863'),
+          hasPiece: !!piece, img: piece ? P[piece] : '',
+          file, rank,
+          showRank: coords && dc === 0, showFile: coords && dr === 7,
+          coordColor: light ? '#b58863' : '#f0d9b5'
+        });
+      }
+    }
+    const toXY = (s) => {
+      const c = 'abcdefgh'.indexOf(s[0]);
+      const r = 8 - Number(s[1]);
+      return flipped ? [7 - c + 0.5, 7 - r + 0.5] : [c + 0.5, r + 0.5];
+    };
+    // Entered moves: each square a faint red tint; a square entered twice gets darker, and the soft glow lets neighbours blur together.
+    const count = {};
+    for (const s of String(this.props.marks ?? '').split(/[\s,]+/).filter((x) => /^[a-h][1-8]$/.test(x))) count[s] = (count[s] || 0) + 1;
+    const marks = Object.keys(count).map((s) => {
+      const [x, y] = toXY(s);
+      const a = Math.min(0.5, 0.26 + 0.12 * (count[s] - 1));
+      return {
+        left: ((x - 0.5) * 12.5) + '%', top: ((y - 0.5) * 12.5) + '%',
+        bg: 'rgba(201, 50, 48, ' + a + ')', glow: Math.round(size / 40) + 'px',
+        glowColor: 'rgba(201, 50, 48, ' + (a * 0.9) + ')'
+      };
+    });
+    let arrow = null;
+    const a = this.props.arrow ?? '';
+    if (a.length >= 4) {
+      const [x1, y1] = toXY(a.slice(0, 2));
+      const [tx, ty] = toXY(a.slice(2, 4));
+      const len = Math.hypot(tx - x1, ty - y1);
+      const ux = (tx - x1) / len, uy = (ty - y1) / len;
+      const bx = tx - ux * 0.42, by = ty - uy * 0.42;
+      const px = -uy * 0.24, py = ux * 0.24;
+      arrow = {
+        x1, y1, x2: bx, y2: by,
+        head: [[tx - ux * 0.08, ty - uy * 0.08], [bx + px, by + py], [bx - px, by - py]].map((p) => p.join(',')).join(' ')
+      };
+    }
+    return {
+      squares, marks, px: size + 'px',
+      coordSize: Math.max(9, Math.round(size / 8 * 0.18)) + 'px',
+      hasArrow: !!arrow, arrow: arrow || {}
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Course map</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700;800&amp;display=swap">
+<style>
+body{margin:0}
+button,input{font-family:inherit}
+a{color:inherit;text-decoration:none}
+</style>
+</helmet>
+<div style="width: 1280px; height: 800px; box-sizing: border-box; padding: 32px 40px 40px; display: flex; flex-direction: column; gap: 28px; background: #1f1e1c; color: #ece9e4; font-family: 'Noto Sans', system-ui, sans-serif">
+  <div style="display: flex; align-items: center; gap: 16px">
+    <a href="Main.dc.html" aria-label="Back to Home" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: #2b2a27; border: 1px solid #45423d; border-radius: 8px">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ece9e4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+    </a>
+    <h1 style="margin: 0; font-size: 30px; font-weight: 800">Course</h1>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 12px; font-size: 15px; color: #a8a49c">
+      <span>Rated <strong style="color: #ece9e4">1600</strong> in rapid on chess.com</span>
+      <a href="Profile.dc.html" style="height: 36px; padding: 0 12px; display: flex; align-items: center; background: #2b2a27; border: 1px solid #45423d; border-radius: 6px; color: #ece9e4; font-size: 14px; font-weight: 600">Edit</a>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 6px">
+    <span style="font-size: 13px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: #a8a49c">Your stage</span>
+    <h2 style="margin: 0; font-size: 24px; font-weight: 800">[Stage name] · around 1600</h2>
+  </div>
+
+  <a href="Unit.dc.html" style="display: flex; gap: 28px; padding: 24px; background: #2b2a27; border: 1px solid #45423d; border-radius: 10px; cursor: pointer">
+    <dc-import name="Board" fen="1K1k4/1P6/8/8/8/8/r7/2R5" size="200" coords="false" marks="" hint-size="200px,200px"></dc-import>
+    <div style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 10px">
+      <div style="display: flex; align-items: center; gap: 12px">
+        <span style="font-size: 14px; font-weight: 700; color: #a8a49c">Unit 1</span>
+        <span style="height: 26px; padding: 0 10px; display: inline-flex; align-items: center; gap: 6px; border-radius: 13px; background: {{status.bg}}; color: {{status.fg}}; font-size: 13px; font-weight: 700">{{status.label}}</span>
+      </div>
+      <h3 style="margin: 0; font-size: 28px; font-weight: 800">Rook endgames</h3>
+      <span style="font-size: 16px; color: #a8a49c">Lucena and Philidor · rook and pawn against rook</span>
+      <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: auto">
+        <sc-for list="{{parts}}" as="p" hint-placeholder-count="4">
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <div style="height: 6px; border-radius: 3px; background: #45423d; overflow: hidden"><div style="width: {{p.fill}}; height: 100%; background: #7fa650"></div></div>
+            <span style="font-size: 14px; font-weight: 600">{{p.name}}</span>
+            <span style="font-size: 13px; color: #a8a49c">{{p.note}}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#a8a49c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="align-self: center; flex: none"><path d="M9 5l7 7-7 7"></path></svg>
+  </a>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"unitStatus":{"editor":"enum","options":["new","in progress","mastered","needs review"],"default":"in progress"},"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const s = this.props.unitStatus ?? 'in progress';
+    const chips = {
+      'new': { label: 'New', bg: '#363430', fg: '#ece9e4' },
+      'in progress': { label: 'In progress', bg: '#45423d', fg: '#ece9e4' },
+      'mastered': { label: 'Mastered', bg: '#7fa650', fg: '#141412' },
+      'needs review': { label: 'Needs review', bg: '#f4bf44', fg: '#141412' }
+    };
+    const sets = {
+      'new': [['Theory', '0%', 'Not opened'], ['Solving', '0%', '0/12'], ['Play-outs', '0%', '0/4'], ['Pass test', '0%', 'Not taken']],
+      'in progress': [['Theory', '100%', 'Done'], ['Solving', '33%', '4/12'], ['Play-outs', '0%', '0/4'], ['Pass test', '0%', 'Not taken']],
+      'mastered': [['Theory', '100%', 'Done'], ['Solving', '100%', '12/12'], ['Play-outs', '100%', '4/4'], ['Pass test', '100%', 'Passed']],
+      'needs review': [['Theory', '100%', 'Done'], ['Solving', '100%', '12/12'], ['Play-outs', '100%', '4/4'], ['Pass test', '100%', 'Review check missed']]
+    };
+    return {
+      status: chips[s] || chips['in progress'],
+      parts: (sets[s] || sets['in progress']).map(([name, fill, note]) => ({ name, fill, note }))
+    };
+  }
+}
+</script>
+</body>
+</html>

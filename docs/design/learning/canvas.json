@@ -1,0 +1,27 @@
+{
+  "v": 3,
+  "createdOnFiles": { "v": 1, "at": "2026-11-07T15:00:00Z" },
+  "title": "P-Chess learning screens",
+  "launch": { "view": "canvas" },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": { "x": 0, "y": 0, "w": 1280, "h": 800, "title": "1 · Home", "is_interactive": true },
+    "CourseMap.dc.html": { "x": 1360, "y": 0, "w": 1280, "h": 800, "title": "2 · Course map", "is_interactive": true },
+    "RatingModal.dc.html": { "x": 2720, "y": 0, "w": 1280, "h": 800, "title": "8 · Rating sentence: first time the course opens", "is_interactive": true },
+    "Unit.dc.html": { "x": 4080, "y": 0, "w": 1280, "h": 800, "title": "3 · Unit page", "is_interactive": true },
+    "Theory.dc.html": { "x": 0, "y": 920, "w": 1280, "h": 800, "title": "4 · Theory pointer", "is_interactive": true },
+    "SolvingEntry.dc.html": { "x": 1360, "y": 920, "w": 1280, "h": 800, "title": "5 · Solving: entering a line", "is_interactive": true },
+    "SolvingFeedback.dc.html": { "x": 2720, "y": 920, "w": 1280, "h": 800, "title": "5 · Solving: feedback", "is_interactive": true },
+    "PlayoutStart.dc.html": { "x": 0, "y": 1840, "w": 1280, "h": 800, "title": "6 · Play-out: start", "is_interactive": true },
+    "PlayoutEnd.dc.html": { "x": 1360, "y": 1840, "w": 1280, "h": 800, "title": "6 · Play-out: end card", "is_interactive": true },
+    "TestStart.dc.html": { "x": 2720, "y": 1840, "w": 1280, "h": 800, "title": "7 · Pass test: start", "is_interactive": true },
+    "TestResult.dc.html": { "x": 4080, "y": 1840, "w": 1280, "h": 800, "title": "7 · Pass test: result", "is_interactive": true },
+    "Profile.dc.html": { "x": 0, "y": 2760, "w": 1280, "h": 800, "title": "8 · Profile with the rating sentence", "is_interactive": true },
+    "ReviewMarker.dc.html": { "x": 1360, "y": 2760, "w": 470, "h": 330, "title": "9 · Review: from-your-game marker in the move list" },
+    "Board.dc.html": { "x": 1910, "y": 2760, "w": 480, "h": 480, "title": "Component · Board (with entry marks)" },
+    "ClassIcon.dc.html": { "x": 2470, "y": 2760, "w": 48, "h": 48, "title": "Component · Class icon" }
+  },
+  "order": ["Main.dc.html", "CourseMap.dc.html", "RatingModal.dc.html", "Unit.dc.html", "Theory.dc.html", "SolvingEntry.dc.html", "SolvingFeedback.dc.html", "PlayoutStart.dc.html", "PlayoutEnd.dc.html", "TestStart.dc.html", "TestResult.dc.html", "Profile.dc.html", "ReviewMarker.dc.html", "Board.dc.html", "ClassIcon.dc.html"],
+  "notes": {},
+  "designSystems": []
+}

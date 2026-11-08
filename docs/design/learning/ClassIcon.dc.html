@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Move class icon</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700;800&amp;display=swap">
+<style>body{margin:0}</style>
+</helmet>
+<div role="img" aria-label="{{label}}" style="width: {{px}}; height: {{px}}; flex: none; box-sizing: border-box; border-radius: 50%; background: {{color}}; border: {{ring}} solid rgba(0,0,0,0.22); display: flex; align-items: center; justify-content: center; color: #ffffff; font-family: 'Noto Sans', system-ui, sans-serif; font-weight: 800; font-size: {{fs}}; line-height: 1; letter-spacing: -0.06em">
+  <sc-if value="{{isText}}" hint-placeholder-val="{{ true }}"><span>{{glyph}}</span></sc-if>
+  <sc-if value="{{isStar}}" hint-placeholder-val="{{ false }}">
+    <svg width="64%" height="64%" viewBox="0 0 24 24" aria-hidden="true"><polygon points="12,2.8 14.8,8.9 21.4,9.6 16.4,14 17.9,20.6 12,17.2 6.1,20.6 7.6,14 2.6,9.6 9.2,8.9" fill="#ffffff"></polygon></svg>
+  </sc-if>
+  <sc-if value="{{isThumb}}" hint-placeholder-val="{{ false }}">
+    <svg width="60%" height="60%" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5h3.6v10H3z M8.4 10.5 12 3.2c1.5 0 2.5 1.1 2.3 2.6l-.5 3.6h5.4c1.3 0 2.2 1.2 1.9 2.4l-1.7 7c-.2.9-1 1.6-2 1.6H8.4z" fill="#ffffff"></path></svg>
+  </sc-if>
+  <sc-if value="{{isCheck}}" hint-placeholder-val="{{ false }}">
+    <svg width="62%" height="62%" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.8l4.6 4.4L19 7.2"></path></svg>
+  </sc-if>
+  <sc-if value="{{isBook}}" hint-placeholder-val="{{ false }}">
+    <svg width="64%" height="64%" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 5.2c3-1.2 6.2-1 9 1v13.6c-2.8-2-6-2.2-9-1z M12.5 6.2c2.8-2 6-2.2 9-1v13.6c-3-1.2-6.2-1-9 1z" fill="#ffffff"></path></svg>
+  </sc-if>
+  <sc-if value="{{isArrow}}" hint-placeholder-val="{{ false }}">
+    <svg width="62%" height="62%" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 12h14M13 6.5l5.5 5.5-5.5 5.5"></path></svg>
+  </sc-if>
+  <sc-if value="{{isCross}}" hint-placeholder-val="{{ false }}">
+    <svg width="56%" height="56%" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"cls":{"editor":"enum","options":["brilliant","great","best","excellent","good","book","repertoire","inaccuracy","mistake","miss","blunder","forced"],"default":"brilliant"},"size":{"editor":"int","default":48,"min":12,"max":96},"$preview":{"width":48,"height":48}}'>
+class Component extends DCLogic {
+  renderVals() {
+    // Colours from chess.com's classic review palette (as mirrored by WintrCat/freechess); miss and repertoire are ours.
+    const C = {
+      brilliant: ['#1baaa6', 'text', '!!', 'Brilliant'],
+      great: ['#5b8baf', 'text', '!', 'Great'],
+      best: ['#98bc49', 'star', '', 'Best'],
+      excellent: ['#98bc49', 'thumb', '', 'Excellent'],
+      good: ['#9db57a', 'check', '', 'Good'],
+      book: ['#a88764', 'book', '', 'Book'],
+      repertoire: ['#3f94e0', 'book', '', 'Repertoire'],
+      inaccuracy: ['#f4bf44', 'text', '?!', 'Inaccuracy'],
+      mistake: ['#e28c28', 'text', '?', 'Mistake'],
+      miss: ['#ff7769', 'cross', '', 'Miss'],
+      blunder: ['#c93230', 'text', '??', 'Blunder'],
+      forced: ['#96bc4b', 'arrow', '', 'Forced']
+    };
+    const [color, kind, glyph, label] = C[this.props.cls] || C.brilliant;
+    const size = Number(this.props.size ?? 48);
+    return {
+      color, glyph, label, px: size + 'px',
+      fs: Math.round(size * (glyph.length > 1 ? 0.5 : 0.62)) + 'px',
+      ring: (size >= 28 ? 2 : 1) + 'px',
+      isText: kind === 'text', isStar: kind === 'star', isThumb: kind === 'thumb',
+      isCheck: kind === 'check', isBook: kind === 'book', isArrow: kind === 'arrow', isCross: kind === 'cross'
+    };
+  }
+}
+</script>
+</body>
+</html>

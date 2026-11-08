@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Play-out: end card</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700;800&amp;display=swap">
+<style>
+body{margin:0}
+button,input{font-family:inherit}
+a{color:inherit;text-decoration:none}
+</style>
+</helmet>
+<div style="width: 1280px; height: 800px; box-sizing: border-box; padding: 40px; display: flex; gap: 40px; background: #1f1e1c; color: #ece9e4; font-family: 'Noto Sans', system-ui, sans-serif">
+  <div style="position: relative; width: 720px; height: 720px; flex: none">
+    <dc-import name="Board" fen="{{v.fen}}" size="720" last="{{v.last}}" marks="" hint-size="720px,720px"></dc-import>
+    <div role="dialog" aria-modal="true" aria-labelledby="po-title" style="position: absolute; left: 190px; top: 170px; width: 340px; box-sizing: border-box; display: flex; flex-direction: column; background: #2b2a27; border: 1px solid #45423d; border-radius: 12px; overflow: hidden; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45)">
+      <div style="padding: 22px 24px 18px; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; background: {{v.headBg}}">
+        <sc-if value="{{v.ok}}" hint-placeholder-val="{{ false }}">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#98bc49" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"></path></svg>
+        </sc-if>
+        <sc-if value="{{v.bad}}" hint-placeholder-val="{{ true }}">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#ee7a72" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+        </sc-if>
+        <h2 id="po-title" style="margin: 4px 0 0; font-size: 28px; font-weight: 800; line-height: 1.15">{{v.title}}</h2>
+        <p style="margin: 0; font-size: 14px; color: #a8a49c">{{v.reason}}</p>
+      </div>
+      <sc-if value="{{v.hasMove}}" hint-placeholder-val="{{ true }}">
+        <div style="margin: 0 20px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; background: #1f1e1c; border: 1px solid #45423d; border-radius: 8px">
+          <div style="display: flex; align-items: center; gap: 8px; font-size: 15px">
+            <span style="width: 64px; flex: none; color: #a8a49c">You</span>
+            <span style="font-weight: 800; color: #ee7a72">4. Rb8</span>
+            <dc-import name="ClassIcon" cls="blunder" size="18" hint-size="18px,18px"></dc-import>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px; font-size: 15px">
+            <span style="width: 64px; flex: none; color: #a8a49c">Holds</span>
+            <span style="font-weight: 800; color: #98bc49">4. Ra3</span>
+          </div>
+        </div>
+      </sc-if>
+      <div style="padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 10px">
+        <a href="{{v.primaryHref}}" style="height: 56px; display: flex; align-items: center; justify-content: center; background: #7fa650; color: #141412; border-radius: 10px; font-size: 18px; font-weight: 800; box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.22)">{{v.primary}}</a>
+        <a href="Unit.dc.html" style="height: 44px; display: flex; align-items: center; justify-content: center; background: #45423d; color: #ece9e4; border-radius: 8px; font-size: 15px; font-weight: 700; box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.22)">Back to the unit</a>
+      </div>
+    </div>
+  </div>
+
+  <div style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 18px">
+    <div style="display: flex; flex-direction: column">
+      <span style="font-size: 13px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: #a8a49c">Rook endgames · Play-outs</span>
+      <span style="font-size: 20px; font-weight: 800">{{v.counter}}</span>
+    </div>
+    <div style="flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; background: #2b2a27; border: 1px solid #45423d; border-radius: 10px; overflow: hidden">
+      <div style="height: 56px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; border-bottom: 1px solid #45423d">
+        <span style="font-size: 15px; font-weight: 700">Maia 1900</span>
+        <span style="height: 36px; padding: 0 12px; display: flex; align-items: center; background: #1f1e1c; border-radius: 6px; font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; color: #a8a49c">{{v.botClock}}</span>
+      </div>
+      <ol aria-label="Moves" style="flex: 1 1 0; margin: 0; padding: 8px 0; list-style: none; font-size: 15px">
+        <sc-for list="{{v.rows}}" as="m" hint-placeholder-count="4">
+          <li style="height: 30px; display: grid; grid-template-columns: 44px minmax(0, 1fr) minmax(0, 1fr); align-items: center; padding: 0 16px">
+            <span style="color: #a8a49c; font-variant-numeric: tabular-nums">{{m.n}}.</span>
+            <span style="font-weight: 600; color: {{m.wColor}}">{{m.w}}</span>
+            <span style="font-weight: 600">{{m.b}}</span>
+          </li>
+        </sc-for>
+      </ol>
+      <div style="height: 56px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; border-top: 1px solid #45423d">
+        <span style="font-size: 15px; font-weight: 700">Bruno</span>
+        <span style="height: 36px; padding: 0 12px; display: flex; align-items: center; background: {{v.myClockBg}}; color: {{v.myClockFg}}; border-radius: 6px; font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums">{{v.myClock}}</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"result":{"editor":"enum","options":["passed","failed: move","failed: time"],"default":"failed: move"},"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const T = '#ece9e4';
+    const okHead = 'linear-gradient(180deg, rgba(127,166,80,0.30), rgba(127,166,80,0))';
+    const badHead = 'linear-gradient(180deg, rgba(201,50,48,0.28), rgba(201,50,48,0))';
+    const holdRows = [
+      { n: 1, w: 'Rb3', b: 'Rh1+', wColor: T }, { n: 2, w: 'Kd2', b: 'Rh2+', wColor: T },
+      { n: 3, w: 'Ke1', b: 'Rc2', wColor: T }, { n: 4, w: 'Rb8', b: '', wColor: '#ee7a72' }
+    ];
+    const V = {
+      'passed': {
+        ok: true, bad: false, hasMove: false, headBg: okHead,
+        fen: '1Q6/3k4/8/1K6/1R6/8/8/1r6', last: 'b7b8', counter: 'Play-out 1 of 4 · Convert',
+        title: 'Converted', reason: 'You promoted on move 8',
+        primary: 'Next play-out', primaryHref: 'PlayoutStart.dc.html',
+        rows: [
+          { n: 1, w: 'Rd1+', b: 'Ke7', wColor: T }, { n: 2, w: 'Rd4', b: 'Ra1', wColor: T },
+          { n: 3, w: 'Kc7', b: 'Rc1+', wColor: T }, { n: 4, w: 'Kb6', b: 'Rb1+', wColor: T },
+          { n: 5, w: 'Kc6', b: 'Rc1+', wColor: T }, { n: 6, w: 'Kb5', b: 'Rb1+', wColor: T },
+          { n: 7, w: 'Rb4', b: 'Kd7', wColor: T }, { n: 8, w: 'b8=Q', b: '', wColor: T }
+        ],
+        botClock: '4:12', myClock: '3:47', myClockBg: '#1f1e1c', myClockFg: '#a8a49c'
+      },
+      'failed: move': {
+        ok: false, bad: true, hasMove: true, headBg: badHead,
+        fen: '1R6/8/8/8/4pk2/8/2r5/4K3', last: 'b3b8', counter: 'Play-out 3 of 4 · Hold',
+        title: 'Play-out failed', reason: 'This move turned the draw into a loss',
+        primary: 'Retry', primaryHref: 'PlayoutStart.dc.html',
+        rows: holdRows, botClock: '4:40', myClock: '4:02', myClockBg: '#1f1e1c', myClockFg: '#a8a49c'
+      },
+      'failed: time': {
+        ok: false, bad: true, hasMove: false, headBg: badHead,
+        fen: '8/8/8/8/4pk2/1R6/2r5/4K3', last: 'h2c2', counter: 'Play-out 3 of 4 · Hold',
+        title: 'Out of time', reason: 'The position was still a draw',
+        primary: 'Retry', primaryHref: 'PlayoutStart.dc.html',
+        rows: holdRows.slice(0, 3), botClock: '3:58', myClock: '0:00', myClockBg: '#c93230', myClockFg: '#ffffff'
+      }
+    };
+    return { v: V[this.props.result ?? 'failed: move'] || V['failed: move'] };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Review: from-your-game marker</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700;800&amp;display=swap">
+<style>
+body{margin:0}
+a{color:inherit;text-decoration:none}
+</style>
+</helmet>
+<div style="width: 470px; height: 330px; box-sizing: border-box; display: flex; flex-direction: column; background: #2b2a27; border: 1px solid #45423d; border-radius: 10px; overflow: hidden; color: #ece9e4; font-family: 'Noto Sans', system-ui, sans-serif">
+  <ol aria-label="Moves" style="flex: 1 1 0; margin: 0; padding: 8px 0; list-style: none; font-size: 14px">
+    <sc-for list="{{rows}}" as="m" hint-placeholder-count="5">
+      <li style="height: 26px; display: grid; grid-template-columns: 40px minmax(0, 1fr) minmax(0, 1fr); align-items: center; padding: 0 16px">
+        <span style="color: #a8a49c; font-variant-numeric: tabular-nums">{{m.n}}.</span>
+        <span style="justify-self: start; height: 24px; display: flex; align-items: center; gap: 6px; padding: 0 6px; border-radius: 4px; background: {{m.wBg}}">
+          <dc-import name="ClassIcon" cls="{{m.wCls}}" size="18" hint-size="18px,18px"></dc-import>
+          <span style="font-weight: 600">{{m.w}}</span>
+        </span>
+        <span style="justify-self: start; height: 24px; display: flex; align-items: center; gap: 6px; padding: 0 6px; border-radius: 4px">
+          <dc-import name="ClassIcon" cls="{{m.bCls}}" size="18" hint-size="18px,18px"></dc-import>
+          <span style="font-weight: 600">{{m.b}}</span>
+        </span>
+      </li>
+      <sc-if value="{{m.marker}}" hint-placeholder-val="{{ false }}">
+        <li style="margin: 2px 16px 4px 56px">
+          <a href="Unit.dc.html" style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid #7fa650; border-radius: 6px; font-size: 12px; font-weight: 600; color: #b9d68f">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7fa650" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"></path><path d="M9 3v15M15 6v15"></path></svg>
+            <span style="flex: 1 1 0; display: flex; flex-direction: column; gap: 1px">
+              <span>Rook and pawn against rook · this move turned the draw into a loss</span>
+              <span style="color: #ece9e4; font-weight: 700">Practise in Rook endgames</span>
+            </span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b9d68f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M9 5l7 7-7 7"></path></svg>
+          </a>
+        </li>
+      </sc-if>
+    </sc-for>
+  </ol>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":470,"height":330}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const rows = [
+      { n: 43, w: 'Ra3', wCls: 'good', b: 'Kf4', bCls: 'best', marker: false },
+      { n: 44, w: 'Rb3', wCls: 'best', b: 'Rh1+', bCls: 'best', marker: false },
+      { n: 45, w: 'Kd2', wCls: 'best', b: 'Rh2+', bCls: 'best', marker: false },
+      { n: 46, w: 'Rb8', wCls: 'blunder', b: 'Kf3', bCls: 'best', marker: true },
+      { n: 47, w: 'Rf8+', wCls: 'good', b: 'Ke3', bCls: 'best', marker: false },
+      { n: 48, w: 'Re8', wCls: 'inaccuracy', b: 'Rh1+', bCls: 'best', marker: false }
+    ].map((r) => ({ ...r, wBg: r.n === 46 ? '#4a4741' : 'transparent' }));
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

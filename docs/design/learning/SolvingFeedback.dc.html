@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Solving: feedback</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700;800&amp;display=swap">
+<style>
+body{margin:0}
+button,input{font-family:inherit}
+a{color:inherit;text-decoration:none}
+</style>
+</helmet>
+<div style="width: 1280px; height: 800px; box-sizing: border-box; padding: 40px; display: flex; gap: 40px; background: #1f1e1c; color: #ece9e4; font-family: 'Noto Sans', system-ui, sans-serif">
+  <dc-import name="Board" fen="{{v.fen}}" size="720" last="{{v.last}}" arrow="{{v.arrow}}" marks="" hint-size="720px,720px"></dc-import>
+
+  <div style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 18px">
+    <div style="display: flex; align-items: center; gap: 12px">
+      <a href="Unit.dc.html" aria-label="Back to the unit" style="width: 40px; height: 40px; flex: none; display: flex; align-items: center; justify-content: center; background: #2b2a27; border: 1px solid #45423d; border-radius: 8px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ece9e4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+      </a>
+      <div style="display: flex; flex-direction: column">
+        <span style="font-size: 13px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: #a8a49c">Rook endgames · Solving</span>
+        <span style="font-size: 20px; font-weight: 800">Position 5 of 12</span>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 14px; padding: 16px 18px; background: {{v.bannerBg}}; color: {{v.bannerFg}}; border-radius: 10px">
+      <sc-if value="{{v.ok}}" hint-placeholder-val="{{ false }}">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"></path></svg>
+      </sc-if>
+      <sc-if value="{{v.bad}}" hint-placeholder-val="{{ true }}">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+      </sc-if>
+      <div style="display: flex; flex-direction: column; gap: 2px">
+        <span style="font-size: 22px; font-weight: 800">{{v.title}}</span>
+        <span style="font-size: 14px; font-weight: 600; opacity: 0.85">{{v.sub}}</span>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 10px; padding: 18px; background: #2b2a27; border: 1px solid #45423d; border-radius: 10px">
+      <span style="font-size: 13px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: #a8a49c">Your line</span>
+      <sc-for list="{{v.rows}}" as="r" hint-placeholder-count="3">
+        <div style="display: grid; grid-template-columns: 36px 1fr 1fr; gap: 8px; font-size: 18px; font-weight: 600">
+          <span style="color: #a8a49c">{{r.n}}</span>
+          <span style="display: flex; align-items: center; gap: 8px; color: {{r.wColor}}">{{r.w}} <span style="font-size: 16px; font-weight: 800; color: {{r.wMarkColor}}">{{r.wMark}}</span></span>
+          <span style="color: {{r.bColor}}">{{r.b}}</span>
+        </div>
+      </sc-for>
+    </div>
+
+    <sc-if value="{{v.bad}}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; flex-direction: column; gap: 8px; padding: 18px; background: #2b2a27; border: 1px solid #45423d; border-radius: 10px">
+        <span style="font-size: 13px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: #a8a49c">Correct</span>
+        <span style="font-size: 22px; font-weight: 800; color: #98bc49">2. Rd4</span>
+        <span style="font-size: 16px; font-weight: 600">2. Rd4 Ra1 3. Kc7 Rc1+ 4. Kb6</span>
+      </div>
+    </sc-if>
+
+    <span style="margin-top: auto; font-size: 14px; color: #a8a49c">{{v.note}}</span>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+      <a href="SolvingEntry.dc.html" style="height: 56px; display: flex; align-items: center; justify-content: center; background: {{v.retryBg}}; color: {{v.retryFg}}; border: {{v.retryBorder}}; border-radius: 10px; font-size: 17px; font-weight: 800">Retry</a>
+      <a href="SolvingEntry.dc.html" style="height: 56px; display: flex; align-items: center; justify-content: center; gap: 8px; background: {{v.nextBg}}; color: {{v.nextFg}}; border: {{v.nextBorder}}; border-radius: 10px; font-size: 17px; font-weight: 800">
+        Next
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"></path></svg>
+      </a>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"result":{"editor":"enum","options":["miss","solved"],"default":"miss"},"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const G = '#7fa650', R = '#e0605e', T = '#ece9e4', M = '#a8a49c', DIM = '#8a857c';
+    const primary = { bg: G, fg: '#141412', border: '0' };
+    const second = { bg: '#2b2a27', fg: T, border: '1px solid #45423d' };
+    const miss = {
+      ok: false, bad: true,
+      fen: '1K6/1P2k3/8/8/8/8/r7/3R4', last: 'd8e7', arrow: 'd1d4',
+      bannerBg: '#3a2423', bannerFg: '#f0a3a1',
+      title: 'Not solved', sub: '2. Kc7 still wins, but too slowly',
+      rows: [
+        { n: '1.', w: 'Rd1+', wMark: '✓', wMarkColor: G, wColor: T, b: 'Ke7', bColor: T },
+        { n: '2.', w: 'Kc7', wMark: '✗', wMarkColor: R, wColor: T, b: 'Rc2+', bColor: DIM },
+        { n: '3.', w: 'Kb6', wMark: '', wMarkColor: M, wColor: DIM, b: '', bColor: DIM }
+      ],
+      note: 'A retry counts as solved, not as first try.',
+      retryBg: primary.bg, retryFg: primary.fg, retryBorder: primary.border,
+      nextBg: second.bg, nextFg: second.fg, nextBorder: second.border
+    };
+    const solved = {
+      ok: true, bad: false,
+      fen: '8/1PK1k3/8/8/3R4/8/8/r7', last: 'b8c7', arrow: '',
+      bannerBg: '#2c3a21', bannerFg: '#b9d68f',
+      title: 'Solved, first try', sub: '5 of 12 solved · 4 on the first try',
+      rows: [
+        { n: '1.', w: 'Rd1+', wMark: '✓', wMarkColor: G, wColor: T, b: 'Ke7', bColor: T },
+        { n: '2.', w: 'Rd4', wMark: '✓', wMarkColor: G, wColor: T, b: 'Ra1', bColor: T },
+        { n: '3.', w: 'Kc7', wMark: '✓', wMarkColor: G, wColor: T, b: '', bColor: T }
+      ],
+      note: '',
+      retryBg: second.bg, retryFg: second.fg, retryBorder: second.border,
+      nextBg: primary.bg, nextFg: primary.fg, nextBorder: primary.border
+    };
+    return { v: this.props.result === 'solved' ? solved : miss };
+  }
+}
+</script>
+</body>
+</html>
