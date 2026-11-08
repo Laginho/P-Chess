@@ -198,3 +198,83 @@ func test_opening_theory_persists_without_losing_other_progress():
 	assert_true(not course.open_theory(unit))
 	assert_eq(FileAccess.get_file_as_string(path), "{broken")
 	DirAccess.remove_absolute(path)
+
+
+func test_real_rook_endgame_content_has_complete_disjoint_pools():
+	var path := "user://course_real_%d.json" % Time.get_ticks_usec()
+	var course = load("res://core/course.gd").new(path)
+	assert_true(course.save_rating(1600, "chess.com"))
+	var units: Array = course.units()
+	assert_eq(units.size(), 1)
+	if units.size() != 1:
+		DirAccess.remove_absolute(path)
+		return
+	var unit: Dictionary = units[0]
+	assert_eq(unit.get("id"), "rook-endgames")
+	var pools := {"practice": [], "test": []}
+	var seen := {}
+	var board_script = load("res://core/board.gd")
+	for position in unit.get("positions", []):
+		var pool: String = position.get("pool", "")
+		assert_true(pools.has(pool), "position has a recognized pool")
+		if not pools.has(pool):
+			continue
+		pools[pool].append(position)
+		var fen: String = position.get("fen", "")
+		var board = board_script.from_fen(fen)
+		assert_true(board != null, "valid FEN: " + fen)
+		if board == null:
+			continue
+		var key: String = board.position_key()
+		assert_true(not seen.has(key), "positions do not repeat: " + key)
+		seen[key] = true
+		assert_eq(position.get("side"), board.side_to_move)
+		assert_true(position.get("goal") in ["win", "hold"])
+		var length = position.get("line_length", 0)
+		assert_true(length is float or length is int, "line length is a number")
+		assert_true(length >= 2 and length <= 4 and length == int(length), "line length is 2–4 moves")
+		var pieces := "".join(board.squares)
+		assert_eq(pieces.count("K"), 1)
+		assert_eq(pieces.count("k"), 1)
+		assert_eq(pieces.count("R"), 1)
+		assert_eq(pieces.count("r"), 1)
+		assert_eq(pieces.count("P") + pieces.count("p"), 1)
+		assert_eq(pieces.length(), 5)
+		assert_eq(board.castling, "-", "these course positions have no castling rights")
+		assert_eq(board.en_passant, "-", "no en passant in a one-pawn ending")
+		for square in range(8):
+			assert_true(board.squares[square] not in ["P", "p"] and board.squares[56 + square] not in ["P", "p"], "pawn is not on a back rank")
+		var previous_side = board.copy()
+		previous_side.side_to_move = "b" if board.side_to_move == "w" else "w"
+		assert_true(not previous_side.in_check(), "side that just moved did not leave its king in check")
+		assert_true(not board.legal_moves().is_empty(), "position is playable")
+	assert_eq(pools.practice.size(), 12)
+	assert_true(pools.test.size() >= 15 and pools.test.size() <= 20)
+	for pool in pools.values():
+		var holds := 0
+		var sides := {}
+		for position in pool:
+			holds += 1 if position.get("goal") == "hold" else 0
+			sides[position.get("side", "")] = true
+		assert_true(holds * 3 >= pool.size(), "at least one third holds")
+		assert_true(holds < pool.size(), "both goals represented")
+		assert_true(sides.has("w") and sides.has("b"), "both sides represented")
+	for entry in [["playouts", 4, 2, 2], ["test_playouts", 2, 1, 1]]:
+		var playouts: Array = unit.get(entry[0], [])
+		assert_eq(playouts.size(), entry[1])
+		var goals := {"convert": 0, "hold": 0}
+		for playout in playouts:
+			var board = board_script.from_fen(playout.get("fen", ""))
+			assert_true(board != null, "play-out has valid FEN")
+			if board == null:
+				continue
+			assert_true(not seen.has(board.position_key()), "play-out is separate from solving")
+			seen[board.position_key()] = true
+			assert_eq(playout.get("side"), board.side_to_move)
+			var goal: String = playout.get("goal", "")
+			assert_true(goals.has(goal))
+			if goals.has(goal):
+				goals[goal] += 1
+		assert_eq(goals.convert, entry[2])
+		assert_eq(goals.hold, entry[3])
+	DirAccess.remove_absolute(path)
