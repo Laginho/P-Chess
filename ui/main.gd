@@ -62,6 +62,11 @@ var _test_unit := {}
 var _test_positions := []
 var _test_results := []
 var _test_playouts := []
+var _review_active := false
+var _review_unit := {}
+var _review_positions := []
+var _review_results := []
+var _review_day := 0
 var _playout_unit := {}
 var _playout_index := 0
 var _playout_active := false
@@ -210,6 +215,7 @@ func _ready() -> void:
 			rating_dialog.present(course)
 		else:
 			_show_course_map())
+	$Home.continue_requested.connect(_continue_course)
 	rating_dialog.saved.connect(_show_course_map)
 	$Home.started.connect(_start)
 	$Home.custom_requested.connect(_show_setup)
@@ -546,6 +552,7 @@ func _show_setup() -> void:
 
 func _show_home() -> void:
 	_test_active = false
+	_review_active = false
 	pass_test.hide()
 	_cancel_playout()
 	playout.hide()
@@ -556,11 +563,34 @@ func _show_home() -> void:
 	_set_focus(false)
 	setup.hide()
 	$Home.sync_level()
+	$Home.refresh_continue()
 	$Home.show()
+
+
+func _continue_course(target: Dictionary) -> void:
+	var kind: String = target.get("kind", "rating")
+	if kind == "rating":
+		rating_dialog.present(course)
+	elif kind == "done":
+		_show_setup()
+	elif kind == "review":
+		if target.get("positions", []).size() != 3:
+			return
+		$Home.hide()
+		_review_active = true
+		_review_unit = target.unit
+		_review_positions = target.positions
+		_review_day = target.day
+		_review_results = []
+		solving.present_review(course, _review_unit, _review_positions, 0, preferences)
+	else:
+		$Home.hide()
+		_show_course_part(target.unit, "solving" if kind == "from_game" else kind)
 
 
 func _show_course_map() -> void:
 	_test_active = false
+	_review_active = false
 	pass_test.hide()
 	_cancel_playout()
 	playout.hide()
@@ -573,6 +603,7 @@ func _show_course_map() -> void:
 
 func _show_unit(unit: Dictionary) -> void:
 	_test_active = false
+	_review_active = false
 	pass_test.hide()
 	_cancel_playout()
 	playout.hide()
@@ -616,6 +647,19 @@ func _begin_test() -> void:
 
 
 func _test_position_graded(position: Dictionary, grade: Dictionary) -> void:
+	if _review_active:
+		if not grade.solved and not course.record_review_check(_review_unit, _review_day, false, false):
+			solving._show_error("Could not save your review check. Try Commit again.")
+			return
+		_review_results.append(bool(grade.solved))
+		if _review_results.size() < _review_positions.size():
+			solving.present_review(course, _review_unit, _review_positions, _review_results.size(), preferences)
+		elif not course.record_review_check(_review_unit, _review_day, not _review_results.has(false)):
+			_review_results.pop_back()
+			solving._show_error("Could not save your review check. Try Commit again.")
+		else:
+			_show_unit(_review_unit)
+		return
 	if not _test_active:
 		return
 	var result := {"position": position, "solved": grade.solved}

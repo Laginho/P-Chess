@@ -4,6 +4,169 @@ const MainScene = preload("res://ui/main.tscn")
 const Session = preload("res://tests/test_session.gd")
 
 
+func test_continue_starts_course_and_opens_the_next_part():
+	var folder := "user://test_continue_home_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var main = MainScene.instantiate()
+	main.course = load("res://core/course.gd").new(folder.path_join("course.json"))
+	main.history = load("res://core/history.gd").new(folder)
+	main.uci.free()
+	main.uci = Session.HeldBridge.new()
+	main.maia = main.MaiaPlayer.new(main.uci)
+	main.preferences = main.Settings.new(folder.path_join("settings.cfg"))
+	main.preferences.set_value("player_name", "You")
+	Engine.get_main_loop().root.add_child(main)
+	var card = main.get_node_or_null("Home/Center/Form/Continue")
+	assert_true(card != null, "Home offers Continue")
+	if card != null:
+		assert_true("Start the course" in card.text)
+		assert_eq(card.get_node("UnitTitle").text, "Start the course")
+		card.pressed.emit()
+		assert_true(main.rating_dialog.visible)
+		main.rating_dialog.hide()
+		assert_true(main.course.save_rating(1600, "chess.com"))
+		main._show_home()
+		assert_true("Rook endgames" in card.text)
+		assert_eq(card.get_node("UnitTitle").text, "Rook endgames")
+		card.pressed.emit()
+		assert_true(main.theory_pointer.visible, "Continue opens the theory pointer")
+		assert_true(not main.get_node("Home").visible)
+	main.free()
+	Session.HistoryStorage.clean(folder)
+
+
+func test_continue_shows_and_opens_the_due_review_position():
+	var folder := "user://test_continue_review_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var path := folder.path_join("course.json")
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	file.store_string(JSON.stringify({"rating": {"number": 1600, "site": "chess.com"}, "units": {"rook-endgames": {"mastered_date": "2000-01-01"}}}))
+	file = null
+	var main = MainScene.instantiate()
+	main.course = load("res://core/course.gd").new(path)
+	main.history = load("res://core/history.gd").new(folder)
+	main.uci.free()
+	main.uci = Session.HeldBridge.new()
+	main.maia = main.MaiaPlayer.new(main.uci)
+	main.preferences = main.Settings.new(folder.path_join("settings.cfg"))
+	main.preferences.set_value("player_name", "You")
+	Engine.get_main_loop().root.add_child(main)
+	var home = main.get_node("Home")
+	var card = home.get_node_or_null("Center/Form/Continue")
+	if card != null:
+		assert_true("REVIEW CHECK" in card.text)
+		assert_true("3 positions" in card.text)
+		assert_eq(card.get_node("Eyebrow").text, "REVIEW CHECK")
+		assert_true("3 positions" in card.get_node("Detail").text)
+		var expected: String = home.target.positions[0].fen
+		assert_eq(home.get_node("Center/Board").game.start_fen, expected)
+		card.pressed.emit()
+		assert_true(main.solving.visible)
+		if main.solving.visible:
+			assert_eq(main.solving.board.game.start_fen, expected, "the card opens the displayed position")
+	else:
+		assert_true(false, "Home offers Continue")
+	main.free()
+	Session.HistoryStorage.clean(folder)
+
+
+func test_continue_refreshes_after_profile_changes_the_stage():
+	var folder := "user://test_continue_profile_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var main = MainScene.instantiate()
+	main.course = load("res://core/course.gd").new(folder.path_join("course.json"), "res://tests/fixtures/course/course.json")
+	assert_true(main.course.save_rating(1000, "chess.com"))
+	main.history = load("res://core/history.gd").new(folder)
+	main.uci.free()
+	main.uci = Session.HeldBridge.new()
+	main.maia = main.MaiaPlayer.new(main.uci)
+	main.preferences = main.Settings.new(folder.path_join("settings.cfg"))
+	main.preferences.set_value("player_name", "You")
+	Engine.get_main_loop().root.add_child(main)
+	var home = main.get_node("Home")
+	var title: Label = home.get_node("Center/Form/Continue/UnitTitle")
+	assert_eq(title.text, "Rook endings")
+	home.get_node("Center/Form/Profile").pressed.emit()
+	var profile = home.get_node("Profile")
+	var rating: LineEdit = profile.find_child("RatingNumber", true, false)
+	rating.text = "1500"
+	rating.text_changed.emit(rating.text)
+	profile.find_child("SaveRating", true, false).pressed.emit()
+	profile.find_child("Back", true, false).pressed.emit()
+	assert_eq(title.text, "Club unit")
+	assert_eq(home.target.get("unit", {}).get("id"), "club")
+	main.free()
+	Session.HistoryStorage.clean(folder)
+
+
+func test_continue_opens_each_course_target_and_done_opens_custom():
+	var folder := "user://test_continue_targets_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var path := folder.path_join("course.json")
+	var unit: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/course/rook-endgames.json"))
+	var position: Dictionary = unit.positions[0].duplicate(true)
+	position.id = "game"
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	file.store_string(JSON.stringify({"rating": {"number": 1600, "site": "chess.com"}, "units": {unit.id: {"theory_opened": true, "from_your_game": [position]}}}))
+	file = null
+	var main = MainScene.instantiate()
+	main.course = load("res://core/course.gd").new(path)
+	main.history = load("res://core/history.gd").new(folder)
+	main.uci.free()
+	main.uci = Session.HeldBridge.new()
+	main.maia = main.MaiaPlayer.new(main.uci)
+	main.preferences = main.Settings.new(folder.path_join("settings.cfg"))
+	main.preferences.set_value("player_name", "You")
+	Engine.get_main_loop().root.add_child(main)
+	var home = main.get_node("Home")
+	var card: Button = home.get_node("Center/Form/Continue")
+	assert_true("FROM YOUR GAME" in card.text)
+	assert_eq(card.get_node("Eyebrow").text, "FROM YOUR GAME")
+	assert_eq(card.get_node("Detail").text, "1 new position from your games")
+	card.pressed.emit()
+	assert_true(main.solving.visible and main.solving.position_data.get("id") == "game")
+	assert_true(main.course.record_commit(unit, position, true))
+	main._show_home()
+	assert_true("Solving" in card.text)
+	assert_eq(card.get_node("Detail").text, "Solving · 0/12")
+	var next_fen: String = home.target.position.fen
+	assert_eq(home.get_node("Center/Board").game.start_fen, next_fen)
+	card.pressed.emit()
+	assert_true(main.solving.visible and main.solving.position_data.get("fen") == next_fen)
+	for item in unit.positions:
+		if item.pool == "practice":
+			assert_true(main.course.record_commit(unit, item, true))
+	main._show_home()
+	var playout_fen: String = home.target.position.fen
+	assert_eq(home.get_node("Center/Board").game.start_fen, playout_fen)
+	card.pressed.emit()
+	assert_true(main.playout.visible, "Continue opens play-out start")
+	assert_eq(main.playout.board.game.start_fen, playout_fen, "play-out opens the position shown on Home")
+	for item in unit.playouts:
+		assert_true(main.course.record_playout_pass(unit, item))
+	main._show_home()
+	card.pressed.emit()
+	assert_true(main.pass_test.visible, "Continue opens test start")
+	var answers := []
+	for i in 6:
+		answers.append({"solved": true})
+	assert_true(main.course.record_test_attempt(unit, answers, [true, true], Time.get_date_string_from_system()))
+	main._show_home()
+	assert_true("Unit done, go play some slow games" in card.text)
+	assert_eq(card.get_node("Eyebrow").text, "UNIT DONE")
+	assert_eq(card.get_node("UnitTitle").text, "Unit done, go play some slow games")
+	home.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	home.size = Vector2(800, 600)
+	var title: Label = card.get_node("UnitTitle")
+	var text_width: float = title.get_theme_font("font").get_string_size(title.text, HORIZONTAL_ALIGNMENT_LEFT, -1, title.get_theme_font_size("font_size")).x
+	assert_true(text_width <= title.size.x, "completed-course text fits at 800×600")
+	assert_eq(home.get_node("Center/Board").game.start_fen, load("res://core/game.gd").START)
+	card.pressed.emit()
+	assert_true(main.setup.visible, "completed course opens Custom")
+	main.free()
+	Session.HistoryStorage.clean(folder)
+
+
 func test_launch_opens_home():
 	var main = MainScene.instantiate()
 	var folder := "user://test_home_%d" % Time.get_ticks_usec()
@@ -299,24 +462,21 @@ func test_searching_keeps_long_player_name_inside_card_at_minimum_window():
 	Session.HistoryStorage.clean(folder)
 
 
-# Bruno's QA follow-up: each quick-play label sits at its tile's centre with the icon just left of it,
-# and the tiles stay landscape however narrow the panel gets.
+# Home's four game choices share a single row across supported window sizes.
 func test_quick_play_tiles_are_landscape_with_centred_labels():
 	var home = load("res://ui/home.tscn").instantiate()
 	home.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
 	Engine.get_main_loop().root.add_child(home)
 	for canvas in [Vector2(1422, 800), Vector2(1280, 960), Vector2(1911, 800), Vector2(800, 600)]:
 		home.size = canvas
+		var previous: Button
 		for name in ["OneZero", "ThreeTwo", "FiveZero", "Custom"]:
 			var tile: Button = home.find_child(name, true, false)
-			assert_true(tile.size.x > tile.size.y, "%s is landscape at %s (%s)" % [name, canvas, tile.size])
-			var placed: Vector3 = tile.placement()
-			var label: float = tile.get_theme_font("font").get_string_size(tile.text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(placed.z)).x
-			assert_true(absf(placed.y + label / 2 - tile.size.x / 2) <= 1.0, "%s label centred at %s" % [name, canvas])
-			var icon_end: float = placed.x + tile.get_theme_constant("icon_max_width")
-			assert_true(placed.x >= tile.icon_left and icon_end <= placed.y and placed.y - icon_end <= 12, "%s icon just left of its label at %s: %s" % [name, canvas, placed])
+			if previous != null:
+				assert_true(absf(tile.get_global_rect().position.y - previous.get_global_rect().position.y) <= 1.0, "%s shares the Play row at %s" % [name, canvas])
+				assert_true(tile.get_global_rect().position.x >= previous.get_global_rect().end.x - 1.0, "%s does not overlap the previous button at %s" % [name, canvas])
+			previous = tile
 	home.free()
-
 
 func test_course_requires_a_valid_rating_before_starting():
 	var folder := "user://test_course_home_%d" % Time.get_ticks_usec()

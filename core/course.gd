@@ -164,9 +164,13 @@ func unit_progress(unit: Dictionary) -> Dictionary:
 	if mastered and checks is Array:
 		for i in range(checks.size() - 1, -1, -1):
 			var check = checks[i]
-			if check is Dictionary and check.get("done", true) != false and (check.has("passed") or check.has("missed")):
-				needs_review = check.get("missed", false) == true or check.get("passed", true) == false
-				break
+			if check is Dictionary:
+				if check.get("missed", false) == true:
+					needs_review = true
+					break
+				if check.get("done", true) != false and (check.has("passed") or check.has("missed")):
+					needs_review = check.get("passed", true) == false
+					break
 	var theory: bool = saved.get("theory_opened", false) == true
 	var status := "needs review" if needs_review else ("mastered" if mastered else ("in progress" if theory or committed > 0 or (playouts is Dictionary and not playouts.is_empty()) or not attempts.is_empty() else "new"))
 	var rate := "–" if committed == 0 else "%d%% (%d of %d)" % [roundi(100.0 * first / committed), first, committed]
@@ -196,6 +200,76 @@ func test_attempts(unit: Dictionary) -> Array:
 	var saved = all_units.get(unit.get("id", ""), {}) if all_units is Dictionary else {}
 	var attempts = saved.get("test_attempts", []) if saved is Dictionary else []
 	return attempts.duplicate(true) if attempts is Array else []
+
+
+# Convert an instant to a wall-clock timestamp so mastery dates and the current
+# day use the same local calendar. The caller supplies the current UTC offset.
+static func local_calendar_time(now: int, offset_minutes: int) -> int:
+	return now + offset_minutes * 60
+
+
+func continue_target(now: int) -> Dictionary:
+	for unit in units():
+		var all_units = _progress.get("units", {})
+		var saved = all_units.get(unit.id, {}) if all_units is Dictionary else {}
+		if not saved is Dictionary:
+			continue
+		var date := str(saved.get("mastered_date", ""))
+		if date.is_empty():
+			continue
+		var mastered_at := int(Time.get_unix_time_from_datetime_string(date + "T00:00:00"))
+		var checks = saved.get("review_checks", [])
+		if not checks is Array:
+			checks = []
+		for day in [7, 30]:
+			var completed := false
+			for check in checks:
+				if check is Dictionary and int(check.get("day", 0)) == day and check.get("done", false):
+					completed = true
+			if not completed and now >= mastered_at + day * 86400:
+				var positions := []
+				for position in unit.get("positions", []):
+					if position is Dictionary and position.get("pool") in ["practice", "test"]:
+						positions.append(position)
+				positions.shuffle()
+				return {"kind": "review", "unit": unit, "day": day, "elapsed_days": int((now - mastered_at) / 86400), "positions": positions.slice(0, 3)}
+	for unit in units():
+		for position in practice_positions(unit):
+			if position.get("from_your_game", false) and not practice_result(unit, position).get("solved", false):
+				return {"kind": "from_game", "unit": unit, "position": position}
+	for unit in units():
+		var progress := unit_progress(unit)
+		if not progress.theory_done:
+			return {"kind": "theory", "unit": unit}
+		if not progress.solving_done:
+			return {"kind": "solving", "unit": unit, "position": next_practice_position(unit)}
+		for position in unit.get("playouts", []):
+			if not playout_passed(unit, position):
+				return {"kind": "playouts", "unit": unit, "position": position}
+		if progress.test != "passed":
+			return {"kind": "test", "unit": unit}
+	return {"kind": "done"}
+
+
+func record_review_check(unit: Dictionary, day: int, passed: bool, done := true) -> bool:
+	var id: String = unit.get("id", "")
+	if id.is_empty() or day not in [7, 30]:
+		return false
+	return _save_progress(func(next: Dictionary) -> bool:
+		var all_units = next.get("units", {})
+		if not all_units is Dictionary:
+			return false
+		var saved = all_units.get(id, {})
+		if not saved is Dictionary or str(saved.get("mastered_date", "")).is_empty():
+			return false
+		var checks = saved.get("review_checks", [])
+		if not checks is Array:
+			return false
+		checks.append({"day": day, "done": done, "passed": passed, "missed": not passed})
+		saved.review_checks = checks
+		all_units[id] = saved
+		next.units = all_units
+		return true)
 
 
 func draw_test_positions(unit: Dictionary) -> Array:

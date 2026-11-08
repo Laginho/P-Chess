@@ -532,11 +532,12 @@ func test_board_stays_centred_on_home_searching_and_game():
 		for i in 4:
 			await tree.process_frame
 		var game: Rect2 = main.board_view.get_global_rect()
-		for item in [["Home", home], ["Searching", searching], ["Game", game]]:
+		for item in [["Searching", searching], ["Game", game]]:
 			assert_true(absf(item[1].get_center().x - canvas.x / 2) <= 1.0, "%s board centred at %s (centre %.1f, canvas %.1f)" % [item[0], window, item[1].get_center().x, canvas.x])
-		assert_true(searching.position.distance_to(home.position) <= 1.0, "Searching board stays where Home drew it at %s" % window)
+		var home_margin := 40.0 if canvas.x >= 1000 else 20.0
+		assert_true(absf(home.position.x - home_margin) <= 1.0, "Home board follows the new left-aligned design at %s" % window)
 		main._show_home()
-	# Below the panel's floor all three screens slide the board left by the same amount.
+	# Searching and Game still align when the panel reaches its minimum width.
 	tree.root.size = Vector2i(800, 600)
 	for i in 4:
 		await tree.process_frame
@@ -549,7 +550,9 @@ func test_board_stays_centred_on_home_searching_and_game():
 	for i in 4:
 		await tree.process_frame
 	var game_low: Rect2 = main.board_view.get_global_rect()
-	assert_true(searching_low.position.distance_to(home_low.position) <= 1.0 and absf(game_low.position.x - home_low.position.x) <= 1.0, "boards agree below the floor: %s %s %s" % [home_low, searching_low, game_low])
+	assert_true(absf(game_low.position.x - searching_low.position.x) <= 1.0, "Searching and Game agree below the floor: %s %s" % [searching_low, game_low])
+	var low_margin := 40.0 if main.get_viewport_rect().size.x >= 1000 else 20.0
+	assert_true(absf(home_low.position.x - low_margin) <= 1.0, "Home remains left aligned at the minimum window")
 	main.free()
 	tree.root.size = before
 

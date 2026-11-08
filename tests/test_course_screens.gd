@@ -5,6 +5,50 @@ const Session = preload("res://tests/test_session.gd")
 const Tunables = preload("res://core/tunables.gd")
 
 
+func test_review_check_grades_three_positions_once_and_keeps_mastery():
+	var folder := "user://review_check_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var path := folder.path_join("course.json")
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	file.store_string(JSON.stringify({"rating": {"number": 1600, "site": "chess.com"}, "units": {"rook": {"mastered_date": "2026-01-01"}}}))
+	file = null
+	var main = MainScene.instantiate()
+	main.course = load("res://core/course.gd").new(path)
+	main.history = load("res://core/history.gd").new(folder)
+	main.uci.free()
+	main.uci = Session.HeldBridge.new()
+	main.maia = main.MaiaPlayer.new(main.uci)
+	main.preferences = main.Settings.new(folder.path_join("settings.cfg"))
+	main.preferences.set_value("player_name", "You")
+	var sample = load("res://tests/test_grader.gd")
+	var probe = sample.FakeProbe.new()
+	probe.answers[sample.FEN] = sample.answer("win", "c6c5", {"c6c5": {"result": "win", "dtz": 1}, "c6c4": {"result": "draw", "dtz": 0}})
+	main.tablebase.free()
+	main.tablebase = LifecycleProbe.new(probe, [])
+	Engine.get_main_loop().root.add_child(main)
+	var positions := []
+	for i in 3:
+		positions.append({"id": str(i), "pool": "practice", "fen": sample.FEN, "side": "b", "line_length": 1, "goal": "win"})
+	var unit := {"id": "rook", "title": "Rook endings", "positions": positions, "playouts": []}
+	main._continue_course({"kind": "review", "unit": unit, "day": 7, "positions": positions})
+	assert_true(main.solving.visible, "review opens on the solving board")
+	if main.solving.visible:
+		main.solving.board._commit("c6c4", false)
+		main.solving.find_child("Commit", true, false).pressed.emit()
+		assert_eq(main.course.unit_progress(unit).status, "needs review", "a miss is saved immediately")
+		main.solving.find_child("Back", true, false).pressed.emit()
+		assert_eq(main.course.unit_progress(unit).status, "needs review", "leaving does not discard a miss")
+		main._continue_course({"kind": "review", "unit": unit, "day": 7, "positions": positions})
+		for i in 3:
+			main.solving.board._commit("c6c4" if i == 0 else "c6c5", false)
+			main.solving.find_child("Commit", true, false).pressed.emit()
+		assert_eq(main.course.unit_progress(unit).status, "needs review")
+		assert_eq(JSON.parse_string(FileAccess.get_file_as_string(path)).units.rook.mastered_date, "2026-01-01")
+		assert_true(main.unit_page.visible, "the completed check returns to the unit")
+	main.free()
+	Session.HistoryStorage.clean(folder)
+
+
 func test_pass_test_runs_positions_and_playouts_and_lists_misses():
 	var folder := "user://pass_screen_%d" % Time.get_ticks_usec()
 	DirAccess.make_dir_recursive_absolute(folder)

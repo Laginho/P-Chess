@@ -1,6 +1,113 @@
 extends "res://tests/run.gd".Test
 
 
+func test_continue_advances_to_the_next_unit_after_mastery():
+	var folder := "user://course_next_unit_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var index := folder.path_join("course.json")
+	var progress := folder.path_join("progress.json")
+	var file := FileAccess.open(index, FileAccess.WRITE)
+	file.store_string(JSON.stringify({"stages": [{"min_rating": 0, "max_rating": 3500, "units": ["first.json", "second.json"]}]}))
+	file = FileAccess.open(folder.path_join("first.json"), FileAccess.WRITE)
+	file.store_string(JSON.stringify({"id": "first", "positions": [{"id": "one", "pool": "practice"}], "playouts": [{"id": "a"}]}))
+	file = FileAccess.open(folder.path_join("second.json"), FileAccess.WRITE)
+	file.store_string(JSON.stringify({"id": "second", "positions": []}))
+	file = FileAccess.open(progress, FileAccess.WRITE)
+	file.store_string(JSON.stringify({"rating": {"number": 1000, "site": "chess.com"}, "units": {"first": {"mastered_date": "2026-01-01"}}}))
+	file = null
+	var course = load("res://core/course.gd").new(progress, index)
+	var now := int(Time.get_unix_time_from_datetime_string("2026-01-02T00:00:00"))
+	var target: Dictionary = course.continue_target(now)
+	assert_eq(target.get("kind"), "theory", "mastery does not skip unfinished parts")
+	assert_eq(target.get("unit", {}).get("id"), "first")
+	var first: Dictionary = course.units()[0]
+	assert_true(course.open_theory(first))
+	assert_eq(course.continue_target(now).get("kind"), "solving")
+	assert_true(course.record_commit(first, first.positions[0], true))
+	assert_eq(course.continue_target(now).get("kind"), "playouts")
+	assert_true(course.record_playout_pass(first, first.playouts[0]))
+	target = course.continue_target(now)
+	assert_eq(target.get("kind"), "theory")
+	assert_eq(target.get("unit", {}).get("id"), "second")
+	for name in ["course.json", "first.json", "second.json", "progress.json"]:
+		DirAccess.remove_absolute(folder.path_join(name))
+	DirAccess.remove_absolute(folder)
+
+
+func test_continue_prefers_game_positions_then_unfinished_parts():
+	var path := "user://course_order_%d.json" % Time.get_ticks_usec()
+	var script = load("res://core/course.gd")
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	file.store_string(JSON.stringify({"rating": {"number": 1000, "site": "chess.com"}, "units": {"rook": {"from_your_game": [{"id": "game"}]}}}))
+	file = null
+	var course = script.new(path, "res://tests/fixtures/course/course.json")
+	var now: int = Time.get_unix_time_from_datetime_string("2026-01-01T00:00:00")
+	var target: Dictionary = course.continue_target(now)
+	assert_eq(target.get("kind"), "from_game")
+	if target.get("kind") != "from_game":
+		DirAccess.remove_absolute(path)
+		return
+	var unit: Dictionary = target.unit
+	assert_eq(target.position.id, "game")
+	assert_true(course.record_commit(unit, target.position, true))
+	assert_eq(course.continue_target(now).get("kind"), "theory")
+	assert_true(course.open_theory(unit))
+	assert_eq(course.continue_target(now).get("kind"), "solving")
+	for position in unit.positions:
+		if position.pool == "practice":
+			assert_true(course.record_commit(unit, position, true))
+	assert_eq(course.continue_target(now).get("kind"), "playouts")
+	for position in unit.playouts:
+		assert_true(course.record_playout_pass(unit, position))
+	assert_eq(course.continue_target(now).get("kind"), "test")
+	var answers := []
+	for i in 6:
+		answers.append({"solved": true})
+	assert_true(course.record_test_attempt(unit, answers, [true, true], "2026-01-01"))
+	assert_eq(course.continue_target(now).get("kind"), "done")
+	DirAccess.remove_absolute(path)
+
+
+func test_continue_offers_review_checks_at_seven_and_thirty_days():
+	var path := "user://course_continue_%d.json" % Time.get_ticks_usec()
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	file.store_string(JSON.stringify({"rating": {"number": 1000, "site": "chess.com"}, "units": {"rook": {"mastered_date": "2026-01-01", "from_your_game": [{"id": "game"}]}}}))
+	file = null
+	var course = load("res://core/course.gd").new(path, "res://tests/fixtures/course/course.json")
+	assert_true(course.has_method("continue_target"), "course chooses Continue")
+	if course.has_method("continue_target"):
+		var day6: int = Time.get_unix_time_from_datetime_string("2026-01-07T00:00:00")
+		var day7: int = Time.get_unix_time_from_datetime_string("2026-01-08T00:00:00")
+		var day30: int = Time.get_unix_time_from_datetime_string("2026-01-31T00:00:00")
+		assert_true(course.continue_target(day6).get("kind") != "review")
+		var review: Dictionary = course.continue_target(day7)
+		assert_eq(review.get("kind"), "review")
+		assert_eq(review.get("day"), 7)
+		assert_eq(review.get("positions", []).size(), 3)
+		var ids := []
+		for position in review.get("positions", []):
+			assert_true(position.pool in ["practice", "test"])
+			assert_true(position.id not in ids, "review positions are distinct")
+			ids.append(position.id)
+		var day15: int = Time.get_unix_time_from_datetime_string("2026-01-16T00:00:00")
+		assert_eq(course.continue_target(day15).get("elapsed_days"), 15, "late checks report the actual age of mastery")
+		assert_true(course.has_method("local_calendar_time"), "review checks use the local calendar date")
+		if course.has_method("local_calendar_time"):
+			var utc_before: int = Time.get_unix_time_from_datetime_string("2026-01-08T02:59:00")
+			var utc_after: int = Time.get_unix_time_from_datetime_string("2026-01-08T03:00:00")
+			assert_true(course.continue_target(course.local_calendar_time(utc_before, -180)).get("kind") != "review")
+			assert_eq(course.continue_target(course.local_calendar_time(utc_after, -180)).get("kind"), "review")
+		assert_true(course.record_review_check(review.unit, 7, false))
+		assert_eq(course.unit_progress(review.unit).status, "needs review")
+		assert_eq(JSON.parse_string(FileAccess.get_file_as_string(path)).units.rook.mastered_date, "2026-01-01")
+		assert_true(course.continue_target(day7).get("kind") != "review")
+		var later: Dictionary = course.continue_target(day30)
+		assert_eq(later.get("day"), 30)
+		assert_true(course.record_review_check(later.unit, 30, true))
+		assert_eq(course.unit_progress(later.unit).status, "mastered")
+	DirAccess.remove_absolute(path)
+
+
 func test_pass_test_draw_and_mastery_persist_across_attempts():
 	var path := "user://course_pass_test_%d.json" % Time.get_ticks_usec()
 	var script = load("res://core/course.gd")

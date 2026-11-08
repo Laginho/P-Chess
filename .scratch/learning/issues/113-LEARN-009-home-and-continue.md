@@ -1,5 +1,5 @@
 # LEARN-009: The new Home and Continue, with review checks
-Stage: to-implement
+Stage: to-review
 Blocked by: LEARN-008
 Review: human
 Difficulty: normal
@@ -41,6 +41,24 @@ Home as designed in `Main.dc.html` (spec §L9, §L11): a large Continue card fir
 - `tests/test_course.gd`: the Continue order across fixture progress, with the time passed in: review check at day 7 and day 30, own-game position before the next part, "done" at the end; a missed check gives needs review and keeps mastery (red: no target function).
 - `tests/test_home.gd`: the card shows the target from a fixture progress file and opens it; quick play unchanged; the replaced layout assertions rewritten for the new layout (red: no card).
 
+## Resolution
+
+- Continue selects due reviews, positions from games, unfinished parts and subsequent units; review misses survive leaving the board and passing a check clears the review status.
+- Home shows the target and its board, opens the selected activity, and retains the Play row and navigation. The 1280×800 capture was compared with `docs/design/learning/png/Main.png`; automated screen tests exercise the card's destinations.
+- `godot --headless -s tests/run.gd`: 662 passed, 0 failed at commit `130a6e0`.
+
+Gate evidence: /run/media/lage/New Volume/Scratch/learn009-gate-final.json
+
 ## Comments
 
 - 2026-11-07 Written from `.scratch/learning/spec.md` §L9, §L11. `Review: human`: the Home redesign is the first thing Bruno sees.
+- Stage 2 criteria check, independently reviewed against the committed diff:
+  - ✅ 1: `ui/home.gd:124`, `ui/main.gd:570`; `tests/test_home.gd:7` checks the visible start label and rating dialog.
+  - ✅ 2: `core/course.gd:211`; `tests/test_course.gd:4`, `tests/test_course.gd:37` and `tests/test_course.gd:71` check priority, incomplete mastered units, next unit and done.
+  - ✅ 3: `core/course.gd:207`, `core/course.gd:211`; `tests/test_course.gd:71` checks both deadlines, local-date boundary, distinct positions and eligible pools.
+  - ✅ 4: `ui/solving.gd:58`, `ui/main.gd:649`, `core/course.gd:254`; `tests/test_course_screens.gd:8` checks three commits, an interrupted miss and preserved mastery, and `tests/test_course.gd:71` checks clearing on a later pass.
+  - ✅ 5: `ui/home.gd:124`, `ui/home.gd:179`; `tests/test_home.gd:7`, `tests/test_home.gd:38` and `tests/test_home.gd:102` check visible labels and the completed message at 800×600.
+  - ✅ 6: `ui/main.gd:570`, `ui/main.gd:616`; `tests/test_home.gd:7`, `tests/test_home.gd:38` and `tests/test_home.gd:102` exercise every destination.
+  - ✅ 7: `ui/home.gd:124`; `tests/test_home.gd:38` and `tests/test_home.gd:102` compare the Home board with the opened review, solving and play-out positions, and the starting board when done.
+  - ✅ 8: `ui/home.gd:24`, `ui/home.gd:88`; Home and session tests cover quick play, controls and engine guidance. `tests/test_session.gd:516` replaces Home's old centred-board expectation with the approved left-aligned design while retaining Searching and Game placement checks; the replacement was proved red with a left-margin mutation and green after restoration.
+  - ✅ 9: `docs/spec.md:484` documents Home and review checks; verified by reading the section.
