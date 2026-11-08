@@ -28,6 +28,17 @@ func check(fen: String, move: String, goal: String, own_moves: int, callback: Ca
 		var mate: bool = board.legal_moves().is_empty() and board.in_check()
 		var promoted := move.length() == 5
 		var pieces := "".join(board.squares)
-		var passed: bool = (goal == "convert" and (promoted or mate)) or (goal == "hold" and ((not "P" in pieces and not "p" in pieces) or own_moves >= Tunables.COURSE_HOLD_MOVES))
-		callback.call({"ok": true, "state": "passed" if passed else "continue", "best": answer.get("best", "")})
+		var pawn_gone: bool = not "P" in pieces and not "p" in pieces
+		var reason := ""
+		if goal == "convert":
+			if promoted:
+				reason = "You promoted a pawn."
+			elif mate:
+				reason = "You checkmated."
+		elif goal == "hold":
+			if pawn_gone:
+				reason = "You captured the pawn and kept the draw."
+			elif own_moves >= Tunables.COURSE_HOLD_MOVES:
+				reason = "You held the draw for %d moves." % Tunables.COURSE_HOLD_MOVES
+		callback.call({"ok": true, "state": "passed" if not reason.is_empty() else "continue", "best": answer.get("best", ""), "reason": reason})
 	)

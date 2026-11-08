@@ -60,6 +60,7 @@ var _playout_index := 0
 var _playout_active := false
 var _playout_previous_fen := ""
 var _playout_moves := 0
+var _playout_flagged := ""
 var _playout_generation := 0
 var analysis_queue
 var review_analysis_path := ""
@@ -176,6 +177,8 @@ func _ready() -> void:
 	board_view.sound_requested.connect(sound_player.play)
 	maia.move_ready.connect(_on_maia_move)
 	claim_draw.pressed.connect(func() -> void:
+		if _playout_active:
+			return
 		board_view.game.claim_draw()
 		_show_result())
 	resign_button.pressed.connect(_resign)
@@ -310,6 +313,8 @@ func _input(_event: InputEvent) -> void:
 func _unhandled_key_input(event: InputEvent) -> void:
 	if not event.is_pressed() or event.is_echo():
 		return
+	if _playout_active or playout.visible:
+		return
 	if event.keycode == KEY_COMMA and event.ctrl_pressed:
 		if settings_screen.visible and not _covers_settings():
 			settings_screen.get_node("Panel").show()
@@ -338,12 +343,16 @@ func _covers_settings() -> bool:
 
 
 func _resign() -> void:
+	if _playout_active or playout.visible:
+		return
 	if not settings_screen.get_node("Panel").visible and clock != null and not board_view.game.is_over() and resign_key.press():
 		board_view.game.resign(human)
 		_show_result()
 
 
 func _offer_draw() -> void:
+	if _playout_active or playout.visible:
+		return
 	if settings_screen.get_node("Panel").visible or clock == null or board_view.game.is_over() or draw_button.disabled:
 		return
 	_draw_offered = true
@@ -473,13 +482,13 @@ func _start(new_settings: Dictionary) -> void:
 	claim_draw.disabled = true
 	clock = Clock.new(settings.control, Time.get_ticks_msec)
 	resign_button.disabled = false
-	resign_button.show()
-	draw_button.show()
+	resign_button.visible = not _playout_active
+	draw_button.visible = not _playout_active
 	$Layout/Side/Actions/NewGameButton.hide()
 	$Layout/Side/Actions/RematchButton.hide()
 	_draw_offered = false
 	_draw_moves_left = 0
-	draw_button.disabled = false
+	draw_button.disabled = _playout_active
 	draw_notice.hide()
 	draw_notice_timer.stop()
 	maia.clock = null if _playout_active else clock
@@ -585,6 +594,7 @@ func _start_playout() -> void:
 	_playout_generation += 1
 	_playout_previous_fen = position.fen
 	_playout_moves = 0
+	_playout_flagged = ""
 	playout.hide()
 	_start({"colour": position.side, "level": course.maia_level(), "control": course.clock_choice(), "opening": "Free", "start_fen": position.fen})
 
@@ -847,7 +857,7 @@ func _on_maia_move(move: String) -> void:
 func _on_move_played(san: String) -> void:
 	move_list.add(san)
 	var game = board_view.game
-	claim_draw.disabled = not game.can_claim_draw()
+	claim_draw.disabled = _playout_active or not game.can_claim_draw()
 	var mover: String = "b" if game.board.side_to_move == "w" else "w"
 	if mover == human and _draw_moves_left > 0:
 		_draw_moves_left -= 1
@@ -860,8 +870,8 @@ func _on_move_played(san: String) -> void:
 	_move_clocks.append(clock.left(mover))
 	_recording_move = false
 	if _playout_active:
-		if game.reason == "time":
-			_finish_playout("Out of time", "Your time ran out.")
+		if not _playout_flagged.is_empty():
+			_finish_playout("Out of time" if _playout_flagged == human else "Play-out failed", "Your time ran out." if _playout_flagged == human else "Maia ran out of time.")
 			return
 		if mover == human:
 			_playout_moves += 1
@@ -883,7 +893,7 @@ func _on_move_played(san: String) -> void:
 					_finish_playout("Play-out failed", "✗ %s changed the result. %s kept it." % [san, correct], move)
 				elif result.state == "passed":
 					var converted: bool = _playout_unit.playouts[_playout_index].goal == "convert"
-					_finish_playout("Converted" if converted else "Held", "You kept the result and completed the play-out.")
+					_finish_playout("Converted" if converted else "Held", result.get("reason", "You kept the result."))
 				elif game.is_over():
 					_finish_playout("Play-out failed", "The game ended before the task was complete.")
 				else:
@@ -903,6 +913,7 @@ func _on_move_played(san: String) -> void:
 func _on_flagged(side: String) -> void:
 	board_view.game.flag(side)
 	if _playout_active:
+		_playout_flagged = side
 		if not _recording_move:
 			_finish_playout("Out of time" if side == human else "Play-out failed", "Your time ran out." if side == human else "Maia ran out of time.")
 		return
@@ -913,6 +924,8 @@ func _on_flagged(side: String) -> void:
 
 # Every way a game ends lands here, after the game has its result.
 func _show_result() -> void:
+	if _playout_active or playout.visible:
+		return
 	analysis_queue.resume()
 	draw_button.disabled = true
 	draw_button.hide()
