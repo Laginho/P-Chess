@@ -116,6 +116,17 @@ func test_solving_entry_opens_next_position_limits_line_and_handles_keys():
 		if commits.size() == 1:
 			assert_eq(commits[0][1], PackedStringArray(["e2e4", "e7e5", "g1f3"]))
 			assert_eq(commits[0][2], PackedStringArray(["e4", "e5", "Nf3"]))
+		assert_eq(screen.find_child("Count", true, false).text, "2 of 2 moves")
+		assert_true(screen.find_child("Moves", true, false).text.contains("1.  e4  e5"))
+		screen.find_child("Undo", true, false).pressed.emit()
+		assert_eq(board.entry_moves.size(), 2)
+		screen.find_child("Clear", true, false).pressed.emit()
+		assert_eq(board.entry_moves.size(), 0)
+		screen.find_child("Commit", true, false).pressed.emit()
+		assert_eq(commits.size(), 1)
+		var progress = screen.find_child("Progress", true, false)
+		assert_eq(progress.get_child_count(), 2)
+		assert_true(progress.get_child(1).get_meta("current", false), "current position has an independent indicator")
 	main.free()
 	Session.HistoryStorage.clean(folder)
 

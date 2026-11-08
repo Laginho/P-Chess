@@ -33,6 +33,47 @@ func test_entry_moves_use_a_virtual_position_and_accumulate_marks():
 	board.free()
 
 
+func test_entry_promotion_picker_and_auto_queen_keep_displayed_position():
+	for auto in ["off", "on"]:
+		var board = preload("res://ui/board_view.tscn").instantiate()
+		board.game = preload("res://core/game.gd").new("4k3/P7/8/8/8/8/8/4K3 w - - 0 1")
+		board.auto_queen = auto
+		Engine.get_main_loop().root.add_child(board)
+		board.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+		board.size = Vector2(800, 800)
+		board.start_entry(1)
+		board._gui_input(_mouse(true, Vector2(50, 150)))
+		board._gui_input(_mouse(false, Vector2(50, 50)))
+		var picker = board.get_node("PromotionPicker")
+		assert_eq(picker.visible, auto == "off")
+		if auto == "off":
+			picker.get_child(3).pressed.emit()
+		assert_eq(board.entry_moves, PackedStringArray(["a7a8n" if auto == "off" else "a7a8q"]))
+		assert_eq(board.game.board.piece_at("a7"), "P")
+		assert_eq(board.game.board.piece_at("a8"), "")
+		board.clear_entry()
+		assert_eq(board.entry_moves.size(), 0)
+		assert_eq(board.entry_mark_count("a7"), 0)
+		board.free()
+
+
+func test_entry_drag_can_start_with_black_and_accepts_white_reply():
+	var board = preload("res://ui/board_view.tscn").instantiate()
+	board.game = preload("res://core/game.gd").new("4k3/3p4/8/8/8/8/4P3/4K3 b - - 0 1")
+	Engine.get_main_loop().root.add_child(board)
+	board.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	board.size = Vector2(800, 800)
+	board.start_entry(2)
+	for move in [["d7", "d5"], ["e2", "e4"]]:
+		var from: Vector2 = BoardView.square_position(move[0], 800, false) + Vector2(50, 50)
+		var to: Vector2 = BoardView.square_position(move[1], 800, false) + Vector2(50, 50)
+		board._gui_input(_mouse(true, from))
+		board._gui_input(_mouse(false, to))
+	assert_eq(board.entry_moves, PackedStringArray(["d7d5", "e2e4"]))
+	assert_eq(board.entry_san, PackedStringArray(["d5", "e4"]))
+	board.free()
+
+
 func test_board_size_clamps_and_fit_follows_layout():
 	var main = preload("res://ui/main.tscn").instantiate()
 	var path := "user://test_ui015_size_%d.cfg" % Time.get_ticks_usec()
