@@ -1,5 +1,5 @@
 # CLEAN-014: Keep the current Review side-line move visible
-Stage: to-implement
+Stage: blocked
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -65,3 +65,5 @@ Disclosure: pending | none | Non-blocking usability follow-up to REV-007; no int
   > **Manual visual check:** this is not required for handoff. The ticket is `Review: agent`, and criteria 1–3 are covered by the headless viewport test at 1280×800 and 800×600. If stage 3 wants to see it running, it can open a window with `--position 3000,3000`.
   > 
   > I didn't run the gate or open the game. The fixture fix only lives in this lane's settings, so a fresh Windows checkout can fail the same way until that CLEAN ticket is done.
+
+- 2026-11-08 Attempt 2 stopped to ask (its commits are on branch `recovery/asked/20261108-143245/CLEAN-014`): O **CLEAN-014 está bloqueado**, com a implementação e os testes recuperados na branch `CLEAN-014`. O último gate registrou **681 testes aprovados e 1 falha** no teste de tablebase, causada pelo fixture em CRLF segundo a investigação anterior. O código recuperado corresponde ao que foi testado naquele gate. /  / Registrei o bloqueio no [ticket CLEAN-014](<C:/Users/bruno/Desktop/Pastinha/Programas/Projects/P-Chess/.artifacts-build/lanes/review-explore/.scratch/review-explore/issues/93-CLEAN-014-review-line-scroll.md>) e abri o [CLEAN-021](<C:/Users/bruno/Desktop/Pastinha/Programas/Projects/P-Chess/.artifacts-build/lanes/review-explore/.scratch/review-explore/issues/94-CLEAN-021-tablebase-fixture-line-endings.md>) para triagem da compatibilidade do fixture. A árvore está limpa. /  / Não repeti o gate nem fiz verificação gráfica manual; ainda não há evidência de gate verde. /  / Você autoriza uma exceção para executar o gate novamente com o fixture agora em LF, sem outra mudança de código? /  / Preciso dessa autorização porque o `AGENTS.md` fornecido diz **“Rode de novo só depois de mudar código”**, e a skill [ticket-flow](C:/Users/bruno/.agents/skills/ticket-flow/SKILL.md) exige gate verde para entregar o ticket à revisão. A alteração local do fixture não mudou o código testado.
