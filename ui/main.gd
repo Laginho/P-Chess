@@ -751,6 +751,7 @@ func _teardown_test_playout() -> void:
 func _cancel_playout() -> void:
 	var leaving_game: bool = _playout_active or playout.visible
 	if _playout_active:
+		$Layout/Side/Actions/NewGameButton.hide()
 		maia.begin_game(null)
 		maia.clock = null
 		board_view.cancel_premoves()
