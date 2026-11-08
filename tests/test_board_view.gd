@@ -6,6 +6,33 @@ extends "res://tests/run.gd".Test
 const BoardView = preload("res://ui/board_view.gd")
 
 
+func test_entry_moves_use_a_virtual_position_and_accumulate_marks():
+	var board = preload("res://ui/board_view.tscn").instantiate()
+	board.game = preload("res://core/game.gd").new()
+	Engine.get_main_loop().root.add_child(board)
+	board.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	board.size = Vector2(800, 800)
+	assert_true(board.has_method("start_entry"), "board supports line entry")
+	if board.has_method("start_entry"):
+		board.start_entry(2)
+		for square in ["e2", "e4", "e7", "e5", "e4", "e5", "g1", "f3"]:
+			var at: Vector2 = BoardView.square_position(square, 800, false) + Vector2(50, 50)
+			board._gui_input(_mouse(true, at))
+			board._gui_input(_mouse(false, at))
+		assert_eq(board.entry_moves, PackedStringArray(["e2e4", "e7e5", "g1f3"]))
+		assert_eq(board.game.board.to_fen(), preload("res://core/game.gd").START)
+		assert_eq(board.entry_mark_count("e2"), 1)
+		assert_eq(board.entry_mark_count("e5"), 1, "illegal move adds no mark")
+		board.undo_entry()
+		board.undo_entry()
+		for square in ["d7", "d5", "e4", "d5"]:
+			var at: Vector2 = BoardView.square_position(square, 800, false) + Vector2(50, 50)
+			board._gui_input(_mouse(true, at))
+			board._gui_input(_mouse(false, at))
+		assert_eq(board.entry_mark_count("d5"), 2, "a reused square accumulates marks")
+	board.free()
+
+
 func test_board_size_clamps_and_fit_follows_layout():
 	var main = preload("res://ui/main.tscn").instantiate()
 	var path := "user://test_ui015_size_%d.cfg" % Time.get_ticks_usec()
