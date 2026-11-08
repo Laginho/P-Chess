@@ -81,7 +81,7 @@ func test_continue_moves_to_first_unfinished_part_and_disappears_when_done():
 	]
 	for sample in samples:
 		var file := FileAccess.open(path, FileAccess.WRITE)
-		file.store_string(JSON.stringify({"rating": {"number": 1300, "site": "chess.com"}, "units": {"rook": sample[0]}}))
+		file.store_string(JSON.stringify({"rating": {"number": 1100, "site": "chess.com"}, "units": {"rook": sample[0]}}))
 		file = null
 		main.course = load("res://core/course.gd").new(path, "res://tests/fixtures/course/course.json")
 		main._show_course_map()
@@ -113,5 +113,55 @@ func test_new_rating_lands_on_the_map():
 	number.text_changed.emit(number.text)
 	dialog.confirmed.emit()
 	assert_true(main.course_map.visible and not main.get_node("Home").visible, "saving the first rating opens the map")
+	main.free()
+	Session.HistoryStorage.clean(folder)
+
+
+func _labels(node: Node) -> Array:
+	var result := []
+	if node is Label:
+		result.append(node.text)
+	for child in node.get_children():
+		result.append_array(_labels(child))
+	return result
+
+
+func test_map_shows_only_selected_stage_and_unit_page_reports_progress():
+	var folder := "user://course_display_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var path := folder.path_join("course.json")
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	file.store_string(JSON.stringify({"rating": {"number": 1499, "site": "lichess"}, "units": {"rook": {"theory_opened": true, "practice": {"one": {"solved": true, "first_try": true}, "two": {"solved": false, "first_try": false}}, "playouts": {"a": true}, "test_attempts": [{"passed": false}]}}}))
+	file = null
+	var main = MainScene.instantiate()
+	main.course = load("res://core/course.gd").new(path, "res://tests/fixtures/course/course.json")
+	main.history = load("res://core/history.gd").new(folder)
+	main.uci.free()
+	main.uci = Session.HeldBridge.new()
+	main.maia = main.MaiaPlayer.new(main.uci)
+	main.preferences = main.Settings.new(folder.path_join("settings.cfg"))
+	main.preferences.set_value("player_name", "You")
+	Engine.get_main_loop().root.add_child(main)
+	main.get_node("Home/Center/Form/Course").pressed.emit()
+	var map = main.course_map
+	var cards = map.find_child("Units", true, false)
+	assert_eq(cards.get_child_count(), 1)
+	var labels := _labels(cards)
+	for expected in ["Rook endings", "Done", "1/2 solved", "1/4 passed", "Not Passed"]:
+		assert_true(expected in labels, "map displays " + expected)
+	assert_true("Club unit" not in labels)
+	cards.get_child(0).pressed.emit()
+	var parts = main.unit_page.find_child("Parts", true, false)
+	var titles := ["Theory pointer", "Solving", "Play-outs", "Pass test"]
+	var status := ["Done", "1/2 solved", "1/4 passed", "Not Passed"]
+	for i in 4:
+		var row_labels := _labels(parts.get_child(i))
+		assert_true(titles[i] in row_labels, "part order includes " + titles[i])
+		assert_true(status[i] in row_labels, "part displays " + status[i])
+	assert_eq(main.unit_page.find_child("FirstTry", true, false).text, "50% (1 of 2)")
+	assert_true(main.course.save_rating(1500, "lichess"))
+	main._show_course_map()
+	labels = _labels(cards)
+	assert_true("Club unit" in labels and "Rook endings" not in labels, "different stage shows its own unit")
 	main.free()
 	Session.HistoryStorage.clean(folder)
