@@ -1099,7 +1099,15 @@ func test_side_line_navigation_keeps_current_and_exit_rows_visible():
 		var review = main.review
 		var game = Game.new()
 		game.play("e2e4")
-		review.present(game, [180000], SETTINGS, "")
+		var rng := RandomNumberGenerator.new()
+		rng.seed = 260026
+		while game.moves.size() < 80 and not game.is_over():
+			var legal = game.board.legal_moves()
+			game.play(legal[rng.randi_range(0, legal.size() - 1)])
+		var clocks := []
+		clocks.resize(game.moves.size())
+		clocks.fill(180000)
+		review.present(game, clocks, SETTINGS, "")
 		review._show_ply(0)
 		for i in 3:
 			await root.get_tree().process_frame
@@ -1112,16 +1120,29 @@ func test_side_line_navigation_keeps_current_and_exit_rows_visible():
 		for row in [list.get_selected(), review._line_rows[-1]]:
 			var rect := list.get_item_area_rect(row, 1)
 			assert_true(rect.position.y >= 0 and rect.end.y <= list.size.y, "line end row visible at %s: %s in %s" % [window_size, rect, list.size])
+		list.scroll_to_item(review._line_rows[0])
+		await root.get_tree().process_frame
 		review.get_node("Margin/Content/ReviewBody/Side/Navigation/Previous").pressed.emit()
 		await root.get_tree().process_frame
 		var rect := list.get_item_area_rect(list.get_selected(), 1)
 		assert_true(rect.position.y >= 0 and rect.end.y <= list.size.y, "previous row visible at %s: %s" % [window_size, rect])
+		list.scroll_to_item(review._move_rows[-1])
+		await root.get_tree().process_frame
+		review.get_node("Margin/Content/ReviewBody/Side/Navigation/Next").pressed.emit()
+		await root.get_tree().process_frame
+		for row in [list.get_selected(), review._line_rows[-1]]:
+			rect = list.get_item_area_rect(row, 1)
+			assert_true(rect.position.y >= 0 and rect.end.y <= list.size.y, "line end visible after scrolling below at %s: %s" % [window_size, rect])
 		list.scroll_to_item(review._line_rows[0])
 		await root.get_tree().process_frame
 		var offset := list.get_scroll()
 		review._refresh_line_classes()
 		await root.get_tree().process_frame
 		assert_eq(list.get_scroll(), offset, "classification does not scroll")
+		list.scroll_to_item(review._line_rows[-1])
+		await root.get_tree().process_frame
+		offset = list.get_scroll()
+		assert_true(offset.y > 0, "index zero check starts away from the top")
 		review._show_line(0)
 		await root.get_tree().process_frame
 		assert_eq(list.get_scroll(), offset, "line index zero does not scroll")
