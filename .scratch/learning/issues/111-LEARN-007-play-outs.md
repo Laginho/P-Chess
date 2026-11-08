@@ -1,5 +1,5 @@
 # LEARN-007: Play-outs against Maia
-Stage: to-implement
+Stage: implementing
 Blocked by: CORE-007, CLOCK-003, LEARN-004, LEARN-006
 Review: agent
 Difficulty: normal
