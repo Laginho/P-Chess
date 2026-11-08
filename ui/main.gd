@@ -572,10 +572,15 @@ func _show_course_part(unit: Dictionary, part: String) -> void:
 
 
 func _cancel_playout() -> void:
+	var leaving_game: bool = _playout_active or playout.visible
 	_playout_generation += 1
 	_playout_active = false
 	if clock != null:
 		clock.stop()
+	if leaving_game:
+		clock = null
+		white_clock.clock = null
+		black_clock.clock = null
 
 
 func _show_playout(index: int) -> void:
