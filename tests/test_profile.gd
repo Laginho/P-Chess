@@ -265,3 +265,31 @@ func _clean(folder: String) -> void:
 # Date headings and the paging footer share the list with game cards.
 func _history_cards(list: Node) -> Array:
 	return list.get_children().filter(func(node): return node is PanelContainer)
+
+
+func test_profile_edits_and_saves_rating_sentence():
+	var folder := "user://test_profile_rating_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var course = load("res://core/course.gd").new(folder.path_join("course.json"))
+	assert_true(course.save_rating(1400, "lichess"))
+	var profile = load("res://ui/profile.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(profile)
+	profile.present(Settings.new(folder.path_join("settings.cfg")), course)
+	var number = profile.find_child("RatingNumber", true, false)
+	var site = profile.find_child("RatingSite", true, false)
+	var save = profile.find_child("SaveRating", true, false)
+	assert_true(number != null and site != null and save != null, "Profile offers the rating sentence")
+	if number != null and site != null and save != null:
+		assert_eq(number.text, "1400")
+		assert_eq(site.get_item_text(site.selected), "lichess")
+		for text in ["", "99", "3501", "1400.5"]:
+			number.text = text
+			number.text_changed.emit(text)
+			assert_true(save.disabled, "invalid rating cannot be saved")
+		number.text = "1250"
+		number.text_changed.emit(number.text)
+		site.select(0)
+		save.pressed.emit()
+		assert_eq(load("res://core/course.gd").new(folder.path_join("course.json")).rating(), {"number": 1250, "site": "chess.com"})
+	profile.free()
+	_clean(folder)
