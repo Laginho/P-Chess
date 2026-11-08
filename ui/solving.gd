@@ -89,6 +89,15 @@ func _commit_line() -> void:
 		line_committed.emit(position_data.duplicate(true), board.entry_moves.duplicate(), board.entry_san.duplicate())
 
 
+func _input(event: InputEvent) -> void:
+	if not visible or not event is InputEventKey or event.keycode not in [KEY_ENTER, KEY_KP_ENTER]:
+		return
+	# Consume both phases before a focused button can activate on key release.
+	if event.pressed and not event.echo:
+		_commit_line()
+	get_viewport().set_input_as_handled()
+
+
 func _unhandled_key_input(event: InputEvent) -> void:
 	if not visible or not event is InputEventKey or not event.pressed or event.echo:
 		return
