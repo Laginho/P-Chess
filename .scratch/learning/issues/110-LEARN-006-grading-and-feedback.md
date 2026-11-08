@@ -1,5 +1,5 @@
 # LEARN-006: Grading a line, and the feedback
-Stage: to-review
+Stage: done
 Blocked by: CI-005, LEARN-005, LEARN-010
 Review: agent
 Difficulty: hard
@@ -102,3 +102,45 @@ Native Windows CI/release startup remains LEARN-010's previously documented rele
 Foreground bound gate at tested commit `7aab4973270048eb29c9be91d76f2499846717c4`: `godot --headless -s tests/run.gd`, **637 passed, 0 failed**, exit 0. All three real-file tablebase tests passed. Existing skips: two graphical-only pixel checks under headless and six live Lc0 methods because `engine/lc0/lc0.exe` is absent on this Linux checkout. Feedback was separately captured/inspected via Xvfb; the real tablebase/Lucena checks did run. Log: `/run/media/lage/New Volume/Scratch/LEARN-006/gate.log`. The `Gate evidence:` receipt records the tested commit and log hash. `git diff --check` passed.
 
 Stage 2 hands off at `to-review` on `LEARN-006`. Only this tracker ticket changes after the tested commit. No merge or ledger entry; stage 3 reviews and integrates into `sweatshop/learning/2026-11-07-2234`.
+
+### Stage 3 review and integration (2026-11-08)
+
+#### Resolution (2026-11-08)
+Verdict: Approve
+
+Reviewed the full `d4b6190...ecb6903` diff and all 15 ticket commits, with independent read-only reviewers `/root/review_standards` and `/root/review_spec`. Neither reviewer nor the closing agent authored production repairs. All ten numbered criteria pass; no unresolved implementation finding or new contract change.
+
+##### Standards
+
+**0 findings.** The independent reviewer checked `AGENTS.md`, `CONTEXT.md`, the domain/tracker guidance, all ADRs, the learning design README and the code-review smell baseline. There is no `CODING_STANDARDS.md` or `CONTRIBUTING.md`. All changed production and test files are in Primary files; tracker edits preserve the separate Stage axis. Domain vocabulary and ADR boundaries are respected. Every commit separates tests from production; the original missing-behavior regressions and the held-draw repair have test-first evidence. Later test strengthening and the capture-fixture correction introduce no scope breach. Dictionary probe answers implement the approved interface, and scene lookups follow existing repository conventions; no substantive heuristic smell warrants a follow-up.
+
+##### Spec
+
+**0 findings.** The independent reviewer found no missing numbered requirement, scope creep or introduced regression. The closing agent confirmed the complete diff and callers, inspected both feedback captures, and repeated the real-file Lucena flow against Main's shared Fathom helper.
+
+- ✅ 1: `ui/main.gd:34,161` constructs, parents and injects the adapter; `ui/solving.gd:128` starts it on Commit. `core/grader.gd:38` consumes only probe answers. The lifecycle regression checks construction, startup, injection and freeing.
+- ✅ 2: `core/grader.gd:48` compares the mover's result and root-move DTZ with the one-ply margin in `core/tunables.gd:39`. Tests cover exact/over-margin boundaries, drawing moves and winning zeroing/mate DTZ 1.
+- ✅ 3: `core/grader.gd:60` reports strictly better defender results or longer losing defences without failing the line; `ui/solving.gd:226` renders the SAN advice. Both grading and visible-text regressions pass, including equally good defences without advice.
+- ✅ 4: `core/grader.gd:53` stops at the first failure; untouched later plies remain unmarked and grey through `ui/solving.gd:229`. Grader and screen tests check the tail.
+- ✅ 5: `core/grader.gd:66` follows both sides' best moves for the position's full line length, truncating at an actual terminal position. The five-ply correction and real mate regressions pass.
+- ✅ 6: `ui/solving.gd:234` advances each validated ply, reveals marks, stops before a failed move and shows the best-move arrow. Both material-draw and 50-move-draw playback regressions pass; live Game rules remain unchanged.
+- ✅ 7: `ui/solving.gd:29,193` supplies Retry, the existing next-unsolved/solved-fallback selection, all three banners and both failure reasons. Focused screen tests and the real Lucena flow cover retry and Next.
+- ✅ 8: `core/course.gd:240` atomically records cumulative solved status and first try only on the first passing commit, preserving unrelated progress and existing first-try results. Course reload tests and the unit-page screen checks pass.
+- ✅ 9: `core/course.gd:174` derives practice completion; `ui/unit_page.gd:44` selects Continue after solved/total reaches the practice-pool total. The recording and screen regressions verify completion and the following part.
+- ✅ 10: `core/grader.gd:39,67` propagates probe errors, including during correction; `ui/solving.gd:136,172` returns to entry with the error and records nothing. Tests also cover duplicate Commit and delayed callbacks after leaving the screen.
+
+Affected callers, failure paths and interactions examined: Main ownership/navigation, Solving entry/grading/feedback transitions, black-first SAN numbering, legal entry validation, exact DTZ boundaries, drawing moves, equal/weaker defences, terminal correction, playback after automatic draw thresholds, Retry/Next and reopening solved positions, progress reload/read/write failure preservation, asynchronous errors and stale callbacks, unit-page counts and Continue. The separately saved `from_your_game` collection does not change fixed practice-pool counts, consistent with LEARN-002 criterion 3 and spec L9/LEARN-009's separate Continue priority; its creation and Home integration remain REV-011/LEARN-009 work. Not exercised live: physical mouse/keyboard input, native Windows startup or Lc0. No new unresolved defect was identified in these boundaries.
+
+Independent runtime verification: the Spec reviewer ran all six grader tests, the Course recording test and six feedback/lifecycle tests: **13 passed, 0 failed**, with no script errors ([script](</run/media/lage/New Volume/Scratch/LEARN-006/review/spec-check.gd>), [log](</run/media/lage/New Volume/Scratch/LEARN-006/review/spec-check.log>)). The closing agent independently reran [the real Lucena smoke](</run/media/lage/New Volume/Scratch/LEARN-006/real-smoke.gd>) with an isolated external data root: **14 checks passed**, `REAL_SMOKE_ERRORS []`, exit 0 ([review log](</run/media/lage/New Volume/Scratch/LEARN-006/review/real-smoke.log>)). The real best move was `a1g1` at DTZ 9; the DTZ-11 detour failed as too slow, its retry solved without first try, the next position solved first try, and Back refreshed the unit to 2 solved and 50% (1 of 2). Inspected [failed feedback](</run/media/lage/New Volume/Scratch/LEARN-006/feedback-miss.png>) and [solved feedback](</run/media/lage/New Volume/Scratch/LEARN-006/feedback-solved.png>); marks, correction arrow, banners and controls are visible.
+
+Red/green proof retained: `c350f38` → `2596f45` establishes grading; `adc3eaf` → `b2535ae` adds the result/DTZ/defence/failure rules; `1d7e2c5` → `1edf979` adds durable recording (test-harness numeric correction in `661660d`); `d83668a` → `8ded8f5` adds feedback; `80a3552` → `27039da` repairs held-draw playback. The stage-2 evidence above records failing and passing counts; later test-only commits strengthen correction and lifecycle coverage. Primary-file scope and test/production separation pass across the full history.
+
+Gate reused at tested commit `7aab4973270048eb29c9be91d76f2499846717c4`: `godot --headless -s tests/run.gd`, **637 passed, 0 failed**, exit 0. All three real-file tablebase tests ran. Existing skips are two graphical pixel checks and six live Lc0 methods; feedback captures and the real helper were verified separately. The official `Assert-GateEvidence` helper validated the command, tested commit, exit marker, log SHA-256 and identical code before and after integration. No source changed in review/rebase, so the full gate was not rerun. `git diff --check` passed.
+
+Proxy disclosure: the existing `Proxy decided (opus-5.5 xhigh)` line was checked against [its receipt](/tmp/sweatshop-proxy/20261108-020737-LEARN-006-0937d8.json). The approved split puts the exact-DTZ native probe and packaging in LEARN-010; this ticket consumes that merged interface without weakening grading or changing its contract. No new proxy call was made.
+
+Delivery: rebase onto `sweatshop/learning/2026-11-07-2234` was a no-op. Integrated without squash in merge `8e49570`; this closure commits `Stage: done` and the ledger entry together on the session branch. No PR or push is part of this stage.
+
+Acceptance: pending | Linux automated Lucena acceptance and feedback captures passed as linked above. Native Windows CI execution and release startup from an accented folder remain pending under [LEARN-010's approved verification](117-LEARN-010-tablebase-probe.md#verification); no Windows result is claimed.
+Disclosure: decision | none | [Prior proxy receipt](/tmp/sweatshop-proxy/20261108-020737-LEARN-006-0937d8.json): LEARN-010 owns the shared helper; the prerequisite and this consumer are integrated with exact root-move DTZ preserved.
+Disclosure: pending | release | [LEARN-010 verification](117-LEARN-010-tablebase-probe.md#verification): actual Windows CI and accented-folder release startup remain release conditions. The Linux end-to-end Lucena check previously pending there has now passed in this ticket's independently repeated real-file smoke.
