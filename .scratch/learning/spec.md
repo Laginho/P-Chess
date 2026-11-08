@@ -93,7 +93,13 @@ Numbered so tickets can cite them (`spec §L3`).
 
 **L4. Rating.** The rating sentence stores the number and the site. On the chess.com scale, a Lichess number is shown minus 300 (ADR 0003). The course's Maia level is the chess.com number plus 300, rounded to the nearest hundred (halves up) and clamped to 1100–1900, the nets already bundled. The rating sets the stage (L1) and the course's Maia level; the sandbox keeps its own level picker.
 
-**L5. Tablebase probe.** Grading never asks an evaluation engine for a judgement: it asks a probe what a position is worth. The probe answers, for a position, win, draw or loss for the side to move and, where the tables give it, a distance to zeroing; and for a position, the best move. The real probe is the bundled Stockfish with the bundled tablebase files (`SyzygyPath`), how exactly is RES-001's finding. Everything that grades (solving, play-out fail checks, the review marker, the perfect opponent) goes through this one probe, so tests use a fake.
+**L5. Tablebase probe.** Grading never asks an evaluation engine for a judgement. It asks a probe what a position is worth. For a position, the probe answers from the side to move:
+
+- win, draw or loss under the 50-move rule. A cursed win counts as a draw, and so does a blessed loss, because the game ends at 100 half-moves.
+- for each legal move, the mover's result and its distance to zeroing, in plies from this position with the move included. A capture, pawn move, promotion or mate that keeps a win is 1.
+- the best move: the best result; then for a win the smallest distance, for a loss the largest; then UCI order.
+
+The real probe is a small helper built from Fathom (MIT) that reads the bundled tablebase files (§L12). RES-001 found that Stockfish computes these distances but does not expose them through UCI. The helper speaks a UCI subset over the engines' bridge and sees only the position (FEN, with its half-move clock), not the game's history. A position it cannot answer is a probe failure that the caller shows: castling rights, material without a bundled file, a missing or unreadable file, or a helper that stopped. A failure is never replaced by an engine evaluation. Everything that grades (solving, play-out fail checks, the review marker, the perfect opponent) goes through this one probe, so tests use a fake.
 
 **L6. Grading a line.** A committed line has your moves and the opponent's moves in between, starting and ending with yours (line length N means 2N−1 plies). Each of your moves must keep the result for your side; when winning, it must also not detour: the distance to zeroing after your move may be at most the best move's plus a margin (a tunable). Opponent moves only need to be legal; where a better defence existed it is shown, but it doesn't fail you. Grading stops at your first failing move. A position is solved when its first commit, or any later one, has no failing move; it is first try only when its first commit passes. Solving is done when every practice position is solved once.
 
@@ -107,15 +113,15 @@ Numbered so tickets can cite them (`spec §L3`).
 
 **L11. Screens.** Course map, unit page, theory pointer, solving, play-out and pass test are new screens owned by `ui/main.gd` like Review and History, each with a `present(...)` entry and a back signal. Home changes as in the design (Continue card first, Course button, Play row with Custom). Layout follows `docs/design/learning/`; where the design and this spec disagree, this spec wins.
 
-**L12. Tablebase files.** Only the files this unit needs are bundled (rook and pawn against rook and the smaller endings it can turn into), fetched with pinned hashes like the engines, and listed in `docs/THIRD_PARTY.md`.
+**L12. Tablebase files.** Only the files this unit needs are bundled (rook and pawn against rook and the smaller endings it can turn into), fetched with pinned hashes like the engines, and listed in `docs/THIRD_PARTY.md`. The probe helper (§L5) is built by `scripts/build-tbprobe.ps1` from a pinned Fathom commit and ships at `engine/tbprobe/`. Its MIT notice ships in `licenses/` and `docs/THIRD_PARTY.md`.
 
 ## Testing Decisions
 
 - Test what the player sees and what the course remembers, not how a module stores it. A good course test sets up data and progress, acts (commits a line, finishes a play-out, moves the date forward), and checks the answer to a question the UI asks: the status, the Continue target, the first-try rate.
 - **Seam 1: the course module (L3).** Logic tests with fixture data in `tests/fixtures/course/`, progress in a temporary `user://` folder, and the time passed in. Covers statuses, Continue order, first try, mastery, review checks, from-your-game positions. Prior art: `tests/test_history.gd`, `tests/test_settings.gd` (isolated files).
-- **Seam 2: the tablebase probe (L5).** The grader, the play-out fail check, the perfect opponent and the review marker run against a fake probe with scripted answers. The real probe is tested through the fake UCI engine, like `tests/test_uci.gd` and `tests/test_analyser.gd`.
+- **Seam 2: the tablebase probe (L5).** The grader, the play-out fail check, the perfect opponent and the review marker run against a fake probe with scripted answers. The probe's adapter (`engine/tablebase.gd`) is tested through the fake UCI engine with scripted helper lines, like `tests/test_uci.gd` and `tests/test_analyser.gd`. The helper is tested against the real bundled files when they are present, and skipped otherwise, like the live Lc0 tests. Its Windows build is checked by a CI job that builds it and runs one real probe.
 - **Existing seams for the rest.** Screens through `ui/main.tscn` with `Session.HeldBridge` and a temporary history folder (`tests/test_home.gd`, `tests/test_profile.gd`, `tests/test_review.gd`); the board through `tests/test_board_view.gd`; starting from a FEN through `tests/test_maia_player.gd` and `tests/test_pgn.gd`; time controls through `tests/test_clock.gd`.
-- What these seams can miss: a fake probe can't catch a wrong reading of real Stockfish output (RES-001 and the real-probe test cover that), and headless screen tests can't judge layout (the design PNGs and the screenshot harness `scripts/screens.gd` do). Reversing either choice means adding an end-to-end test with the real engine, which is slow and needs the binaries in CI.
+- What these seams can miss: a fake probe can't catch a wrong reading of the real tables (the real-file tests, checked against an independent reader as in RES-001, cover that; CI skips the full real-file suite, while the Windows job uses only KRvK smoke tables), and headless screen tests can't judge layout (the design PNGs and the screenshot harness `scripts/screens.gd` do). Reversing either choice means adding an end-to-end test with the real engine, which is slow and needs the binaries in CI.
 - Gate: `godot --headless -s tests/run.gd`.
 
 ## Acceptance scenarios
@@ -139,7 +145,7 @@ Numbered so tickets can cite them (`spec §L3`).
 
 ## Tickets
 
-In `.scratch/learning/issues/`, build order: RES-001, CORE-007, CLOCK-003, CI-005, LEARN-001 to LEARN-009, REV-011. Each lists its blockers.
+In `.scratch/learning/issues/`, build order: RES-001, CORE-007, CLOCK-003, CI-005, LEARN-001 to LEARN-005, LEARN-010, LEARN-006 to LEARN-009, REV-011. Each lists its blockers.
 
 ## Further Notes
 
