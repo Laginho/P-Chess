@@ -904,8 +904,18 @@ func test_playout_starts_from_unit_and_failing_move_ends_before_maia_without_his
 	assert_eq(main.human, "b")
 	assert_eq(main.settings.level, "maia-1600")
 	assert_eq(main.settings.control, "none")
+	var game_back: Button = main.get_node("Layout/Side/Actions/NewGameButton")
+	game_back.grab_focus()
 	assert_true(main.board_view.play("c6c4"))
 	assert_true(screen.visible, "end card opens")
+	for pressed in [true, false]:
+		var key := InputEventKey.new()
+		key.keycode = KEY_ENTER
+		key.physical_keycode = KEY_ENTER
+		key.pressed = pressed
+		main.get_viewport().push_input(key, true)
+		await Engine.get_main_loop().process_frame
+	assert_true(screen.visible, "Enter cannot activate the game exit behind the end card")
 	assert_eq(screen.find_child("Heading", true, false).text, "Play-out failed")
 	assert_true(screen.find_child("Reason", true, false).text.contains("Rc4"))
 	assert_true(screen.find_child("Reason", true, false).text.contains("Rc5"))
@@ -1256,3 +1266,97 @@ func test_fourth_playout_pass_offers_back_to_unit_without_next():
 	screen.find_child("Back", true, false).pressed.emit()
 	assert_eq(backs, [true])
 	screen.free()
+
+
+func test_leaving_playout_ignores_pending_replies_and_records_nothing():
+	for pending in ["probe", "maia"]:
+		var session = Session.new()
+		var main = await session._session(Session.ManualWaits.new(), false)
+		var path: String = main.history._root.path_join("course.json")
+		main.course = load("res://core/course.gd").new(path)
+		main.course.save_rating(1400, "chess.com")
+		var sample = load("res://tests/test_grader.gd")
+		var probe = sample.FakeProbe.new()
+		probe.held = pending == "probe"
+		probe.answers[sample.FEN] = sample.answer("win", "c6c5", {"c6c5": {"result": "win", "dtz": 3}})
+		main.tablebase.queue_free()
+		var adapter = LifecycleProbe.new(probe, [])
+		main.tablebase = adapter
+		main.add_child(adapter)
+		var position := {"id": "a", "fen": sample.FEN, "side": "b", "goal": "convert"}
+		var unit := {"id": "rook", "title": "Rook endings", "playouts": [position]}
+		main._show_unit(unit)
+		var progress := FileAccess.get_file_as_string(path)
+		main.unit_page.part_requested.emit(unit, "playouts")
+		main.playout.find_child("Start", true, false).pressed.emit()
+		while main._starting:
+			await Engine.get_main_loop().process_frame
+		assert_true(main.board_view.play("c6c5"))
+		if pending == "probe":
+			assert_eq(probe.pending.size(), 1)
+		else:
+			assert_eq(main.uci.requests.size(), 2)
+		var game = main.board_view.game
+		var replies := []
+		main.maia.move_ready.connect(func(move): replies.append(move))
+		var game_clock = main.clock
+		game_clock.moved("w")
+		game_clock.moved("b")
+		assert_true(not game_clock._running.is_empty(), "clock is running before leaving")
+		var back: Button = main.get_node("Layout/Side/Actions/NewGameButton")
+		assert_true(back.is_visible_in_tree() and back.text == "Back to the unit", pending + ": exit is visible")
+		assert_true(back.focus_mode == Control.FOCUS_ALL, pending + ": exit is keyboard reachable")
+		for i in 40:
+			var tab := InputEventKey.new()
+			tab.keycode = KEY_TAB
+			tab.physical_keycode = KEY_TAB
+			tab.pressed = true
+			main.get_viewport().push_input(tab, true)
+			tab = tab.duplicate()
+			tab.pressed = false
+			main.get_viewport().push_input(tab, true)
+			await Engine.get_main_loop().process_frame
+			if main.get_viewport().gui_get_focus_owner() == back:
+				break
+		assert_eq(main.get_viewport().gui_get_focus_owner(), back, pending + ": Tab reaches the exit")
+		for pressed in [true, false, true, false]:
+			var key := InputEventKey.new()
+			key.keycode = KEY_ENTER
+			key.physical_keycode = KEY_ENTER
+			key.pressed = pressed
+			main.get_viewport().push_input(key, true)
+			await Engine.get_main_loop().process_frame
+		assert_true(main.unit_page.visible and not main.playout.visible, pending + ": unit page opens")
+		assert_true(main.clock == null and main.white_clock.clock == null and main.black_clock.clock == null)
+		assert_eq(game_clock._running, "", pending + ": clock stopped")
+		if pending == "probe":
+			probe.reply()
+		else:
+			main.uci.policy_ready.emit({})
+			main.uci.policy_ready.emit({"e1f2": 1.0})
+		assert_true(replies.is_empty(), pending + ": Maia cannot deliver a cancelled move")
+		assert_eq(game.moves, PackedStringArray(["c6c5"]), pending + ": late reply cannot play")
+		assert_true(main.unit_page.visible and not main.playout.visible)
+		assert_eq(FileAccess.get_file_as_string(path), progress, pending + ": progress unchanged")
+		assert_true(main.history.games().is_empty())
+		assert_true(not FileAccess.file_exists(main.history._root.path_join("stats.cfg")))
+		main.free()
+
+
+func test_pass_test_playout_back_still_returns_to_the_unit():
+	var session = Session.new()
+	var main = await session._session(Session.ManualWaits.new(), false)
+	main.course = load("res://core/course.gd").new(main.history._root.path_join("course.json"))
+	main.course.save_rating(1400, "chess.com")
+	var position := {"id": "a", "fen": load("res://tests/test_grader.gd").FEN, "side": "b", "goal": "convert"}
+	var unit := {"id": "rook", "title": "Rook endings", "test_playouts": [position]}
+	main._show_unit(unit)
+	main._test_unit = unit
+	main._test_active = true
+	main._start_test_playout()
+	var back: Button = main.get_node("Layout/Side/Actions/NewGameButton")
+	assert_true(back.is_visible_in_tree() and back.text == "Back to the unit")
+	back.pressed.emit()
+	assert_true(main.unit_page.visible and not main._test_active)
+	assert_true(main.course.test_attempts(unit).is_empty())
+	main.free()
