@@ -800,6 +800,7 @@ func _finish_playout(title: String, message: String, failed_move := "") -> void:
 		return
 	_playout_generation += 1
 	_playout_active = false
+	$Layout/Side/Actions/NewGameButton.hide()
 	clock.stop()
 	board_view.cancel_premoves()
 	board_view.mouse_filter = MOUSE_FILTER_IGNORE
