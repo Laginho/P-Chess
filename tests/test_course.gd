@@ -74,6 +74,8 @@ func test_continue_offers_review_checks_at_seven_and_thirty_days():
 		assert_eq(review.get("kind"), "review")
 		assert_eq(review.get("day"), 7)
 		assert_eq(review.get("positions", []).size(), 3)
+		var day15: int = Time.get_unix_time_from_datetime_string("2026-01-16T00:00:00")
+		assert_eq(course.continue_target(day15).get("elapsed_days"), 15, "late checks report the actual age of mastery")
 		assert_true(course.record_review_check(review.unit, 7, false))
 		assert_eq(course.unit_progress(review.unit).status, "needs review")
 		assert_eq(JSON.parse_string(FileAccess.get_file_as_string(path)).units.rook.mastered_date, "2026-01-01")
