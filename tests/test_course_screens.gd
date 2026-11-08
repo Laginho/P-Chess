@@ -5,6 +5,60 @@ const Session = preload("res://tests/test_session.gd")
 const Tunables = preload("res://core/tunables.gd")
 
 
+func test_pass_test_runs_positions_and_playouts_and_lists_misses():
+	var folder := "user://pass_screen_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var main = MainScene.instantiate()
+	main.course = load("res://core/course.gd").new(folder.path_join("course.json"))
+	main.history = load("res://core/history.gd").new(folder)
+	main.uci.free()
+	main.uci = Session.HeldBridge.new()
+	main.maia = main.MaiaPlayer.new(main.uci)
+	main.preferences = main.Settings.new(folder.path_join("settings.cfg"))
+	main.preferences.set_value("player_name", "You")
+	var sample = load("res://tests/test_grader.gd")
+	var probe = sample.FakeProbe.new()
+	probe.answers[sample.FEN] = sample.answer("win", "c6c5", {"c6c5": {"result": "win", "dtz": 1}, "c6c4": {"result": "draw", "dtz": 0}})
+	var convert := "7k/P7/5K2/8/8/8/8/8 w - - 0 1"
+	var hold := "4k3/8/8/8/8/8/4p2R/K7 w - - 0 1"
+	probe.answers[convert] = sample.answer("win", "a7a8q", {"a7a8q": {"result": "win", "dtz": 1}})
+	probe.answers[hold] = sample.answer("draw", "h2e2", {"h2e2": {"result": "draw", "dtz": 0}})
+	main.tablebase.free()
+	main.tablebase = LifecycleProbe.new(probe, [])
+	Engine.get_main_loop().root.add_child(main)
+	var positions := []
+	for i in 6:
+		positions.append({"id": str(i), "pool": "test", "fen": sample.FEN, "side": "b", "line_length": 1, "goal": "win"})
+	var unit := {"id": "rook", "title": "Rook endings", "positions": positions, "test_playouts": [
+		{"id": "convert", "fen": convert, "side": "w", "goal": "convert"},
+		{"id": "hold", "fen": hold, "side": "w", "goal": "hold"}]}
+	main._show_unit(unit)
+	main.unit_page.part_requested.emit(unit, "test")
+	var screen = main.get_node_or_null("PassTest")
+	assert_true(screen != null and screen.visible, "unit opens test start")
+	if screen == null:
+		main.free()
+		Session.HistoryStorage.clean(folder)
+		return
+	screen.find_child("Start", true, false).pressed.emit()
+	for i in 6:
+		assert_true(main.solving.visible)
+		main.solving.board._commit("c6c4" if i < 2 else "c6c5", false)
+		main.solving.find_child("Commit", true, false).pressed.emit()
+		assert_true(not main.solving.find_child("Feedback", true, false).visible)
+	assert_eq(main.board_view.game.start_fen, convert)
+	assert_true(main.board_view.play("a7a8q"))
+	assert_eq(main.board_view.game.start_fen, hold)
+	assert_true(main.board_view.play("h2e2"))
+	assert_true(screen.visible)
+	assert_true(screen.find_child("Heading", true, false).text.contains("Not passed yet"))
+	assert_true(screen.find_child("Results", true, false).text.contains("Rc4"))
+	assert_true(screen.find_child("Results", true, false).text.contains("Rc5"))
+	assert_eq(main.course.test_attempts(unit).size(), 1)
+	main.free()
+	Session.HistoryStorage.clean(folder)
+
+
 func test_black_first_line_pairs_san_by_side_after_undo_and_clear():
 	var screen = load("res://ui/solving.tscn").instantiate()
 	Engine.get_main_loop().root.add_child(screen)
