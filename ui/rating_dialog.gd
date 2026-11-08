@@ -2,6 +2,8 @@ extends AcceptDialog
 
 signal saved
 
+const Course = preload("res://core/course.gd")
+
 var course
 
 
@@ -37,7 +39,7 @@ func present(store) -> void:
 
 func _update() -> void:
 	var text: String = $Content/Row/RatingNumber.text
-	var valid := text.is_valid_int() and int(text) >= 100 and int(text) <= 3500
+	var valid := text.is_valid_int() and Course.valid_rating(int(text), $Content/Row/RatingSite.get_item_text($Content/Row/RatingSite.selected))
 	get_ok_button().disabled = not valid
 	var hint: Label = $Content/ScaleHint
 	hint.visible = $Content/Row/RatingSite.selected == 1 and valid
