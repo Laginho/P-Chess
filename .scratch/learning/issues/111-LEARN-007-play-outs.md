@@ -1,5 +1,5 @@
 # LEARN-007: Play-outs against Maia
-Stage: implementing
+Stage: to-review
 Blocked by: CORE-007, CLOCK-003, LEARN-004, LEARN-006
 Review: agent
 Difficulty: normal
@@ -44,6 +44,20 @@ The unit's four play-outs (spec §L8, design `PlayoutStart.dc.html`, `PlayoutEnd
 - `tests/test_course.gd`: recording passes; play-outs done at 4 (red: no recording).
 
 ## Comments
+
+- Criteria check by a fresh-context agent, rechecked after fixes:
+  - 1 ✅ `ui/playout.gd:97`; `test_playout_start_describes_task_rules_and_all_states_including_replay` and `test_playout_starts_from_unit_and_failing_move_ends_before_maia_without_history`.
+  - 2 ✅ `ui/main.gd:471`, `ui/main.gd:593`; `test_playout_starts_from_unit_and_failing_move_ends_before_maia_without_history` and `test_playout_promotion_records_pass_and_next_opens_next_position`.
+  - 3 ✅ `core/playout_judge.gd:11`, `ui/main.gd:862`; `test_result_change_fails_and_result_kept_continues`, `test_playout_waits_for_probe_before_maia`, and the failing-move screen test.
+  - 4 ✅ `ui/main.gd:918`; `test_playout_flag_fails_without_history_and_retry_returns_to_start` and `test_playout_flag_during_terminal_move_takes_precedence_over_mate`.
+  - 5 ✅ `core/playout_judge.gd:27`; `test_promotion_and_mate_convert_and_capturing_pawn_holds` and `test_thirtieth_held_move_passes_only_if_result_kept_and_probe_errors_surface`.
+  - 6 ✅ `ui/playout.gd:123`, `ui/main.gd:887`; the failing-move screen test, promotion and judge tests, and `test_fourth_playout_pass_offers_back_to_unit_without_next`.
+  - 7 ✅ `core/course.gd:222`, `ui/main.gd:613`; `test_playout_passes_are_persistent_and_counted_once`, promotion, flag and fourth-play-out screen tests.
+  - 8 ✅ `ui/main.gd:574`, `ui/main.gd:931`; `test_playout_disables_sandbox_actions_and_hotkeys_do_not_save_a_game` and the failing-move screen test, including shortcuts after returning to the unit.
+  - 9 ✅ `ui/unit_page.gd:45`; `test_continue_moves_to_first_unfinished_part_and_disappears_when_done` and `test_playout_passes_are_persistent_and_counted_once`.
+- Verification: `godot --headless -s tests/run.gd` passed 650 tests, 0 failed. The headless run skipped two pixel checks and live Lc0 tests because the engine is absent. Captured the start at 1280×800 and the end at 800×600 using the graphical fixture. Manual play against real Maia (intentional hold failure, successful convert, legal reply from the supplied FEN) and Bruno's difficulty assessment remain for release; they could not be performed without Lc0 and the Maia nets.
+
+Gate evidence: /run/media/lage/New Volume/Scratch/learn007-captures/gate-final.json
 
 - Updated `test_course_navigation_unit_progress_and_clock` for the new play-out screen: return from it before continuing the existing navigation assertions. Disabling its Back connection makes the updated test fail.
 
