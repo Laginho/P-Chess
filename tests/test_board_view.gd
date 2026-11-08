@@ -6,6 +6,121 @@ extends "res://tests/run.gd".Test
 const BoardView = preload("res://ui/board_view.gd")
 
 
+func test_entry_moves_use_a_virtual_position_and_accumulate_marks():
+	var board = preload("res://ui/board_view.tscn").instantiate()
+	board.game = preload("res://core/game.gd").new()
+	Engine.get_main_loop().root.add_child(board)
+	board.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	board.size = Vector2(800, 800)
+	assert_true(board.has_method("start_entry"), "board supports line entry")
+	if board.has_method("start_entry"):
+		board.start_entry(2)
+		for square in ["e2", "e4", "e7", "e5", "e4", "e5", "g1", "f3"]:
+			var at: Vector2 = BoardView.square_position(square, 800, false) + Vector2(50, 50)
+			board._gui_input(_mouse(true, at))
+			board._gui_input(_mouse(false, at))
+		assert_eq(board.entry_moves, PackedStringArray(["e2e4", "e7e5", "g1f3"]))
+		assert_eq(board.game.board.to_fen(), preload("res://core/game.gd").START)
+		assert_eq(board.entry_mark_count("e2"), 1)
+		assert_eq(board.entry_mark_count("e5"), 1, "illegal move adds no mark")
+		board.undo_entry()
+		board.undo_entry()
+		for square in ["d7", "d5", "e4", "d5"]:
+			var at: Vector2 = BoardView.square_position(square, 800, false) + Vector2(50, 50)
+			board._gui_input(_mouse(true, at))
+			board._gui_input(_mouse(false, at))
+		assert_eq(board.entry_mark_count("d5"), 2, "a reused square accumulates marks")
+	board.free()
+
+
+func test_entry_promotion_picker_and_auto_queen_keep_displayed_position():
+	for auto in ["off", "on"]:
+		var board = preload("res://ui/board_view.tscn").instantiate()
+		board.game = preload("res://core/game.gd").new("4k3/P7/8/8/8/8/8/4K3 w - - 0 1")
+		board.auto_queen = auto
+		Engine.get_main_loop().root.add_child(board)
+		board.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+		board.size = Vector2(800, 800)
+		board.start_entry(1)
+		board._gui_input(_mouse(true, Vector2(50, 150)))
+		board._gui_input(_mouse(false, Vector2(50, 50)))
+		var picker = board.get_node("PromotionPicker")
+		assert_eq(picker.visible, auto == "off")
+		if auto == "off":
+			picker.get_child(3).pressed.emit()
+		assert_eq(board.entry_moves, PackedStringArray(["a7a8n" if auto == "off" else "a7a8q"]))
+		assert_eq(board.game.board.piece_at("a7"), "P")
+		assert_eq(board.game.board.piece_at("a8"), "")
+		board.clear_entry()
+		assert_eq(board.entry_moves.size(), 0)
+		assert_eq(board.entry_mark_count("a7"), 0)
+		board.free()
+
+
+func test_entry_drag_can_start_with_black_and_accepts_white_reply():
+	var board = preload("res://ui/board_view.tscn").instantiate()
+	board.game = preload("res://core/game.gd").new("4k3/3p4/8/8/8/8/4P3/4K3 b - - 0 1")
+	Engine.get_main_loop().root.add_child(board)
+	board.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	board.size = Vector2(800, 800)
+	board.start_entry(2)
+	for move in [["d7", "d5"], ["e2", "e4"]]:
+		var from: Vector2 = BoardView.square_position(move[0], 800, false) + Vector2(50, 50)
+		var to: Vector2 = BoardView.square_position(move[1], 800, false) + Vector2(50, 50)
+		board._gui_input(_mouse(true, from))
+		board._gui_input(_mouse(false, to))
+	assert_eq(board.entry_moves, PackedStringArray(["d7d5", "e2e4"]))
+	assert_eq(board.entry_san, PackedStringArray(["d5", "e4"]))
+	board.free()
+
+
+func test_lucena_line_can_be_entered_undone_and_cleared():
+	var board = preload("res://ui/board_view.tscn").instantiate()
+	board.game = preload("res://core/game.gd").new("1K1k4/1P6/8/8/8/8/r7/2R5 w - - 0 1")
+	Engine.get_main_loop().root.add_child(board)
+	board.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	board.size = Vector2(800, 800)
+	board.start_entry(3)
+	for move in ["c1d1", "d8e7", "d1d4", "a2a1", "b8c7"]:
+		for square in [move.substr(0, 2), move.substr(2, 2)]:
+			var at: Vector2 = BoardView.square_position(square, 800, false) + Vector2(50, 50)
+			board._gui_input(_mouse(true, at))
+			board._gui_input(_mouse(false, at))
+	assert_eq(board.entry_san, PackedStringArray(["Rd1+", "Ke7", "Rd4", "Ra1", "Kc7"]))
+	assert_eq(board.entry_mark_count("d1"), 2)
+	board.undo_entry()
+	board.undo_entry()
+	assert_eq(board.entry_moves.size(), 3)
+	assert_eq(board.entry_mark_count("a1"), 0)
+	board.clear_entry()
+	assert_eq(board.entry_moves.size(), 0)
+	assert_eq(board.entry_mark_count("d1"), 0)
+	board.free()
+
+
+func test_reused_entry_square_is_visibly_darker():
+	if DisplayServer.get_name() == "headless":
+		print("SKIP entry mark pixels: graphical display required")
+		return
+	var board = preload("res://ui/board_view.tscn").instantiate()
+	board.game = preload("res://core/game.gd").new()
+	Engine.get_main_loop().root.add_child(board)
+	board.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	board.size = Vector2(400, 400)
+	board.start_entry(2)
+	board._commit("e2e4", false)
+	board._commit("d7d5", false)
+	await Engine.get_main_loop().process_frame
+	await RenderingServer.frame_post_draw
+	var once = board.get_viewport().get_texture().get_image().get_pixel(155, 155)
+	board._commit("e4d5", false)
+	await Engine.get_main_loop().process_frame
+	await RenderingServer.frame_post_draw
+	var twice = board.get_viewport().get_texture().get_image().get_pixel(155, 155)
+	assert_true(twice.g < once.g, "a second mark deepens the red tint")
+	board.free()
+
+
 func test_board_size_clamps_and_fit_follows_layout():
 	var main = preload("res://ui/main.tscn").instantiate()
 	var path := "user://test_ui015_size_%d.cfg" % Time.get_ticks_usec()

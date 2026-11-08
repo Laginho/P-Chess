@@ -1,6 +1,38 @@
 extends "res://tests/run.gd".Test
 
 
+func test_next_practice_prefers_unsolved_positions_from_games():
+	var path := "user://course_next_%d.json" % Time.get_ticks_usec()
+	var unit := {"id": "rook", "positions": [
+		{"id": "ordinary", "pool": "practice"},
+		{"id": "game", "pool": "practice", "from_your_game": true},
+		{"id": "test", "pool": "test"}]}
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	file.store_string(JSON.stringify({"units": {"rook": {"practice": {"game": {"solved": true}}}}}))
+	file = null
+	var course = load("res://core/course.gd").new(path)
+	assert_true(course.has_method("next_practice_position"), "selects the next practice position")
+	if course.has_method("next_practice_position"):
+		assert_eq(course.next_practice_position(unit).id, "ordinary")
+		file = FileAccess.open(path, FileAccess.WRITE)
+		file.store_string(JSON.stringify({"units": {"rook": {"practice": {"ordinary": {"solved": true}}}}}))
+		file = null
+		course = load("res://core/course.gd").new(path)
+		assert_eq(course.next_practice_position(unit).id, "game")
+		file = FileAccess.open(path, FileAccess.WRITE)
+		file.store_string(JSON.stringify({"units": {"rook": {"practice": {"ordinary": {"solved": true}, "game": {"solved": true}}}}}))
+		file = null
+		course = load("res://core/course.gd").new(path)
+		assert_eq(course.next_practice_position(unit).id, "ordinary")
+		assert_eq(course.next_practice_position({"id": "empty", "positions": []}), {})
+		file = FileAccess.open(path, FileAccess.WRITE)
+		file.store_string(JSON.stringify({"units": {"rook": {"from_your_game": [{"id": "saved-game"}], "practice": {"game": {"solved": true}}}}}))
+		file = null
+		course = load("res://core/course.gd").new(path)
+		assert_eq(course.next_practice_position(unit).id, "saved-game")
+	DirAccess.remove_absolute(path)
+
+
 func test_rating_round_trip_and_conversion():
 	var path := "user://course_test_%d.json" % Time.get_ticks_usec()
 	var script = load("res://core/course.gd")

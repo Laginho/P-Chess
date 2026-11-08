@@ -1,7 +1,7 @@
 ﻿extends SceneTree
 
 # The launcher must set the data root before Godot starts, including its own log.
-const BOARDS := ["Main", "CourseMap", "Unit", "Theory", "NameDialog", "Searching", "Game", "GamePanelStates", "GameSidePanel", "GameOver", "GameOverStates", "GameOverCard", "History", "Review", "ReviewAnalysing", "ReviewNotAnalysed", "ReviewSmall", "ReviewLegend", "Profile", "Repertoire", "OpeningPicker", "RepertoireEditor", "Board", "ClassIcon", "ClassLegend", "Settings", "Setup", "PromotionPicker", "RepertoireImport"]
+const BOARDS := ["Main", "CourseMap", "Unit", "Theory", "SolvingEntry", "NameDialog", "Searching", "Game", "GamePanelStates", "GameSidePanel", "GameOver", "GameOverStates", "GameOverCard", "History", "Review", "ReviewAnalysing", "ReviewNotAnalysed", "ReviewSmall", "ReviewLegend", "Profile", "Repertoire", "OpeningPicker", "RepertoireEditor", "Board", "ClassIcon", "ClassLegend", "Settings", "Setup", "PromotionPicker", "RepertoireImport"]
 const CATALOG := """eco	name	pgn
 B12	Caro-Kann Defense: Advance Variation, Short Variation	1. e4 c6 2. d4 d5 3. e5 Bf5 4. Nf3 e6 5. Be2 c5
 B12	Caro-Kann Defense: Advance Variation, Tal Variation	1. e4 c6 2. d4 d5 3. e5 Bf5 4. h4 h5
@@ -144,13 +144,15 @@ func capture() -> void:
  if board not in ["Main", "NameDialog"]:
   main.name_dialog.hide()
  match board:
-  "CourseMap", "Unit", "Theory":
+  "CourseMap", "Unit", "Theory", "SolvingEntry":
    main.course.save_rating(1600, "chess.com")
    main._show_course_map()
-   if board in ["Unit", "Theory"] and not main.course.units().is_empty():
+   if board in ["Unit", "Theory", "SolvingEntry"] and not main.course.units().is_empty():
     main._show_unit(main.course.units()[0])
     if board == "Theory":
      main.unit_page.part_requested.emit(main.course.units()[0], "theory")
+    elif board == "SolvingEntry":
+     main.unit_page.part_requested.emit(main.course.units()[0], "solving")
   "Searching":
    main.get_node("Home").hide()
    main.searching.present(SETTINGS)

@@ -167,6 +167,40 @@ func unit_progress(unit: Dictionary) -> Dictionary:
 			"playouts_passed": passed, "test": test, "first_try": rate}
 
 
+func practice_positions(unit: Dictionary) -> Array:
+	var result := []
+	for position in unit.get("positions", []):
+		if position is Dictionary and position.get("pool") == "practice":
+			result.append(position)
+	var all_units = _progress.get("units", {})
+	var saved = all_units.get(unit.get("id", ""), {}) if all_units is Dictionary else {}
+	var from_games = saved.get("from_your_game", []) if saved is Dictionary else []
+	if from_games is Array:
+		for position in from_games:
+			if position is Dictionary:
+				var entry: Dictionary = position.duplicate()
+				entry.from_your_game = true
+				result.append(entry)
+	return result
+
+
+func practice_result(unit: Dictionary, position: Dictionary) -> Dictionary:
+	var all_units = _progress.get("units", {})
+	var saved = all_units.get(unit.get("id", ""), {}) if all_units is Dictionary else {}
+	var practice = saved.get("practice", {}) if saved is Dictionary else {}
+	var result = practice.get(position.get("id", ""), {}) if practice is Dictionary else {}
+	return result if result is Dictionary else {}
+
+
+func next_practice_position(unit: Dictionary) -> Dictionary:
+	var positions := practice_positions(unit)
+	for from_game in [true, false]:
+		for position in positions:
+			if bool(position.get("from_your_game", false)) == from_game and not practice_result(unit, position).get("solved", false):
+				return position
+	return positions[0] if not positions.is_empty() else {}
+
+
 func clock_choice() -> String:
 	return "none" if _progress.get("clock") == "none" else "5+5"
 

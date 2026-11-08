@@ -4,6 +4,68 @@ const MainScene = preload("res://ui/main.tscn")
 const Session = preload("res://tests/test_session.gd")
 
 
+func test_black_first_line_pairs_san_by_side_after_undo_and_clear():
+	var screen = load("res://ui/solving.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(screen)
+	var unit := {"id": "black", "positions": [{"id": "one", "pool": "practice", "fen": "4k3/8/2r5/8/8/8/8/4K3 b - - 0 1", "line_length": 2, "side": "b", "goal": "win"}]}
+	screen.present(load("res://core/course.gd").new("user://absent_black_line_test.json"), unit)
+	var moves = screen.find_child("Moves", true, false)
+	for move in ["c6c5", "e1f2", "c5c4"]:
+		screen.board._commit(move, false)
+	assert_eq(moves.text, "1...  Rc5\n2.  Kf2  Rc4")
+	screen.find_child("Undo", true, false).pressed.emit()
+	assert_eq(moves.text, "1...  Rc5\n2.  Kf2")
+	screen.find_child("Clear", true, false).pressed.emit()
+	assert_eq(moves.text, "")
+	screen.free()
+
+
+func test_enter_commits_only_full_line_even_when_action_buttons_have_focus():
+	var root = Engine.get_main_loop().root
+	var screen = load("res://ui/solving.tscn").instantiate()
+	root.add_child(screen)
+	var unit := {"id": "keys", "positions": [{"id": "one", "pool": "practice", "fen": preload("res://core/game.gd").START, "line_length": 2, "side": "w", "goal": "win"}]}
+	screen.present(load("res://core/course.gd").new("user://absent_keys_test.json"), unit)
+	var commits := []
+	var backs := []
+	screen.line_committed.connect(func(position, uci, san): commits.append([position, uci, san]))
+	screen.back_requested.connect(func(): backs.append(true))
+	await Engine.get_main_loop().process_frame
+	for keycode in [KEY_ENTER, KEY_KP_ENTER]:
+		for button_name in ["Undo", "Clear", "Back", "Commit"]:
+			screen.board.clear_entry()
+			for move in ["e2e4", "e7e5", "g1f3"]:
+				screen.board._commit(move, false)
+			var button = screen.find_child(button_name, true, false)
+			button.grab_focus()
+			assert_eq(root.gui_get_focus_owner(), button, button_name + " receives focus")
+			var previous := commits.size()
+			for pressed in [true, false]:
+				var event := InputEventKey.new()
+				event.keycode = keycode
+				event.physical_keycode = keycode
+				event.pressed = pressed
+				root.push_input(event, true)
+				await Engine.get_main_loop().process_frame
+			assert_eq(commits.size(), previous + 1, button_name + " commits once")
+			assert_eq(screen.board.entry_moves, PackedStringArray(["e2e4", "e7e5", "g1f3"]), button_name + " does not alter the line")
+			assert_eq(backs.size(), 0, "Enter does not go back")
+			if button_name != "Commit":
+				screen.board.undo_entry()
+				previous = commits.size()
+				for pressed in [true, false]:
+					var event := InputEventKey.new()
+					event.keycode = keycode
+					event.physical_keycode = keycode
+					event.pressed = pressed
+					root.push_input(event, true)
+					await Engine.get_main_loop().process_frame
+				assert_eq(commits.size(), previous, "short line cannot commit")
+				assert_eq(screen.board.entry_moves, PackedStringArray(["e2e4", "e7e5"]), button_name + " leaves a short line intact")
+				assert_eq(backs.size(), 0, "Enter on a short line does not go back")
+	screen.free()
+
+
 func test_course_navigation_unit_progress_and_clock():
 	var folder := "user://course_screens_%d" % Time.get_ticks_usec()
 	DirAccess.make_dir_recursive_absolute(folder)
@@ -49,6 +111,9 @@ func test_course_navigation_unit_progress_and_clock():
 			theory.present(main.course, without_books)
 			assert_true(not theory.find_child("ReadCard", true, false).visible, "empty books section is hidden")
 			theory.find_child("Back", true, false).pressed.emit()
+		var solving = main.get_node_or_null("Solving")
+		if solving != null and solving.visible:
+			solving.find_child("Back", true, false).pressed.emit()
 	assert_eq(requests, [["rook-endgames", "theory"], ["rook-endgames", "solving"], ["rook-endgames", "playouts"], ["rook-endgames", "test"]])
 	assert_true(unit.visible, "a part without a screen leaves the unit visible")
 	unit.find_child("NoClock", true, false).pressed.emit()
@@ -64,6 +129,87 @@ func test_course_navigation_unit_progress_and_clock():
 	assert_true(map.visible, "Profile returns to map")
 	map.find_child("Back", true, false).pressed.emit()
 	assert_true(main.get_node("Home").visible and not map.visible)
+	main.free()
+	Session.HistoryStorage.clean(folder)
+
+
+func test_solving_entry_opens_next_position_limits_line_and_handles_keys():
+	var folder := "user://solving_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var path := folder.path_join("course.json")
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	file.store_string(JSON.stringify({"units": {"unit": {"practice": {"first": {"solved": true}}}}}))
+	file = null
+	var main = MainScene.instantiate()
+	main.course = load("res://core/course.gd").new(path)
+	main.history = load("res://core/history.gd").new(folder)
+	main.uci.free()
+	main.uci = Session.HeldBridge.new()
+	main.maia = main.MaiaPlayer.new(main.uci)
+	main.preferences = main.Settings.new(folder.path_join("settings.cfg"))
+	Engine.get_main_loop().root.add_child(main)
+	var unit := {"id": "unit", "title": "Test", "positions": [
+		{"id": "first", "pool": "practice", "fen": preload("res://core/game.gd").START, "line_length": 2, "side": "w", "goal": "win"},
+		{"id": "next", "pool": "practice", "fen": preload("res://core/game.gd").START, "line_length": 2, "side": "w", "goal": "win"}]}
+	main._show_unit(unit)
+	main.unit_page.part_requested.emit(unit, "solving")
+	var screen = main.get_node_or_null("Solving")
+	assert_true(screen != null and screen.visible, "solving opens")
+	if screen != null:
+		assert_eq(screen.position_data.id, "next")
+		assert_eq(screen.find_child("Position", true, false).text, "Position 2 of 2")
+		assert_eq(screen.find_child("Instruction", true, false).text, "Enter 2 of your moves, with Black's replies in between.")
+		assert_eq(screen.find_child("Goal", true, false).find_child("Title", true, false).text, "White to play and win")
+		var commits := []
+		screen.line_committed.connect(func(position, uci, san): commits.append([position, uci, san]))
+		var board = screen.find_child("BoardView", true, false)
+		var key := InputEventKey.new()
+		key.pressed = true
+		key.keycode = KEY_ENTER
+		screen._unhandled_key_input(key)
+		assert_eq(commits.size(), 0, "a short line cannot be committed")
+		for move in ["e2e4", "e7e5", "g1f3", "b8c6"]:
+			board._commit(move, false)
+		assert_eq(board.entry_moves.size(), 3, "line ends after two own moves")
+		key.keycode = KEY_BACKSPACE
+		screen._unhandled_key_input(key)
+		assert_eq(board.entry_moves.size(), 2)
+		board._commit("g1f3", false)
+		key.keycode = KEY_ENTER
+		screen._unhandled_key_input(key)
+		assert_eq(commits.size(), 1)
+		if commits.size() == 1:
+			assert_eq(commits[0][0].id, "next")
+			assert_eq(commits[0][1], PackedStringArray(["e2e4", "e7e5", "g1f3"]))
+			assert_eq(commits[0][2], PackedStringArray(["e4", "e5", "Nf3"]))
+		assert_eq(screen.find_child("Count", true, false).text, "2 of 2 moves")
+		assert_true(screen.find_child("Moves", true, false).text.contains("1.  e4  e5"))
+		screen.find_child("Undo", true, false).pressed.emit()
+		assert_eq(board.entry_moves.size(), 2)
+		screen.find_child("Clear", true, false).pressed.emit()
+		assert_eq(board.entry_moves.size(), 0)
+		screen.find_child("Commit", true, false).pressed.emit()
+		assert_eq(commits.size(), 1)
+		var progress = screen.find_child("Progress", true, false)
+		assert_eq(progress.get_child_count(), 2)
+		assert_true(progress.get_child(1).get_meta("current", false), "current position has an independent indicator")
+		board._commit("e2e4", false)
+		board._commit("e7e5", false)
+		board._commit("g1f3", false)
+		screen.find_child("Commit", true, false).pressed.emit()
+		assert_eq(commits.size(), 2, "the button commits a full line")
+		file = FileAccess.open(path, FileAccess.WRITE)
+		file.store_string(JSON.stringify({"units": {"unit": {"practice": {"first": {"solved": true, "first_try": true}, "next": {"solved": true}}}}}))
+		file = null
+		screen.present(load("res://core/course.gd").new(path), unit)
+		assert_true(progress.get_child(0).get_meta("current", false), "the solved fallback is still current")
+		assert_eq(progress.get_child(0).get_theme_stylebox("panel").bg_color, Color("#7fa650"))
+		assert_eq(progress.get_child(0).get_theme_stylebox("panel").border_width_left, 2)
+		assert_eq(progress.get_child(1).get_theme_stylebox("panel").bg_color, Color("#4f6a33"))
+		var from_game: Dictionary = unit.duplicate(true)
+		from_game.positions[0].from_your_game = true
+		screen.present(load("res://core/course.gd").new(path), from_game)
+		assert_true(screen.find_child("FromGame", true, false).visible)
 	main.free()
 	Session.HistoryStorage.clean(folder)
 
