@@ -123,7 +123,8 @@ func configure(preferences, course_store = null) -> void:
 func refresh_continue() -> void:
 	if course == null:
 		return
-	target = {"kind": "rating"} if course.rating().is_empty() else course.continue_target(int(Time.get_unix_time_from_system()))
+	var now: int = course.local_calendar_time(int(Time.get_unix_time_from_system()), int(Time.get_time_zone_from_system().bias))
+	target = {"kind": "rating"} if course.rating().is_empty() else course.continue_target(now)
 	var kind: String = target.kind
 	var title := "Start the course"
 	var eyebrow := "CONTINUE"
@@ -181,6 +182,7 @@ func _show_profile() -> void:
 	profile.back_requested.connect(func():
 		profile.hide()
 		profile.queue_free()
+		refresh_continue()
 		$Center.show()
 		$Center/Form/Profile.grab_focus())
 	profile.present(store, course)

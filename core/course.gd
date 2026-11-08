@@ -164,9 +164,13 @@ func unit_progress(unit: Dictionary) -> Dictionary:
 	if mastered and checks is Array:
 		for i in range(checks.size() - 1, -1, -1):
 			var check = checks[i]
-			if check is Dictionary and check.get("done", true) != false and (check.has("passed") or check.has("missed")):
-				needs_review = check.get("missed", false) == true or check.get("passed", true) == false
-				break
+			if check is Dictionary:
+				if check.get("missed", false) == true:
+					needs_review = true
+					break
+				if check.get("done", true) != false and (check.has("passed") or check.has("missed")):
+					needs_review = check.get("passed", true) == false
+					break
 	var theory: bool = saved.get("theory_opened", false) == true
 	var status := "needs review" if needs_review else ("mastered" if mastered else ("in progress" if theory or committed > 0 or (playouts is Dictionary and not playouts.is_empty()) or not attempts.is_empty() else "new"))
 	var rate := "–" if committed == 0 else "%d%% (%d of %d)" % [roundi(100.0 * first / committed), first, committed]
@@ -196,6 +200,12 @@ func test_attempts(unit: Dictionary) -> Array:
 	var saved = all_units.get(unit.get("id", ""), {}) if all_units is Dictionary else {}
 	var attempts = saved.get("test_attempts", []) if saved is Dictionary else []
 	return attempts.duplicate(true) if attempts is Array else []
+
+
+# Convert an instant to a wall-clock timestamp so mastery dates and the current
+# day use the same local calendar. The caller supplies the current UTC offset.
+static func local_calendar_time(now: int, offset_minutes: int) -> int:
+	return now + offset_minutes * 60
 
 
 func continue_target(now: int) -> Dictionary:
@@ -229,8 +239,6 @@ func continue_target(now: int) -> Dictionary:
 				return {"kind": "from_game", "unit": unit, "position": position}
 	for unit in units():
 		var progress := unit_progress(unit)
-		if progress.test == "passed":
-			continue
 		if not progress.theory_done:
 			return {"kind": "theory", "unit": unit}
 		if not progress.solving_done:
@@ -238,11 +246,12 @@ func continue_target(now: int) -> Dictionary:
 		for position in unit.get("playouts", []):
 			if not playout_passed(unit, position):
 				return {"kind": "playouts", "unit": unit, "position": position}
-		return {"kind": "test", "unit": unit}
+		if progress.test != "passed":
+			return {"kind": "test", "unit": unit}
 	return {"kind": "done"}
 
 
-func record_review_check(unit: Dictionary, day: int, passed: bool) -> bool:
+func record_review_check(unit: Dictionary, day: int, passed: bool, done := true) -> bool:
 	var id: String = unit.get("id", "")
 	if id.is_empty() or day not in [7, 30]:
 		return false
@@ -256,7 +265,7 @@ func record_review_check(unit: Dictionary, day: int, passed: bool) -> bool:
 		var checks = saved.get("review_checks", [])
 		if not checks is Array:
 			return false
-		checks.append({"day": day, "done": true, "passed": passed, "missed": not passed})
+		checks.append({"day": day, "done": done, "passed": passed, "missed": not passed})
 		saved.review_checks = checks
 		all_units[id] = saved
 		next.units = all_units

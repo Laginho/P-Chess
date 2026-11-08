@@ -648,6 +648,9 @@ func _begin_test() -> void:
 
 func _test_position_graded(position: Dictionary, grade: Dictionary) -> void:
 	if _review_active:
+		if not grade.solved and not course.record_review_check(_review_unit, _review_day, false, false):
+			solving._show_error("Could not save your review check. Try Commit again.")
+			return
 		_review_results.append(bool(grade.solved))
 		if _review_results.size() < _review_positions.size():
 			solving.present_review(course, _review_unit, _review_positions, _review_results.size(), preferences)
