@@ -1003,6 +1003,12 @@ func _input(event: InputEvent) -> void:
 	if settings_panel and settings_panel.visible:
 		return
 	if visible and event is InputEventKey and event.is_pressed() and not event.is_echo() \
+			and event.keycode in [KEY_ENTER, KEY_KP_ENTER, KEY_SPACE] \
+			and _moves.has_focus() and _moves.get_selected() in _marker_rows:
+		get_viewport().set_input_as_handled()
+		unit_requested.emit(own_game_unit)
+		return
+	if visible and event is InputEventKey and event.is_pressed() and not event.is_echo() \
 			and event.keycode == KEY_SPACE:
 		get_viewport().set_input_as_handled()
 		if not _from_history:
@@ -1442,8 +1448,8 @@ func present(game, clocks: Array, settings: Dictionary, result_text: String,
 				marker_row.set_custom_color(1, Color("a4cf78"))
 				marker_row.set_custom_font_size(1, 12)
 				marker_row.set_custom_bg_color(1, Color("42652b"), true)
-				for column in 3:
-					marker_row.set_selectable(column, false)
+				marker_row.set_selectable(0, false)
+				marker_row.set_selectable(2, false)
 				_marker_rows.append(marker_row)
 				_exit_rows.append(marker_row)
 				own_game_course.add_from_game(own_game_unit, {"fen": marker.fen, "side": _colour, "goal": "win" if marker.before == "win" else "hold", "line_length": int(own_game_unit.get("default_line_length", 3))})

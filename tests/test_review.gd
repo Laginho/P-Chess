@@ -2375,7 +2375,7 @@ func test_result_change_shows_link_and_adds_position_to_course():
 			var marker: TreeItem = rows[1]
 			assert_true(marker.get_text(1).contains("this move turned draw into loss"))
 			assert_true(marker.get_text(1).contains("Practise in Rook endgames"))
-			assert_true(marker.get_expand_right(1) and not marker.is_selectable(1))
+			assert_true(marker.get_expand_right(1))
 			var click := InputEventMouseButton.new()
 			click.button_index = MOUSE_BUTTON_LEFT
 			click.pressed = true
@@ -2391,6 +2391,65 @@ func test_result_change_shows_link_and_adds_position_to_course():
 			assert_eq(saved[0].line_length, 3)
 	DirAccess.remove_absolute(path)
 	main.free()
+
+func test_practice_marker_is_reachable_and_activates_by_keyboard():
+	var root: Window = Engine.get_main_loop().root
+	var old_size := root.size
+	root.size = Vector2i(1280, 800)
+	var main = await _session(FakeTime.new())
+	var review = main.review
+	var fen := "4k3/8/8/8/4p3/R7/7r/4K3 w - - 0 1"
+	var game := Game.new(fen)
+	game.play("a3a4")
+	var probe = preload("res://tests/test_grader.gd").FakeProbe.new()
+	probe.answers[fen] = {"ok": true, "result": "draw"}
+	probe.answers[game.board.to_fen()] = {"ok": true, "result": "win"}
+	var path := "user://review_keyboard_%d.json" % Time.get_ticks_usec()
+	var course = load("res://core/course.gd").new(path)
+	var unit := {"id": "rook-endgames", "title": "Rook endgames", "default_line_length": 3, "positions": []}
+	review.own_game_probe = probe
+	review.own_game_course = course
+	review.own_game_unit = unit
+	var opened := []
+	review.unit_requested.connect(func(request): opened.append(request))
+	review.present(game, [180000], SETTINGS, "")
+	await Engine.get_main_loop().process_frame
+	var list: Tree = review.get_node("Margin/Content/ReviewBody/Side/Moves")
+	var rows := list.get_root().get_children()
+	assert_eq(rows.size(), 2)
+	if rows.size() == 2:
+		var marker: TreeItem = rows[1]
+		assert_true(marker.get_text(1).contains("Practise in Rook endgames"), "the link has a name")
+		list.grab_focus()
+		for key in [KEY_ENTER, KEY_SPACE]:
+			review.get_node("Margin/Content/ReviewBody/Side/Navigation/First").pressed.emit()
+			list.set_block_signals(true)
+			rows[0].select(1)
+			list.set_block_signals(false)
+			await _review_key(Engine.get_main_loop().root, KEY_DOWN)
+			assert_true(list.get_selected() == marker, "Down reaches the marker")
+			assert_eq(review._ply, 0, "the marker is not a chess move")
+			await _review_key(Engine.get_main_loop().root, key)
+			assert_eq(opened.size(), 1, "Enter and Space open the unit")
+			if not opened.is_empty():
+				assert_eq(opened[0], unit)
+			opened.clear()
+			main.unit_page.hide()
+			review.show()
+			list.grab_focus()
+			await _review_key(Engine.get_main_loop().root, KEY_UP)
+			assert_true(list.get_selected() == rows[0], "Up returns to the move")
+			assert_eq(review._ply, 1)
+		await Engine.get_main_loop().process_frame
+		var at: Vector2 = list.global_position + list.get_item_area_rect(marker, 1).get_center()
+		await _review_mouse_motion(root, at)
+		await _review_mouse_button(root, at, true)
+		await _review_mouse_button(root, at, false)
+		assert_eq(opened, [unit], "a real click opens the unit")
+	assert_eq(course.practice_positions(unit)[0].fen, fen, "the unit contains the position from the game")
+	DirAccess.remove_absolute(path)
+	main.free()
+	root.size = old_size
 
 func test_review_unit_request_opens_unit_page():
 	var main = await _session(FakeTime.new())
