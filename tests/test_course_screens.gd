@@ -861,3 +861,46 @@ func test_playout_flag_during_terminal_move_takes_precedence_over_mate():
 	assert_eq(main.playout.find_child("Heading", true, false).text, "Out of time")
 	assert_true(not main.course.playout_passed(unit, position))
 	main.free()
+
+
+func test_playout_start_describes_task_rules_and_all_states_including_replay():
+	var path := "user://playout_start_%d.json" % Time.get_ticks_usec()
+	var course = load("res://core/course.gd").new(path)
+	course.save_rating(1250, "chess.com")
+	course.save_clock_choice("none")
+	var fen := "8/8/1RK5/r3k3/2P5/8/8/8 b - - 20 54"
+	var positions := []
+	for i in 4:
+		positions.append({"id": str(i), "fen": fen, "side": "b", "goal": "hold"})
+	var unit := {"id": "rook", "playouts": positions}
+	course.record_playout_pass(unit, positions[0])
+	var screen = load("res://ui/playout.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(screen)
+	screen.present_start(course, unit, 0)
+	var states: String = screen.find_child("States", true, false).text
+	assert_true(states.contains("1 Passed") and states.contains("Current"), "a replay is both passed and current")
+	assert_true(states.contains("2 To do") and states.contains("3 To do") and states.contains("4 To do"))
+	var details: String = screen.find_child("Details", true, false).text
+	assert_true(details.contains("Black to play and draw") and details.contains("Maia 1600") and details.contains("No clock"))
+	var rules: String = screen.find_child("Reason", true, false).text
+	assert_true(rules.contains("pawn") and rules.contains("30 moves") and rules.contains("time"))
+	screen.free()
+	DirAccess.remove_absolute(path)
+
+
+func test_fourth_playout_pass_offers_back_to_unit_without_next():
+	var screen = load("res://ui/playout.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(screen)
+	var position := {"fen": "4k3/8/8/8/8/8/4p2R/K7 w - - 0 1", "side": "w", "goal": "hold"}
+	var game = load("res://core/game.gd").new(position.fen)
+	game.play("h2e2")
+	screen.present_end(position, game, "Held", "You captured the pawn and kept the draw.", "", false)
+	assert_eq(screen.find_child("Heading", true, false).text, "Held")
+	assert_true(screen.find_child("Reason", true, false).text.contains("captured"))
+	assert_true(not screen.find_child("Next", true, false).visible)
+	assert_true(screen.find_child("Back", true, false).visible)
+	var backs := []
+	screen.back_requested.connect(func(): backs.append(true))
+	screen.find_child("Back", true, false).pressed.emit()
+	assert_eq(backs, [true])
+	screen.free()
