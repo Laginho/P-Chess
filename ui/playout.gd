@@ -85,6 +85,7 @@ func present_start(course, unit: Dictionary, index: int) -> void:
 	board.game = Game.new(position.fen)
 	board.flipped = position.side == "b"
 	board.review_square = ""
+	board.review_icon = null
 	board.best_move_arrow = ""
 	heading.text = "Play-out %d of 4" % (index + 1)
 	var labels := []
@@ -104,6 +105,7 @@ func present_end(position: Dictionary, game, title: String, message: String, fai
 	board.game = game
 	board.flipped = position.side == "b"
 	board.review_square = failed_move.substr(2, 2) if not failed_move.is_empty() else ""
+	board.review_icon = preload("res://ui/icons/classes/blunder.svg") if not failed_move.is_empty() else null
 	board.queue_redraw()
 	heading.text = title
 	states.text = ""
