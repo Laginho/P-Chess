@@ -155,6 +155,11 @@ func test_continue_opens_each_course_target_and_done_opens_custom():
 	assert_true("Unit done, go play some slow games" in card.text)
 	assert_eq(card.get_node("Eyebrow").text, "UNIT DONE")
 	assert_eq(card.get_node("UnitTitle").text, "Unit done, go play some slow games")
+	home.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	home.size = Vector2(800, 600)
+	var title: Label = card.get_node("UnitTitle")
+	var text_width: float = title.get_theme_font("font").get_string_size(title.text, HORIZONTAL_ALIGNMENT_LEFT, -1, title.get_theme_font_size("font_size")).x
+	assert_true(text_width <= title.size.x, "completed-course text fits at 800×600")
 	assert_eq(home.get_node("Center/Board").game.start_fen, load("res://core/game.gd").START)
 	card.pressed.emit()
 	assert_true(main.setup.visible, "completed course opens Custom")
