@@ -230,7 +230,9 @@ func test_real_rook_endgame_content_has_complete_disjoint_pools():
 		seen[key] = true
 		assert_eq(position.get("side"), board.side_to_move)
 		assert_true(position.get("goal") in ["win", "hold"])
-		assert_true(position.get("line_length", 0) in [2, 3, 4])
+		var length = position.get("line_length", 0)
+		assert_true(length is float or length is int, "line length is a number")
+		assert_true(length >= 2 and length <= 4 and length == int(length), "line length is 2–4 moves")
 		var pieces := "".join(board.squares)
 		assert_eq(pieces.count("K"), 1)
 		assert_eq(pieces.count("k"), 1)
