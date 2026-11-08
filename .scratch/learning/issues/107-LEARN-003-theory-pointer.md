@@ -1,5 +1,5 @@
 # LEARN-003: Theory pointer
-Stage: implementing
+Stage: to-review
 Blocked by: LEARN-002
 Review: agent
 Difficulty: normal
@@ -38,3 +38,16 @@ The first part of a unit only points elsewhere (design `Theory.dc.html`, CONTEXT
 
 - Proxy decided (opus-5.5 xhigh): LEARN-003 adds no book or chapter entries. Criterion 1 is met by showing the books and chapters the unit file holds, and the real books come in LEARN-004 — that ticket already owns them, and neither of us can confirm the chapter titles or numbers. (receipt /tmp/sweatshop-proxy/20261108-004319-LEARN-003-ca1693.json)
 - LEARN-004 criterion 5 owns the checked book chapters and human content review. Until then, the released unit displays its goal and terms without a books section; integration is unaffected.
+
+- Criteria check (independent agent): ✅ 1 — `ui/theory_pointer.gd:21` and `ui/theory_pointer.gd:41`; `tests/test_course_screens.gd` checks the goal, terms, visible book entries and empty state under the proxy-adjusted contract.
+- Criteria check (independent agent): ✅ 2 — `ui/theory_pointer.gd:35`; clipboard assertion passed on Xvfb and failed when the copied term was mutated.
+- Criteria check (independent agent): ✅ 3 — `core/course.gd:197`, `ui/theory_pointer.gd:61`, `ui/main.gd:501`; course and screen tests verify persisted completion and Continue.
+- Criteria check (independent agent): ✅ 4 — `ui/theory_pointer.gd:10`, `ui/main.gd:224`; screen test exercises both Back controls and the solving request.
+- Harness correction: the headless display cannot read the clipboard; the clipboard assertion runs on a supported display. Xvfb run: 5 passed, 0 failed; mutation to a wrong copied term failed as expected. The old `test_course_navigation_unit_progress_and_clock` now returns from the newly implemented theory screen before continuing its existing navigation assertions.
+- Layout and book visibility tests failed before the fixes and passed afterward; a mutation hiding populated books also failed as expected. A 1280 × 800 Xvfb capture was inspected.
+
+## Resolution
+
+Implemented the theory pointer, copying search terms, completion persistence and unit/solving navigation. The real unit's books remain LEARN-004 content; the empty section stays hidden until then. `godot --headless -s tests/run.gd`: 593 passed, 0 failed. Clipboard checked separately with Xvfb: 5 passed, 0 failed.
+
+Gate evidence: /tmp/learn003-gate.json
