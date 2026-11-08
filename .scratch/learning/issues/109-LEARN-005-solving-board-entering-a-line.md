@@ -1,5 +1,5 @@
 # LEARN-005: Solving board: entering a line
-Stage: implementing
+Stage: to-review
 Blocked by: LEARN-002
 Review: agent
 Difficulty: normal
@@ -58,8 +58,6 @@ The solving board as designed in `SolvingEntry.dc.html` (spec §L7): the positio
   - 10 ✅ entry guards in `ui/board_view.gd:217`, `:350`, `:492`; existing input and premove tests pass in the gate.
 - Resolution: implemented stationary legal line entry, promotion, undo/clear/commit, practice selection and the solving screen. The Lucena reference line was exercised by `tests/test_board_view.gd`; graphical board tests passed under Xvfb (20 passed), including the darker repeated mark. `godot --headless -s tests/run.gd`: 601 passed, 0 failed. The headless suite skips pixel checks, which were run graphically.
 
-Gate evidence: /run/media/lage/New Volume/Scratch/learn005-gate.json
-
 #### Resolution (2026-11-08)
 Verdict: Reopen — criteria 5 and 7 fail for Black-first move pairs and Enter with a focused action button.
 
@@ -85,3 +83,10 @@ Verdict: Reopen — criteria 5 and 7 fail for Black-first move pairs and Enter w
 
 Acceptance: pending | Criteria 5 and 7 need repairs and regression coverage; see the two reproductions in this Resolution.
 Disclosure: pending|integration | [LEARN-005](109-LEARN-005-solving-board-entering-a-line.md#resolution-2026-11-08) remains open for both confirmed defects; do not integrate until a fresh stage-3 review approves them.
+
+#### Stage 2 follow-up (2026-11-08)
+
+- Criterion 5 ✅ Independent read-only check: `ui/solving.gd:73` separates Black's first ply and pairs subsequent White and Black moves; `tests/test_course_screens.gd:7` checks the displayed line, Undo and Clear. Test commit `821ac74` failed against the previous grouping; production commit `8d781f5` passed it.
+- Criterion 7 ✅ Independent read-only check: `ui/solving.gd:87` checks the full line and `:92` consumes both Enter key phases before focused buttons; `tests/test_course_screens.gd:23` dispatches Enter and keypad Enter through the viewport with Undo, Clear, Back and Commit focused, checking short and full lines. Test commit `7117a83` reproduced unintended button actions and duplicate commits; production commit `fa8a8f6` passed it. Commit is disabled for a short line, so that case cannot retain Commit focus.
+- Verification: the focused course-screen suite passed 8 tests. The required `godot --headless -s tests/run.gd` gate passed 603 tests, 0 failed, exit 0. Two pixel checks and six live Lc0 checks were skipped in the headless environment; the previous stage recorded the graphical board checks. The Lucena line was previously exercised automatically; this follow-up did not repeat a manual play-through.
+Gate evidence: /run/media/lage/New Volume/Scratch/LEARN-005-reopen-gate.json
