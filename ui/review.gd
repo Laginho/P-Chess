@@ -1137,6 +1137,8 @@ func _show_line(index: int, announce := false, already_played := false) -> void:
 	else:
 		_moves.deselect_all()
 	_moves.set_block_signals(false)
+	if _line_index > 0:
+		_scroll_line.call_deferred()
 	if announce and before != _line_index and _line_index > 0:
 		_board_view.request_move_sounds(san)
 	_search_shown_position()
@@ -1144,6 +1146,11 @@ func _show_line(index: int, announce := false, already_played := false) -> void:
 	_update_eval_bar()
 	_update_engine_lines()
 	_board_view.queue_redraw()
+
+
+func _scroll_line() -> void:
+	if _line_active and _line_index > 0:
+		_moves.scroll_to_item(_line_rows[_line_index] if _line_index == _line_moves.size() else _line_rows[_line_index - 1])
 
 
 func _step(delta: int) -> void:
