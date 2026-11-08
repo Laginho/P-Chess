@@ -1,7 +1,7 @@
 ﻿extends SceneTree
 
 # The launcher must set the data root before Godot starts, including its own log.
-const BOARDS := ["Main", "CourseMap", "Unit", "Theory", "SolvingEntry", "SolvingFeedback", "NameDialog", "Searching", "Game", "GamePanelStates", "GameSidePanel", "GameOver", "GameOverStates", "GameOverCard", "History", "Review", "ReviewAnalysing", "ReviewNotAnalysed", "ReviewSmall", "ReviewLegend", "Profile", "Repertoire", "OpeningPicker", "RepertoireEditor", "Board", "ClassIcon", "ClassLegend", "Settings", "Setup", "PromotionPicker", "RepertoireImport"]
+const BOARDS := ["Main", "CourseMap", "Unit", "Theory", "SolvingEntry", "SolvingFeedback", "PlayoutStart", "PlayoutEnd", "NameDialog", "Searching", "Game", "GamePanelStates", "GameSidePanel", "GameOver", "GameOverStates", "GameOverCard", "History", "Review", "ReviewAnalysing", "ReviewNotAnalysed", "ReviewSmall", "ReviewLegend", "Profile", "Repertoire", "OpeningPicker", "RepertoireEditor", "Board", "ClassIcon", "ClassLegend", "Settings", "Setup", "PromotionPicker", "RepertoireImport"]
 const CATALOG := """eco	name	pgn
 B12	Caro-Kann Defense: Advance Variation, Short Variation	1. e4 c6 2. d4 d5 3. e5 Bf5 4. Nf3 e6 5. Be2 c5
 B12	Caro-Kann Defense: Advance Variation, Tal Variation	1. e4 c6 2. d4 d5 3. e5 Bf5 4. h4 h5
@@ -155,6 +155,18 @@ func capture() -> void:
      main.unit_page.part_requested.emit(main.course.units()[0], "solving")
   "SolvingFeedback":
    _solving_feedback(main, state)
+  "PlayoutStart", "PlayoutEnd":
+   main.course.save_rating(1600, "chess.com")
+   var unit: Dictionary = main.course.units()[0]
+   main._show_unit(unit)
+   main._show_course_part(unit, "playouts")
+   if board == "PlayoutEnd":
+    var position: Dictionary = unit.playouts[0]
+    var played = load("res://core/game.gd").new(position.fen)
+    var move: String = played.board.legal_moves()[0]
+    var san: String = played.board.san(move)
+    played.play(move)
+    main.playout.present_end(position, played, "Play-out failed", "✗ %s changed the result. Keep the win instead." % san, move, true)
   "Searching":
    main.get_node("Home").hide()
    main.searching.present(SETTINGS)

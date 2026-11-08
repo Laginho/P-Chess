@@ -378,6 +378,8 @@ func _start(new_settings: Dictionary) -> void:
 		_starting = false
 		searching.hide()
 		analysis_queue.resume()
+		if _playout_active:
+			_playout_start_failed(uci.error)
 		return
 	searching.status("Loading Maia %s…" % new_settings.level.trim_prefix("maia-"))
 	var ready := [false]
@@ -392,6 +394,8 @@ func _start(new_settings: Dictionary) -> void:
 		_starting = false
 		searching.hide()
 		analysis_queue.resume()
+		if _playout_active:
+			_playout_start_failed(uci.error)
 		return
 	searching.status("Preparing game…")
 	var error := ""
@@ -425,9 +429,14 @@ func _start(new_settings: Dictionary) -> void:
 	searching.hide()
 	if not uci.error.is_empty():
 		analysis_queue.resume()
+		if _playout_active:
+			_playout_start_failed(uci.error)
 		return
 	if not error.is_empty():
 		analysis_queue.resume()
+		if _playout_active:
+			_playout_start_failed(error)
+			return
 		setup.show()
 		var status: Label = setup.get_node("Center/Form/Missing")
 		status.text = error
@@ -568,6 +577,9 @@ func _show_playout(index: int) -> void:
 
 
 func _start_playout() -> void:
+	if not uci.error.is_empty():
+		_playout_start_failed(uci.error)
+		return
 	var position: Dictionary = _playout_unit.playouts[_playout_index]
 	_playout_active = true
 	_playout_generation += 1
@@ -575,6 +587,12 @@ func _start_playout() -> void:
 	_playout_moves = 0
 	playout.hide()
 	_start({"colour": position.side, "level": course.maia_level(), "control": course.clock_choice(), "opening": "Free", "start_fen": position.fen})
+
+
+func _playout_start_failed(message: String) -> void:
+	_cancel_playout()
+	playout.present_start(course, _playout_unit, _playout_index)
+	playout.reason.text = message
 
 
 func _finish_playout(title: String, message: String, failed_move := "") -> void:
