@@ -2,6 +2,7 @@ extends Control
 
 signal back_requested
 signal line_committed(position: Dictionary, uci: PackedStringArray, san: PackedStringArray)
+signal test_graded(position: Dictionary, result: Dictionary)
 
 var course
 var unit: Dictionary
@@ -13,6 +14,7 @@ var _mode := "entry"
 var _generation := 0
 var _grade := {}
 var _playback_ply := 0
+var test_mode := false
 
 @onready var board = $Margin/Content/BoardView
 @onready var side = $Margin/Content/Side
@@ -36,11 +38,21 @@ func _ready() -> void:
 
 
 func present(store, selected: Dictionary, settings = null) -> void:
+	test_mode = false
 	course = store
 	unit = selected
 	positions = course.practice_positions(unit)
 	_settings = settings
 	_open_position(course.next_practice_position(unit))
+
+
+func present_test(store, selected: Dictionary, drawn: Array, index: int, settings = null) -> void:
+	test_mode = true
+	course = store
+	unit = selected
+	positions = drawn
+	_settings = settings
+	_open_position(positions[index])
 
 
 func _open_position(selected: Dictionary) -> void:
@@ -80,7 +92,7 @@ func _open_position(selected: Dictionary) -> void:
 		segment.name = "Segment%d" % i
 		segment.custom_minimum_size = Vector2(0, 8)
 		segment.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var result: Dictionary = course.practice_result(unit, positions[i])
+		var result: Dictionary = {} if test_mode else course.practice_result(unit, positions[i])
 		var style := StyleBoxFlat.new()
 		style.bg_color = Color("#7fa650") if result.get("first_try", false) and result.get("solved", false) else (Color("#4f6a33") if result.get("solved", false) else Color("#45423d"))
 		style.set_corner_radius_all(4)
@@ -128,13 +140,16 @@ func _commit_line() -> void:
 	if probe.has_method("start"):
 		probe.start()
 	var generation := _generation
-	var first: bool = course.practice_result(unit, position_data).is_empty()
+	var first: bool = not test_mode and course.practice_result(unit, position_data).is_empty()
 	var grader = preload("res://core/grader.gd").new(probe)
 	grader.grade(position_data, line, func(result: Dictionary):
 		if generation != _generation or not visible:
 			return
 		if not result.ok:
 			_show_error(result.get("error", "Tablebase probe failed."))
+		elif test_mode:
+			_mode = "finished"
+			test_graded.emit(position_data.duplicate(true), result)
 		elif not course.record_commit(unit, position_data, result.solved):
 			_show_error("Could not save course progress. Try Commit again.")
 		else:
