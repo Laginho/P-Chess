@@ -1,5 +1,5 @@
 # LEARN-001: The rating sentence
-Stage: to-implement
+Stage: implementing
 Blocked by: none
 Review: agent
 Difficulty: normal
