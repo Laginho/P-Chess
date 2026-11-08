@@ -34,3 +34,6 @@ const CLASSIFICATION_MATERIAL := {"n": 3, "b": 3, "r": 5, "q": 9}
 const CLASSIFICATION_MISS_BEFORE_EP := 0.75
 const CLASSIFICATION_MISS_AFTER_EP := 0.60
 const CLASSIFICATION_MISS_LOSS := 0.10
+
+# Root-move distance to zeroing, in plies. Syzygy may round one ply high.
+const COURSE_DTZ_MARGIN := 1

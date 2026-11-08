@@ -1,8 +1,9 @@
 # LEARN-006: Grading a line, and the feedback
-Stage: to-implement
+Stage: to-review
 Blocked by: CI-005, LEARN-005, LEARN-010
 Review: agent
 Difficulty: hard
+Gate evidence: /run/media/lage/New Volume/Scratch/LEARN-006/gate.json
 
 - Primary files:
   - New: core/grader.gd (grading a committed line against a probe, spec §L6)
@@ -55,3 +56,49 @@ Commit grades the line by tablebase and shows the feedback designed in `SolvingF
 - 2026-11-08 Contract reconciled before implementation: [LEARN-010](117-LEARN-010-tablebase-probe.md) owns the shared native probe, its fake-UCI and real-file seams, build and Windows packaging. LEARN-006 consumes that interface and preserves its grading/feedback scope, DTZ margin and error-without-recording requirement. Stage 2 stops here without code or a ticket branch, as the proxy directed; resume LEARN-006 after LEARN-010 is done. RES-001/CI-005's Windows Stockfish check still verifies table loading; LEARN-010 adds acceptance for the application's actual probe path, pending Bruno before release.
 
 - 2026-11-08 Attempt 1 failed: exit 0. Log tail: LEARN-006 permanece `to-implement`, aguardando o novo [LEARN-010](/home/lage/Projects/P-Chess/.artifacts-build/lanes/learning/.scratch/learning/issues/117-LEARN-010-tablebase-probe.md), que fornecerá DTZ exato via Fathom. /  / O proxy aprovou a separação. Tickets e especificação atualizados no commit `703fe57`; recibo e dependências validados. Apenas documentação mudou. /  / A [skill ticket-flow](/home/lage/.agents/skills/ticket-flow/SKILL.md) determina parar quando “the ticket needs more than one seam (back to stage 1)”. Próxima etapa: **LEARN-010**.
+
+### Stage 2 (2026-11-08)
+
+- LEARN-010 is done and merged into the learning session. Implementing on `LEARN-006` from `d4b6190`; no contract change.
+- Callers/boundaries before tests: the new grader consumes only `probe(fen, callback)` answers; Course readers are unit/map/solving and future Continue. Solving Commit currently emits an unhandled line signal; existing entry tests cover repeated commits without a configured probe. Main owns engine nodes. Boundaries to preserve: black-first SAN, empty practice, exact DTZ margin, draw/terminal positions, failed reads/writes, asynchronous errors, repeated Commit, Back/Retry/Next during pending callbacks, and reopening an already solved position. Approved seams: scripted probe/grader, Course public persistence/progress, scene controls with a fake probe.
+
+- Course test harness correction: JSON reload returns numeric counts as floats, so the reloaded commit count is compared as a number separately from the boolean fields, instead of a type-strict dictionary comparison. The original red (`13 passed, 1 failed`) proved the missing public recording method; the corrected assertion preserves that regression.
+
+
+#### Implementation and red/green evidence
+
+- `c350f38` (test-only plus ticket) **0 passed, 1 failed** → `2596f45` (production-only) **1 passed, 0 failed**: a committed result-keeping line is graded through scripted probe answers.
+- `adc3eaf` (test-only) **1 passed, 4 failed** → `b2535ae` (production-only) **5 passed, 0 failed**: result changes, exact/over-margin root DTZ, all drawing moves, strictly better/equal opponent defences, first-failure stopping, best continuation and probe errors (including correction).
+- `1d7e2c5` (test-only) **13 passed, 1 failed**, missing recording → `1edf979` (production-only) adds atomic commit recording. The JSON numeric comparison correction is documented above and committed separately in `661660d`; corrected Course suite **14 passed, 0 failed**. Existing progress is preserved, solved is cumulative, and later passes cannot acquire first try.
+- `d83668a` (test-only) **8 passed, 3 failed**, missing feedback → `8ded8f5` (production-only) **3 passed, 0 failed** for the new feedback methods; the combined grader/Course/course-screen suite then passed **30 passed, 0 failed**. Main owns the shared adapter; Commit starts it lazily. Feedback reveals marks using a Timer, stops before failure with the correct arrow/line, provides Retry/Next, and records only a complete successful grade. Repeated Commit is serialized; stale callbacks after leaving the screen do not record.
+- Capture fixture correction `583c344` uses a legal black defence. `scripts/screens.gd` now accepts `SolvingFeedback` with `miss` (default) and `solved` states. Both 1280×800 captures were generated offscreen via Xvfb with isolated data roots and visually inspected: `feedback-miss.png` and `feedback-solved.png` in the evidence directory.
+- Independent criterion check identified an actual playback boundary miss: `Game.play()` stopped after an automatic draw while the entered/graded Board sequence continued. `80a3552` (test-only) **0 passed, 1 failed**, reproducing both capture to bare kings and halfmove 99→102 → `27039da` (production-only) **4 passed, 0 failed** for feedback regressions. Playback now advances the already validated Board sequence. Normal Game rules are unchanged. The independent original seven-ply reproduction now reaches its expected final FEN.
+- `b6f189f` strengthens correction tests: full five-ply best continuation from a later failure, actual mate termination, and root DTZ=1. Grader suite **6 passed, 0 failed**. A one-ply correction mutant fails **4 passed, 2 failed**; removing mate termination fails **5 passed, 1 failed**. This replaces the earlier fake terminal answer at a position with legal moves.
+- `7aab497` adds Main construction/child ownership/injection/Commit-start/free and rendered `Better defence` regressions: **2 passed, 0 failed**. Independently removing injection, startup, child ownership or rendered advice makes its respective test fail (**0 passed, 1 failed** each). All temporary mutations were restored before the gate. These coverage additions are test-only commits.
+
+#### Independent criteria check
+
+Fresh-context read-only checker `criteria_check` examined the full ticket and `d4b6190..7aab497`, independently exercised all 13 relevant committed methods successfully across focused runs, and rechecked criterion 6 after its repair. It also verified that callbacks after screen destruction do not record or log script errors. No remaining concrete miss. Evidence: `/run/media/lage/New Volume/Scratch/LEARN-006/criteria-check/`.
+
+- ✅ 1: `ui/main.gd:34,161–163` constructs/owns/injects the shared adapter; `ui/solving.gd:128–133` starts it on Commit; `core/grader.gd:38–44` reads only its position/move answers. Regression: `test_main_owns_starts_injects_and_frees_the_solving_probe` and `test_result_keeping_line_passes_with_marks_on_own_moves`.
+- ✅ 2: `core/grader.gd:48–52` compares mover results and root-move DTZ; `core/tunables.gd:39` sets a one-ply margin. Regression: `test_winning_distance_boundary_is_in_root_plies_and_draws_ignore_it` and `test_correction_stops_at_real_mate_and_zeroing_win_is_one_ply`.
+- ✅ 3: `core/grader.gd:60–61` compares defender result / distance in a loss; `ui/solving.gd:226–227` renders the SAN advice beside the opponent move. Regression: `test_opponent_better_defence_is_advice_and_never_a_failure` and `test_feedback_shows_better_defence_beside_the_opponent_move`.
+- ✅ 4: `core/grader.gd:24,53–59` leaves later plies grey/unmarked and stops grading; `ui/solving.gd:229` renders them grey. Regression: `test_first_failure_stops_marks_and_shows_best_line_for_both_sides` and `test_failed_feedback_stops_before_bad_move_with_arrow_and_grey_tail`.
+- ✅ 5: `core/grader.gd:66–79` follows best moves for both sides from failure for up to 2N−1 plies. Regression: `test_first_failure_stops_marks_and_shows_best_line_for_both_sides` checks five plies from a later failure; `test_correction_stops_at_real_mate_and_zeroing_win_is_one_ply` checks actual mate truncation.
+- ✅ 6: `ui/solving.gd:208,234–258` reveals marks ply by ply, stops before the failure and shows its best-move arrow. The independent check found that live `Game.play()` stopped at drawn positions; fixed in `27039da` after red regression `80a3552`. Regression: `test_commit_feedback_replays_marks_retry_next_and_updates_unit_counts`, `test_failed_feedback_stops_before_bad_move_with_arrow_and_grey_tail` and `test_feedback_replays_legal_hold_line_through_material_and_fifty_move_draws`. Independent seven-ply reproduction now reaches the expected FEN.
+- ✅ 7: `ui/solving.gd:29–30,193–195` provides Retry/Next and the three banners/reasons; Next reuses `core/course.gd:202–208`. Regression: the passing/failing feedback scene tests plus existing `test_next_practice_prefers_unsolved_positions_from_games` cover the priority and solved fallback.
+- ✅ 8: `core/course.gd:240–266` records commits without reclaiming first try or clearing solved status; `:137–174` derives counts. Regression: `test_commits_record_first_try_once_solved_forever_and_solving_done` checks reload/preservation/corrupt storage; passing/failing feedback scene tests check visible first-try rate and counts.
+- ✅ 9: `core/course.gd:174` derives solving done; existing `ui/unit_page.gd:44,78–80` advances Continue past finished solving. Regression: `test_commits_record_first_try_once_solved_forever_and_solving_done` and `tests/test_course_screens.gd:458–466`. Home Continue remains LEARN-009.
+- ✅ 10: `core/grader.gd:39–40,67–69` propagates errors before any recording; `ui/solving.gd:136–139,172–179` shows the error and restores entry. Regression: `test_probe_errors_even_in_correction_do_not_return_a_grade`, `test_probe_failure_and_cancelled_async_commit_record_nothing` and existing adapter missing-helper/file tests.
+
+#### Real-file and visual verification
+
+Final-code Linux Main→Solving→shared Fathom helper→bundled tablebase smoke passed. Lucena FEN `4K1k1/4P3/8/8/8/8/7r/R7 w - - 0 1`, N=2: the real probe chose `a1g1` (DTZ 9). Correct line `a1g1 g8h7 g1e1` passes; result-keeping detour `a1a6 h2b2 a6g6` fails as too slow (first move DTZ 11 > 9 + 1), leaves the board at the root and points to `a1g1`. Retry with the correct line says Solved; Next opens the second unsolved position, whose correct first commit says Solved, first try. Unit page reports **2 solved**, **50% (1 of 2)** first try and solving done. All checks passed (`REAL_SMOKE_ERRORS []`). Reproduction script `real-smoke.gd` and final log `real-smoke-final.log` live in `/run/media/lage/New Volume/Scratch/LEARN-006/`; run from the repository with `godot --headless -s '<absolute script path>'` and the helper/tables installed. The script uses isolated progress/history and cleans it afterwards.
+
+Native Windows CI/release startup remains LEARN-010's previously documented release verification condition; this stage ran Linux, the approved fake-probe seams, real-file Lucena UI flow and offscreen captures. No new proxy decision or contract change. The existing approved LEARN-010 split is consumed as written.
+
+#### Bound gate and handoff
+
+Foreground bound gate at tested commit `7aab4973270048eb29c9be91d76f2499846717c4`: `godot --headless -s tests/run.gd`, **637 passed, 0 failed**, exit 0. All three real-file tablebase tests passed. Existing skips: two graphical-only pixel checks under headless and six live Lc0 methods because `engine/lc0/lc0.exe` is absent on this Linux checkout. Feedback was separately captured/inspected via Xvfb; the real tablebase/Lucena checks did run. Log: `/run/media/lage/New Volume/Scratch/LEARN-006/gate.log`. The `Gate evidence:` receipt records the tested commit and log hash. `git diff --check` passed.
+
+Stage 2 hands off at `to-review` on `LEARN-006`. Only this tracker ticket changes after the tested commit. No merge or ledger entry; stage 3 reviews and integrates into `sweatshop/learning/2026-11-07-2234`.

@@ -171,7 +171,7 @@ func unit_progress(unit: Dictionary) -> Dictionary:
 	var status := "needs review" if needs_review else ("mastered" if mastered else ("in progress" if theory or committed > 0 or (playouts is Dictionary and not playouts.is_empty()) or not attempts.is_empty() else "new"))
 	var rate := "–" if committed == 0 else "%d%% (%d of %d)" % [roundi(100.0 * first / committed), first, committed]
 	return {"status": status, "theory_done": theory, "solved": solved, "total": total,
-			"playouts_passed": passed, "test": test, "first_try": rate}
+			"playouts_passed": passed, "test": test, "first_try": rate, "solving_done": total > 0 and solved == total}
 
 
 func practice_positions(unit: Dictionary) -> Array:
@@ -232,6 +232,35 @@ func open_theory(unit: Dictionary) -> bool:
 		if not saved is Dictionary:
 			return false
 		saved.theory_opened = true
+		all_units[id] = saved
+		next.units = all_units
+		return true)
+
+
+func record_commit(unit: Dictionary, position: Dictionary, solved: bool) -> bool:
+	var id: String = unit.get("id", "")
+	var position_id: String = position.get("id", "")
+	if id.is_empty() or position_id.is_empty():
+		return false
+	return _save_progress(func(next: Dictionary) -> bool:
+		var all_units = next.get("units", {})
+		if not all_units is Dictionary:
+			return false
+		var saved = all_units.get(id, {})
+		if not saved is Dictionary:
+			return false
+		var practice = saved.get("practice", {})
+		if not practice is Dictionary:
+			return false
+		var result = practice.get(position_id, {})
+		if not result is Dictionary:
+			return false
+		var first: bool = result.is_empty()
+		result.first_try = solved if first else result.get("first_try", false)
+		result.solved = solved or result.get("solved", false)
+		result.commits = int(result.get("commits", 0 if first else 1)) + 1
+		practice[position_id] = result
+		saved.practice = practice
 		all_units[id] = saved
 		next.units = all_units
 		return true)

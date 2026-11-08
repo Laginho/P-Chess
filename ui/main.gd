@@ -10,6 +10,7 @@ const Clock = preload("res://core/clock.gd")
 const Tunables = preload("res://core/tunables.gd")
 const SoundPlayer = preload("res://ui/sound_player.gd")
 const UCI = preload("res://engine/uci.gd")
+const Tablebase = preload("res://engine/tablebase.gd")
 const MaiaPlayer = preload("res://bot/maia_player.gd")
 const Settings = preload("res://core/settings.gd")
 const SettingsScreen = preload("res://ui/settings.tscn")
@@ -30,6 +31,7 @@ const MIN_BOARD_SIZE := 320
 
 var sound_player := SoundPlayer.new()
 var uci := UCI.new()
+var tablebase = Tablebase.new()
 var maia := MaiaPlayer.new(uci)
 # "w" or "b".
 var human := "w"
@@ -156,6 +158,9 @@ func _ready() -> void:
 	# In the tree, so its _process reads Lc0 every frame without blocking the UI.
 	uci.name = "Engine"
 	add_child(uci)
+	tablebase.name = "Tablebase"
+	add_child(tablebase)
+	solving.probe = tablebase
 	uci.stopped.connect(_on_engine_stopped)
 	board_view.game = Game.new()
 	board_view.move_played.connect(_on_move_played)
