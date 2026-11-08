@@ -113,23 +113,38 @@ function Test-PinnedFile([string]$Path, [string]$Hash) {
     return $true
 }
 
-function Get-PinnedDownload([string]$Url, [string]$Path, [string]$Hash) {
+function Get-PinnedDownload([string]$Url, [string]$Path, [string]$Hash, [switch]$StageOutsideDestination) {
     if (Test-PinnedFile $Path $Hash) {
         Write-Host "Verified, skipping download: $Path"
         return
     }
-    Write-Host "Downloading: $Url"
+    $stagingDir = $null
+    $downloadPath = $Path
     try {
-        Invoke-WebRequest -UseBasicParsing -Uri $Url -OutFile $Path -TimeoutSec 120
-        if (-not (Test-PinnedFile $Path $Hash)) {
-            throw "Download did not create $Path"
+        if ($StageOutsideDestination) {
+            # A killed transfer must not leave an incomplete table in the probe's folder.
+            $stagingDir = Join-Path ([IO.Path]::GetTempPath()) ("P-Chess-tablebase-" + [guid]::NewGuid())
+            [IO.Directory]::CreateDirectory($stagingDir) | Out-Null
+            $downloadPath = Join-Path $stagingDir ([IO.Path]::GetFileName($Path))
+        }
+        Write-Host "Downloading: $Url"
+        Invoke-WebRequest -UseBasicParsing -Uri $Url -OutFile $downloadPath -TimeoutSec 120
+        if (-not (Test-PinnedFile $downloadPath $Hash)) {
+            throw "Download did not create $downloadPath"
+        }
+        if ($StageOutsideDestination) {
+            Move-Item -LiteralPath $downloadPath -Destination $Path
         }
     } catch {
         # Interrupted transfers must not become a cached file on the next run.
-        if (Test-Path -LiteralPath $Path -PathType Leaf) {
-            Remove-Item -LiteralPath $Path -Force
+        if (Test-Path -LiteralPath $downloadPath -PathType Leaf) {
+            Remove-Item -LiteralPath $downloadPath -Force
         }
         throw
+    } finally {
+        if ($null -ne $stagingDir -and (Test-Path -LiteralPath $stagingDir)) {
+            Remove-Item -LiteralPath $stagingDir -Recurse -Force
+        }
     }
 }
 
@@ -200,7 +215,7 @@ try {
     }
     foreach ($file in $tablebaseFiles.GetEnumerator()) {
         $kind = if ($file.Key.EndsWith('.rtbw')) { 'wdl' } else { 'dtz' }
-        Get-PinnedDownload "$tablebaseRelease/3-4-5-$kind/$($file.Key)" (Join-Path $tablebaseDir $file.Key) $file.Value
+        Get-PinnedDownload "$tablebaseRelease/3-4-5-$kind/$($file.Key)" (Join-Path $tablebaseDir $file.Key) $file.Value -StageOutsideDestination
     }
     Write-Host 'Verified Lc0 v0.32.1, Stockfish 19, all nine Maia v1.0 networks and the Syzygy tablebases.'
 } catch {
