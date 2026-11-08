@@ -2,6 +2,7 @@ extends Control
 
 signal back_requested
 
+const Course = preload("res://core/course.gd")
 const History = preload("res://core/history.gd")
 const Setup = preload("res://ui/setup.gd")
 const Analyser = preload("res://engine/analyser.gd")
@@ -9,11 +10,17 @@ const Accuracy = preload("res://core/accuracy.gd")
 const Tunables = preload("res://core/tunables.gd")
 
 var preferences
+var course
 
 
 func _ready() -> void:
 	%Back.pressed.connect(func(): back_requested.emit())
 	%SaveName.pressed.connect(_save_name)
+	%RatingSite.add_item("chess.com")
+	%RatingSite.add_item("lichess")
+	%RatingNumber.text_changed.connect(func(_text): _update_rating())
+	%RatingSite.item_selected.connect(func(_index): _update_rating())
+	%SaveRating.pressed.connect(_save_rating)
 	%PlayerName.text_submitted.connect(func(_text): _save_name())
 	%Results.resized.connect(_fit_headers)
 	%SaveName.add_theme_font_override("font", get_theme_font("font", "BoldText"))
@@ -21,8 +28,13 @@ func _ready() -> void:
 		label.add_theme_font_override("normal_font", get_theme_font("font", "ExtraBoldText"))
 
 
-func present(settings) -> void:
+func present(settings, course_store = null) -> void:
 	preferences = settings
+	course = course_store if course_store != null else Course.new()
+	var rating: Dictionary = course.rating()
+	%RatingNumber.text = str(rating.number) if not rating.is_empty() else ""
+	%RatingSite.select(1 if rating.get("site") == "lichess" else 0)
+	_update_rating()
 	%PlayerName.text = preferences.get_value("player_name")
 	_show_name(%PlayerName.text)
 	refresh(History.new())
@@ -164,3 +176,20 @@ func _save_name() -> void:
 func _show_name(value: String) -> void:
 	%DisplayName.text = value
 	%Avatar.text = value.left(1).to_upper()
+
+
+func _update_rating() -> void:
+	var text: String = %RatingNumber.text
+	var valid := text.is_valid_int() and Course.valid_rating(int(text), %RatingSite.get_item_text(%RatingSite.selected))
+	%SaveRating.disabled = not valid
+	%RatingHint.visible = valid and %RatingSite.selected == 1
+	if %RatingHint.visible:
+		%RatingHint.text = "Shown as %d on the chess.com scale" % (int(text) - 300)
+
+
+func _save_rating() -> void:
+	_update_rating()
+	if not %SaveRating.disabled and course.save_rating(int(%RatingNumber.text), %RatingSite.get_item_text(%RatingSite.selected)):
+		%RatingError.hide()
+	else:
+		%RatingError.show()

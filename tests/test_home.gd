@@ -316,3 +316,83 @@ func test_quick_play_tiles_are_landscape_with_centred_labels():
 			var icon_end: float = placed.x + tile.get_theme_constant("icon_max_width")
 			assert_true(placed.x >= tile.icon_left and icon_end <= placed.y and placed.y - icon_end <= 12, "%s icon just left of its label at %s: %s" % [name, canvas, placed])
 	home.free()
+
+
+func test_course_requires_a_valid_rating_before_starting():
+	var folder := "user://test_course_home_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var main = MainScene.instantiate()
+	main.course = load("res://core/course.gd").new(folder.path_join("course.json"))
+	main.history = load("res://core/history.gd").new(folder)
+	main.uci.free()
+	main.uci = Session.HeldBridge.new()
+	main.maia = main.MaiaPlayer.new(main.uci)
+	main.preferences = main.Settings.new(folder.path_join("settings.cfg"))
+	main.preferences.set_value("player_name", "You")
+	main.preferences.save_last_game({"level": "maia-1300"})
+	Engine.get_main_loop().root.add_child(main)
+	var button = main.get_node_or_null("Home/Center/Form/Course")
+	assert_true(button != null, "Home offers Course")
+	if button == null:
+		main.free()
+		Session.HistoryStorage.clean(folder)
+		return
+	button.pressed.emit()
+	var dialog = main.get_node_or_null("RatingDialog")
+	assert_true(dialog != null and dialog.visible, "Course opens the rating dialog")
+	if dialog:
+		Session.new()._push_key(dialog, KEY_ESCAPE)
+		var click := InputEventMouseButton.new()
+		click.button_index = MOUSE_BUTTON_LEFT
+		click.pressed = true
+		click.position = Vector2(1, 1)
+		main.get_viewport().push_input(click, true)
+		await Engine.get_main_loop().process_frame
+		assert_true(dialog.visible, "Escape and an outside click do not dismiss the dialog")
+		assert_true(dialog.exclusive and not dialog.dialog_close_on_escape, "outside click cannot dismiss the dialog")
+		var number: LineEdit = dialog.find_child("RatingNumber", true, false)
+		var site: OptionButton = dialog.find_child("RatingSite", true, false)
+		var start: Button = dialog.get_ok_button()
+		assert_eq(site.get_item_text(site.selected), "chess.com")
+		for text in ["", "99", "3501", "1400.5", "abc", "-100"]:
+			number.text = text
+			number.text_changed.emit(text)
+			assert_true(start.disabled, "invalid rating %s is disabled" % text)
+		for text in ["100", "3500"]:
+			number.text = text
+			number.text_changed.emit(text)
+			assert_true(not start.disabled, "boundary %s is accepted" % text)
+		number.text = "1400"
+		number.text_changed.emit(number.text)
+		site.select(1)
+		site.item_selected.emit(1)
+		assert_eq(dialog.find_child("ScaleHint", true, false).text, "Shown as 1100 on the chess.com scale")
+		dialog.confirmed.emit()
+		assert_true(not dialog.visible, "saving returns to Home")
+		assert_eq(load("res://core/course.gd").new(folder.path_join("course.json")).rating(), {"number": 1400, "site": "lichess"})
+		button.pressed.emit()
+		assert_true(not dialog.visible, "saved rating skips dialog")
+		assert_eq(main.preferences.last_game().get("level"), "maia-1300", "course rating does not change the sandbox level")
+		assert_eq(main.get_node("Home/Center/Form/Level").get_item_text(main.get_node("Home/Center/Form/Level").selected), "Maia 1300")
+		main.get_node("Home/Center/Form/Profile").pressed.emit()
+		var profile = main.get_node("Home/Profile")
+		assert_eq(profile.find_child("RatingNumber", true, false).text, "1400")
+		var saved_site: OptionButton = profile.find_child("RatingSite", true, false)
+		assert_eq(saved_site.get_item_text(saved_site.selected), "lichess")
+	main.free()
+	Session.HistoryStorage.clean(folder)
+
+
+func test_rating_dialog_displays_the_rating_as_a_sentence():
+	var dialog = load("res://ui/rating_dialog.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(dialog)
+	dialog.present(load("res://core/course.gd").new("user://sentence_unused.json"))
+	await Engine.get_main_loop().process_frame
+	var first: Label = dialog.find_child("Sentence", true, false)
+	var number: LineEdit = dialog.find_child("RatingNumber", true, false)
+	var middle: Label = dialog.find_child("SiteLabel", true, false)
+	var site: OptionButton = dialog.find_child("RatingSite", true, false)
+	assert_true(first.get_global_rect().end.x <= number.get_global_rect().position.x, "rating follows 'I'm rated' in the sentence")
+	assert_true(number.get_global_rect().end.x <= middle.get_global_rect().position.x, "'in rapid on' follows the rating")
+	assert_true(middle.get_global_rect().end.x <= site.get_global_rect().position.x, "site completes the sentence")
+	dialog.free()

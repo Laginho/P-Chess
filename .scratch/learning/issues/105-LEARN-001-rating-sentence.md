@@ -1,5 +1,5 @@
 # LEARN-001: The rating sentence
-Stage: to-implement
+Stage: to-review
 Blocked by: none
 Review: agent
 Difficulty: normal
@@ -44,3 +44,16 @@ The player states their rating once, in one sentence: "I'm rated [1600] in rapid
 ## Comments
 
 - 2026-11-07 Written from `.scratch/learning/spec.md` §L2, §L4.
+
+- Stage 2: testes red/green por fatia; preservação de campos comprovada também com mutação que descartava o progresso. Gate `godot --headless -s tests/run.gd`: 580 passed, 0 failed (commit 1221ea0). Verificação manual em janela pendente: ambiente sem display gráfico.
+- Checagem independente dos critérios (agente de contexto novo):
+- ✅ 1: `ui/main.gd:172`, `ui/rating_dialog.tscn:5`; `tests/test_home.gd:321` envia Esc ao diálogo e clique ao viewport. O clique nativo de janela ainda requer verificação manual.
+- ✅ 2: `ui/rating_dialog.gd:36`, `core/course.gd:30`; `tests/test_home.gd:321` cobre limites, entradas inválidas e site padrão.
+- ✅ 3: `ui/rating_dialog.gd:36`; `tests/test_home.gd:321` verifica 1400 lichess → 1100.
+- ✅ 4: `ui/rating_dialog.gd:46`, `core/course.gd:56`, `ui/main.gd:172`; `tests/test_home.gd:321` verifica persistência e reabertura.
+- ✅ 5: `core/course.gd:47`; `tests/test_course.gd:4` cobre conversão e todos os exemplos.
+- ✅ 6: `ui/profile.gd:31`, `ui/profile.gd:181`; `tests/test_profile.gd:270` e `tests/test_home.gd:321` cobrem edição e navegação real até Profile.
+- ✅ 7: `core/course.gd:14`, `core/course.gd:56`; `tests/test_course.gd:24` e `tests/test_course.gd:41` cobrem conteúdo inválido, falha de abertura e preservação de campos. Falha parcial de leitura em arquivo regular não foi reproduzida; código verifica erro e tamanho.
+- ✅ 8: `ui/home.gd:78`; `tests/test_home.gd:321` verifica o nível do sandbox após salvar o rating, e `test_custom_choices_survive_restart_and_new_game_returns_home` verifica persistência.
+
+Gate evidence: /run/media/lage/New Volume/Scratch/learn001/gate.json
