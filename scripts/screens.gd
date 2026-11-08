@@ -1,7 +1,7 @@
 ﻿extends SceneTree
 
 # The launcher must set the data root before Godot starts, including its own log.
-const BOARDS := ["Main", "CourseMap", "Unit", "Theory", "SolvingEntry", "SolvingFeedback", "PlayoutStart", "PlayoutEnd", "NameDialog", "Searching", "Game", "GamePanelStates", "GameSidePanel", "GameOver", "GameOverStates", "GameOverCard", "History", "Review", "ReviewAnalysing", "ReviewNotAnalysed", "ReviewSmall", "ReviewLegend", "Profile", "Repertoire", "OpeningPicker", "RepertoireEditor", "Board", "ClassIcon", "ClassLegend", "Settings", "Setup", "PromotionPicker", "RepertoireImport"]
+const BOARDS := ["Main", "CourseMap", "Unit", "Theory", "SolvingEntry", "SolvingFeedback", "PlayoutStart", "PlayoutEnd", "TestStart", "TestResult", "NameDialog", "Searching", "Game", "GamePanelStates", "GameSidePanel", "GameOver", "GameOverStates", "GameOverCard", "History", "Review", "ReviewAnalysing", "ReviewNotAnalysed", "ReviewSmall", "ReviewLegend", "Profile", "Repertoire", "OpeningPicker", "RepertoireEditor", "Board", "ClassIcon", "ClassLegend", "Settings", "Setup", "PromotionPicker", "RepertoireImport"]
 const CATALOG := """eco	name	pgn
 B12	Caro-Kann Defense: Advance Variation, Short Variation	1. e4 c6 2. d4 d5 3. e5 Bf5 4. Nf3 e6 5. Be2 c5
 B12	Caro-Kann Defense: Advance Variation, Tal Variation	1. e4 c6 2. d4 d5 3. e5 Bf5 4. h4 h5
@@ -167,6 +167,16 @@ func capture() -> void:
     var san: String = played.board.san(move)
     played.play(move)
     main.playout.present_end(position, played, "Play-out failed", "✗ %s changed the result. Keep the win instead." % san, move, true)
+  "TestStart", "TestResult":
+   main.course.save_rating(1600, "chess.com")
+   var unit: Dictionary = main.course.units()[0]
+   main._show_unit(unit)
+   main._show_course_part(unit, "test")
+   if board == "TestResult":
+    var positions := []
+    for position in main.course.draw_test_positions(unit):
+     positions.append({"position": position, "solved": positions.size() < 4, "your_move": "Rc4", "best_move": "Rc5"})
+    main.pass_test.present_result({"passed": false, "score": 4, "positions": positions, "playouts": [true, false]})
   "Searching":
    main.get_node("Home").hide()
    main.searching.present(SETTINGS)

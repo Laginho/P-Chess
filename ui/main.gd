@@ -190,7 +190,11 @@ func _ready() -> void:
 		_show_result())
 	resign_button.pressed.connect(_resign)
 	draw_button.pressed.connect(_offer_draw)
-	$Layout/Side/Actions/NewGameButton.pressed.connect(_show_home)
+	$Layout/Side/Actions/NewGameButton.pressed.connect(func():
+		if _test_active:
+			_show_unit(_test_unit)
+		else:
+			_show_home())
 	$Layout/Side/Actions/RematchButton.pressed.connect(func(): _start(rematch(settings)))
 	draw_notice_timer.timeout.connect(func():
 		draw_notice.hide())
@@ -502,6 +506,7 @@ func _start(new_settings: Dictionary) -> void:
 	resign_button.visible = not _playout_active
 	draw_button.visible = not _playout_active
 	$Layout/Side/Actions/NewGameButton.hide()
+	$Layout/Side/Actions/NewGameButton.text = "New game"
 	$Layout/Side/Actions/RematchButton.hide()
 	_draw_offered = false
 	_draw_moves_left = 0
@@ -639,11 +644,13 @@ func _start_test_playout() -> void:
 	board_view.game = Game.new(position.fen)
 	board_view.human_side = human
 	move_list.reset()
-	result_label.hide()
+	result_label.text = "Pass test · %s · %s" % ["Convert" if position.goal == "convert" else "Hold", "No clock"]
+	result_label.show()
 	claim_draw.disabled = true
 	resign_button.hide()
 	draw_button.hide()
-	$Layout/Side/Actions/NewGameButton.hide()
+	$Layout/Side/Actions/NewGameButton.text = "Back to the unit"
+	$Layout/Side/Actions/NewGameButton.show()
 	$Layout/Side/Actions/RematchButton.hide()
 	clock = Clock.new("none", Time.get_ticks_msec)
 	clock.flagged.connect(_on_flagged)
@@ -657,6 +664,9 @@ func _finish_test_playout(passed: bool) -> void:
 	_playout_generation += 1
 	_playout_active = false
 	clock.stop()
+	clock = null
+	white_clock.clock = null
+	black_clock.clock = null
 	board_view.cancel_premoves()
 	board_view.mouse_filter = MOUSE_FILTER_IGNORE
 	_test_playouts.append(passed)
@@ -676,6 +686,9 @@ func _test_playout_error(message: String) -> void:
 	_playout_generation += 1
 	_playout_active = false
 	clock.stop()
+	clock = null
+	white_clock.clock = null
+	black_clock.clock = null
 	board_view.cancel_premoves()
 	board_view.mouse_filter = MOUSE_FILTER_IGNORE
 	pass_test.present_error(message)
