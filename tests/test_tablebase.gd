@@ -145,7 +145,8 @@ func test_recorded_fathom_transcript_is_parsed_without_live_tables():
 	var received := []
 	setup.probe.probe(RES_FEN, func(answer): received.append(answer))
 	var lines := []
-	for line in FileAccess.get_file_as_string("res://tests/fixtures/tablebase/res001.txt").split("\n"):
+	# A Windows checkout (autocrlf) gives the fixture CRLF endings.
+	for line in FileAccess.get_file_as_string("res://tests/fixtures/tablebase/res001.txt").replace("\r", "").split("\n"):
 		if line.begins_with("info ") or line.begins_with("bestmove"):
 			lines.append(line)
 	setup.bridge.output(lines)
