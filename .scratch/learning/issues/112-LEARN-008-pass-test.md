@@ -1,5 +1,5 @@
 # LEARN-008: Pass test
-Stage: blocked
+Stage: to-review
 Blocked by: LEARN-004, LEARN-007
 Review: agent
 Difficulty: normal
@@ -45,3 +45,4 @@ The unit's last part (spec §L8, design `TestStart.dc.html`, `TestResult.dc.html
 - 2026-11-07 Written from `.scratch/learning/spec.md` §L8.
 
 - 2026-11-08 Stage stopped (incomplete handoff): Invalid committed handoff: test and production in one commit: 6e3dd50e mixes ui/pass_test.gd with scripts/screens.gd; e286bb1e mixes ui/pass_test.gd with ui/main.gd; 3f27f10b mixes ui/pass_test.gd with ui/main.gd. Split it; a test fixture kept beside production goes in the binding's `Test files:`. See /home/lage/Projects/P-Chess/.artifacts-build/lanes/learning/.scratch/run-log/LEARN-008-implement-20261108-045850.txt.runtime.json and run-log/recovery.txt; inspect the saved work before retrying.
+- 2026-11-08 Foreman: the incomplete-handoff park above is a driver false positive. `driver.ps1`'s `$TestFiles` pattern `[._-](test|spec)\.[^/.]+$` classifies the production screen `ui/pass_test.gd` as a test file. Checked each of the 14 stage-2 commits (`221360f`..`2891082`): every one touches only `tests/` or only production (`ui/`, `scripts/`, `core/`) plus the tracker. Branch `LEARN-008` is intact at `to-review`, gate 654/0 per the handoff. Restored `to-review` for stage 3; no work redone.
