@@ -79,10 +79,22 @@ func save_rating(number, site: String) -> bool:
 	return true
 
 
+func _read_data(file_path: String):
+	if not FileAccess.file_exists(file_path):
+		return null
+	var file := FileAccess.open(file_path, FileAccess.READ)
+	if file == null:
+		return null
+	var json := JSON.new()
+	if json.parse(file.get_as_text()) != OK:
+		return null
+	return json.data
+
+
 func stage() -> Dictionary:
 	if rating().is_empty():
 		return {}
-	var index = JSON.parse_string(FileAccess.get_file_as_string(index_path))
+	var index = _read_data(index_path)
 	if not index is Dictionary or not index.get("stages", []) is Array:
 		return {}
 	var value := chess_com_rating()
@@ -97,7 +109,7 @@ func units() -> Array:
 	for filename in stage().get("units", []):
 		if not filename is String:
 			continue
-		var unit = JSON.parse_string(FileAccess.get_file_as_string(index_path.get_base_dir().path_join(filename)))
+		var unit = _read_data(index_path.get_base_dir().path_join(filename))
 		if unit is Dictionary and not unit.get("id", "").is_empty():
 			result.append(unit)
 	return result
