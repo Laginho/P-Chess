@@ -2391,3 +2391,12 @@ func test_result_change_shows_link_and_adds_position_to_course():
 			assert_eq(saved[0].line_length, 3)
 	DirAccess.remove_absolute(path)
 	main.free()
+
+func test_review_unit_request_opens_unit_page():
+	var main = await _session(FakeTime.new())
+	var unit: Dictionary = main.course._read_data("res://data/course/rook-endgames.json")
+	main.review.show()
+	main.review.unit_requested.emit(unit)
+	assert_true(main.unit_page.visible)
+	assert_true(not main.review.visible)
+	main.free()

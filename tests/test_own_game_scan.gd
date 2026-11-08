@@ -45,3 +45,32 @@ func test_ignores_other_material_and_discards_results_on_probe_failure():
 	probe.answers[positions[0].fen] = {"ok": true, "result": "draw"}
 	scanner.scan(positions, "w", func(result): replies.append(result))
 	assert_eq(replies.back(), [])
+
+func test_black_player_and_white_pawn_use_player_perspective():
+	var fen := "4k3/7R/8/4P3/8/r7/8/4K3 b - - 0 1"
+	var board = Board.from_fen(fen)
+	var positions := [{"fen": board.to_fen()}]
+	board.make_move("a3a4")
+	positions.append({"fen": board.to_fen()})
+	var probe = FakeProbe.new()
+	probe.answers[positions[0].fen] = {"ok": true, "result": "win"}
+	probe.answers[positions[1].fen] = {"ok": true, "result": "draw"}
+	var replies := []
+	load("res://core/own_game_scan.gd").new(probe).scan(positions, "b", func(result): replies.append(result))
+	assert_eq(replies[0].size(), 1)
+	if replies[0].size() == 1:
+		assert_eq(replies[0][0].before, "win")
+		assert_eq(replies[0][0].after, "draw")
+
+func test_probe_failure_after_a_marker_discards_the_whole_scan():
+	var board = Board.from_fen(FEN)
+	var positions := [{"fen": board.to_fen()}]
+	for move in ["a3a4", "e8e7", "a4a5"]:
+		board.make_move(move)
+		positions.append({"fen": board.to_fen()})
+	var probe = FakeProbe.new()
+	probe.answers[positions[0].fen] = {"ok": true, "result": "draw"}
+	probe.answers[positions[1].fen] = {"ok": true, "result": "win"}
+	var replies := []
+	load("res://core/own_game_scan.gd").new(probe).scan(positions, "w", func(result): replies.append(result))
+	assert_eq(replies, [[]])
