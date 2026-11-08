@@ -1,6 +1,40 @@
 extends "res://tests/run.gd".Test
 
 
+func test_continue_prefers_game_positions_then_unfinished_parts():
+	var path := "user://course_order_%d.json" % Time.get_ticks_usec()
+	var script = load("res://core/course.gd")
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	file.store_string(JSON.stringify({"rating": {"number": 1000, "site": "chess.com"}, "units": {"rook": {"from_your_game": [{"id": "game"}]}}}))
+	file = null
+	var course = script.new(path, "res://tests/fixtures/course/course.json")
+	var now: int = Time.get_unix_time_from_datetime_string("2026-01-01T00:00:00")
+	var target: Dictionary = course.continue_target(now)
+	assert_eq(target.get("kind"), "from_game")
+	if target.get("kind") != "from_game":
+		DirAccess.remove_absolute(path)
+		return
+	var unit: Dictionary = target.unit
+	assert_eq(target.position.id, "game")
+	assert_true(course.record_commit(unit, target.position, true))
+	assert_eq(course.continue_target(now).get("kind"), "theory")
+	assert_true(course.open_theory(unit))
+	assert_eq(course.continue_target(now).get("kind"), "solving")
+	for position in unit.positions:
+		if position.pool == "practice":
+			assert_true(course.record_commit(unit, position, true))
+	assert_eq(course.continue_target(now).get("kind"), "playouts")
+	for position in unit.playouts:
+		assert_true(course.record_playout_pass(unit, position))
+	assert_eq(course.continue_target(now).get("kind"), "test")
+	var answers := []
+	for i in 6:
+		answers.append({"solved": true})
+	assert_true(course.record_test_attempt(unit, answers, [true, true], "2026-01-01"))
+	assert_eq(course.continue_target(now).get("kind"), "done")
+	DirAccess.remove_absolute(path)
+
+
 func test_continue_offers_review_checks_at_seven_and_thirty_days():
 	var path := "user://course_continue_%d.json" % Time.get_ticks_usec()
 	var file := FileAccess.open(path, FileAccess.WRITE)
