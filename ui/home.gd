@@ -16,6 +16,24 @@ var target := {}
 
 func _ready() -> void:
 	$Center/Board.game = preload("res://core/game.gd").new()
+	for button in $Center/Form/Quick.get_children() + [$Center/Form/Custom]:
+		for colour in ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color", "font_focus_color", "font_disabled_color", "icon_normal_color", "icon_hover_color", "icon_pressed_color", "icon_hover_pressed_color", "icon_focus_color", "icon_disabled_color"]:
+			button.add_theme_color_override(colour, Color.TRANSPARENT)
+		var artwork := TextureRect.new()
+		artwork.name = "Artwork"
+		artwork.texture = button.icon
+		artwork.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		artwork.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		artwork.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		button.add_child(artwork)
+		var caption := Label.new()
+		caption.name = "Caption"
+		caption.text = button.text
+		caption.theme_type_variation = "ExtraBoldText"
+		caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		caption.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		button.add_child(caption)
 	$Center/Form/Missing.visibility_changed.connect(_layout_home)
 	resized.connect(_layout_home)
 	_layout_home()
@@ -47,7 +65,9 @@ func _layout_home() -> void:
 	for item in [["Eyebrow", 0, 19], ["UnitTitle", 20, 30], ["Detail", 51, 22], ["Progress", 80, 5]]:
 		var child: Control = card.get_node(item[0])
 		child.position = Vector2(22, text_y + item[1])
-		child.size = Vector2(maxf(0, width - 44), item[2])
+		child.size = Vector2(maxf(0, width - 86), item[2])
+	card.get_node("Chevron").position = Vector2(width - 52, (card_height - 30) / 2)
+	card.get_node("Chevron").size = Vector2(30, 30)
 	_fit_continue_title()
 	form.get_node("Course").position = Vector2(0, 75 + card_height)
 	form.get_node("Course").size = Vector2(width, 44)
@@ -81,6 +101,22 @@ func _layout_home() -> void:
 	custom.add_theme_constant_override("icon_max_width", 12 if width < 380 else 16)
 	custom.position = Vector2(3 * (tile_width + 8), tile_y)
 	custom.size = Vector2(tile_width, tile_height)
+	for button in quick.get_children() + [custom]:
+		var compact: bool = tile_height < 60
+		var icon_size := 14.0 if compact else 22.0
+		var caption_size := 12 if compact else (15 if button == custom else 22)
+		var caption_height := float(caption_size + 4)
+		var spacing := 0.0 if compact else 8.0
+		var top := maxf(0, (tile_height - icon_size - spacing - caption_height) / 2)
+		var artwork: TextureRect = button.get_node("Artwork")
+		artwork.position = Vector2((tile_width - icon_size) / 2, top)
+		artwork.size = Vector2(icon_size, icon_size)
+		artwork.modulate.a = 0.4 if button.disabled else 1.0
+		var caption: Label = button.get_node("Caption")
+		caption.add_theme_font_size_override("font_size", caption_size)
+		caption.position = Vector2(0, top + icon_size + spacing)
+		caption.size = Vector2(tile_width, caption_height)
+		caption.modulate.a = 0.4 if button.disabled else 1.0
 	for i in 4:
 		var button: Button = form.get_node(["History", "Profile", "Settings", "Quit"][i])
 		button.position = Vector2((i % 2) * (row + 12), form.size.y - 106 + (i / 2) * 58)
@@ -219,6 +255,7 @@ func show_missing(message: String) -> void:
 	$Center/Form/Missing.show()
 	for button in $Center/Form/Quick.get_children():
 		button.disabled = true
+	_layout_home()
 
 
 func sync_level() -> void:
