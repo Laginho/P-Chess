@@ -35,16 +35,14 @@ func _ready() -> void:
 	board.custom_minimum_size = Vector2(320, 320)
 	board.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	board.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	board.size_flags_stretch_ratio = 1.6
 	board.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(board)
-	var panel := PanelContainer.new()
-	panel.theme_type_variation = "CardPanel"
-	panel.custom_minimum_size.x = 340
-	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(panel)
 	var content := VBoxContainer.new()
+	content.custom_minimum_size.x = 320
+	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	content.add_theme_constant_override("separation", 18)
-	panel.add_child(content)
+	row.add_child(content)
 	heading = Label.new()
 	heading.name = "Heading"
 	heading.theme_type_variation = "ExtraBoldText"
@@ -57,20 +55,36 @@ func _ready() -> void:
 	details = Label.new()
 	details.name = "Details"
 	details.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	content.add_child(details)
+	details.theme_type_variation = "BoldText"
+	details.add_theme_font_size_override("font_size", 20)
+	_card(content, details)
 	reason = Label.new()
 	reason.name = "Reason"
 	reason.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	reason.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	content.add_child(reason)
+	_card(content, reason)
+	var spacer := Control.new()
+	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	content.add_child(spacer)
 	start_button = _button(content, "Start", "Start")
 	next_button = _button(content, "Next", "Next play-out")
 	retry_button = _button(content, "Retry", "Retry")
 	back_button = _button(content, "Back", "Back to the unit")
+	for button in [start_button, next_button, retry_button]:
+		button.theme_type_variation = "PrimaryButton"
 	start_button.pressed.connect(func(): start_requested.emit())
 	next_button.pressed.connect(func(): next_requested.emit())
 	retry_button.pressed.connect(func(): retry_requested.emit())
 	back_button.pressed.connect(func(): back_requested.emit())
+
+func _card(parent: Node, label: Label) -> void:
+	var panel := PanelContainer.new()
+	panel.theme_type_variation = "CardPanel"
+	parent.add_child(panel)
+	var margin := MarginContainer.new()
+	for edge in ["left", "right", "top", "bottom"]:
+		margin.add_theme_constant_override("margin_" + edge, 16)
+	panel.add_child(margin)
+	margin.add_child(label)
 
 func _button(parent: Node, node_name: String, label: String) -> Button:
 	var button := Button.new()
@@ -82,6 +96,8 @@ func _button(parent: Node, node_name: String, label: String) -> Button:
 
 func present_start(course, unit: Dictionary, index: int) -> void:
 	var position: Dictionary = unit.playouts[index]
+	details.get_parent().get_parent().show()
+	states.show()
 	board.game = Game.new(position.fen)
 	board.flipped = position.side == "b"
 	board.review_square = ""
@@ -105,6 +121,8 @@ func present_start(course, unit: Dictionary, index: int) -> void:
 	show()
 
 func present_end(position: Dictionary, game, title: String, message: String, failed_move := "", next_exists := false) -> void:
+	details.get_parent().get_parent().hide()
+	states.hide()
 	board.game = game
 	board.flipped = position.side == "b"
 	board.review_square = failed_move.substr(2, 2) if not failed_move.is_empty() else ""
