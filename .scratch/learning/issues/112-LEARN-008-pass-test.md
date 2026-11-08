@@ -57,4 +57,4 @@ The unit's last part (spec §L8, design `TestStart.dc.html`, `TestResult.dc.html
 - Criterion 7 ✅ `core/course.gd:125`, `core/course.gd:248`; `tests/test_course.gd:4` checks mastery survives a later failure and reload, and `tests/test_course_screens.gd:7` checks the unit and map.
 - Criterion 8 ✅ `core/course.gd:224`, `ui/main.gd:663`; `tests/test_course.gd:4` and `tests/test_course_screens.gd:7` check recorded dates, positions, outcomes and results.
 - Verification: `godot --headless -s tests/run.gd` passed, 654 passed and 0 failed. Headless pixel checks and live Lc0 tests were skipped where a display or Windows executable was unavailable. TestStart and TestResult captures were generated and inspected under Xvfb; a two-miss retry was exercised through the screen test with a scripted probe, not manually played against the real tablebase.
-Gate evidence: /run/media/lage/New Volume/Scratch/LEARN-008-gate.json
+Gate evidence: /run/media/lage/New Volume/Scratch/LEARN-008-review-gate.json
