@@ -1150,7 +1150,9 @@ func _show_line(index: int, announce := false, already_played := false) -> void:
 
 func _scroll_line() -> void:
 	if _line_active and _line_index > 0:
-		_moves.scroll_to_item(_line_rows[_line_index] if _line_index == _line_moves.size() else _line_rows[_line_index - 1])
+		if _line_index == _line_moves.size():
+			_moves.scroll_to_item(_line_rows[_line_index])
+		_moves.scroll_to_item(_line_rows[_line_index - 1])
 
 
 func _step(delta: int) -> void:
