@@ -1,5 +1,5 @@
 # HIST-010: History card builds stall on queue state changes
-Stage: to-review
+Stage: done
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -72,3 +72,22 @@ Gate evidence: C:\Users\bruno\AppData\Local\Temp\hist010-20261108-gate2.json
 
 Disclosure: deferred | none | The full-refresh cost on open, tab change and delete stays and is tracked in HIST-011.
 - Proxy decided (opus-5.5 xhigh): Yes. Commit the four Godot-generated `home-*.svg.import` remaps in this stage, as a gate prerequisite added to Primary files, then run the gate once more on that commit with a new log and receipt. Reason: the red gate is a defect already on main, CLEAN-020 shipped the SVGs without their remaps, and `1d0e6a3` (Bruno, "track Godot-generated uid and import files… the sweatshop driver needs a clean tree") is the precedent for committing exactly this kind of file. (receipt C:\Users\bruno\AppData\Local\Temp\sweatshop-proxy\20261108-142409-HIST-010-b2d1c3.json)
+
+#### Resolution (2026-11-08)
+Verdict: Approve
+
+- Coverage: reviewed every file in `git diff 8a9aa501332adcd36dff75ef10094f1af8baca06...6c010e747c7835116c181f348435976f56518bc3`, including the tracker and four import remaps. Examined `_queue_changed`, `present`, `_refresh`, paging and `_add_card`; real queue enqueue/start/completion/failure/pause/resume/remove/clear/priority ordering; selection, focus, scroll, inline deletion, hidden/off-page/empty History, Review navigation, resize and catalog-completion refresh. No production or test edits were authored during review. Graphical interaction, screen-reader behavior, live engines, export and CI were not exercised.
+- Standards: independent review found 0 documented-standard violations or actionable baseline smells. All changes are within the amended Primary files. The commit history separates tests (`edbaea5`, `b02ae78`, `ebbc7dd`) from production (`346fc3d`, `b82c8c9`, import configuration `8bb815e`).
+- Spec: independent review found 0 missing, incorrect or extra requirements. All four criteria pass:
+  - ✅ 1: `ui/history_screen.gd:796` retains the full `present` refresh; `:804` replaces only pending membership changes and changed old/new current cards, while `:807` updates queued ordinals in place. Tabs (`:146`) and deletion (`:734`) keep full refresh. Tests at `tests/test_history_screen.gd:351` and `:408` check accuracy/start, unaffected instances, headings/counts, off-page changes and empty/present behavior.
+  - ✅ 2: replacement at `ui/history_screen.gd:225` retains index, relative focus and scroll; existing construction at `:352` and `:622` reapplies selection and inline confirmation. `tests/test_history_screen.gd:408` verifies these after layout, loaded pages/footer, failure/retry/removal and hidden-to-present.
+  - ✅ 3: inspected `C:\Users\bruno\AppData\Local\Temp\hist010_probe.gd` and `hist010-probe-results.txt`. Six recorded runs on the Windows i5-12400F measure individual transitions at 41.826–109.369 ms, below 200 ms; Analyze all50 is informational at 1987.396–3117.037 ms. Normal/legacy fixtures, fake runner and excluded rendering are explicit. No timing assertion was added.
+  - ✅ 4: verified the receipt hash, exit 0 and identical code using `Assert-GateEvidence` after rebase. The bound gate remains 683 passed, 0 failed at `8bb815e`; only tracker metadata changed afterward, so no gate rerun was needed.
+- Red/green proof: inspected stage-2 logs showing the unchanged baseline fails card/heading identity and active-card retention (18/1, 18/2 and 19/1), then passes 20/0. This review independently ran only `tests/test_history_screen.gd` with an external adaptation of the repository runner: 20 passed, 0 failed, exit 0, no script errors. Log: `C:\Users\bruno\AppData\Local\Temp\hist010-stage3-focused.log`.
+- Proxy decisions reviewed: `Proxy decided (opus-5.5 xhigh): 5 settled, 0 escalated (receipt /tmp/sweatshop-proxy/20261108-125958-HIST-010-b9505f.json)` and `Proxy decided (opus-5.5 xhigh): 3 settled, 0 escalated (receipt /tmp/sweatshop-proxy/20261108-130224-HIST-010-5b620a.json)` define the incremental scope and HIST-011 deferral. The `Proxy decided (opus-5.5 xhigh): Yes. Commit the four Godot-generated` remaps decision above, receipt `C:\Users\bruno\AppData\Local\Temp\sweatshop-proxy\20261108-142409-HIST-010-b2d1c3.json`, explicitly authorizes the four remaps; its receipt and the resulting diff were inspected. The first two receipts are Linux paths and were not revalidated on Windows; their committed contract is the review baseline.
+
+Acceptance: passed | The scoped headless contract is supported by the 20/0 focused review run, validated 683/0 gate receipt and recorded normal/legacy performance probe above. Rendering and live-engine acceptance are outside this evidence.
+Disclosure: decision | none | The proxy-approved four Home icon remaps are included as the documented gate prerequisite; SVGs, scenes and public APIs are unchanged.
+Disclosure: deferred | none | [HIST-011](123-HIST-011-history-full-refresh-slow.md) retains full-refresh latency on open/tab/delete. Analyze all50 remains 2.0–3.1 seconds in the recorded probe, accepted as informational by criterion 3, with no batch latency target in this ticket.
+
+- Integrated without conflicts into `sweatshop/audit-fixes/2026-11-08-1410` by merge `6db57c318f7051999bac56f11fd8f626deebdc2f`. Ticket closure and ledger entry are committed together on the session branch. No PR or push from this stage.
