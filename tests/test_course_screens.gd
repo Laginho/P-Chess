@@ -39,11 +39,15 @@ func test_course_navigation_unit_progress_and_clock():
 		assert_eq(parts.get_child(i).find_child("Open", true, false).text, "Open")
 	var requests := []
 	unit.part_requested.connect(func(selected, part): requests.append([selected.id, part]))
-	parts.get_child(1).find_child("Open", true, false).pressed.emit()
-	assert_eq(requests, [["rook-endgames", "solving"]])
+	for row in parts.get_children():
+		row.find_child("Open", true, false).pressed.emit()
+	assert_eq(requests, [["rook-endgames", "theory"], ["rook-endgames", "solving"], ["rook-endgames", "playouts"], ["rook-endgames", "test"]])
 	assert_true(unit.visible, "a part without a screen leaves the unit visible")
 	unit.find_child("NoClock", true, false).pressed.emit()
 	assert_eq(load("res://core/course.gd").new(path).clock_choice(), "none")
+	unit.present(load("res://core/course.gd").new(path), main.course.units()[0])
+	assert_true(unit.find_child("NoClock", true, false).button_pressed, "saved clock is selected on reopening")
+	assert_true(not unit.find_child("ClockOn", true, false).button_pressed)
 	unit.find_child("Back", true, false).pressed.emit()
 	assert_true(map.visible and not unit.visible)
 	map.find_child("Edit", true, false).pressed.emit()
