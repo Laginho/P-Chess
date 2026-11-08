@@ -1,7 +1,7 @@
 #requires -Version 5.1
 <#
 .SYNOPSIS
-Downloads and verifies the pinned Windows engines and nine Maia-1 networks.
+Downloads and verifies the pinned Windows engines, Maia-1 networks and Syzygy tablebases.
 .EXAMPLE
 powershell -NoProfile -File scripts/fetch-engine.ps1 -Root 'C:\Games\P Chess'
 #>
@@ -56,6 +56,51 @@ $maiaFiles = [ordered]@{
     'maia-1900.pb.gz' = 'e2f565f42d7cd9f122557e6dc4eb84e5bbaedceda1d404dc485d3611c7c97a12'
 }
 
+# Syzygy 3-4-5 WDL and DTZ files: hashes from the RES-001 Lichess manifest.
+$tablebaseRelease = 'https://tablebase.lichess.ovh/tables/standard'
+$tablebaseFiles = [ordered]@{
+    'KBvK.rtbw' = 'bc0d8ab3560de9038460f0e8f61e3b7efd3e3d0327d19ae0387c0da7ddeb244d'
+    'KBvK.rtbz' = '6246c8a5c643eec9d4758d55ed843e31cc28a9b82a6f630c1c950d8b7755975b'
+    'KNvK.rtbw' = '9d3518b12df3d2006441df758bce31e961346e70a11920aaad75c647003bb6e7'
+    'KNvK.rtbz' = '0e49a0f2810a131c32fc14872e83044aa9810ce2c86df071851512077291fc25'
+    'KPvK.rtbw' = '02fd2bdcd92821c869458f019f63524def1c9e7a2862ca8d2b16dc7712b16183'
+    'KPvK.rtbz' = 'ad01af2076183c90ccee662ca6c5d74da3222ff1fee47c01b5d4e56ed01938de'
+    'KQRvK.rtbw' = 'b018ece9cc195618981b027268f9cca929a1ed4c0bdd739874b7846640ef479a'
+    'KQRvK.rtbz' = '9766d3e684582297943583e1981154609655034cea2aa78a5494cc01c8c6bcee'
+    'KQRvKR.rtbw' = '13477ef681468dfb19d09ab8dbeb08d259f9db57a6e5e2c7cdb902880fc2166b'
+    'KQRvKR.rtbz' = '6ed2eba7b9d5b7813a30751a0e1dd3561e499c1ffe76b5de98ea7ad5b006fdbd'
+    'KQvK.rtbw' = '517667dff787162dbb1ed9d5d6484d30ee854e686ee0675c08d99ecf045d2d50'
+    'KQvK.rtbz' = '71ea9444fa5bd42897d781a0c356975ea6f23e0f65a4254e470897031c161c8c'
+    'KQvKR.rtbw' = '8cdbe3c8e098037875de5854c656f8afeadb8327c85b5b7b1cac81719afd3e2c'
+    'KQvKR.rtbz' = '0c15a2aaa3bdef39da4c26932006b5d38b55b8e3ad13e8a44815d63f84738618'
+    'KRBvK.rtbw' = '9e6eced11a37cad71b4fc1a4f62a15e191e58883b51ce8c4c45f341051c6ae8e'
+    'KRBvK.rtbz' = 'e3bb6fbd54a57a154136ecee763a8e9862d8ab3f57b2f55387df70bdbff1b140'
+    'KRBvKR.rtbw' = '6343cff1ca9d4026aed57ede37ebd29004d11c9d8ec932351b04b4e8018ce8b9'
+    'KRBvKR.rtbz' = 'e6ee6691bde20eceedd44b26adab5b3328d9ca758153693775b65d3a51ae11cb'
+    'KRNvK.rtbw' = '4f96cab9fc0005f2679eacb92cec32edf9c932db7bb29b5dc7659be0012d6c35'
+    'KRNvK.rtbz' = '150b85874a78474a38d0f36f1ab39d387f524a1c2092ad92d3d0945d96c17d16'
+    'KRNvKR.rtbw' = '163432941d6f625c093c7291d2045453f712435e906e9d91d371105da96f97c4'
+    'KRNvKR.rtbz' = '4183e43f92e4ea0126028acc59b991b36dabdf944d53a61e9e7367374aebbe06'
+    'KRPvK.rtbw' = '6bc2aa9db5ee7fcc287e6c3b006ab6cfc2be4dff4ae7ca4a524a78520eea61db'
+    'KRPvK.rtbz' = '5c89c9ef70c144bb2d6d823a41668ccf2f79b486b6bc128ff01aadb5485c06a9'
+    'KRPvKR.rtbw' = '1100e6deaee14ca9a56b69441208462c02ef45b3f56daa3d75f687eb5cf12319'
+    'KRPvKR.rtbz' = '184ce33fa4dcfa931f7a3b9955662e166287ec203224ae9681d527d3b8cd9c6f'
+    'KRRvK.rtbw' = '4c05ec32e6e43b690d235307de75432a3ceecdbc3d2659d8101ed15b48b8445d'
+    'KRRvK.rtbz' = 'e68314e00bf9f16122005a06f7d42bc0f6c682f30e8ca50532ba44444f3b96ce'
+    'KRRvKR.rtbw' = '7897a69c7ad337adc93aa39c9d22dcf1a5e215908437b36d92db5e4bebf9217e'
+    'KRRvKR.rtbz' = 'dd0fe4d32ccbfc390e8d4468fa5a31484e26abdb45d712cdfe1b8b5fe0a05c14'
+    'KRvK.rtbw' = '386fbde73308e49a4207836922c68b30b664e83c5a37f7fa37305a15cd16f2f1'
+    'KRvK.rtbz' = 'cab59f42e75c2a25da3939231850a79fa838593fff5c28d7772da92062ed965a'
+    'KRvKB.rtbw' = '69b247cb390ffcd729cf5fe5c40f8a24803190bf67b108b8f05b8b08b26a6a72'
+    'KRvKB.rtbz' = '4fa644478a516e1425b22a740ddefc4d54e51298250b8208d26073df3638630b'
+    'KRvKN.rtbw' = 'a8cde902b010bf6c8763c97d19b5430b422e74db9cb8e9d5e67fa07373c13c5b'
+    'KRvKN.rtbz' = 'c0df57d0b066cdd7be5bdf9b14745f6ead1fd8e9fba2b77fe0f3cb56ebef7ae0'
+    'KRvKP.rtbw' = '3968c2bfced3a5ecfbb54166ec13d4e7b70f3b03c495af4ae87cad2ec75a0749'
+    'KRvKP.rtbz' = '6d4b1389832854119df815ff89ed2cb0786e8887f000009f0db3484457f7f6ff'
+    'KRvKR.rtbw' = '797081b5b3fbac20c4baa5453d68bdae1425b63895f5c9a5ac5c68ea63a97712'
+    'KRvKR.rtbz' = 'c23fa5a0209204b847232ed49e079c099cf603b43d6ace9e27257793b1839850'
+}
+
 function Test-PinnedFile([string]$Path, [string]$Hash) {
     if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
         return $false
@@ -98,9 +143,11 @@ try {
     $lc0Dir = Join-Path $Root 'engine/lc0'
     $weightsDir = Join-Path $Root 'engine/weights'
     $stockfishDir = Join-Path $Root 'engine/stockfish'
+    $tablebaseDir = Join-Path $Root 'engine/tablebase'
     [IO.Directory]::CreateDirectory($stockfishDir) | Out-Null
     [IO.Directory]::CreateDirectory($lc0Dir) | Out-Null
     [IO.Directory]::CreateDirectory($weightsDir) | Out-Null
+    [IO.Directory]::CreateDirectory($tablebaseDir) | Out-Null
 
     # Keep the verified archives outside -Root, so a release package built in
     # -Root never ships them, but still cache them for reruns and offline
@@ -151,7 +198,11 @@ try {
     foreach ($file in $maiaFiles.GetEnumerator()) {
         Get-PinnedDownload "$maiaRelease/$($file.Key)" (Join-Path $weightsDir $file.Key) $file.Value
     }
-    Write-Host 'Verified Lc0 v0.32.1, Stockfish 19 and all nine Maia v1.0 networks.'
+    foreach ($file in $tablebaseFiles.GetEnumerator()) {
+        $kind = if ($file.Key.EndsWith('.rtbw')) { 'wdl' } else { 'dtz' }
+        Get-PinnedDownload "$tablebaseRelease/3-4-5-$kind/$($file.Key)" (Join-Path $tablebaseDir $file.Key) $file.Value
+    }
+    Write-Host 'Verified Lc0 v0.32.1, Stockfish 19, all nine Maia v1.0 networks and the Syzygy tablebases.'
 } catch {
     [Console]::Error.WriteLine($_.Exception.Message)
     exit 1
