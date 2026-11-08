@@ -8,6 +8,7 @@ Difficulty: hard
 - Primary files:
   - ui/history_screen.gd (`_queue_changed`, `present`, an in-place card replace)
   - tests/test_history_screen.gd
+  - ui/icons/home-blitz.svg.import, ui/icons/home-bullet.svg.import, ui/icons/home-chevron.svg.import, ui/icons/home-course.svg.import (Godot-generated remaps missing since CLEAN-020; gate prerequisite for criterion 4 only)
 
 #### What to build
 
@@ -54,6 +55,7 @@ Settled by the grill of 2026-11-08: caching derived per-record data on its own c
 | Legacy 3 | 75.518 | 77.186 | 79.542 | 2987.985 |
 
 - Remaining measured limit: Analyze all still takes about 2.0–3.1 seconds synchronously for these 50 games. Criterion 3 requests an informational total, not a batch latency target. Full refresh on present, tab change and delete remains the separate HIST-011 scope.
+- Gate prerequisite: the first bound gate at `f8e6c85` (`C:\Users\bruno\AppData\Local\Temp\hist010-20261108-gate.log`, retained with exit 1) reports 682 passed, 1 failed: `tests/test_home.gd::test_home_shows_quick_play_and_navigation_icons` (OneZero/ThreeTwo/FiveZero have no icon). The four Home SVGs from CLEAN-020 lack their `.svg.import` remaps; the same loader errors occur with the original History code. The proxy approves the four generated remaps as a prerequisite for criterion 4, following the repository's `1d0e6a3` precedent. `godot --headless --path . --import` generated the remaps and their local `.ctex` caches. Unrelated generated `.uid`/`.import` files were removed and tracked import rewrites were restored; only the four agreed remaps are committed. The unchanged Home test provides red/green coverage. A new gate log/receipt follows the import-configuration commit; the failed run is preserved. No SVG, scene, user data or public API changes.
 
 - 2026-11-06 Foreman measured one queue-state rebuild (HIST-007 probe trimmed: 50 finished 40-ply games, 20 cards, fake runner, headless, rendering excluded, 3 runs each, Windows i5-12400F): main f6daf32 438/460/450 ms; session adf06bf 773/792/800 ms. REV-010 adds about 340 ms (positions_from_game per card); main already exceeds the 200 ms bar. Reopen attribution row: session-review, REV-010.
 - 2026-11-08 Triaged in a stage-1 grill with Bruno through the proxy. Incremental in-place card rebuild on queue changes; the full-refresh cost moved to HIST-011; agent/hard.
@@ -61,3 +63,4 @@ Settled by the grill of 2026-11-08: caching derived per-record data on its own c
 - Proxy decided (opus-5.5 xhigh): 3 settled, 0 escalated (receipt /tmp/sweatshop-proxy/20261108-130224-HIST-010-5b620a.json)
 
 Disclosure: deferred | none | The full-refresh cost on open, tab change and delete stays and is tracked in HIST-011.
+- Proxy decided (opus-5.5 xhigh): Yes. Commit the four Godot-generated `home-*.svg.import` remaps in this stage, as a gate prerequisite added to Primary files, then run the gate once more on that commit with a new log and receipt. Reason: the red gate is a defect already on main, CLEAN-020 shipped the SVGs without their remaps, and `1d0e6a3` (Bruno, "track Godot-generated uid and import files… the sweatshop driver needs a clean tree") is the precedent for committing exactly this kind of file. (receipt C:\Users\bruno\AppData\Local\Temp\sweatshop-proxy\20261108-142409-HIST-010-b2d1c3.json)
