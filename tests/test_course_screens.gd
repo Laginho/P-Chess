@@ -95,6 +95,8 @@ func test_solving_entry_opens_next_position_limits_line_and_handles_keys():
 	assert_true(screen != null and screen.visible, "solving opens")
 	if screen != null:
 		assert_eq(screen.position_data.id, "next")
+		assert_eq(screen.find_child("Position", true, false).text, "Position 2 of 2")
+		assert_eq(screen.find_child("Instruction", true, false).text, "Enter 2 of your moves, with Black's replies in between.")
 		var commits := []
 		screen.line_committed.connect(func(position, uci, san): commits.append([position, uci, san]))
 		var board = screen.find_child("BoardView", true, false)
@@ -127,6 +129,13 @@ func test_solving_entry_opens_next_position_limits_line_and_handles_keys():
 		var progress = screen.find_child("Progress", true, false)
 		assert_eq(progress.get_child_count(), 2)
 		assert_true(progress.get_child(1).get_meta("current", false), "current position has an independent indicator")
+		file = FileAccess.open(path, FileAccess.WRITE)
+		file.store_string(JSON.stringify({"units": {"unit": {"practice": {"first": {"solved": true, "first_try": true}, "next": {"solved": true}}}}}))
+		file = null
+		screen.present(load("res://core/course.gd").new(path), unit)
+		assert_true(progress.get_child(0).get_meta("current", false), "the solved fallback is still current")
+		assert_eq(progress.get_child(0).get_theme_stylebox("panel").bg_color, Color("#7fa650"))
+		assert_eq(progress.get_child(0).get_theme_stylebox("panel").border_width_left, 2)
 	main.free()
 	Session.HistoryStorage.clean(folder)
 

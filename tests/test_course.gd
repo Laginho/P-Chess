@@ -25,6 +25,11 @@ func test_next_practice_prefers_unsolved_positions_from_games():
 		course = load("res://core/course.gd").new(path)
 		assert_eq(course.next_practice_position(unit).id, "ordinary")
 		assert_eq(course.next_practice_position({"id": "empty", "positions": []}), {})
+		file = FileAccess.open(path, FileAccess.WRITE)
+		file.store_string(JSON.stringify({"units": {"rook": {"from_your_game": [{"id": "saved-game"}], "practice": {"game": {"solved": true}}}}}))
+		file = null
+		course = load("res://core/course.gd").new(path)
+		assert_eq(course.next_practice_position(unit).id, "saved-game")
 	DirAccess.remove_absolute(path)
 
 

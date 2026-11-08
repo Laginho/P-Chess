@@ -74,6 +74,30 @@ func test_entry_drag_can_start_with_black_and_accepts_white_reply():
 	board.free()
 
 
+func test_lucena_line_can_be_entered_undone_and_cleared():
+	var board = preload("res://ui/board_view.tscn").instantiate()
+	board.game = preload("res://core/game.gd").new("1K1k4/1P6/8/8/8/8/r7/2R5 w - - 0 1")
+	Engine.get_main_loop().root.add_child(board)
+	board.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	board.size = Vector2(800, 800)
+	board.start_entry(3)
+	for move in ["c1d1", "d8e7", "d1d4", "a2a1", "b8c7"]:
+		for square in [move.substr(0, 2), move.substr(2, 2)]:
+			var at: Vector2 = BoardView.square_position(square, 800, false) + Vector2(50, 50)
+			board._gui_input(_mouse(true, at))
+			board._gui_input(_mouse(false, at))
+	assert_eq(board.entry_san, PackedStringArray(["Rd1+", "Ke7", "Rd4", "Ra1", "Kc7"]))
+	assert_eq(board.entry_mark_count("d1"), 2)
+	board.undo_entry()
+	board.undo_entry()
+	assert_eq(board.entry_moves.size(), 3)
+	assert_eq(board.entry_mark_count("a1"), 0)
+	board.clear_entry()
+	assert_eq(board.entry_moves.size(), 0)
+	assert_eq(board.entry_mark_count("d1"), 0)
+	board.free()
+
+
 func test_board_size_clamps_and_fit_follows_layout():
 	var main = preload("res://ui/main.tscn").instantiate()
 	var path := "user://test_ui015_size_%d.cfg" % Time.get_ticks_usec()
