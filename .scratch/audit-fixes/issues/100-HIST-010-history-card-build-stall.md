@@ -1,5 +1,5 @@
 # HIST-010: History card builds stall on queue state changes
-Stage: to-implement
+Stage: implementing
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -37,6 +37,8 @@ Settled by the grill of 2026-11-08: caching derived per-record data on its own c
 - tests/test_history_screen.gd: a card rebuilt by a queue change keeps its selection checkbox state and its keyboard focus.
 
 ## Comments
+
+- 2026-11-08 Stage 2 scope: `_queue_changed` is connected to `analysis_queue.changed` and called by `present`; `_add_card` is shared with paging. Keep full refresh for `present`, tabs, deletion, resize and catalog completion. Test real queue transitions with the existing fake-runner seam, including unchanged cards/headings, queued ordinals, empty/off-page changes, paging, selection, focus and inline deletion. No caller or persistence API changes.
 
 - 2026-11-06 Foreman measured one queue-state rebuild (HIST-007 probe trimmed: 50 finished 40-ply games, 20 cards, fake runner, headless, rendering excluded, 3 runs each, Windows i5-12400F): main f6daf32 438/460/450 ms; session adf06bf 773/792/800 ms. REV-010 adds about 340 ms (positions_from_game per card); main already exceeds the 200 ms bar. Reopen attribution row: session-review, REV-010.
 - 2026-11-08 Triaged in a stage-1 grill with Bruno through the proxy. Incremental in-place card rebuild on queue changes; the full-refresh cost moved to HIST-011; agent/hard.
