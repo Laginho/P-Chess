@@ -69,7 +69,9 @@ static func failing_probe(result := "draw", dtz := 0):
 	board.make_move("f2e2")
 	probe.answers[board.to_fen()] = answer("win", "c3c2", {"c3c2": {"result": "win", "dtz": 1}})
 	board.make_move("c3c2")
-	probe.answers[board.to_fen()] = {"ok": true, "result": "loss", "best": "", "moves": {}, "dtz": 0}
+	probe.answers[board.to_fen()] = answer("loss", "e2d1", {"e2d1": {"result": "loss", "dtz": 2}})
+	board.make_move("e2d1")
+	probe.answers[board.to_fen()] = answer("win", "c2c1", {"c2c1": {"result": "win", "dtz": 1}})
 	return probe
 
 func test_first_failure_stops_marks_and_shows_best_line_for_both_sides():
@@ -87,9 +89,9 @@ func test_first_failure_stops_marks_and_shows_best_line_for_both_sides():
 	assert_eq(result.failed_ply, 2)
 	assert_eq(result.plies.map(func(ply): return ply.mark), ["✓", "", "✗", "", ""])
 	assert_eq(result.plies.map(func(ply): return ply.get("grey", false)), [false, false, false, true, true])
-	assert_eq(result.get("correct", []).map(func(ply): return ply.uci), ["c5c3", "f2e2", "c3c2"], "stops correction at a terminal probe answer, before five plies")
-	assert_eq(result.get("correct", []).map(func(ply): return ply.san), ["Rc3", "Ke2", "Rc2+"])
-	assert_eq(probe.requests.size(), 6, "three committed roots and three correction roots, including terminal")
+	assert_eq(result.get("correct", []).map(func(ply): return ply.uci), ["c5c3", "f2e2", "c3c2", "e2d1", "c2c1"], "full three-own-move correction from the failing position")
+	assert_eq(result.get("correct", []).map(func(ply): return ply.san), ["Rc3", "Ke2", "Rc2+", "Kd1", "Rc1+"])
+	assert_eq(probe.requests.size(), 7, "three committed roots and four subsequent correction roots")
 
 func test_winning_distance_boundary_is_in_root_plies_and_draws_ignore_it():
 	var constants: Dictionary = load("res://core/tunables.gd").get_script_constant_map()
@@ -136,3 +138,18 @@ func test_probe_errors_even_in_correction_do_not_return_a_grade():
 		var replies := []
 		_grader(probe).grade(position(), PackedStringArray(LINE), func(result): replies.append(result))
 		assert_eq(replies, [{"ok": false, "error": "Table missing"}])
+
+
+func test_correction_stops_at_real_mate_and_zeroing_win_is_one_ply():
+	var fen := "7k/8/5KQ1/8/8/8/8/8 w - - 0 1"
+	var probe := FakeProbe.new()
+	probe.answers[fen] = answer("win", "g6g7", {"g6g7": {"result": "win", "dtz": 1}, "g6g5": {"result": "draw", "dtz": 0}})
+	var replies := []
+	_grader(probe).grade({"fen": fen, "side": "w", "line_length": 2}, PackedStringArray(["g6g5", "h8h7", "g5g4"]), func(result): replies.append(result))
+	assert_true(replies[0].ok and not replies[0].solved)
+	assert_eq(replies[0].failed_ply, 0)
+	assert_eq(replies[0].correct, [{"uci": "g6g7", "san": "Qg7#"}])
+	assert_eq(probe.requests.size(), 1, "mate ends correction before the full length")
+	replies.clear()
+	_grader(probe).grade({"fen": fen, "side": "w", "line_length": 1}, PackedStringArray(["g6g7"]), func(result): replies.append(result))
+	assert_true(replies[0].ok and replies[0].solved, "a root mate is a winning zeroing move with DTZ 1")
