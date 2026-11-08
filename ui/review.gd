@@ -1435,7 +1435,7 @@ func present(game, clocks: Array, settings: Dictionary, result_text: String,
 				return
 			for marker in markers:
 				var anchor: TreeItem = _move_rows[marker.ply - 1]
-				var marker_row := _moves.create_item(root)
+				var marker_row := _moves.create_item(_moves.get_root())
 				marker_row.move_after(anchor)
 				marker_row.set_text(1, "Rook and pawn against rook · this move turned %s into %s · Practise in Rook endgames" % [marker.before, marker.after])
 				marker_row.set_expand_right(1, true)
