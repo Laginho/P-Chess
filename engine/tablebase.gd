@@ -19,6 +19,7 @@ var _active := {}
 var _moves := {}
 var _ranks := {}
 var _stdout := []
+var _identified := false
 
 
 func _init(bridge = null) -> void:
@@ -77,13 +78,33 @@ func poll() -> void:
 		_stdout.clear()
 		_bridge._mutex.unlock()
 		for line: String in lines:
-			# The generic bridge tolerates unrelated stdout; this helper's
-			# enumerated protocol must fail closed, including during startup.
-			if not (line.begins_with("id name ") or line in ["uciok", "readyok"]
-					or line.begins_with("info ") or line.begins_with("bestmove")
-					or line.begins_with("error ")):
-				line = "error Invalid tablebase line: " + line
+			# Check against the command actually sent, not an adapter request
+			# still queued behind a barrier. The bridge tolerates stray output.
+			var valid := line.begins_with("error ")
+			if not valid:
+				match _bridge._awaiting:
+					"uciok":
+						if not _identified:
+							var identity := RegEx.create_from_string("^id name P-Chess tbprobe \\(Fathom [0-9a-f]{40}\\)$")
+							valid = identity.search(line) != null
+							_identified = valid
+						else:
+							valid = line == "uciok"
+					"readyok":
+						valid = line == "readyok"
+					"bestmove":
+						valid = (line.begins_with("info string tbmove ")
+								or line.begins_with("info string tberror ")
+								or line.begins_with("bestmove "))
+			if not valid:
+				stop("Invalid tablebase line: " + line)
+				return
 			_bridge._lines.append(line)
+			# Dispatch before validating the next line: a barrier or bestmove
+			# can send the next command even within the same reader batch.
+			_bridge.poll()
+			if not available:
+				return
 		_bridge.poll()
 
 
@@ -128,7 +149,8 @@ func _on_line(line: String) -> void:
 		var move := found.get_string(1)
 		var wdl := found.get_string(2)
 		var dtz := found.get_string(3).to_int()
-		if not move in _active.legal or _moves.has(move) or (wdl == "draw" and dtz != 0):
+		if (not move in _active.legal or _moves.has(move)
+				or (wdl == "draw" and dtz != 0) or (wdl != "draw" and dtz == 0)):
 			stop("Invalid tablebase move: " + line)
 			return
 		_moves[move] = {"result": _result(wdl), "dtz": dtz}
