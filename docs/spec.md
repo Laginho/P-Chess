@@ -38,6 +38,7 @@ P-Chess/
 
 - `scripts/fetch-engine.ps1` downloads the pinned Lc0 and Stockfish zips and the 9 Maia nets into `engine/`, and checks their SHA-256 hashes. It must run in Windows PowerShell 5.1. CI uses the same script.
 - The 40 pinned Syzygy files for rook and pawn against rook are fetched into `engine/tablebase/` and shipped at that path.
+- `scripts/build-tbprobe.ps1` builds the pinned Fathom helper into `engine/tbprobe/`; the helper reads `../tablebase` from its own folder and provides WDL/DTZ through the existing UCI bridge.
 - At startup the app looks for `engine/lc0/lc0.exe` next to the executable (or in the project root inside the editor). If it is missing, the app shows how to run the fetch script.
 
 ### 3.2 Getting Maia's probabilities
