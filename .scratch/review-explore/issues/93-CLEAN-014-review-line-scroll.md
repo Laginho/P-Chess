@@ -1,5 +1,5 @@
 # CLEAN-014: Keep the current Review side-line move visible
-Stage: to-implement
+Stage: blocked
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -44,3 +44,5 @@ Acceptance: pending | Scroll behavior awaits stage-1 specification and implement
 Disclosure: pending | none | Non-blocking usability follow-up to REV-007; no integration or release hold imposed by this observation.
 
 - 2026-11-08 Attempt 1 failed: exit 0. Log tail: O CLEAN-014 foi implementado e permanece em **`implementing`**: a passagem para revisão depende de um gate verde. /  / A lista agora mantém a jogada selecionada visível e mostra “Back to game” no fim da linha, inclusive quando a navegação começa abaixo dela. O teste focado passou nos dois tamanhos previstos. /  / O gate completo terminou com **681 testes aprovados e 1 falha**, fora de Review. O teste de tablebase falhou com o fixture em CRLF neste checkout Windows; uma cópia isolada do teste passou ao remover os finais de linha. A regra do repositório permite repetir o gate somente após mudança de código, então não há recibo verde nem handoff para revisão. Registrei o resultado no [ticket](<C:/Users/bruno/Desktop/Pastinha/Programas/Projects/P-Chess/.artifacts-build/lanes/review-explore/.scratch/review-explore/issues/93-CLEAN-014-review-line-scroll.md>). /  / Não fiz verificação gráfica manual; o gate também pulou verificações que exigem display e tablebases Linux. /  /
+
+- 2026-11-08 Attempt 2 stopped to ask (its commits are on branch `recovery/asked/20261108-142949/CLEAN-014`): O **CLEAN-014 está bloqueado** na branch `CLEAN-014`, com a implementação e os testes preservados. O último gate terminou com **681 testes aprovados e 1 falha** no teste de tablebase; não há recibo de gate verde. Registrei o bloqueio no commit `0f1fc45`. /  / O fixture que causou a falha agora está em LF. O proxy recomendou repetir o gate, mas sua instrução no `AGENTS.md` diz: **“Rode de novo só depois de mudar código.”** A correção do fixture no ambiente não foi uma mudança de código. A skill [ticket-flow](C:/Users/bruno/.agents/skills/ticket-flow/SKILL.md) também exige gate verde para entregar o ticket à revisão. /  / Você autoriza uma exceção para repetir o gate agora, com o fixture corrigido, sem alterar código? /  / Não repeti o gate nem fiz verificação gráfica manual; o comportamento visual ainda precisa dessa validação. /  /
