@@ -1,5 +1,5 @@
 # CLEAN-014: Keep the current Review side-line move visible
-Stage: to-implement
+Stage: implementing
 Status: ready-for-agent
 Blocked by: none
 Review: agent
