@@ -1,5 +1,5 @@
 # LEARN-010: The tablebase probe (Fathom helper)
-Stage: to-review
+Stage: done
 Blocked by: CI-005
 Review: agent
 Difficulty: hard
@@ -295,3 +295,35 @@ Fresh independent check of the complete ticket and diff against the session base
 Fresh bound foreground gate at tested commit `64469e0ffea8994a3f461361a4e6e0bea554cd16`: `godot --headless -s tests/run.gd`, **624 passed, 0 failed**, exit 0. All 21 tablebase tests, including the three real-file checks, passed. Log: `/run/media/lage/New Volume/Scratch/LEARN-010/consolidated-gate.log`; receipt is the `Gate evidence:` line above. Only this ticket changes after that tested commit. `git diff --check` passed, and `engine/uci.gd` remains byte-for-byte unchanged against the session base.
 
 Stage 2 hands off at `to-review`; no merge or ledger entry. Actual Windows CI/release startup in an accented folder and LEARN-006's end-to-end Lucena grading remain pending under the original approved verification limits. Stage 3 must re-review criterion 4 across all phases, including completion callback reentry, before session integration.
+
+### Stage 3 consolidated re-review and integration (2026-11-08)
+
+#### Resolution (2026-11-08)
+Verdict: Approve
+
+Standards: **0 findings**. Independent reviewer `standards_review` read the full `c087ae0...ec14dc5` diff and the consolidated repair `61be75a..ec14dc5`, against the documented repository rules and smell baseline. Primary files and the test/production commit split are respected: `b826327` and `3c3b200` are test-only plus metadata, `a541507` and `64469e0` production-only, and the remaining repair commits metadata-only. No actionable baseline smell. `engine/uci.gd` is unchanged.
+
+Spec: **0 findings**. Independent reviewer `spec_review` examined the complete diff, all reopened criterion-4 paths and their interaction with the unchanged UCI bridge. Startup identity, both handshake barriers, active search, idle output, split/coalesced batches and completion callback reentry now validate each line in protocol order. Malformed output, `tberror`, duplicate/illegal/incomplete move sets, malformed completion tokens and decisive moves with zero DTZ fail closed. Pending, queued and later requests receive exactly one error; a valid answer already completed is preserved.
+
+Criteria reviewed:
+
+- ✅ 1: pinned source/license hashes, external cache, host compiler discovery, single-threaded build, static Windows CRT and failed-output cleanup retain their prior approved assessment.
+- ✅ 2: native protocol, own-directory startup, root/child probing, promotions and DTZ normalization retain their prior approved assessment and real-file evidence.
+- ✅ 3: helper discovery, all 40 required files, exact diagnostics and relative Syzygy path remain covered by the startup tests.
+- ✅ 4: all remaining ❌ items are resolved by the consolidated phase and callback repair; asynchronous answers, result normalization, ranking, terminal answers and castling/move-set failures also pass.
+- ✅ 5: stopped/error/free handling drains active and queued requests, rejects later probes and stops the helper; the lifecycle and phase/reentry tests verify exact callback counts.
+- ✅ 6: all three real-file tests ran in the verified gate, covering every required scenario; the independent-reader commands, 40 file hashes and warm median recorded above remain applicable.
+- ✅ 7: release build, system-import inspection, pinned Fathom license and required-package checks retain their prior approved assessment. Actual Windows execution remains a release check.
+- ✅ 8: the Windows build and spaced/accented-path KRvK smoke job meet the written workflow requirement; its actual execution remains pending a push.
+- ✅ 9: attribution, ignore/spec entries and export exclusions retain their prior approved assessment and recorded pack-inspection evidence.
+
+Affected paths examined: `start`, `probe`, `poll`, `_on_line`, `_finish`, `_next`, `stop`, PREDELETE, retained worker inbox, UCI command queue/barriers/parser dispatch, Board legal moves and terminal handling, native helper, build script, workflows, licensing and packaging. There are no production adapter callers yet; LEARN-006 and subsequent grader/play-out/review integration remain future tickets. Actual Windows execution and end-to-end Lucena grading were not performed in this review, as allowed by the original verification limits. No new contract change, proxy decision or unresolved implementation finding.
+
+Independent focused verification: **19 passed, 0 failed**, with no script errors: all 18 FakeUCI tests plus an additional positive case that queues the next probe and reenters an empty `poll()` inside the completed probe's callback. Script and captured output: [stage3-spec-phases.gd](</run/media/lage/New Volume/Scratch/LEARN-010/stage3-spec-phases.gd>) and [stage3-spec-phases.log](</run/media/lage/New Volume/Scratch/LEARN-010/stage3-spec-phases.log>).
+
+Red/green proof retained: `b826327` **15 passed, 5 failed** → `a541507` **20 passed, 0 failed**; `3c3b200` **20 passed, 1 failed** → `64469e0` **21 passed, 0 failed**, including the three real-file tests. The bound gate at tested commit `64469e0ffea8994a3f461361a4e6e0bea554cd16` is **624 passed, 0 failed**, exit 0, with no tablebase SKIPs. `Assert-GateEvidence` verified the command, tested commit, exit marker, log hash and identical code before and after rebase. The existing receipt is reused because review and rebase changed only ticket metadata. `git diff --check` passed.
+
+Rebased onto `sweatshop/learning/2026-11-07-2234`, preserving the session's foreman stop note and the complete repair history. The sole conflict was in this ticket's append-only history; the final code and committed tests are identical to `64469e0`. Rebased repair commits are `45cb43c` → `2b77638` and `5672315` → `73ebec1`; handoff `d3b71dd`. Integrated without squash in merge `65e0c78`; this closure and the ledger entry are committed together on the session branch. Stage 3 authored no production repair.
+
+Acceptance: pending | [Verification](#verification): actual Windows CI, release startup from an accented folder and LEARN-006 Lucena grading remain pending under the original approved ticket. Implementation review and Linux verification passed.
+Disclosure: pending | release | [Verification](#verification): those Windows and end-to-end checks remain release conditions; session integration is approved. The earlier criterion-4 integration disclosures are resolved by this re-review.
