@@ -1256,3 +1256,53 @@ func test_fourth_playout_pass_offers_back_to_unit_without_next():
 	screen.find_child("Back", true, false).pressed.emit()
 	assert_eq(backs, [true])
 	screen.free()
+
+
+func test_leaving_playout_ignores_pending_replies_and_records_nothing():
+	for pending in ["probe", "maia"]:
+		var session = Session.new()
+		var main = await session._session(Session.ManualWaits.new(), false)
+		var path: String = main.history._root.path_join("course.json")
+		main.course = load("res://core/course.gd").new(path)
+		main.course.save_rating(1400, "chess.com")
+		var sample = load("res://tests/test_grader.gd")
+		var probe = sample.FakeProbe.new()
+		probe.held = pending == "probe"
+		probe.answers[sample.FEN] = sample.answer("win", "c6c5", {"c6c5": {"result": "win", "dtz": 3}})
+		main.tablebase.queue_free()
+		var adapter = LifecycleProbe.new(probe, [])
+		main.tablebase = adapter
+		main.add_child(adapter)
+		var position := {"id": "a", "fen": sample.FEN, "side": "b", "goal": "convert"}
+		var unit := {"id": "rook", "title": "Rook endings", "playouts": [position]}
+		main._show_unit(unit)
+		var progress := FileAccess.get_file_as_string(path)
+		main.unit_page.part_requested.emit(unit, "playouts")
+		main.playout.find_child("Start", true, false).pressed.emit()
+		while main._starting:
+			await Engine.get_main_loop().process_frame
+		assert_true(main.board_view.play("c6c5"))
+		if pending == "probe":
+			assert_eq(probe.pending.size(), 1)
+		else:
+			assert_eq(main.uci.requests.size(), 2)
+		var game = main.board_view.game
+		var game_clock = main.clock
+		var back: Button = main.get_node("Layout/Side/Actions/NewGameButton")
+		assert_true(back.is_visible_in_tree() and back.text == "Back to the unit", pending + ": exit is visible")
+		assert_true(back.focus_mode == Control.FOCUS_ALL, pending + ": exit is keyboard reachable")
+		back.pressed.emit()
+		assert_true(main.unit_page.visible and not main.playout.visible, pending + ": unit page opens")
+		assert_true(main.clock == null and main.white_clock.clock == null and main.black_clock.clock == null)
+		assert_eq(game_clock._running, "", pending + ": clock stopped")
+		if pending == "probe":
+			probe.reply()
+		else:
+			main.uci.policy_ready.emit({})
+			main.uci.policy_ready.emit({"e1f2": 1.0})
+		assert_eq(game.moves, PackedStringArray(["c6c5"]), pending + ": late reply cannot play")
+		assert_true(main.unit_page.visible and not main.playout.visible)
+		assert_eq(FileAccess.get_file_as_string(path), progress, pending + ": progress unchanged")
+		assert_true(main.history.games().is_empty())
+		assert_true(not FileAccess.file_exists(main.history._root.path_join("stats.cfg")))
+		main.free()
