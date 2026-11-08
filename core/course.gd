@@ -101,3 +101,46 @@ func units() -> Array:
 		if unit is Dictionary and not unit.get("id", "").is_empty():
 			result.append(unit)
 	return result
+
+
+func unit_progress(unit: Dictionary) -> Dictionary:
+	var all_units = _progress.get("units", {})
+	var saved = all_units.get(unit.get("id", ""), {}) if all_units is Dictionary else {}
+	if not saved is Dictionary:
+		saved = {}
+	var practice = saved.get("practice", {})
+	if not practice is Dictionary:
+		practice = {}
+	var total := 0
+	var solved := 0
+	var committed := 0
+	var first := 0
+	for position in unit.get("positions", []):
+		if not position is Dictionary or position.get("pool") != "practice":
+			continue
+		total += 1
+		var result = practice.get(position.get("id", ""), {})
+		if result is Dictionary and not result.is_empty():
+			committed += 1
+			if result.get("solved", false):
+				solved += 1
+			if result.get("first_try", false):
+				first += 1
+	var playouts = saved.get("playouts", {})
+	var passed := 0
+	if playouts is Dictionary:
+		for value in playouts.values():
+			if value == true:
+				passed += 1
+	var attempts = saved.get("test_attempts", [])
+	if not attempts is Array:
+		attempts = []
+	var mastered: bool = not str(saved.get("mastered_date", "")).is_empty()
+	var test := "passed" if mastered else ("not passed" if not attempts.is_empty() else "not taken")
+	var checks = saved.get("review_checks", [])
+	var needs_review: bool = mastered and checks is Array and not checks.is_empty() and checks[-1] is Dictionary and checks[-1].get("passed") == false
+	var theory: bool = saved.get("theory_opened", false) == true
+	var status := "needs review" if needs_review else ("mastered" if mastered else ("in progress" if theory or committed > 0 or passed > 0 or not attempts.is_empty() else "new"))
+	var rate := "–" if committed == 0 else "%d%% (%d of %d)" % [roundi(100.0 * first / committed), first, committed]
+	return {"status": status, "theory_done": theory, "solved": solved, "total": total,
+			"playouts_passed": passed, "test": test, "first_try": rate}
