@@ -26,6 +26,25 @@ func test_only_the_three_time_controls():
 	assert_eq(Clock.CONTROLS.keys(), ["1+0", "3+2", "5+0"])
 
 
+func test_sandbox_and_custom_game_offer_only_the_three_controls():
+	var home = load("res://ui/home.tscn").instantiate()
+	var quick: Node = home.get_node("Center/Form/Quick")
+	var quick_controls := []
+	for button in quick.get_children():
+		if button is Button:
+			quick_controls.append(button.text)
+	assert_eq(quick_controls, ["1+0", "3+2", "5+0"])
+	home.free()
+	var setup = load("res://ui/setup.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(setup)
+	var choice: OptionButton = setup.get_node("Center/Form/Control")
+	var custom_controls := []
+	for i in choice.item_count:
+		custom_controls.append(choice.get_item_text(i))
+	assert_eq(custom_controls, ["1+0", "3+2", "5+0"])
+	setup.free()
+
+
 func test_no_clock_runs_while_a_side_makes_its_first_move():
 	var time := FakeTime.new()
 	var clock = Clock.new("3+2", time.ms)
