@@ -144,3 +144,30 @@ func unit_progress(unit: Dictionary) -> Dictionary:
 	var rate := "–" if committed == 0 else "%d%% (%d of %d)" % [roundi(100.0 * first / committed), first, committed]
 	return {"status": status, "theory_done": theory, "solved": solved, "total": total,
 			"playouts_passed": passed, "test": test, "first_try": rate}
+
+
+func clock_choice() -> String:
+	return "none" if _progress.get("clock") == "none" else "5+5"
+
+
+func save_clock_choice(choice: String) -> bool:
+	if choice not in ["5+5", "none"]:
+		return false
+	var result := _read()
+	if not result.ok:
+		return false
+	var next: Dictionary = result.data
+	next.clock = choice
+	var temporary := path + ".tmp"
+	var file := FileAccess.open(temporary, FileAccess.WRITE)
+	if file == null:
+		return false
+	file.store_string(JSON.stringify(next, "\t"))
+	file.flush()
+	var error := file.get_error()
+	file = null
+	if error != OK or DirAccess.rename_absolute(temporary, path) != OK:
+		DirAccess.remove_absolute(temporary)
+		return false
+	_progress = next
+	return true
