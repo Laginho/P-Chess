@@ -3,6 +3,7 @@ extends "res://tests/run.gd".Test
 const UCI = preload("res://engine/uci.gd")
 const Board = preload("res://core/board.gd")
 const RES_FEN := "8/8/8/4k3/8/4K3/4P3/R6r w - - 0 1"
+const HELPER_ID := "id name P-Chess tbprobe (Fathom c9c6fef0dddc05d2e242c183acf5833149ab676d)"
 const MATERIALS := ["KBvK", "KNvK", "KPvK", "KQRvK", "KQRvKR", "KQvK", "KQvKR",
 		"KRBvK", "KRBvKR", "KRNvK", "KRNvKR", "KRPvK", "KRPvKR", "KRRvK", "KRRvKR",
 		"KRvK", "KRvKB", "KRvKN", "KRvKP", "KRvKR"]
@@ -60,7 +61,7 @@ func _remove(root: String) -> void:
 	DirAccess.remove_absolute(root)
 
 
-func _setup() -> Dictionary:
+func _setup(handshake := [HELPER_ID, "uciok", "readyok"]) -> Dictionary:
 	var script = _script()
 	if script == null:
 		return {}
@@ -69,7 +70,7 @@ func _setup() -> Dictionary:
 	bridge.poll_output = probe.poll
 	var root := _installation()
 	assert_true(probe.start(PackedStringArray([root])), probe.error)
-	bridge.output(["id name P-Chess tbprobe (Fathom test)", "uciok", "readyok"])
+	bridge.output(handshake)
 	return {"probe": probe, "bridge": bridge, "root": root}
 
 
@@ -81,12 +82,16 @@ func _cleanup(setup: Dictionary) -> void:
 
 
 func _answer(setup: Dictionary, changes := {}, best := "a1h1", fen := RES_FEN) -> void:
+	setup.bridge.output(_answer_lines(changes, best, fen))
+
+
+func _answer_lines(changes := {}, best := "a1h1", fen := RES_FEN) -> Array:
 	var lines := []
 	for move in Board.from_fen(fen).legal_moves():
 		var value: Array = changes.get(move, ["draw", 0])
 		lines.append("info string tbmove %s %s %d" % [move, value[0], value[1]])
 	lines.append("bestmove " + best)
-	setup.bridge.output(lines)
+	return lines
 
 
 func test_start_checks_the_helper_and_each_required_table():
@@ -299,6 +304,143 @@ func test_unknown_stdout_fails_active_queued_and_later_probes_once():
 			if answers.size() == 1:
 				assert_eq(answers[0].ok, false, unexpected)
 				assert_true(not answers[0].get("error", "").is_empty(), unexpected)
+		_cleanup(setup)
+
+
+func _assert_failed_queries(setup: Dictionary, received: Array, context: String) -> void:
+	assert_eq(setup.probe.available, false, context)
+	assert_eq(setup.bridge.available, false, context)
+	setup.probe.probe(RES_FEN, func(answer): received[2].append(answer))
+	setup.probe.poll()
+	for answers in received:
+		assert_eq(answers.size(), 1, context)
+		if answers.size() == 1:
+			assert_eq(answers[0].ok, false, context)
+			assert_true(not answers[0].get("error", "").is_empty(), context)
+
+
+func test_search_output_before_either_handshake_barrier_fails_all_queries_once():
+	for handshake in [[], [HELPER_ID], [HELPER_ID, "uciok"]]:
+		for unexpected in ["info garbage", "info string tbmove a1h1 win 1",
+				"info string tbmove a1h1 win -1", "info string tberror missing table",
+				"bestmove a1h1", "bestmoves a1h1", "bestmoveX a1h1"]:
+			var setup := _setup(handshake)
+			if setup.is_empty():
+				return
+			var received := [[], [], []]
+			for index in 2:
+				setup.probe.probe(RES_FEN, func(answer): received[index].append(answer))
+			# Include the remaining valid handshake in the same reader batch.
+			var remaining := [HELPER_ID, "uciok", "readyok"].slice(handshake.size())
+			setup.bridge.output([unexpected] + remaining)
+			_answer(setup)
+			_answer(setup)
+			_assert_failed_queries(setup, received, str(handshake) + ": " + unexpected)
+			_cleanup(setup)
+
+
+func test_handshake_requires_the_helper_identity_and_ordered_barriers():
+	for handshake in [["id name Other engine", "uciok", "readyok"],
+			["id name P-Chess tbprobe (Fathom )", "uciok", "readyok"],
+			["id name P-Chess tbprobe (Fathom not-a-commit)", "uciok", "readyok"],
+			[HELPER_ID.trim_suffix(")"), "uciok", "readyok"],
+			[HELPER_ID + " extra", "uciok", "readyok"],
+			["uciok", "readyok"], [HELPER_ID, "readyok", "uciok"],
+			[HELPER_ID, HELPER_ID, "uciok", "readyok"],
+			[HELPER_ID, "uciok", "uciok", "readyok"]]:
+		var setup := _setup([])
+		if setup.is_empty():
+			return
+		var received := [[], [], []]
+		for index in 2:
+			setup.probe.probe(RES_FEN, func(answer): received[index].append(answer))
+		setup.bridge.output(handshake)
+		_answer(setup)
+		_answer(setup)
+		_assert_failed_queries(setup, received, str(handshake))
+		_cleanup(setup)
+
+
+func test_handshake_lines_during_search_fail_active_queued_and_later_queries_once():
+	for unexpected in [HELPER_ID, "uciok", "readyok"]:
+		var setup := _setup()
+		if setup.is_empty():
+			return
+		var received := [[], [], []]
+		for index in 2:
+			setup.probe.probe(RES_FEN, func(answer): received[index].append(answer))
+		setup.bridge.output([unexpected] + _answer_lines())
+		_answer(setup)
+		_assert_failed_queries(setup, received, unexpected)
+		_cleanup(setup)
+
+
+func test_any_idle_stdout_after_completion_disables_later_queries():
+	for unexpected in [HELPER_ID, "uciok", "readyok", "info garbage",
+			"info string tbmove a1h1 win 1", "info string tberror missing table",
+			"bestmove a1h1", "bestmoves a1h1", "garbage", ""]:
+		for same_batch in [false, true]:
+			var setup := _setup()
+			if setup.is_empty():
+				return
+			var completed := []
+			setup.probe.probe(RES_FEN, func(answer): completed.append(answer))
+			if same_batch:
+				setup.bridge.output(_answer_lines() + [unexpected])
+			else:
+				_answer(setup)
+				setup.bridge.output([unexpected])
+			assert_eq(completed.size(), 1, unexpected)
+			if completed.size() == 1:
+				assert_eq(completed[0].ok, true, "the earlier valid answer is preserved")
+			var received := [[], [], []]
+			for index in 2:
+				setup.probe.probe(RES_FEN, func(answer): received[index].append(answer))
+			_answer(setup)
+			_answer(setup)
+			_assert_failed_queries(setup, received, unexpected + " same batch: " + str(same_batch))
+			_cleanup(setup)
+
+
+func test_only_draw_moves_may_have_zero_distance():
+	for wdl in ["win", "cursed-win", "blessed-loss", "loss"]:
+		var setup := _setup()
+		if setup.is_empty():
+			return
+		var received := [[], [], []]
+		for index in 2:
+			setup.probe.probe(RES_FEN, func(answer): received[index].append(answer))
+		_answer(setup, {"a1h1": [wdl, 0]})
+		_answer(setup)
+		_assert_failed_queries(setup, received, wdl)
+		_cleanup(setup)
+
+
+func test_fragmented_or_batched_handshake_and_search_replies_preserve_order():
+	for fragmented in [false, true]:
+		var setup := _setup([])
+		if setup.is_empty():
+			return
+		var received := []
+		for index in 2:
+			setup.probe.probe(RES_FEN, func(answer): received.append(answer))
+		assert_eq(received.size(), 0)
+		assert_eq(setup.bridge.sent(), "uci\n", "searches wait for both barriers")
+		var lines := [HELPER_ID, "uciok", "readyok"]
+		lines.append_array(_answer_lines({"a1h1": ["win", 1]}))
+		lines.append_array(_answer_lines({"a1a3": ["win", 2]}))
+		if fragmented:
+			for line in lines:
+				setup.bridge.output([line])
+		else:
+			setup.bridge.output(lines)
+		assert_eq(received.size(), 2)
+		if received.size() == 2:
+			assert_eq(received[0].ok, true)
+			assert_eq(received[0].best, "a1h1")
+			assert_eq(received[1].ok, true)
+			assert_eq(received[1].best, "a1a3")
+		assert_eq(setup.probe.available, true)
 		_cleanup(setup)
 
 

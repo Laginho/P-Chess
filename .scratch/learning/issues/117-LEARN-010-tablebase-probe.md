@@ -1,5 +1,5 @@
 # LEARN-010: The tablebase probe (Fathom helper)
-Stage: to-implement
+Stage: implementing
 Blocked by: CI-005
 Review: agent
 Difficulty: hard
@@ -265,3 +265,8 @@ Disclosure: pending | release | [Verification](#verification): actual Windows CI
     2. Shape: the filter accepts any `id name ` text; the protocol fixes `id name P-Chess tbprobe (Fathom <commit>)`.
     3. Values: `_on_line` (`:131`) rejects a `draw` with nonzero dtz, but accepts `win`/`cursed-win`/`blessed-loss`/`loss` with dtz `0`. The protocol counts dtz "with the move included", so only a draw can be 0.
   - Next action: back to `to-implement` on `LEARN-010`. Write red tests at the FakeUCI seam for each phase (a pending and a queued probe before `uciok`, between `uciok` and `readyok`, idle after a `bestmove`, out-of-phase handshake lines during a search) and for items 2 and 3. Then make one adapter repair, with `engine/uci.gd` unchanged; the stop-and-ask rule still applies if it must change. Every pending, queued and later probe gets exactly one `{ok = false}` and `available` turns false. Fresh gate. Stage 3 re-reviews criterion 4 across all phases, not only the cases listed.
+
+### Stage 2 consolidated phase repair (2026-11-08)
+
+- Callers and boundaries checked before writing tests: `poll()` is called by `_process()` and the approved FakeUCI harness; it dispatches `_on_line()` through the unchanged UCI queue. `_finish()` calls the user's callback and `_next()`, which can queue another search before the bridge consumes the previous `bestmove`. `stop()` is reached by parsing, the stopped signal and PREDELETE, and must drain active/queued callbacks before rejecting later requests. There are no production callers of this new adapter yet. Regression cases cover split/coalesced reader batches, both startup barriers (including identity not received), idle lines immediately after completion, queued searches, callback reentry, malformed identity/order, and zero DTZ in all four decisive WDL classes. All tests stay at the approved FakeUCI/probe seam; all three real-file tests will run with the HDD tables.
+- Red before production changes: focused suite **15 passed, 5 failed**, exit 1 (`/run/media/lage/New Volume/Scratch/LEARN-010/phase-red.log`). The five failures reproduce ignored startup output, invalid identity/barrier ordering, handshake lines during search, idle output (separate/coalesced batches), and decisive moves with DTZ 0. Existing tests and the new positive fragmented/coalesced ordering test pass; all three live tests ran. The fake identity now uses the pinned helper's actual commit. Helper rebuilt from verified cached sources; the 40-file table directory is an ignored symlink to the HDD installation.
