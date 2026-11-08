@@ -73,7 +73,19 @@ func probe(fen: String, callback: Callable) -> void:
 	if not available:
 		callback.call({"ok": false, "error": error if error else "Tablebase probe is unavailable."})
 		return
-	_pending.append({"fen": fen, "callback": callback})
+	var board = Board.from_fen(fen)
+	if board == null or board.squares.count("K") != 1 or board.squares.count("k") != 1:
+		callback.call({"ok": false, "error": "Invalid tablebase FEN."})
+		return
+	if board.castling != "-":
+		callback.call({"ok": false, "error": "Tablebase positions cannot have castling rights."})
+		return
+	var legal := Array(board.legal_moves())
+	if legal.is_empty():
+		callback.call({"ok": true, "result": "loss" if board.in_check() else "draw",
+				"dtz": 0, "best": "", "moves": {}})
+		return
+	_pending.append({"fen": fen, "legal": legal, "callback": callback})
 	_next()
 
 
@@ -81,8 +93,6 @@ func _next() -> void:
 	if not available or not _active.is_empty() or _pending.is_empty():
 		return
 	_active = _pending.pop_front()
-	var board = Board.from_fen(_active.fen)
-	_active.legal = Array(board.legal_moves())
 	_moves = {}
 	_ranks = {}
 	_bridge.request_search(PackedStringArray(["position fen " + _active.fen, "go"]), _on_line)
@@ -92,15 +102,31 @@ func _on_line(line: String) -> void:
 	if _active.is_empty():
 		return
 	if line.begins_with("info string tbmove "):
+		var pattern := RegEx.create_from_string("^info string tbmove ([a-h][1-8][a-h][1-8][qrbn]?) (win|cursed-win|draw|blessed-loss|loss) ([0-9]{1,4})$")
+		var found := pattern.search(line)
+		if found == null:
+			stop("Invalid tablebase line: " + line)
+			return
+		var move := found.get_string(1)
+		var wdl := found.get_string(2)
+		var dtz := found.get_string(3).to_int()
+		if not move in _active.legal or _moves.has(move) or (wdl == "draw" and dtz != 0):
+			stop("Invalid tablebase move: " + line)
+			return
+		_moves[move] = {"result": _result(wdl), "dtz": dtz}
+		_ranks[move] = RANKS.find(wdl)
+	elif line.begins_with("bestmove"):
 		var words := line.split(" ")
-		_moves[words[3]] = {"result": _result(words[4]), "dtz": words[5].to_int()}
-		_ranks[words[3]] = RANKS.find(words[4])
-	elif line.begins_with("bestmove "):
+		if words.size() != 2 or not words[1] in _active.legal or _moves.size() != _active.legal.size():
+			stop("Tablebase move set differs from Board.legal_moves(): " + line)
+			return
 		var ordered := _moves.keys()
 		ordered.sort_custom(_better)
 		var best: String = ordered[0]
 		_finish({"ok": true, "result": _moves[best].result, "dtz": _moves[best].dtz,
 				"best": best, "moves": _moves})
+	else:
+		stop("Tablebase probe failed: " + line)
 
 
 static func _result(wdl: String) -> String:
