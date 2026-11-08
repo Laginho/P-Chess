@@ -1,5 +1,5 @@
 # CORE-007: A game keeps its start position, and Maia plays from it
-Stage: implementing
+Stage: to-review
 Blocked by: none
 Review: agent
 Difficulty: normal
@@ -32,3 +32,12 @@ Play-outs start from a FEN (spec §L8). Today `Game.new(fen)` accepts a FEN but 
 ## Comments
 
 - 2026-11-07 Written from `.scratch/learning/spec.md` §L8. Found by the code survey: `bot/maia_player.gd` lines 98–101.
+- Stage 2: test commits `734c147` and `0f9668d` failed before production changes (11 passed, 1 failed): the start field was absent and both requests used `Game.START`. The second test-only commit corrected the first assertion's timing: the fake retains the mutable moves array, so the initial request must be checked before moves are played. Production commit `9a75f8e` made the focused suite green (12 passed, 0 failed).
+- Criteria check, read-only subagent:
+  - ✅ 1: `core/game.gd:24-25` stores the supplied or default FEN; `tests/test_maia_player.gd:119-123,132` checks both and retention after moves.
+  - ✅ 2: `bot/maia_player.gd:96-98` requests both positions from that FEN; `tests/test_maia_player.gd:127-135` checks empty and nonempty histories.
+  - ✅ 3: the same production lines preserve the default; unchanged request assertions in `tests/test_maia_player.gd:58-68,108-115` cover the initial game.
+  - ✅ 4: diff inspection confirms the shortcut comment is removed; this structural criterion has no behavioral test.
+- Gate on `9a75f8e`: `godot --headless -s tests/run.gd` exited 0, 570 passed, 0 failed. Seven checks reported skips: one graphical pixel check and six requiring Lc0. No live-engine or graphical acceptance was performed.
+
+Gate evidence: /run/media/lage/New Volume/Scratch/core-007/gate.json
