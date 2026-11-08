@@ -1,5 +1,5 @@
 # CLEAN-017: Share the course progress persistence sequence
-Stage: to-implement
+Stage: implementing
 Status: ready-for-agent
 Blocked by: LEARN-002
 Review: agent
@@ -34,3 +34,5 @@ Difficulty: normal
 - 2026-11-08 [LEARN-003 closing review](107-LEARN-003-theory-pointer.md#resolution-2026-11-08): `open_theory()` at `core/course.gd:197–226` adds a third caller of the same read-preserve-write/flush/rename sequence. Include it when triaging this optional extraction and preserve its validation, unrelated unit progress and corrupt-file refusal. No current behavior defect or integration/release condition was found; this note leaves the contract for stage-1 triage to settle.
 
 - Triage by the driver: ready-for-agent — all three operations repeat the same persistence sequence; sharing it reduces drift while preserving each operation's validation. Include theory in the contract and existing public-interface coverage. No concrete behavior defect was identified, so extraction needs no new regression test.
+
+- Stage 2 starts with existing public-interface tests: the cleanup changes structure only, so there is no new behavior to make red. Callers are the rating dialog and profile, the unit clock control, and the theory pointer; validation and failure return values stay unchanged.
