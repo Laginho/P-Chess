@@ -20,6 +20,7 @@ var _moves := {}
 var _ranks := {}
 var _stdout := []
 var _identified := false
+var _finishing := false
 
 
 func _init(bridge = null) -> void:
@@ -93,7 +94,7 @@ func poll() -> void:
 					"readyok":
 						valid = line == "readyok"
 					"bestmove":
-						valid = (line.begins_with("info string tbmove ")
+						valid = not _finishing and (line.begins_with("info string tbmove ")
 								or line.begins_with("info string tberror ")
 								or line.begins_with("bestmove "))
 			if not valid:
@@ -187,7 +188,11 @@ func _better(a: String, b: String) -> bool:
 func _finish(answer: Dictionary) -> void:
 	var callback: Callable = _active.callback
 	_active = {}
+	# Client callbacks can poll or queue a probe. The bridge still awaits the
+	# completed bestmove until this callback returns; no reply is legal here.
+	_finishing = true
 	callback.call(answer)
+	_finishing = false
 	_next()
 
 
