@@ -2393,6 +2393,9 @@ func test_result_change_shows_link_and_adds_position_to_course():
 	main.free()
 
 func test_practice_marker_is_reachable_and_activates_by_keyboard():
+	var root: Window = Engine.get_main_loop().root
+	var old_size := root.size
+	root.size = Vector2i(1280, 800)
 	var main = await _session(FakeTime.new())
 	var review = main.review
 	var fen := "4k3/8/8/8/4p3/R7/7r/4K3 w - - 0 1"
@@ -2419,10 +2422,13 @@ func test_practice_marker_is_reachable_and_activates_by_keyboard():
 		assert_true(marker.get_text(1).contains("Practise in Rook endgames"), "the link has a name")
 		list.grab_focus()
 		for key in [KEY_ENTER, KEY_SPACE]:
+			review.get_node("Margin/Content/ReviewBody/Side/Navigation/First").pressed.emit()
+			list.set_block_signals(true)
 			rows[0].select(1)
+			list.set_block_signals(false)
 			await _review_key(Engine.get_main_loop().root, KEY_DOWN)
 			assert_true(list.get_selected() == marker, "Down reaches the marker")
-			assert_eq(review._ply, 1, "the marker is not a chess move")
+			assert_eq(review._ply, 0, "the marker is not a chess move")
 			await _review_key(Engine.get_main_loop().root, key)
 			assert_eq(opened.size(), 1, "Enter and Space open the unit")
 			if not opened.is_empty():
@@ -2434,9 +2440,16 @@ func test_practice_marker_is_reachable_and_activates_by_keyboard():
 			await _review_key(Engine.get_main_loop().root, KEY_UP)
 			assert_true(list.get_selected() == rows[0], "Up returns to the move")
 			assert_eq(review._ply, 1)
+		await Engine.get_main_loop().process_frame
+		var at: Vector2 = list.global_position + list.get_item_area_rect(marker, 1).get_center()
+		await _review_mouse_motion(root, at)
+		await _review_mouse_button(root, at, true)
+		await _review_mouse_button(root, at, false)
+		assert_eq(opened, [unit], "a real click opens the unit")
 	assert_eq(course.practice_positions(unit)[0].fen, fen, "the unit contains the position from the game")
 	DirAccess.remove_absolute(path)
 	main.free()
+	root.size = old_size
 
 func test_review_unit_request_opens_unit_page():
 	var main = await _session(FakeTime.new())
