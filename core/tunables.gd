@@ -37,3 +37,6 @@ const CLASSIFICATION_MISS_LOSS := 0.10
 
 # Root-move distance to zeroing, in plies. Syzygy may round one ply high.
 const COURSE_DTZ_MARGIN := 1
+
+# Number of the player's moves needed to hold a course play-out.
+const COURSE_HOLD_MOVES := 30
