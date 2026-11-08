@@ -35,3 +35,5 @@ The release carries exactly the Syzygy files RES-001 lists for rook and pawn aga
 ## Comments
 
 - 2026-11-07 Written from `.scratch/learning/spec.md` §L12.
+
+- 2026-11-07 RES-001 review follow-up: the 40-file manifest in `docs/research/tablebase.md` was independently verified (47,896,448 bytes). Windows acceptance remains a release condition: once packaged, Bruno runs the documented UCI probe from the release root and checks `Found 20 WDL and 20 DTZ` and `bestmove a1h1`. Linux evidence does not replace this Windows check. Record its result here; see RES-001's dated Resolution for the proxy-authorized Linux substitution.

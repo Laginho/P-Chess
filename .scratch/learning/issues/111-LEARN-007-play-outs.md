@@ -46,3 +46,5 @@ The unit's four play-outs (spec §L8, design `PlayoutStart.dc.html`, `PlayoutEnd
 ## Comments
 
 - 2026-11-07 Written from `.scratch/learning/spec.md` §L4, §L8. "Not saved to History" is a spec decision (§L8) Bruno can reverse.
+
+- 2026-11-07 RES-001 review follow-up: assess hold/convert difficulty with Bruno on the actual LEARN-004 course positions before release. The research's small random sample and WDL-preserving opponent do not validate human difficulty or 50-move-perfect play; record the manual play-out outcome here. See `docs/research/tablebase.md` and RES-001's dated Resolution; this adds no implementation criterion.

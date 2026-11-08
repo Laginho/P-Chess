@@ -50,3 +50,5 @@ Commit grades the line by tablebase and shows the feedback designed in `SolvingF
 ## Comments
 
 - 2026-11-07 Written from `.scratch/learning/spec.md` §L5–§L7. `hard`: the grading rules interact (result, margin, stopping) and the probe parses engine output. How the probe gets a distance per move depends on RES-001; if RES-001 says Stockfish can't give it, this ticket uses RES-001's alternative and says so in its first commit.
+
+- 2026-11-07 RES-001 review follow-up (integration condition): Stockfish 19 computes root-move DTZ internally but does not expose it through UCI scores. RES-001 recommends evaluating Fathom (MIT); that requires a native adapter/helper, packaging and tests absent from this ticket's Primary files and fake-UCI seam. Before implementation, reconcile spec L5, criterion 1 and the test seam through stage 1/the proxy; preserve the DTZ-margin requirement unless Bruno approves a product change. Do not infer DTZ from centipawns or silently replace a failed tablebase probe with engine evaluation. This comment records the open decision, not approval to change the contract. See `docs/research/tablebase.md` and RES-001's dated Resolution.

@@ -35,3 +35,5 @@ Claude drafts the unit's content and Bruno tunes it (spec Further Notes). The un
 ## Comments
 
 - 2026-11-07 Written from `.scratch/learning/spec.md` §L1. `Review: human` because Bruno tunes the content.
+
+- 2026-11-07 RES-001 review follow-up: the ten random KRPKR positions per Maia net are research samples, not validated course content. Their result-preservation ratios cannot establish whether holds are too easy or converts too hard. Bruno's content tuning and actual human play-outs remain pending release acceptance here and in LEARN-007; see `docs/research/tablebase.md`, Maia experiment, and RES-001's dated Resolution.
