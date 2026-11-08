@@ -47,12 +47,12 @@
     },
     {
       "id": "practice-04",
-      "fen": "8/8/2R5/1P1k2r1/8/1K6/8/8 w - - 0 1",
+      "fen": "4K1k1/4P3/8/8/8/8/7r/R7 w - - 0 1",
       "side": "w",
       "goal": "win",
       "line_length": 2,
       "pool": "practice",
-      "source": "Hand-built setup"
+      "source": "Hand-built Lucena setup"
     },
     {
       "id": "practice-05",
@@ -124,7 +124,7 @@
       "goal": "win",
       "line_length": 4,
       "pool": "practice",
-      "source": "Hand-built setup"
+      "source": "Adapted from generated RES-001 research sample 2 (color-mirrored; side to move changed)"
     },
     {
       "id": "test-01",
