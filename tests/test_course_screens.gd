@@ -390,3 +390,150 @@ func test_theory_pointer_displays_data_copies_and_navigates():
 	DirAccess.remove_absolute(index)
 	DirAccess.remove_absolute(folder.path_join("unit.json"))
 	Session.HistoryStorage.clean(folder)
+
+
+func _feedback_setup(probe) -> Dictionary:
+	var folder := "user://feedback_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var course = load("res://core/course.gd").new(folder.path_join("course.json"))
+	var screen = load("res://ui/solving.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(screen)
+	var feedback = screen.find_child("Feedback", true, false)
+	assert_true(feedback != null, "solving has a feedback state")
+	if feedback == null:
+		screen.free()
+		Session.HistoryStorage.clean(folder)
+		return {}
+	var sample = load("res://tests/test_grader.gd")
+	var second: Dictionary = sample.position()
+	second.id = "two"
+	var unit := {"id": "rook", "title": "Rook endings", "positions": [sample.position(), second]}
+	screen.probe = probe
+	screen.present(course, unit)
+	return {"screen": screen, "course": course, "unit": unit, "folder": folder}
+
+
+func _feedback_cleanup(fixture: Dictionary) -> void:
+	fixture.screen.free()
+	Session.HistoryStorage.clean(fixture.folder)
+
+
+func test_commit_feedback_replays_marks_retry_next_and_updates_unit_counts():
+	var sample = load("res://tests/test_grader.gd")
+	var fixture := _feedback_setup(sample.winning_probe())
+	if fixture.is_empty():
+		return
+	var screen = fixture.screen
+	for move in sample.LINE:
+		screen.board._commit(move, false)
+	screen.find_child("Commit", true, false).pressed.emit()
+	assert_true(screen.find_child("Feedback", true, false).visible)
+	assert_true(not screen.find_child("Actions", true, false).visible)
+	assert_eq(screen.find_child("BannerTitle", true, false).text, "Solved, first try")
+	assert_true(not screen.board.entry_mode)
+	assert_eq(screen.board.game.board.to_fen(), sample.FEN, "playback starts at root")
+	var timer = screen.find_child("Playback", true, false)
+	timer.timeout.emit()
+	assert_true(screen.find_child("FeedbackMoves", true, false).get_child(0).text.contains("✓"))
+	assert_eq(screen.board.game.moves.size(), 1)
+	timer.timeout.emit()
+	timer.timeout.emit()
+	assert_eq(screen.board.game.moves, PackedStringArray(sample.LINE))
+	assert_true(timer.is_stopped())
+	assert_eq(fixture.course.unit_progress(fixture.unit).solved, 1)
+	screen.find_child("Retry", true, false).pressed.emit()
+	assert_eq(screen.position_data.id, "one")
+	assert_eq(screen.board.entry_moves.size(), 0)
+	assert_true(screen.board.entry_mode)
+	for move in sample.LINE:
+		screen.board._commit(move, false)
+	screen.find_child("Commit", true, false).pressed.emit()
+	assert_eq(screen.find_child("BannerTitle", true, false).text, "Solved", "only the first passing commit gets first-try feedback")
+	screen.find_child("Next", true, false).pressed.emit()
+	assert_eq(screen.position_data.id, "two")
+	assert_eq(screen.board.entry_moves.size(), 0)
+	for move in sample.LINE:
+		screen.board._commit(move, false)
+	screen.find_child("Commit", true, false).pressed.emit()
+	assert_true(fixture.course.unit_progress(fixture.unit).solving_done)
+	assert_true(fixture.course.open_theory(fixture.unit))
+	var unit_page = load("res://ui/unit_page.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(unit_page)
+	unit_page.present(fixture.course, fixture.unit)
+	assert_eq(unit_page.find_child("FirstTry", true, false).text, "100% (2 of 2)")
+	var parts = unit_page.find_child("Parts", true, false)
+	assert_true("2/2 solved" in _labels(parts.get_child(1)))
+	assert_eq(parts.get_child(2).find_child("Open", true, false).text, "Continue")
+	unit_page.free()
+	_feedback_cleanup(fixture)
+
+
+func test_failed_feedback_stops_before_bad_move_with_arrow_and_grey_tail():
+	var sample = load("res://tests/test_grader.gd")
+	var fixture := _feedback_setup(sample.failing_probe("win", 99))
+	if fixture.is_empty():
+		return
+	var screen = fixture.screen
+	fixture.unit.positions[0].line_length = 3
+	screen.present(fixture.course, fixture.unit)
+	for move in ["c6c5", "e1f2", "c5c4", "f2e2", "c4c3"]:
+		screen.board._commit(move, false)
+	screen.find_child("Commit", true, false).pressed.emit()
+	assert_eq(screen.find_child("BannerTitle", true, false).text, "Not solved")
+	assert_true(screen.find_child("BannerReason", true, false).text.contains("too slow"))
+	var timer = screen.find_child("Playback", true, false)
+	for i in 5:
+		timer.timeout.emit()
+	assert_eq(screen.board.game.moves, PackedStringArray(["c6c5", "e1f2"]))
+	assert_eq(screen.board.best_move_arrow, "c5c3")
+	assert_true(timer.is_stopped())
+	var rows = screen.find_child("FeedbackMoves", true, false)
+	assert_true(rows.get_child(0).text.contains("✓"))
+	assert_true(rows.get_child(2).text.contains("✗"))
+	assert_true(not rows.get_child(4).text.contains("✓") and not rows.get_child(4).text.contains("✗"))
+	assert_eq(rows.get_child(4).get_theme_color("font_color"), Color("#8a857c"))
+	assert_true(screen.find_child("CorrectLine", true, false).text.contains("Rc3"))
+	assert_true(screen.find_child("CorrectLine", true, false).text.contains("Ke2"))
+	assert_eq(fixture.course.unit_progress(fixture.unit).solved, 0)
+	# A failed first commit followed by a passing retry is solved, never first try.
+	screen.find_child("Retry", true, false).pressed.emit()
+	fixture.unit.positions[0].line_length = 2
+	screen.probe = sample.winning_probe()
+	screen.present(fixture.course, fixture.unit)
+	for move in sample.LINE:
+		screen.board._commit(move, false)
+	screen.find_child("Commit", true, false).pressed.emit()
+	assert_eq(screen.find_child("BannerTitle", true, false).text, "Solved")
+	assert_eq(fixture.course.unit_progress(fixture.unit).first_try, "0% (0 of 1)")
+	_feedback_cleanup(fixture)
+
+
+func test_probe_failure_and_cancelled_async_commit_record_nothing():
+	var sample = load("res://tests/test_grader.gd")
+	var probe = sample.FakeProbe.new()
+	probe.held = true
+	probe.answers[sample.FEN] = {"ok": false, "error": "Engine or tablebase missing"}
+	var fixture := _feedback_setup(probe)
+	if fixture.is_empty():
+		return
+	var screen = fixture.screen
+	for move in sample.LINE:
+		screen.board._commit(move, false)
+	var commit = screen.find_child("Commit", true, false)
+	commit.pressed.emit()
+	commit.pressed.emit()
+	assert_eq(probe.pending.size(), 1, "Commit is serialized while the probe answers")
+	probe.reply()
+	assert_true(screen.find_child("ProbeError", true, false).visible)
+	assert_true(screen.find_child("ProbeError", true, false).text.contains("Engine or tablebase missing"))
+	assert_true(not screen.find_child("Feedback", true, false).visible)
+	assert_eq(fixture.course.practice_result(fixture.unit, screen.position_data), {})
+	assert_true(not commit.disabled, "line can be committed again after an error")
+	# A delayed answer after leaving the screen cannot record or overwrite a new position.
+	probe.answers = sample.winning_probe().answers
+	commit.pressed.emit()
+	screen.hide()
+	while not probe.pending.is_empty():
+		probe.reply()
+	assert_eq(fixture.course.practice_result(fixture.unit, screen.position_data), {})
+	_feedback_cleanup(fixture)
