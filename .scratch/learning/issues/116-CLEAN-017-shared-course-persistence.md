@@ -1,5 +1,5 @@
 # CLEAN-017: Share the course progress persistence sequence
-Stage: implementing
+Stage: to-review
 Status: ready-for-agent
 Blocked by: LEARN-002
 Review: agent
@@ -36,3 +36,10 @@ Difficulty: normal
 - Triage by the driver: ready-for-agent — all three operations repeat the same persistence sequence; sharing it reduces drift while preserving each operation's validation. Include theory in the contract and existing public-interface coverage. No concrete behavior defect was identified, so extraction needs no new regression test.
 
 - Stage 2 starts with existing public-interface tests: the cleanup changes structure only, so there is no new behavior to make red. Callers are the rating dialog and profile, the unit clock control, and the theory pointer; validation and failure return values stay unchanged.
+
+- Stage 2 criteria check (independent read-only subagent):
+  - 1 ✅ `core/course.gd:58`, `:66`, `:215`, `:224` route all three operations through the same persistence sequence, retaining their validation. Structural sharing is verified by inspection; the prior implementation had the same behavior, so there is no meaningful behavior test that fails solely without the extraction. `tests/test_course.gd:36`, `:140`, `:209` exercise the three public operations.
+  - 2 ✅ `core/course.gd:66` rereads progress, applies the validated change and publishes only after flush and rename; existing tests at `tests/test_course.gd:56`, `:73`, `:140`, `:209` exercise preservation and corrupt-file refusal. Existing tests do not force a write or rename failure or exercise invalid theory IDs and malformed nested unit dictionaries; those paths were checked against the unchanged prior behavior by inspection.
+  - 3 ✅ `core/course.gd:49`, `:101`, `:211` retain conversion, stage selection and clock behavior; `tests/test_course.gd:36`, `:95`, `:140` exercise them. The bound gate passed.
+- Resolution: shared the reread, validation callback, temporary write, flush, rename and in-memory publication sequence for rating, clock and theory. `godot --headless -s tests/run.gd` passed 603 tests, 0 failed; two graphical pixel checks and six live Lc0 checks were skipped in this environment. No new test was added for this behavior-preserving extraction.
+Gate evidence: /run/media/lage/New Volume/Scratch/CLEAN-017/gate.json
