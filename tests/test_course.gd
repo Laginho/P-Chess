@@ -1,6 +1,33 @@
 extends "res://tests/run.gd".Test
 
 
+func test_continue_offers_review_checks_at_seven_and_thirty_days():
+	var path := "user://course_continue_%d.json" % Time.get_ticks_usec()
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	file.store_string(JSON.stringify({"rating": {"number": 1000, "site": "chess.com"}, "units": {"rook": {"mastered_date": "2026-01-01"}}}))
+	file = null
+	var course = load("res://core/course.gd").new(path, "res://tests/fixtures/course/course.json")
+	assert_true(course.has_method("continue_target"), "course chooses Continue")
+	if course.has_method("continue_target"):
+		var day6: int = Time.get_unix_time_from_datetime_string("2026-01-07T00:00:00")
+		var day7: int = Time.get_unix_time_from_datetime_string("2026-01-08T00:00:00")
+		var day30: int = Time.get_unix_time_from_datetime_string("2026-01-31T00:00:00")
+		assert_true(course.continue_target(day6).get("kind") != "review")
+		var review: Dictionary = course.continue_target(day7)
+		assert_eq(review.get("kind"), "review")
+		assert_eq(review.get("day"), 7)
+		assert_eq(review.get("positions", []).size(), 3)
+		assert_true(course.record_review_check(review.unit, 7, false))
+		assert_eq(course.unit_progress(review.unit).status, "needs review")
+		assert_eq(JSON.parse_string(FileAccess.get_file_as_string(path)).units.rook.mastered_date, "2026-01-01")
+		assert_true(course.continue_target(day7).get("kind") != "review")
+		var later: Dictionary = course.continue_target(day30)
+		assert_eq(later.get("day"), 30)
+		assert_true(course.record_review_check(later.unit, 30, true))
+		assert_eq(course.unit_progress(later.unit).status, "mastered")
+	DirAccess.remove_absolute(path)
+
+
 func test_pass_test_draw_and_mastery_persist_across_attempts():
 	var path := "user://course_pass_test_%d.json" % Time.get_ticks_usec()
 	var script = load("res://core/course.gd")

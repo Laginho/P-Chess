@@ -1,5 +1,5 @@
 # LEARN-009: The new Home and Continue, with review checks
-Stage: to-implement
+Stage: implementing
 Blocked by: LEARN-008
 Review: human
 Difficulty: normal
