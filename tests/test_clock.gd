@@ -3,6 +3,7 @@ extends "res://tests/run.gd".Test
 # The two clocks (CLOCK-001, §5): a fake time source drives them, so nothing here waits.
 
 const Clock = preload("res://core/clock.gd")
+const ClockDisplay = preload("res://ui/clock.gd")
 const Game = preload("res://core/game.gd")
 
 
@@ -23,6 +24,25 @@ func _running(control: String, time: FakeTime):
 
 func test_only_the_three_time_controls():
 	assert_eq(Clock.CONTROLS.keys(), ["1+0", "3+2", "5+0"])
+
+
+func test_sandbox_and_custom_game_offer_only_the_three_controls():
+	var home = load("res://ui/home.tscn").instantiate()
+	var quick: Node = home.get_node("Center/Form/Quick")
+	var quick_controls := []
+	for button in quick.get_children():
+		if button is Button:
+			quick_controls.append(button.text)
+	assert_eq(quick_controls, ["1+0", "3+2", "5+0"])
+	home.free()
+	var setup = load("res://ui/setup.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(setup)
+	var choice: OptionButton = setup.get_node("Center/Form/Control")
+	var custom_controls := []
+	for i in choice.item_count:
+		custom_controls.append(choice.get_item_text(i))
+	assert_eq(custom_controls, ["1+0", "3+2", "5+0"])
+	setup.free()
 
 
 func test_no_clock_runs_while_a_side_makes_its_first_move():
@@ -51,6 +71,48 @@ func test_increment_is_added_after_each_timed_move():
 	clock.moved("b")
 	assert_eq(clock.left("b"), 181500)
 	assert_eq(clock.left("w"), 181000, "White's clock stopped while Black thought")
+
+
+func test_play_out_clock_starts_at_five_minutes_and_adds_five_seconds():
+	var time := FakeTime.new()
+	var clock = _running("5+5", time)
+	assert_eq([clock.left("w"), clock.left("b")], [300000, 300000])
+	time.now += 1000
+	clock.moved("w")
+	assert_eq(clock.left("w"), 304000)
+	time.now += 500
+	clock.moved("b")
+	assert_eq(clock.left("b"), 304500)
+
+
+func test_no_clock_stays_unchanged_without_warnings_or_flags():
+	var time := FakeTime.new()
+	var clock = Clock.new("none", time.ms)
+	var initial := [clock.left("w"), clock.left("b")]
+	var low := []
+	var flags := []
+	clock.low_time.connect(func(side): low.append(side))
+	clock.flagged.connect(func(side): flags.append(side))
+	clock.moved("w")
+	clock.moved("b")
+	time.now += 86400000
+	clock.tick()
+	clock.moved("w")
+	clock.moved("b", true)
+	clock.tick()
+	clock.stop()
+	assert_eq([clock.left("w"), clock.left("b")], initial)
+	assert_eq(low, [])
+	assert_eq(flags, [])
+
+
+func test_no_clock_display_does_not_show_zero_time():
+	var clock = Clock.new("none", FakeTime.new().ms)
+	var display = ClockDisplay.new()
+	display.clock = clock
+	display._process(0.0)
+	assert_true(display.text == "" or display.text == "—" or display.text == "-")
+	display.free()
 
 
 func test_low_time_fires_once_at_the_threshold_of_each_control():

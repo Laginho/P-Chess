@@ -5,6 +5,7 @@ extends Control
 
 signal move_played(san: String)
 signal sound_requested(event: String)
+signal entry_changed
 
 const ThemeLoader = preload("res://ui/theme_loader.gd")
 const PromotionPicker = preload("res://ui/promotion_picker.gd")
@@ -18,6 +19,7 @@ const CHECK := Color(1, 0, 0, 0.6)
 const TARGET := Color(0.08, 0.33, 0.12, 0.5)
 const DRAWING := Color(0.12, 0.65, 0.22, 0.75)
 const BEST_MOVE_COLOR := Color(0.247, 0.580, 0.878, 0.65)
+const ENTRY_MARK := Color("#c93230")
 
 # How long a move that was not dragged (the bot's, a premove) slides; 0 is instant.
 @export var slide_seconds := 0.12
@@ -107,6 +109,11 @@ var review_arrow := ""
 var best_move_arrow := ""
 var review_icon: Texture2D
 var drawings: Array[PackedStringArray] = []
+var entry_mode := false
+var entry_moves := PackedStringArray()
+var entry_san := PackedStringArray()
+var entry_limit := 0
+var _entry_position
 var _drawing_from := ""
 var _drawing_to := ""
 
@@ -172,6 +179,41 @@ func premove_highlighted_squares() -> PackedStringArray:
 	return squares
 
 
+func start_entry(own_moves: int) -> void:
+	entry_mode = true
+	entry_limit = maxi(0, 2 * own_moves - 1)
+	entry_moves.clear()
+	entry_san.clear()
+	_entry_position = preload("res://core/board.gd").from_fen(game.board.to_fen())
+	_cancel_interaction()
+	queue_redraw()
+
+
+func entry_mark_count(square: String) -> int:
+	var count := 0
+	for move in entry_moves:
+		count += int(move.substr(0, 2) == square) + int(move.substr(2, 2) == square)
+	return count
+
+
+func undo_entry() -> void:
+	if entry_moves.is_empty():
+		return
+	entry_moves.remove_at(entry_moves.size() - 1)
+	entry_san.remove_at(entry_san.size() - 1)
+	_entry_position = preload("res://core/board.gd").from_fen(game.board.to_fen())
+	for move in entry_moves:
+		_entry_position.make_move(move)
+	_cancel_interaction()
+	queue_redraw()
+	entry_changed.emit()
+
+
+func clear_entry() -> void:
+	while not entry_moves.is_empty():
+		undo_entry()
+
+
 func _draw() -> void:
 	var side := _side()
 	if side < 40:
@@ -181,7 +223,7 @@ func _draw() -> void:
 	var premove_squares := premove_highlighted_squares()
 	var checked := ""
 	var position = game.board if game else null
-	if game and not premoves.moves.is_empty():
+	if game and not entry_mode and not premoves.moves.is_empty():
 		var ghost = premoves.position(game.board)
 		if ghost != null:
 			position = ghost
@@ -189,12 +231,28 @@ func _draw() -> void:
 		checked = "K" if game.board.side_to_move == "w" else "k"
 	if _board_style.texture:
 		draw_texture_rect(_board_style.texture, Rect2(_corner(), Vector2.ONE * side), false)
+	if entry_mode and not _board_style.texture:
+		for i in 64:
+			var square: String = "abcdefgh"[i % 8] + str(i / 8 + 1)
+			var at := _corner() + square_position(square, side, flipped)
+			draw_rect(Rect2(at, cell), _board_style.light if _is_light(square) else _board_style.dark)
+	if entry_mode:
+		for i in 64:
+			var square: String = "abcdefgh"[i % 8] + str(i / 8 + 1)
+			var count := entry_mark_count(square)
+			if count == 0:
+				continue
+			var style := StyleBoxFlat.new()
+			style.bg_color = Color(ENTRY_MARK, minf(0.50, 0.26 + 0.12 * (count - 1)))
+			style.shadow_color = Color(ENTRY_MARK, 0.26)
+			style.shadow_size = roundi(side / 40)
+			draw_style_box(style, Rect2(_corner() + square_position(square, side, flipped), cell))
 	for i in 64:
 		var square: String = "abcdefgh"[i % 8] + str(i / 8 + 1)
 		var at := _corner() + square_position(square, side, flipped)
-		if not _board_style.texture:
+		if not entry_mode and not _board_style.texture:
 			draw_rect(Rect2(at, cell), _board_style.light if _is_light(square) else _board_style.dark)
-		if last and square in [last.substr(0, 2), last.substr(2, 2)]:
+		if not entry_mode and last and square in [last.substr(0, 2), last.substr(2, 2)]:
 			draw_rect(Rect2(at, cell), LAST_MOVE_LIGHT if _is_light(square) else LAST_MOVE_DARK)
 		if square in premove_squares:
 			draw_rect(Rect2(at, cell), PREMOVE_LIGHT if _is_light(square) else PREMOVE_DARK)
@@ -204,10 +262,10 @@ func _draw() -> void:
 			piece = game.board.piece_at(square)
 		if checked and piece == checked:
 			draw_circle(at + cell / 2, cell.x / 2, CHECK)
-		if square != _drag_from and square != _slide_to:
+		if entry_mode or (square != _drag_from and square != _slide_to):
 			_draw_piece(piece, at, cell, 0.5 if game and piece != game.board.piece_at(square) else 1.0)
 	_draw_coordinates(cell.x)
-	if show_targets:
+	if show_targets and not entry_mode:
 		for move in _held_moves:
 			# A promotion is four moves to one square: mark it once.
 			if move.length() == 5 and move[4] != "q":
@@ -219,8 +277,10 @@ func _draw() -> void:
 				draw_circle(_centre(to), cell.x * 0.15, TARGET)
 	if _slide_to:
 		_draw_piece(game.board.piece_at(_slide_to), _slide_pos - cell / 2, cell)
-	if _drag_from:
+	if _drag_from and not entry_mode:
 		_draw_piece(_held_piece, _drag_pos - cell / 2, cell)
+	if entry_mode:
+		return
 	if best_move_arrow.length() >= 4:
 		_draw_annotation(best_move_arrow.substr(0, 2), best_move_arrow.substr(2, 2), cell.x, BEST_MOVE_COLOR)
 	if review_arrow.length() >= 4:
@@ -288,6 +348,9 @@ func _input(event: InputEvent) -> void:
 
 
 func _gui_input(event: InputEvent) -> void:
+	if entry_mode and event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT:
+		_cancel_interaction()
+		return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT:
 		var square := square_at(event.position - _corner(), _side(), flipped)
 		if event.pressed:
@@ -335,7 +398,7 @@ func _gui_input(event: InputEvent) -> void:
 				_pick_up(event.position)
 		elif _drag_from and not _snapping:
 			var to := square_at(event.position - _corner(), _side(), flipped)
-			if click_click and not _dragged and to == _drag_from:
+			if (click_click or entry_mode) and not _dragged and to == _drag_from:
 				if _reselected:
 					_end_snap_back()
 				else:
@@ -355,7 +418,7 @@ func _gui_input(event: InputEvent) -> void:
 
 # During Maia's turn only human pieces can be held, on the queued position.
 func _pick_up(point: Vector2) -> void:
-	if _drag_from or game == null or game.is_over():
+	if _drag_from or game == null or (not entry_mode and game.is_over()) or (entry_mode and entry_moves.size() >= entry_limit):
 		return
 	var square := square_at(point - _corner(), _side(), flipped)
 	var position = _input_position()
@@ -427,6 +490,14 @@ func request_move_sounds(san: String, premove := false) -> void:
 
 # shortcut: only the moving piece slides, a castling rook jumps; slide it too if it looks wrong.
 func _commit(move: String, slide: bool, premove := false) -> void:
+	if entry_mode:
+		if entry_moves.size() < entry_limit and move in _entry_position.legal_moves():
+			entry_san.append(_entry_position.san(move))
+			_entry_position.make_move(move)
+			entry_moves.append(move)
+		_end_snap_back()
+		entry_changed.emit()
+		return
 	var san: String = game.board.san(move)
 	# The game ended (a flag) while the piece was held or the promotion picker was open.
 	if not game.play(move):
@@ -478,17 +549,19 @@ func _end_snap_back() -> void:
 
 
 func _is_premove_input() -> bool:
-	return game != null and human_side != "" and game.board.side_to_move != human_side
+	return not entry_mode and game != null and human_side != "" and game.board.side_to_move != human_side
 
 
 func _input_position():
+	if entry_mode:
+		return _entry_position
 	if _is_premove_input():
 		return null if premoves.style == "off" else premoves.input_position(game.board)
 	return game.board
 
 
 func _submit(move: String, slide: bool) -> void:
-	if game.is_over():
+	if not entry_mode and game.is_over():
 		_cancel_interaction()
 		return
 	if _is_premove_input():

@@ -1,10 +1,12 @@
 # REV-011: The from-your-game marker in Review
-Stage: to-implement
+Stage: done
 Blocked by: LEARN-006, LEARN-009
 Review: agent
 Difficulty: normal
+Gate evidence: /run/media/lage/New Volume/Scratch/REV-011/gate.json
 
 - Primary files:
+  - data/course/rook-endgames.json (default line length for positions from games)
   - ui/review.gd (`present` move-list rows, `_fit_exit_rows`; the marker row beside the "Left repertoire" one)
   - ui/main.gd (the marker's link opens the unit page)
   - core/course.gd (adding a from-your-game position, once per FEN)
@@ -41,3 +43,99 @@ When Review shows a game that reached rook and pawn against rook, each of your m
 ## Comments
 
 - 2026-11-07 Written from `.scratch/learning/spec.md` §L10.
+
+- 2026-11-08 Attempt 1 stopped to ask (its commits are on branch `recovery/asked/20261108-062806/REV-011`): O REV-011 está **bloqueado** na branch `ticket/REV-011`. Preservei um teste para impedir posições duplicadas por FEN, mas a execução foi interrompida antes de verificar a falha esperada; a implementação ainda não começou. /  / Qual deve ser o comprimento padrão das linhas para posições “From your game”? A unidade atual não define um padrão; suas posições usam 2, 3 e 4 movimentos. Minha sugestão é definir **3 movimentos** explicitamente nos dados da unidade. /  / O proxy do fluxo falhou sem retornar uma decisão. A [skill ticket-flow](/home/lage/.agents/skills/ticket-flow/SKILL.md) determina que, nessa situação, se registre `Stage: blocked` e, em sessão acompanhada, se apresente a falha ao usuário. A pergunta e o trabalho preservado estão no [ticket REV-011](/home/lage/Projects/P-Chess/.artifacts-build/lanes/learning/.scratch/learning/issues/114-REV-011-from-your-game-marker.md).
+
+- 2026-11-08 Proxy decided (opus-5.5 xhigh): add `"default_line_length": 3` to the unit file `data/course/rook-endgames.json` and use it for every "From your game" position. Three is in the middle of the unit's 2–4 range, and the design for a "From your game" position (`docs/design/learning/SolvingEntry.dc.html`, the `fromGame` chip) shows "Enter 3 of your moves". (receipt /tmp/sweatshop-proxy/20261108-062810-REV-011-ebb3e4.json)
+  > Decision: add `"default_line_length": 3` to the unit file `data/course/rook-endgames.json` and use it for every "From your game" position. Three is in the middle of the unit's 2–4 range, and the design for a "From your game" position (`docs/design/learning/SolvingEntry.dc.html`, the `fromGame` chip) shows "Enter 3 of your moves".
+  > 
+  > **Evidence**
+  > - Spec §L10 and criterion 5 both say "the unit's default line length". §L1 lists what a unit file holds but has no such field, so the spec never defined it. This decision fills that gap.
+  > - The unit's positions use 2, 3 and 4 moves, and `tests/test_course.gd:453` only allows lengths of 2–4. Three fits that range.
+  > - The test checking the unit's data (`tests/test_course.gd:425`) only looks at positions, not at keys on the unit itself, so adding a new key there breaks nothing.
+  > 
+  > **Drafts for the caller to apply** (contract edits are yours to make)
+  > - **Spec §L1:** after "the line length in your moves, and its pool (practice or test);" add: "the default line length for from-your-game positions (`default_line_length`, 3 for rook endgames);".
+  > - **REV-011 Primary files:** add `data/course/rook-endgames.json` (the new `default_line_length` key). Criterion 5 stays as written.
+  > - **Implementation:** Review or the scan builds the position with `line_length = unit.default_line_length` and passes it to `course.add_from_game`. The test kept on `recovery/asked/20261108-062806/REV-011` (commit `ff03584`) already passes a full position with `line_length: 3`, so it needs no change. Any course fixture that reaches `add_from_game` through the unit should set the key too.
+  > 
+  > **Impact:** one new key in one data file and one sentence in the spec. Nothing in other lanes reads it, saved progress is unaffected, and no public API changes.
+  > 
+  > **Next:** record this under REV-011 `## Comments`, apply the two drafts, set `Stage: 2`, and rerun stage 2 starting from the kept commit `ff03584`. That run still has to confirm the expected red failure, which attempt 1 never checked.
+  > 
+  > I did not run the gate or check the test in `ff03584`.
+
+
+## Resolution
+
+Review scans relevant moves with the tablebase, shows a linked green marker and saves each starting FEN for Continue. The unit sets a default of three moves. The headless gate `godot --headless -s tests/run.gd` passed with 674 tests and 0 failures. The saved-game visual walkthrough remains for manual verification.
+
+### Criteria check
+
+Fresh-context subagent checked each criterion and rechecked the added coverage.
+
+- ✅ 1: `core/own_game_scan.gd:11` filters side and exact material; `tests/test_own_game_scan.gd:7`, `:49`, `:100` cover player colours and adjacent material.
+- ✅ 2: `core/own_game_scan.gd:30` compares results from the player's perspective; `tests/test_own_game_scan.gd:7`, `:49`, `:78` cover changed and kept results and a PGN reaching the material.
+- ✅ 3: `ui/review.gd:1437` adds a full-width, green, nonselectable marker sized by `ui/review.gd:448`; `tests/test_review.gd:2350` checks the text, placement and selection. Colour, multiple markers and resize remain visual verification gaps.
+- ✅ 4: `ui/review.gd:347` emits the request and `ui/main.gd:290` opens the unit; `tests/test_review.gd:2350` and `:2395` check both links.
+- ✅ 5: `ui/review.gd:1449`, `core/course.gd:181`, `data/course/rook-endgames.json:5` save the position, deduplicate the FEN and set the default; `tests/test_course.gd:539`, `tests/test_review.gd:2350`, `:2447` cover persistence, goals and Continue.
+- ✅ 6: `core/own_game_scan.gd:11` returns without probing nonmatching material; `tests/test_own_game_scan.gd:32`, `:100` cover no probes. A direct visual comparison of Review without matching material remains manual.
+- ✅ 7: `core/own_game_scan.gd:30` discards results on probe failure; `tests/test_review.gd:2428` checks no marker, saved position or error dialog.
+
+The initial marker fixture needed explicit Array typing and one clock per move; these harness corrections are in test-only commits. A mutation of material filtering and result inversion failed the scan tests as expected. The stale-review test exposed a freed row capture, fixed before the gate.
+
+
+#### Resolution (2026-11-08)
+Verdict: Approve
+
+Standards: no documented-standard violations or actionable baseline smells. The
+independent `review_standards` subagent reviewed the complete diff, glossary,
+ADRs, Primary files and commit separation. Test commits and production commits
+remain separate; the default-length/spec additions follow the proxy decision.
+
+Spec: no blocking findings across criteria 1–7. The independent `review_spec`
+subagent reviewed the complete diff against the numbered contract and §L10.
+Stage 3 authored no production behavior or test changes.
+
+Examined callers, failure paths and interactions: completed sandbox games and
+History → Review; tablebase startup, serialized asynchronous callbacks and failed
+probes; exact material/player filtering and result inversion; stale callbacks
+when another Review replaces the old one; marker placement beside repertoire
+rows, resizing and unit navigation; course writes, FEN deduplication, practice
+positions, Continue and solving. No known unresolved implementation defects.
+Visual rendering with multiple markers and the real saved-game walkthrough were
+not verified.
+
+- ✅ 1: `core/own_game_scan.gd:11` filters player moves and exactly K+R+P vs K+R; scan tests cover either colour, a PGN reaching that material and nearby excluded material.
+- ✅ 2: `core/own_game_scan.gd:30` probes both positions and inverts the result after the move; scan tests cover changed and unchanged results, and the installed probe reproduced draw → loss after `a3a4`.
+- ✅ 3: `ui/review.gd:1437` inserts green, nonselectable marker rows under the corresponding move row using the existing repertoire-row fitting; the Review test checks placement/text/selection. Headless layout measured wrapping at 1280×800 and 800×600; visual appearance remains pending.
+- ✅ 4: `ui/review.gd:347` emits `unit_requested`; `ui/main.gd:290` opens the unit. Tests cover the row click and navigation; the real-probe smoke also opened the unit.
+- ✅ 5: `core/course.gd:181` persists one entry per FEN; `ui/review.gd:1449` supplies the player's side, pre-move goal and unit default. Course/Review tests cover reload, duplication, win/hold goals and Continue.
+- ✅ 6: the scan returns without probing nonmatching material; the scan tests cover ordinary and nearby material and the Review UI changes only when markers are returned.
+- ✅ 7: startup/probe failures discard the entire scan; scan and Review tests cover failure after a prospective marker and the absence of rows, saved positions and an error dialog.
+
+Red/green evidence reviewed: course test `161bd43` → implementation `e184947`;
+scan test `b5f8795` → implementation `9308d01`; marker test `76bad42` →
+implementation `28228f0`; stale-callback test `9c29964` → repair `5d394b5`.
+The stage-2 record documents test-only fixture corrections and failing material/
+result-inversion mutations. Gate receipt for tested commit `9659c65` was verified
+with `Assert-GateEvidence`; the log hash matches and only ticket metadata changed
+since that code. Gate output: **674 passed, 0 failed**, exit 0. Rebase was a no-op;
+merge introduced no conflicts or code changes, so the existing gate was reused.
+
+Additional execution evidence: the installed tablebase found `a3a4` changed the
+practice Philidor position from draw to loss. An external headless smoke exercised
+the real asynchronous scan, marker, persisted hold position with line length 3,
+layout resizing and unit navigation, all passing. Script/log:
+`/run/media/lage/New Volume/Scratch/REV-011/review-smoke.gd` and
+`/run/media/lage/New Volume/Scratch/REV-011/review-smoke.log`.
+
+The recorded `Proxy decided (opus-5.5 xhigh)` decision sets
+`default_line_length: 3`; it is reflected in the unit JSON and spec §L1. It has no
+remaining integration action and changes no existing progress format.
+
+Acceptance: pending | [spec acceptance scenario 5](../spec.md#acceptance-scenarios): Bruno's real saved-game walkthrough and visual check of marker appearance, multiple rows and resizing remain; automated gate and real-probe smoke passed.
+Disclosure: decision | none | [recorded proxy decision](#comments): three moves is the unit default; data/spec already reflect it, with no remaining integration action.
+Disclosure: pending | release | [spec acceptance scenario 5](../spec.md#acceptance-scenarios): verify the marker and unit/Continue flow using a real saved game, including visual appearance at supported sizes and multiple markers, before release.
+
+Integrated into `sweatshop/learning/2026-11-07-2234` with merge `348cd15`.

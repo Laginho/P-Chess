@@ -1,0 +1,339 @@
+{
+  "id": "rook-endgames",
+  "title": "Rook endgames",
+  "subtitle": "Lucena and Philidor",
+  "default_line_length": 3,
+  "theory": {
+    "goal": "Learn to convert and hold rook and pawn against rook.",
+    "search_terms": [
+      "Lucena position",
+      "Philidor position",
+      "rook and pawn versus rook",
+      "building a bridge rook endgame"
+    ],
+    "books": [
+      {
+        "title": "Silman's Complete Endgame Course — Jeremy Silman",
+        "chapter": "Part Four: The Lucena Position; The Philidor Position"
+      }
+    ]
+  },
+  "positions": [
+    {
+      "id": "practice-01",
+      "fen": "4K3/2k5/2r5/4p3/8/8/R7/8 b - - 0 1",
+      "side": "b",
+      "goal": "win",
+      "line_length": 2,
+      "pool": "practice",
+      "source": "Generated setup, selected for course"
+    },
+    {
+      "id": "practice-02",
+      "fen": "8/8/8/8/4pk2/R7/7r/4K3 w - - 0 1",
+      "side": "w",
+      "goal": "hold",
+      "line_length": 3,
+      "pool": "practice",
+      "source": "https://en.wikipedia.org/wiki/Philidor_position"
+    },
+    {
+      "id": "practice-03",
+      "fen": "8/8/8/8/4p3/7R/3k2K1/r7 w - - 2 60",
+      "side": "w",
+      "goal": "hold",
+      "line_length": 4,
+      "pool": "practice",
+      "source": "https://lichess.org/training/IdE1w"
+    },
+    {
+      "id": "practice-04",
+      "fen": "4K1k1/4P3/8/8/8/8/7r/R7 w - - 0 1",
+      "side": "w",
+      "goal": "win",
+      "line_length": 2,
+      "pool": "practice",
+      "source": "Hand-built Lucena setup"
+    },
+    {
+      "id": "practice-05",
+      "fen": "8/7r/5R2/4kPK1/8/8/8/8 b - - 4 63",
+      "side": "b",
+      "goal": "hold",
+      "line_length": 3,
+      "pool": "practice",
+      "source": "https://lichess.org/training/D1iKZ"
+    },
+    {
+      "id": "practice-06",
+      "fen": "8/6r1/4P3/8/k2K4/5R2/8/8 w - - 0 1",
+      "side": "w",
+      "goal": "win",
+      "line_length": 4,
+      "pool": "practice",
+      "source": "Generated setup, selected for course"
+    },
+    {
+      "id": "practice-07",
+      "fen": "8/3k4/6K1/2p4r/4R3/8/8/8 b - - 0 1",
+      "side": "b",
+      "goal": "win",
+      "line_length": 2,
+      "pool": "practice",
+      "source": "Generated setup, selected for course"
+    },
+    {
+      "id": "practice-08",
+      "fen": "8/2P5/1K1k4/1R6/8/8/8/3r4 b - - 0 79",
+      "side": "b",
+      "goal": "hold",
+      "line_length": 3,
+      "pool": "practice",
+      "source": "https://lichess.org/training/L4jYX"
+    },
+    {
+      "id": "practice-09",
+      "fen": "8/8/2P5/1k6/8/r7/2RK4/8 b - - 4 51",
+      "side": "b",
+      "goal": "hold",
+      "line_length": 4,
+      "pool": "practice",
+      "source": "https://lichess.org/training/Ce6li"
+    },
+    {
+      "id": "practice-10",
+      "fen": "1K1k4/1P6/8/8/8/8/r7/2R5 w - - 0 1",
+      "side": "w",
+      "goal": "win",
+      "line_length": 2,
+      "pool": "practice",
+      "source": "Hand-built setup based on the Lucena position"
+    },
+    {
+      "id": "practice-11",
+      "fen": "8/8/8/2r1P2R/8/6K1/8/1k6 w - - 0 1",
+      "side": "w",
+      "goal": "win",
+      "line_length": 3,
+      "pool": "practice",
+      "source": "Generated setup, selected for course"
+    },
+    {
+      "id": "practice-12",
+      "fen": "1k2K3/8/8/8/7r/p7/5R2/8 b - - 0 1",
+      "side": "b",
+      "goal": "win",
+      "line_length": 4,
+      "pool": "practice",
+      "source": "Adapted from generated RES-001 research sample 2 (color-mirrored; side to move changed)"
+    },
+    {
+      "id": "test-01",
+      "fen": "8/R4K2/8/4k3/4rp2/8/8/8 w - - 0 64",
+      "side": "w",
+      "goal": "hold",
+      "line_length": 2,
+      "pool": "test",
+      "source": "https://lichess.org/training/WuWaS"
+    },
+    {
+      "id": "test-02",
+      "fen": "8/4R3/8/1r6/1P6/8/3K3k/8 w - - 0 1",
+      "side": "w",
+      "goal": "win",
+      "line_length": 3,
+      "pool": "test",
+      "source": "Generated setup, selected for course"
+    },
+    {
+      "id": "test-03",
+      "fen": "8/4r3/2P5/8/1K4R1/8/8/5k2 w - - 0 1",
+      "side": "w",
+      "goal": "win",
+      "line_length": 4,
+      "pool": "test",
+      "source": "Generated setup, selected for course"
+    },
+    {
+      "id": "test-04",
+      "fen": "1R6/8/8/8/8/6K1/6p1/5rk1 w - - 8 73",
+      "side": "w",
+      "goal": "hold",
+      "line_length": 2,
+      "pool": "test",
+      "source": "https://lichess.org/training/Xgsbz"
+    },
+    {
+      "id": "test-05",
+      "fen": "1R6/8/8/8/3K1k2/4rp2/8/8 b - - 0 1",
+      "side": "b",
+      "goal": "win",
+      "line_length": 3,
+      "pool": "test",
+      "source": "Generated setup, selected for course"
+    },
+    {
+      "id": "test-06",
+      "fen": "8/8/7k/8/2K2p2/6r1/3R4/8 b - - 0 1",
+      "side": "b",
+      "goal": "win",
+      "line_length": 4,
+      "pool": "test",
+      "source": "Generated setup, selected for course"
+    },
+    {
+      "id": "test-07",
+      "fen": "4k3/1R6/4K3/5P2/8/8/8/r7 b - - 6 49",
+      "side": "b",
+      "goal": "hold",
+      "line_length": 2,
+      "pool": "test",
+      "source": "https://lichess.org/training/cab5g"
+    },
+    {
+      "id": "test-08",
+      "fen": "8/8/2k5/8/5K2/3R4/2p5/2r5 w - - 0 61",
+      "side": "w",
+      "goal": "hold",
+      "line_length": 3,
+      "pool": "test",
+      "source": "https://lichess.org/training/mMBXI"
+    },
+    {
+      "id": "test-09",
+      "fen": "4k3/8/5KP1/5R2/8/8/8/7r b - - 0 95",
+      "side": "b",
+      "goal": "hold",
+      "line_length": 4,
+      "pool": "test",
+      "source": "https://lichess.org/training/RKYEw"
+    },
+    {
+      "id": "test-10",
+      "fen": "3r4/8/8/2P5/K7/8/3k4/R7 w - - 0 1",
+      "side": "w",
+      "goal": "win",
+      "line_length": 2,
+      "pool": "test",
+      "source": "Generated setup, selected for course"
+    },
+    {
+      "id": "test-11",
+      "fen": "8/8/2r5/8/3k4/6K1/3p4/3R4 b - - 0 1",
+      "side": "b",
+      "goal": "win",
+      "line_length": 3,
+      "pool": "test",
+      "source": "Generated setup, selected for course"
+    },
+    {
+      "id": "test-12",
+      "fen": "4R3/8/8/8/K2k4/4p1r1/8/8 b - - 0 1",
+      "side": "b",
+      "goal": "win",
+      "line_length": 4,
+      "pool": "test",
+      "source": "Generated setup, selected for course"
+    },
+    {
+      "id": "test-13",
+      "fen": "8/3k1P1K/1R6/8/8/6r1/8/8 b - - 2 68",
+      "side": "b",
+      "goal": "hold",
+      "line_length": 2,
+      "pool": "test",
+      "source": "https://lichess.org/training/kkrff"
+    },
+    {
+      "id": "test-14",
+      "fen": "8/7k/8/6p1/3K4/8/2R5/4r3 b - - 0 1",
+      "side": "b",
+      "goal": "win",
+      "line_length": 3,
+      "pool": "test",
+      "source": "Generated setup, selected for course"
+    },
+    {
+      "id": "test-15",
+      "fen": "3k4/8/8/r7/4RP2/4K3/8/8 w - - 0 1",
+      "side": "w",
+      "goal": "win",
+      "line_length": 4,
+      "pool": "test",
+      "source": "Generated setup, selected for course"
+    },
+    {
+      "id": "test-16",
+      "fen": "3r4/1RP5/1K1k4/8/8/8/8/8 b - - 0 67",
+      "side": "b",
+      "goal": "hold",
+      "line_length": 2,
+      "pool": "test",
+      "source": "https://lichess.org/training/eSFyk"
+    },
+    {
+      "id": "test-17",
+      "fen": "2R5/8/8/3r4/8/8/3p1K2/3k4 b - - 0 1",
+      "side": "b",
+      "goal": "win",
+      "line_length": 3,
+      "pool": "test",
+      "source": "Generated setup, selected for course"
+    },
+    {
+      "id": "test-18",
+      "fen": "8/8/1P6/3K4/8/k7/6R1/1r6 w - - 0 1",
+      "side": "w",
+      "goal": "win",
+      "line_length": 4,
+      "pool": "test",
+      "source": "Generated setup, selected for course"
+    }
+  ],
+  "playouts": [
+    {
+      "id": "playout-01",
+      "fen": "R7/8/4k3/1P6/K7/8/8/2r5 w - - 0 1",
+      "side": "w",
+      "goal": "convert",
+      "source": "Generated setup, selected for course"
+    },
+    {
+      "id": "playout-02",
+      "fen": "8/8/8/6R1/8/2K1p3/4rk2/8 b - - 0 1",
+      "side": "b",
+      "goal": "convert",
+      "source": "Generated setup, selected for course"
+    },
+    {
+      "id": "playout-03",
+      "fen": "8/8/1RK5/r3k3/2P5/8/8/8 b - - 20 54",
+      "side": "b",
+      "goal": "hold",
+      "source": "https://lichess.org/training/om0XY"
+    },
+    {
+      "id": "playout-04",
+      "fen": "8/8/3rk3/5p2/2R5/2K5/8/8 w - - 2 57",
+      "side": "w",
+      "goal": "hold",
+      "source": "https://lichess.org/training/s1CR8"
+    }
+  ],
+  "test_playouts": [
+    {
+      "id": "test-playout-01",
+      "fen": "8/8/8/6r1/3P4/2K2k2/R7/8 w - - 0 1",
+      "side": "w",
+      "goal": "convert",
+      "source": "Generated setup, selected for course"
+    },
+    {
+      "id": "test-playout-02",
+      "fen": "8/8/2R2P2/4k3/6K1/8/r7/8 b - - 0 46",
+      "side": "b",
+      "goal": "hold",
+      "source": "https://lichess.org/training/x2wlK"
+    }
+  ]
+}

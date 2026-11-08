@@ -1,5 +1,18 @@
 # Third-party assets
 
+## Tablebase helper: Fathom
+
+`scripts/build-tbprobe.ps1` builds `engine/tbprobe/tbprobe.exe` (Windows) or
+`tbprobe` (Linux) from [Fathom commit c9c6fef0dddc05d2e242c183acf5833149ab676d](https://github.com/jdart1/Fathom/tree/c9c6fef0dddc05d2e242c183acf5833149ab676d).
+The source files and [MIT licence](https://github.com/jdart1/Fathom/blob/c9c6fef0dddc05d2e242c183acf5833149ab676d/LICENSE)
+are downloaded at that commit and individually checked against pinned SHA-256
+hashes. The licence's copyright holders are Ronald de Man (2013–2018), basil00
+(2015) and Jon Dart (2016–2025). The release includes the full notice at
+`licenses/Fathom-LICENSE.txt` (SHA-256
+`c8038055839bd02f995cd7d1bba19657720097f5604411a7977ebcb5b4a37759`).
+Fathom is built single-threaded with the static MSVC runtime on Windows; its
+helper uses the Syzygy files listed below, outside the exported game pack.
+
 ## Font: Noto Sans
 
 `fonts/NotoSans-Variable.ttf` is the Noto Sans variable font from the
@@ -135,6 +148,16 @@ build from the official [Stockfish 19 release](https://github.com/official-stock
 Its exact source tag is [sf_19](https://github.com/official-stockfish/Stockfish/tree/sf_19).
 Stockfish is licensed under [GPL-3.0](https://github.com/official-stockfish/Stockfish/blob/sf_19/Copying.txt).
 Release ZIPs ship the unmodified executable and its `Copying.txt` in `engine/stockfish/`.
+
+## Tablebases: Syzygy
+
+The 20 WDL and 20 DTZ Syzygy files under `engine/tablebase/` come from the
+[Lichess tablebase mirror](https://tablebase.lichess.ovh/tables/standard/).
+The Syzygy tables are public domain, as identified by the
+[Gentoo tablebase package](https://packages.gentoo.org/packages/games-board/tablebase-syzygy).
+The selected files and their SHA-256 hashes are documented in
+the RES-001 research (`docs/research/tablebase.md` in the source); the fetch script pins and verifies
+the same hashes. The release retains the unmodified files.
 
 ## Runtime: Microsoft Visual C++
 

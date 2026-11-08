@@ -8,10 +8,12 @@ extends RefCounted
 signal low_time(side: String)
 signal flagged(side: String)
 
-# Control -> [starting ms, increment ms]. Only these three: the time model has no data for others.
+# Sandbox controls -> [starting ms, increment ms]. The time model has data for these three.
 const CONTROLS := {"1+0": [60000, 0], "3+2": [180000, 2000], "5+0": [300000, 0]}
+const PLAY_OUT_CONTROLS := {"5+5": [300000, 5000], "none": [0, 0]}
 
 var increment := 0
+var untimed := false
 # 10% of the starting time or 10 s, whichever is lower.
 var low_time_ms := 0
 
@@ -28,8 +30,10 @@ var _since := 0
 
 func _init(control: String, time_source: Callable) -> void:
 	_now = time_source
-	var start: int = CONTROLS[control][0]
-	increment = CONTROLS[control][1]
+	untimed = control == "none"
+	var values: Array = CONTROLS[control] if CONTROLS.has(control) else PLAY_OUT_CONTROLS[control]
+	var start: int = values[0]
+	increment = values[1]
 	low_time_ms = mini(start / 10, 10000)
 	_left = {"w": start, "b": start}
 
@@ -45,6 +49,8 @@ func left(side: String) -> int:
 # before the move; the other side's clock starts once that side has made its first move.
 # A premove costs exactly 100 ms, even on the untimed first move; increment still starts later.
 func moved(side: String, premove := false) -> void:
+	if untimed:
+		return
 	var timed := side == _running
 	if timed:
 		if premove:

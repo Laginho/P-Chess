@@ -37,6 +37,8 @@ P-Chess/
 ### 3.1 Engine files
 
 - `scripts/fetch-engine.ps1` downloads the pinned Lc0 and Stockfish zips and the 9 Maia nets into `engine/`, and checks their SHA-256 hashes. It must run in Windows PowerShell 5.1. CI uses the same script.
+- The 40 pinned Syzygy files for rook and pawn against rook are fetched into `engine/tablebase/` and shipped at that path.
+- `scripts/build-tbprobe.ps1` builds the pinned Fathom helper into `engine/tbprobe/`; the helper reads `../tablebase` from its own folder and provides WDL/DTZ through the existing UCI bridge.
 - At startup the app looks for `engine/lc0/lc0.exe` next to the executable (or in the project root inside the editor). If it is missing, the app shows how to run the fetch script.
 
 ### 3.2 Getting Maia's probabilities
@@ -482,8 +484,9 @@ chess.com's CAPS2 is not published.
 ### 15.8 Home screen, profile and your name
 
 - **Home screen:** the app opens on it.
-  - Quick-play buttons for 1+0, 3+2 and 5+0 reuse your last level, colour and opening mode. The first time they use Maia 1500, a random colour and Free mode. A small level selector sits next to them.
-  - Also: Custom game (today's setup screen), History, Profile, Settings and Quit.
+  - A Continue card leads with the next course activity and shows its unit, detail and position on the board. Without a rating it starts the course by asking for one. The course selects a due review check, then an unsolved position from your game, then the first unfinished part or next unit. Once all units are done, Continue points to Custom and the Play row. Review checks draw three positions 7 and 30 days after mastery; a miss marks the unit needs review without removing mastery, and a later passed check clears that status.
+  - A Course button opens the course map. The Play row has 1+0, 3+2, 5+0 and Custom. Quick games reuse your last level, colour and opening mode. The first time they use Maia 1500, a random colour and Free mode. A small level selector sits next to them.
+  - Also: History, Profile, Settings and Quit. If the engine is missing, quick games are disabled and the guidance remains visible above navigation.
 - **Searching screen:** Quick play, Custom game and rematch show the time control and Maia level between the click and the game for at least 0.5 s, and until startup work finishes. Its status follows the real work in order: "Pausing analysis…" only when analysis is active, "Loading Maia 1500…" (with the selected level) until that net's `readyok`, then "Preparing game…" while loading the catalog, repertoire and opening selection. The new game and clock start only after it closes. Startup errors close it and use the existing Custom game or Home error message.
 - **Your name:**
   - On first launch, a modal over Home asks "What should I call you?", prefilled with "You". It has only OK, no skip or dismissal with Esc. A blank or whitespace-only name is refused; confirming stores the trimmed name in `player_name` in `settings.cfg`, and the dialog stays closed on later launches. Confirming "You" is a valid choice; changing another setting does not count as choosing a name.

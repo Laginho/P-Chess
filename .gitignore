@@ -1,5 +1,7 @@
 engine/stockfish/
 engine/lc0/
 engine/weights/
+engine/tablebase
+engine/tbprobe/
 .godot/
 build/

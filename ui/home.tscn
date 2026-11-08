@@ -2,14 +2,16 @@
 
 [ext_resource type="Script" path="res://ui/home.gd" id="1"]
 [ext_resource type="PackedScene" path="res://ui/board_view.tscn" id="2"]
-[ext_resource type="Texture2D" path="res://ui/icons/bullet.svg" id="3"]
-[ext_resource type="Texture2D" path="res://ui/icons/blitz.svg" id="4"]
+[ext_resource type="Texture2D" path="res://ui/icons/home-bullet.svg" id="3"]
+[ext_resource type="Texture2D" path="res://ui/icons/home-blitz.svg" id="4"]
 [ext_resource type="Texture2D" path="res://ui/icons/custom.svg" id="5"]
 [ext_resource type="Texture2D" path="res://ui/icons/history.svg" id="6"]
 [ext_resource type="Texture2D" path="res://ui/icons/profile.svg" id="7"]
 [ext_resource type="Texture2D" path="res://ui/icons/settings.svg" id="8"]
 [ext_resource type="Texture2D" path="res://ui/icons/quit.svg" id="9"]
 [ext_resource type="Script" path="res://ui/icon_button.gd" id="10"]
+[ext_resource type="Texture2D" path="res://ui/icons/home-course.svg" id="11"]
+[ext_resource type="Texture2D" path="res://ui/icons/home-chevron.svg" id="12"]
 
 [node name="Home" type="Control"]
 layout_mode = 3
@@ -45,14 +47,85 @@ mouse_filter = 2
 
 [node name="Title" type="Label" parent="Center/Form"]
 theme_type_variation = &"ExtraBoldText"
-theme_override_font_sizes/font_size = 44
+theme_override_font_sizes/font_size = 36
 text = "P-Chess"
 horizontal_alignment = 1
 vertical_alignment = 1
 
+[node name="Continue" type="Button" parent="Center/Form"]
+theme_type_variation = &"PrimaryButton"
+theme_override_colors/font_color = Color(0, 0, 0, 0)
+theme_override_colors/font_hover_color = Color(0, 0, 0, 0)
+theme_override_colors/font_pressed_color = Color(0, 0, 0, 0)
+theme_override_colors/font_hover_pressed_color = Color(0, 0, 0, 0)
+theme_override_colors/font_focus_color = Color(0, 0, 0, 0)
+text = "Start the course"
+alignment = 0
+clip_text = true
+
+[node name="Eyebrow" type="Label" parent="Center/Form/Continue"]
+mouse_filter = 2
+theme_type_variation = &"SemiboldText"
+theme_override_colors/font_color = Color(0.078, 0.078, 0.071, 1)
+theme_override_font_sizes/font_size = 13
+
+[node name="UnitTitle" type="Label" parent="Center/Form/Continue"]
+mouse_filter = 2
+theme_type_variation = &"ExtraBoldText"
+theme_override_colors/font_color = Color(0.078, 0.078, 0.071, 1)
+theme_override_font_sizes/font_size = 26
+clip_text = true
+
+[node name="Detail" type="Label" parent="Center/Form/Continue"]
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.078, 0.078, 0.071, 1)
+theme_override_font_sizes/font_size = 16
+clip_text = true
+
+[node name="Progress" type="ProgressBar" parent="Center/Form/Continue"]
+mouse_filter = 2
+show_percentage = false
+
+[node name="Chevron" type="TextureRect" parent="Center/Form/Continue"]
+mouse_filter = 2
+texture = ExtResource("12")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Course" type="Button" parent="Center/Form"]
+theme_type_variation = &"RaisedButton"
+text = "Course"
+theme_override_colors/font_color = Color(0, 0, 0, 0)
+theme_override_colors/font_hover_color = Color(0, 0, 0, 0)
+theme_override_colors/font_pressed_color = Color(0, 0, 0, 0)
+theme_override_colors/font_hover_pressed_color = Color(0, 0, 0, 0)
+theme_override_colors/font_focus_color = Color(0, 0, 0, 0)
+
+[node name="Icon" type="TextureRect" parent="Center/Form/Course"]
+mouse_filter = 2
+texture = ExtResource("11")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Title" type="Label" parent="Center/Form/Course"]
+mouse_filter = 2
+theme_type_variation = &"SemiboldText"
+theme_override_font_sizes/font_size = 16
+text = "Course"
+vertical_alignment = 1
+
+[node name="Summary" type="Label" parent="Center/Form/Course"]
+mouse_filter = 2
+theme_type_variation = &"MutedText"
+theme_override_font_sizes/font_size = 14
+text = "0 units"
+horizontal_alignment = 2
+vertical_alignment = 1
+autowrap_mode = 3
+
 [node name="QuickLabel" type="Label" parent="Center/Form"]
 theme_type_variation = &"SectionLabel"
-text = "QUICK PLAY"
+text = "PLAY"
 vertical_alignment = 1
 
 [node name="Level" type="OptionButton" parent="Center/Form"]
@@ -61,37 +134,28 @@ vertical_alignment = 1
 mouse_filter = 2
 
 [node name="OneZero" type="Button" parent="Center/Form/Quick"]
-theme_type_variation = &"PrimaryButton"
+theme_type_variation = &"RaisedButton"
 theme_override_font_sizes/font_size = 34
 theme_override_constants/h_separation = 6
 theme_override_constants/icon_max_width = 34
-script = ExtResource("10")
-icon_left = 8.0
-font_type = &"ExtraBoldText"
 text = "1+0"
 icon = ExtResource("3")
 expand_icon = true
 
 [node name="ThreeTwo" type="Button" parent="Center/Form/Quick"]
-theme_type_variation = &"PrimaryButton"
+theme_type_variation = &"RaisedButton"
 theme_override_font_sizes/font_size = 34
 theme_override_constants/h_separation = 6
 theme_override_constants/icon_max_width = 34
-script = ExtResource("10")
-icon_left = 8.0
-font_type = &"ExtraBoldText"
 text = "3+2"
 icon = ExtResource("4")
 expand_icon = true
 
 [node name="FiveZero" type="Button" parent="Center/Form/Quick"]
-theme_type_variation = &"PrimaryButton"
+theme_type_variation = &"RaisedButton"
 theme_override_font_sizes/font_size = 34
 theme_override_constants/h_separation = 6
 theme_override_constants/icon_max_width = 34
-script = ExtResource("10")
-icon_left = 8.0
-font_type = &"ExtraBoldText"
 text = "5+0"
 icon = ExtResource("4")
 expand_icon = true
@@ -101,9 +165,6 @@ theme_type_variation = &"RaisedButton"
 theme_override_font_sizes/font_size = 24
 theme_override_constants/h_separation = 6
 theme_override_constants/icon_max_width = 24
-script = ExtResource("10")
-icon_left = 8.0
-font_type = &"ExtraBoldText"
 text = "Custom"
 icon = ExtResource("5")
 expand_icon = true

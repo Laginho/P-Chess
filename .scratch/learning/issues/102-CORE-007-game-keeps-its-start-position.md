@@ -1,5 +1,5 @@
 # CORE-007: A game keeps its start position, and Maia plays from it
-Stage: to-implement
+Stage: done
 Blocked by: none
 Review: agent
 Difficulty: normal
@@ -32,3 +32,29 @@ Play-outs start from a FEN (spec §L8). Today `Game.new(fen)` accepts a FEN but 
 ## Comments
 
 - 2026-11-07 Written from `.scratch/learning/spec.md` §L8. Found by the code survey: `bot/maia_player.gd` lines 98–101.
+- Stage 2: test commits `734c147` and `0f9668d` failed before production changes (11 passed, 1 failed): the start field was absent and both requests used `Game.START`. The second test-only commit corrected the first assertion's timing: the fake retains the mutable moves array, so the initial request must be checked before moves are played. Production commit `9a75f8e` made the focused suite green (12 passed, 0 failed).
+- Criteria check, read-only subagent:
+  - ✅ 1: `core/game.gd:24-25` stores the supplied or default FEN; `tests/test_maia_player.gd:119-123,132` checks both and retention after moves.
+  - ✅ 2: `bot/maia_player.gd:96-98` requests both positions from that FEN; `tests/test_maia_player.gd:127-135` checks empty and nonempty histories.
+  - ✅ 3: the same production lines preserve the default; unchanged request assertions in `tests/test_maia_player.gd:58-68,108-115` cover the initial game.
+  - ✅ 4: diff inspection confirms the shortcut comment is removed; this structural criterion has no behavioral test.
+- Gate on `9a75f8e`: `godot --headless -s tests/run.gd` exited 0, 570 passed, 0 failed. Seven checks reported skips: one graphical pixel check and six requiring Lc0. No live-engine or graphical acceptance was performed.
+
+Gate evidence: /run/media/lage/New Volume/Scratch/core-007/gate.json
+
+#### Resolution (2026-11-07)
+Verdict: Approve
+
+- Standards: independent review found 0 documented-standard violations and 0 actionable smells. The diff is confined to Primary files and ticket metadata; test-only commits precede the production-only fix.
+- Spec: independent review found 0 missing requirements, scope changes or regressions. All four numbered criteria pass:
+  1. ✅ `core/game.gd` retains the supplied FEN, defaults to `Game.START` and keeps it after moves; the new test checks each case.
+  2. ✅ Both the previous-position prediction and current-position request use `game.start_fen` with their respective move histories; the new test checks the exact request pairs before and after legal moves.
+  3. ✅ Existing initial-position request assertions are unchanged; the stored default produces the same FEN, moves and request order.
+  4. ✅ The `shortcut:` comment is removed, along with the unused `Game` preload.
+- Examined the whole diff and affected paths: `Game` construction and play, `ui/main.gd::_start` and `_next_turn`, `MaiaPlayer` generation/FIFO guards, synchronous and delayed policy replies, legal-policy fallback, clock/premove paths, and `engine/uci.gd::request_policy` board reconstruction and UCI command. Also checked the history/repertoire constructors and inherited editor game. No caller requires an additional change. Full course play-outs, graphical appearance and real Lc0 execution were not exercised.
+- Files: `core/game.gd`, `bot/maia_player.gd`, `tests/test_maia_player.gd`; review changes only tracker records and the ledger.
+- Red-green proof: the stage-2 record above reports the new test failing on `734c147`/`0f9668d` (11 passed, 1 failed), then passing with production commit `9a75f8e` (12 passed, 0 failed). Review verified the test/production commit split and the unchanged pre-existing assertions.
+- Gate: reused the committed-code run on `9a75f8e`: `godot --headless -s tests/run.gd`, exit 0, 570 passed, 0 failed. Seven checks printed skips: one graphical pixel check and six requiring Lc0. `Assert-GateEvidence` verified the receipt, log hash, recorded exit status and unchanged code. Rebase was already current; merge `c434c35` introduced no conflicts or code beyond the reviewed diff.
+
+Acceptance: pending | Request behavior passes at the approved fake-bridge seam; the real-engine course play-out check remains with LEARN-007, whose screen/game path is still to be implemented.
+Disclosure: pending | release | .scratch/learning/issues/111-LEARN-007-play-outs.md — verify a real Maia reply from a course FEN before release; the headless gate skipped live Lc0 checks and does not establish that product acceptance.

@@ -1,5 +1,5 @@
 # LEARN-009: The new Home and Continue, with review checks
-Stage: to-implement
+Stage: done
 Blocked by: LEARN-008
 Review: human
 Difficulty: normal
@@ -41,6 +41,56 @@ Home as designed in `Main.dc.html` (spec §L9, §L11): a large Continue card fir
 - `tests/test_course.gd`: the Continue order across fixture progress, with the time passed in: review check at day 7 and day 30, own-game position before the next part, "done" at the end; a missed check gives needs review and keeps mastery (red: no target function).
 - `tests/test_home.gd`: the card shows the target from a fixture progress file and opens it; quick play unchanged; the replaced layout assertions rewritten for the new layout (red: no card).
 
+## Resolution
+
+- Continue selects due reviews, positions from games, unfinished parts and subsequent units; review misses survive leaving the board and passing a check clears the review status.
+- Home shows the target and its board, opens the selected activity, and retains the Play row and navigation. The 1280×800 capture was compared with `docs/design/learning/png/Main.png`; automated screen tests exercise the card's destinations.
+- `godot --headless -s tests/run.gd`: 662 passed, 0 failed at commit `130a6e0`.
+
+Gate evidence: /run/media/lage/New Volume/Scratch/learn009-gate-final.json
+
 ## Comments
 
+- 2026-11-08 Bruno approved this `Review: human` review in the foreman chat (PR #44): "parece bom"; he may come back with comments. The hand checks under Acceptance stay pending.
 - 2026-11-07 Written from `.scratch/learning/spec.md` §L9, §L11. `Review: human`: the Home redesign is the first thing Bruno sees.
+- Stage 2 criteria check, independently reviewed against the committed diff:
+  - ✅ 1: `ui/home.gd:124`, `ui/main.gd:570`; `tests/test_home.gd:7` checks the visible start label and rating dialog.
+  - ✅ 2: `core/course.gd:211`; `tests/test_course.gd:4`, `tests/test_course.gd:37` and `tests/test_course.gd:71` check priority, incomplete mastered units, next unit and done.
+  - ✅ 3: `core/course.gd:207`, `core/course.gd:211`; `tests/test_course.gd:71` checks both deadlines, local-date boundary, distinct positions and eligible pools.
+  - ✅ 4: `ui/solving.gd:58`, `ui/main.gd:649`, `core/course.gd:254`; `tests/test_course_screens.gd:8` checks three commits, an interrupted miss and preserved mastery, and `tests/test_course.gd:71` checks clearing on a later pass.
+  - ✅ 5: `ui/home.gd:124`, `ui/home.gd:179`; `tests/test_home.gd:7`, `tests/test_home.gd:38` and `tests/test_home.gd:102` check visible labels and the completed message at 800×600.
+  - ✅ 6: `ui/main.gd:570`, `ui/main.gd:616`; `tests/test_home.gd:7`, `tests/test_home.gd:38` and `tests/test_home.gd:102` exercise every destination.
+  - ✅ 7: `ui/home.gd:124`; `tests/test_home.gd:38` and `tests/test_home.gd:102` compare the Home board with the opened review, solving and play-out positions, and the starting board when done.
+  - ✅ 8: `ui/home.gd:24`, `ui/home.gd:88`; Home and session tests cover quick play, controls and engine guidance. `tests/test_session.gd:516` replaces Home's old centred-board expectation with the approved left-aligned design while retaining Searching and Game placement checks; the replacement was proved red with a left-margin mutation and green after restoration.
+  - ✅ 9: `docs/spec.md:484` documents Home and review checks; verified by reading the section.
+
+#### Resolution (2026-11-08)
+Verdict: Approve
+
+Standards: 0 documented-standard violations, 0 actionable baseline smells. Independent reviewer `/root/standards_review` inspected the entire diff and all 22 commits against AGENTS.md, the domain vocabulary, ADRs and the flow rules. Every commit separates tests, production and tracker metadata. The `tests/test_session.gd` update is allowed by stage 2's explicit exception for tests asserting replaced behavior: only Home's retired centering expectations change, with the replacement and mutation proof named above. Production stays within Primary files.
+
+Spec: 0 numbered-criterion failures. Independent reviewer `/root/spec_review` and the integrating reviewer read the whole diff and confirmed all nine criteria:
+
+- 1 ✅ Home displays Start the course without a rating and opens the rating dialog; `test_continue_starts_course_and_opens_the_next_part` checks both visible text and navigation.
+- 2 ✅ `Course.continue_target` prioritizes due reviews, unsolved from-your-game positions, unfinished parts and subsequent units, then done. Course fixture tests cover the sequence and mastered units with unfinished parts.
+- 3 ✅ Reviews become due at the local calendar boundary 7 and 30 days after mastery, drawing three distinct positions from practice/test pools. Course tests pass time explicitly and check both deadlines, the eligible pools and the time-zone boundary.
+- 4 ✅ Review mode grades each position once, persists a miss before advancing, preserves mastery after Back, records completion and clears needs review after a passed check. The screen scenario checks interrupted/completed misses; the course seam checks a later pass.
+- 5 ✅ The card's visible labels show the selected activity, unit and detail. The done message and Custom/Play guidance remain readable at 800×600.
+- 6 ✅ The card routes directly to rating, theory pointer, solving, play-out start, test start, review or Custom. Home screen tests exercise every destination.
+- 7 ✅ Home displays the selected solving/from-game or review position, the selected play-out position and the starting position when done. Screen tests compare the preview and opened board; the theory/test preview branches were inspected.
+- 8 ✅ Existing quick-play preferences, level selection, Custom and navigation connections remain intact. Existing Home/session tests cover these controls, missing-engine disabling and non-overlap at the minimum window size.
+- 9 ✅ `docs/spec.md` §15.8 describes Continue, review checks, Course, Play and missing-engine guidance.
+
+Affected callers, failure paths and cross-feature interactions examined: Home configuration/refresh, rating entry and Profile stage changes, course/unit navigation, Continue selection across units, practice selection and from-your-game priority, mastery/review status, local-date conversion, shared solving/test grading and callback cancellation, interrupted reviews, persistence refusal and retry, play-out/test entry, completed-course Custom routing, engine-warning layout, quick-play preferences and screenshot fixtures. Shared grader/probe-error and async serialization coverage was inspected. Live tablebase grading, native Windows gameplay, physical input and human visual acceptance were not exercised. The fully passed review is covered at the course-module seam rather than by a complete solving-screen scenario.
+
+Test-first proof: test-only `674bf1d` precedes review scheduling `ca79b7b`; `8b228d6` precedes Continue selection `5db3918`; `11eb1c0` precedes Home routing `94ce33e`; `fdd72d8` precedes review-screen wiring `6ea6093`. Inspected the [missing-target red log](</run/media/lage/New Volume/Scratch/learn009-red.log>), [missing-card red log](</run/media/lage/New Volume/Scratch/learn009-home-red.log>), [review-routing red log](</run/media/lage/New Volume/Scratch/learn009-review-red.log>) and [elapsed-age red log](</run/media/lage/New Volume/Scratch/learn009-age-red.log>). The final green gate includes all corresponding tests. Additional replacement-layout mutation proof is recorded in the stage-2 comments above; its historical execution was not independently reconstructed.
+
+The branch was already based on `sweatshop/learning/2026-11-07-2234`; rebase changed no commits or code. Reused the existing gate at `130a6e0f790831157f0d5bee4faaaef082cef6af`: `godot --headless -s tests/run.gd`, **662 passed, 0 failed**, exit 0. The official `Assert-GateEvidence` helper verified the command, commit, log SHA-256, exit marker and unchanged code. [Gate log](</run/media/lage/New Volume/Scratch/learn009-gate-final.log>) and [receipt](</run/media/lage/New Volume/Scratch/learn009-gate-final.json>). Existing skips: two headless pixel checks and six live Lc0 checks because the Windows engine executable is unavailable. `git diff --check` passed.
+
+Generated and inspected a fresh [1280×800 Home capture](</run/media/lage/New Volume/Scratch/LEARN-009-review-capture-QwHiXE/Main.png>) from the reviewed code under Xvfb, with isolated data on the hard disk and the window at `3000,3000`, against `docs/design/learning/png/Main.png`. The structure and required text are present. The canvas additionally shows vertically stacked Play icons/labels with different accent colors, a Continue chevron and Course icon/status text; the implementation uses inline Play icons/labels and a plain Course button. These details are described by the design/prose, rather than a numbered criterion; [CLEAN-020](120-CLEAN-020-home-visual-details.md) records them for triage, as required by the review rules. The different board position is expected: the capture uses the actual next course position rather than the canvas's illustrative position.
+
+No production review fix, proxy decision or contract change was introduced. Merge `be3c3d6` integrates the ticket without squash; this closure commits Stage: done and the ledger entry together on the session branch. Review: human remains in force for the driver's session PR.
+
+Acceptance: pending | Automated Continue/review scenarios and the fresh capture comparison passed. Bruno's visual approval and manual clicks through Continue's states remain, including a review check using the real tablebase.
+Disclosure: pending | release | Before release, complete the ticket's manual Verification and human visual/input review; [current capture](</run/media/lage/New Volume/Scratch/LEARN-009-review-capture-QwHiXE/Main.png>) and the tests above provide the review evidence.
+Disclosure: pending | none | [CLEAN-020](120-CLEAN-020-home-visual-details.md) tracks the remaining canvas details for triage. No numbered criterion depends on this optional visual work; it does not block session integration.

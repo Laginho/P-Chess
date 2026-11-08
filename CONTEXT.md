@@ -69,7 +69,7 @@ A play-out where you have the winning side: you pass by promoting or mating.
 _Avoid_: win drill
 
 **Hold**:
-A play-out where you defend: you pass when the pawn is gone or after enough moves held.
+A play-out where you defend: you pass when the pawn is gone, after enough moves held, or when the game ends drawn.
 _Avoid_: defend drill, save
 
 **Perfect opponent**:

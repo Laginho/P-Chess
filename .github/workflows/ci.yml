@@ -6,6 +6,57 @@ permissions:
   contents: read
 
 jobs:
+  tbprobe-windows:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - name: Build the pinned Fathom helper
+        run: ./scripts/build-tbprobe.ps1 -Root "$env:RUNNER_TEMP/tbprobe-build"
+
+      - name: Probe from a folder with spaces and accents
+        run: |
+          $root = "$env:RUNNER_TEMP/P Chess ação"
+          New-Item -ItemType Directory -Force "$root/engine/tbprobe", "$root/engine/tablebase" | Out-Null
+          Copy-Item "$env:RUNNER_TEMP/tbprobe-build/engine/tbprobe/tbprobe.exe" "$root/engine/tbprobe/"
+          # The same pinned KRvK pair as fetch-engine.ps1; this smoke probe needs only this material.
+          $files = [ordered]@{
+            'KRvK.rtbw' = @('wdl', '386fbde73308e49a4207836922c68b30b664e83c5a37f7fa37305a15cd16f2f1')
+            'KRvK.rtbz' = @('dtz', 'cab59f42e75c2a25da3939231850a79fa838593fff5c28d7772da92062ed965a')
+          }
+          foreach ($file in $files.GetEnumerator()) {
+            $path = "$root/engine/tablebase/$($file.Key)"
+            Invoke-WebRequest "https://tablebase.lichess.ovh/tables/standard/3-4-5-$($file.Value[0])/$($file.Key)" -OutFile $path
+            if ((Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash -ne $file.Value[1]) {
+              throw "SHA-256 mismatch: $($file.Key)"
+            }
+          }
+          $start = [Diagnostics.ProcessStartInfo]::new("$root/engine/tbprobe/tbprobe.exe")
+          $start.UseShellExecute = $false
+          $start.WorkingDirectory = $env:RUNNER_TEMP
+          $start.RedirectStandardInput = $true
+          $start.RedirectStandardOutput = $true
+          $start.RedirectStandardError = $true
+          $process = [Diagnostics.Process]::Start($start)
+          foreach ($line in @('uci', 'setoption name SyzygyPath value ../tablebase', 'isready',
+              'position fen 8/8/8/4k3/8/4K3/8/R7 w - - 0 1', 'go', 'quit')) {
+            $process.StandardInput.WriteLine($line)
+          }
+          $process.StandardInput.Close()
+          if (-not $process.WaitForExit(30000)) { $process.Kill(); throw 'tbprobe smoke probe timed out' }
+          $output = $process.StandardOutput.ReadToEnd()
+          $errors = $process.StandardError.ReadToEnd()
+          $output
+          if ($process.ExitCode -ne 0 -or $errors -or $output -match '(?m)^(error |info string tberror )' -or
+              $output -notmatch '(?m)^info string tbmove [a-h][1-8][a-h][1-8] win [0-9]+\r?$' -or
+              $output -notmatch '(?m)^bestmove [a-h][1-8][a-h][1-8]\r?$') {
+            throw "tbprobe smoke probe failed (exit $($process.ExitCode)): $errors"
+          }
+
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 15

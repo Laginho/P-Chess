@@ -66,6 +66,28 @@ jobs:
       - name: Fetch verified engine and Maia networks
         run: ./scripts/fetch-engine.ps1 -Root "$env:GITHUB_WORKSPACE/build/windows"
 
+      - name: Build the tablebase helper and verify system-only imports
+        run: |
+          ./scripts/build-tbprobe.ps1 -Root "$env:GITHUB_WORKSPACE/build/windows"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $vs = & "${env:ProgramFiles(x86)}/Microsoft Visual Studio/Installer/vswhere.exe" -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          $tools = Get-ChildItem "$vs/VC/Tools/MSVC" -Directory | Where-Object Name -match '^[\d.]+$' |
+            Sort-Object { [version]$_.Name } | Select-Object -Last 1
+          $dumpbin = "$($tools.FullName)/bin/Hostx64/x64/dumpbin.exe"
+          $imports = & $dumpbin /dependents build/windows/engine/tbprobe/tbprobe.exe
+          if ($LASTEXITCODE -ne 0) { throw 'Could not inspect tbprobe dependencies' }
+          $imports
+          $dlls = @($imports | ForEach-Object {
+            if ($_ -match '^\s+([A-Za-z0-9_.-]+\.dll)\s*$') { $Matches[1] }
+          })
+          if (-not $dlls.Count) { throw 'dumpbin reported no tbprobe imports' }
+          foreach ($dll in $dlls) {
+            if ($dll -notmatch '^(KERNEL32|ADVAPI32|USER32|SHELL32|OLE32|WS2_32|BCRYPT|NTDLL)\.dll$' -and
+                $dll -notmatch '^api-ms-win-.*\.dll$') {
+              throw "tbprobe imports a non-system DLL: $dll"
+            }
+          }
+
       - name: Bundle the Visual C++ runtime for Lc0
         run: |
           # lc0.exe imports these; a clean Windows has no VC++ runtime, so they ship app-local.
@@ -94,6 +116,7 @@ jobs:
             'Godot-LICENSE.txt'   = @('https://raw.githubusercontent.com/godotengine/godot/4.7.2-stable/LICENSE.txt', 'b0435e3b3e4e55238f05f4b306f30524a1b2e20147810d436eaa554fa6855c80')
             'Godot-COPYRIGHT.txt' = @('https://raw.githubusercontent.com/godotengine/godot/4.7.2-stable/COPYRIGHT.txt', 'cb1980c88089573bcacd7221d777c689bb8bbd778799f24c27fca0fe5f774d6d')
             'AGPL-3.0.txt'        = @('https://raw.githubusercontent.com/lichess-org/lila/81e2d1bca7a0c97ba3a980f2c51fcff67bfef7ed/LICENSE', '0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0')
+            'Fathom-LICENSE.txt'  = @('https://raw.githubusercontent.com/jdart1/Fathom/c9c6fef0dddc05d2e242c183acf5833149ab676d/LICENSE', 'c8038055839bd02f995cd7d1bba19657720097f5604411a7977ebcb5b4a37759')
           }
           foreach ($notice in $notices.GetEnumerator()) {
             $path = "build/windows/licenses/$($notice.Key)"
@@ -107,7 +130,15 @@ jobs:
       - name: Verify package and zip
         run: |
           $required = @('P-Chess.exe', 'P-Chess.pck', 'THIRD_PARTY.md', 'engine/lc0/lc0.exe', 'engine/lc0/COPYING', 'engine/weights/COPYING', 'engine/stockfish/stockfish.exe', 'engine/stockfish/Copying.txt')
+          $required += 'engine/tbprobe/tbprobe.exe', 'licenses/Fathom-LICENSE.txt'
           $required += 11..19 | ForEach-Object { "engine/weights/maia-$($_ * 100).pb.gz" }
+          $tablebaseMaterials = @(
+            'KBvK', 'KNvK', 'KPvK', 'KQRvK', 'KQRvKR', 'KQvK', 'KQvKR', 'KRBvK', 'KRBvKR', 'KRNvK', 'KRNvKR', 'KRPvK', 'KRPvKR', 'KRRvK', 'KRRvKR', 'KRvK', 'KRvKB', 'KRvKN', 'KRvKP', 'KRvKR'
+          )
+          $required += foreach ($material in $tablebaseMaterials) {
+            "engine/tablebase/$material.rtbw"
+            "engine/tablebase/$material.rtbz"
+          }
           $required += 'msvcp140.dll', 'vcruntime140.dll', 'vcruntime140_1.dll', 'vcomp140.dll' | ForEach-Object { "engine/lc0/$_" }
           $required += 'Godot-LICENSE.txt', 'Godot-COPYRIGHT.txt', 'AGPL-3.0.txt' | ForEach-Object { "licenses/$_" }
           foreach ($file in $required) {

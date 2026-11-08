@@ -85,7 +85,7 @@ Own games
 
 Numbered so tickets can cite them (`spec §L3`).
 
-**L1. Course data.** The course ships as JSON under `data/course/`. A course index lists the stages (name, rating range on the chess.com scale, units in order); with one stage for now, it covers every rating. Each unit file holds: id, title, subtitle; the theory pointer (goal line, 3–5 search terms, 1–2 books with the chapter); the positions, each with FEN, the side you play, the goal (win or hold), the line length in your moves, and its pool (practice or test); the 4 play-outs (FEN, side, convert or hold); and the test's play-out positions (one convert, one hold). The practice pool has 12 positions, the test pool about 18.
+**L1. Course data.** The course ships as JSON under `data/course/`. A course index lists the stages (name, rating range on the chess.com scale, units in order); with one stage for now, it covers every rating. Each unit file holds: id, title, subtitle; the theory pointer (goal line, 3–5 search terms, 1–2 books with the chapter); the positions, each with FEN, the side you play, the goal (win or hold), the line length in your moves, and its pool (practice or test); the default line length for from-your-game positions (`default_line_length`, 3 for rook endgames); the 4 play-outs (FEN, side, convert or hold); and the test's play-out positions (one convert, one hold). The practice pool has 12 positions, the test pool about 18.
 
 **L2. Progress.** Everything the player does in the course is saved in one JSON file, `user://course.json`: the rating sentence (number and site), the play-out clock choice (5+5 or none, default 5+5), and per unit: theory opened, each practice position's state (solved, first try), play-outs passed, test attempts (date, positions used, result), the mastered date, review checks (due, done, missed), and the from-your-game positions. A missing or unreadable file starts empty; it is never overwritten with less than it held because of a read error.
 
@@ -93,13 +93,19 @@ Numbered so tickets can cite them (`spec §L3`).
 
 **L4. Rating.** The rating sentence stores the number and the site. On the chess.com scale, a Lichess number is shown minus 300 (ADR 0003). The course's Maia level is the chess.com number plus 300, rounded to the nearest hundred (halves up) and clamped to 1100–1900, the nets already bundled. The rating sets the stage (L1) and the course's Maia level; the sandbox keeps its own level picker.
 
-**L5. Tablebase probe.** Grading never asks an evaluation engine for a judgement: it asks a probe what a position is worth. The probe answers, for a position, win, draw or loss for the side to move and, where the tables give it, a distance to zeroing; and for a position, the best move. The real probe is the bundled Stockfish with the bundled tablebase files (`SyzygyPath`), how exactly is RES-001's finding. Everything that grades (solving, play-out fail checks, the review marker, the perfect opponent) goes through this one probe, so tests use a fake.
+**L5. Tablebase probe.** Grading never asks an evaluation engine for a judgement. It asks a probe what a position is worth. For a position, the probe answers from the side to move:
+
+- win, draw or loss under the 50-move rule. A cursed win counts as a draw, and so does a blessed loss, because the game ends at 100 half-moves.
+- for each legal move, the mover's result and its distance to zeroing, in plies from this position with the move included. A capture, pawn move, promotion or mate that keeps a win is 1.
+- the best move: the best result; then for a win the smallest distance, for a loss the largest; then UCI order.
+
+The real probe is a small helper built from Fathom (MIT) that reads the bundled tablebase files (§L12). RES-001 found that Stockfish computes these distances but does not expose them through UCI. The helper speaks a UCI subset over the engines' bridge and sees only the position (FEN, with its half-move clock), not the game's history. A position it cannot answer is a probe failure that the caller shows: castling rights, material without a bundled file, a missing or unreadable file, or a helper that stopped. A failure is never replaced by an engine evaluation. Everything that grades (solving, play-out fail checks, the review marker, the perfect opponent) goes through this one probe, so tests use a fake.
 
 **L6. Grading a line.** A committed line has your moves and the opponent's moves in between, starting and ending with yours (line length N means 2N−1 plies). Each of your moves must keep the result for your side; when winning, it must also not detour: the distance to zeroing after your move may be at most the best move's plus a margin (a tunable). Opponent moves only need to be legal; where a better defence existed it is shown, but it doesn't fail you. Grading stops at your first failing move. A position is solved when its first commit, or any later one, has no failing move; it is first try only when its first commit passes. Solving is done when every practice position is solved once.
 
 **L7. Entering a line.** The solving board shows the position and never moves the pieces. Each entered move marks its two squares with a translucent red under the pieces, darker on a square used twice (values in `docs/design/learning/README.md`, "Entry marks"); no arrows while entering. Moves are checked for legality against the position after the line so far. The line fills after N of your moves; Backspace undoes one ply, Clear empties the line, Enter commits a full line. Feedback plays the line back one ply at a time with ✓/✗ on your moves, stops at the first ✗, and shows the correct move (an arrow is fine here) and the correct line of N moves. Next and Retry follow.
 
-**L8. Play-outs and the pass test.** A play-out is a game from the position's FEN: you against Maia at the course level (L4) with the unit's clock choice, or, in the pass test, against the perfect opponent (the probe's best move) with no clock. After each of your moves the probe checks the result: it fails at once when your move changes the result for your side, or when you run out of time. A convert passes on promotion or mate; a hold passes when the pawn is gone or after 30 of your moves (a tunable). Play-outs are drills: they are not saved to History and don't count in Profile's stats. The pass test draws 6 test-pool positions, preferring ones not used in your previous attempt; it passes with at least 5 first try (a tunable) and both play-outs passed. Passing records the mastered date.
+**L8. Play-outs and the pass test.** A play-out is a game from the position's FEN: you against Maia at the course level (L4) with the unit's clock choice, or, in the pass test, against the perfect opponent (the probe's best move) with no clock. After each of your moves the probe checks the result: it fails at once when your move changes the result for your side, or when you run out of time. A convert passes on promotion or mate; a hold passes when the pawn is gone, after 30 of your moves (a tunable), or when the game ends drawn before that (stalemate, repetition, the 50-move rule or insufficient material). Play-outs are drills: they are not saved to History and don't count in Profile's stats. The pass test draws 6 test-pool positions, preferring ones not used in your previous attempt; it passes with at least 5 first try (a tunable) and both play-outs passed. Passing records the mastered date.
 
 **L9. Continue.** Continue's target, in order: a review check that is due (3 positions drawn from the unit's practice and test pools, offered 7 days and again 30 days after the mastered date); then any from-your-game position not yet solved; then the next unfinished part of the current unit (theory pointer, solving, play-outs, pass test); then the next unit. With nothing left it shows "Unit done, go play some slow games" and points to the sandbox. A review check with a failed position marks the unit "needs review"; the mastered date and badge stay, and passing a later check clears it.
 
@@ -107,15 +113,15 @@ Numbered so tickets can cite them (`spec §L3`).
 
 **L11. Screens.** Course map, unit page, theory pointer, solving, play-out and pass test are new screens owned by `ui/main.gd` like Review and History, each with a `present(...)` entry and a back signal. Home changes as in the design (Continue card first, Course button, Play row with Custom). Layout follows `docs/design/learning/`; where the design and this spec disagree, this spec wins.
 
-**L12. Tablebase files.** Only the files this unit needs are bundled (rook and pawn against rook and the smaller endings it can turn into), fetched with pinned hashes like the engines, and listed in `docs/THIRD_PARTY.md`.
+**L12. Tablebase files.** Only the files this unit needs are bundled (rook and pawn against rook and the smaller endings it can turn into), fetched with pinned hashes like the engines, and listed in `docs/THIRD_PARTY.md`. The probe helper (§L5) is built by `scripts/build-tbprobe.ps1` from a pinned Fathom commit and ships at `engine/tbprobe/`. Its MIT notice ships in `licenses/` and `docs/THIRD_PARTY.md`.
 
 ## Testing Decisions
 
 - Test what the player sees and what the course remembers, not how a module stores it. A good course test sets up data and progress, acts (commits a line, finishes a play-out, moves the date forward), and checks the answer to a question the UI asks: the status, the Continue target, the first-try rate.
 - **Seam 1: the course module (L3).** Logic tests with fixture data in `tests/fixtures/course/`, progress in a temporary `user://` folder, and the time passed in. Covers statuses, Continue order, first try, mastery, review checks, from-your-game positions. Prior art: `tests/test_history.gd`, `tests/test_settings.gd` (isolated files).
-- **Seam 2: the tablebase probe (L5).** The grader, the play-out fail check, the perfect opponent and the review marker run against a fake probe with scripted answers. The real probe is tested through the fake UCI engine, like `tests/test_uci.gd` and `tests/test_analyser.gd`.
+- **Seam 2: the tablebase probe (L5).** The grader, the play-out fail check, the perfect opponent and the review marker run against a fake probe with scripted answers. The probe's adapter (`engine/tablebase.gd`) is tested through the fake UCI engine with scripted helper lines, like `tests/test_uci.gd` and `tests/test_analyser.gd`. The helper is tested against the real bundled files when they are present, and skipped otherwise, like the live Lc0 tests. Its Windows build is checked by a CI job that builds it and runs one real probe.
 - **Existing seams for the rest.** Screens through `ui/main.tscn` with `Session.HeldBridge` and a temporary history folder (`tests/test_home.gd`, `tests/test_profile.gd`, `tests/test_review.gd`); the board through `tests/test_board_view.gd`; starting from a FEN through `tests/test_maia_player.gd` and `tests/test_pgn.gd`; time controls through `tests/test_clock.gd`.
-- What these seams can miss: a fake probe can't catch a wrong reading of real Stockfish output (RES-001 and the real-probe test cover that), and headless screen tests can't judge layout (the design PNGs and the screenshot harness `scripts/screens.gd` do). Reversing either choice means adding an end-to-end test with the real engine, which is slow and needs the binaries in CI.
+- What these seams can miss: a fake probe can't catch a wrong reading of the real tables (the real-file tests, checked against an independent reader as in RES-001, cover that; CI skips the full real-file suite, while the Windows job uses only KRvK smoke tables), and headless screen tests can't judge layout (the design PNGs and the screenshot harness `scripts/screens.gd` do). Reversing either choice means adding an end-to-end test with the real engine, which is slow and needs the binaries in CI.
 - Gate: `godot --headless -s tests/run.gd`.
 
 ## Acceptance scenarios
@@ -125,6 +131,21 @@ Numbered so tickets can cite them (`spec §L3`).
 3. In a hold play-out, play a move that loses: the end card appears at once with that move and a holding move. (Bruno; reference: the Lichess tablebase.)
 4. Pass the test, move the clock 7 days forward (test only) or wait: Continue offers the 3-position review check before anything else. (Tests.)
 5. Review a game that reached rook and pawn against rook where you lost a draw: the move list shows the marker; its link opens the unit, where the position appears as "From your game", and Continue offers it. (Bruno, with a real game.)
+
+### Session check (2026-11-08, foreman, session `sweatshop/learning/2026-11-07-2234` at `66abb54`)
+
+Evidence reused from the integrated session's last gate (`godot --headless -s tests/run.gd`, 677 passed, 0 failed, CLEAN-020's receipt; the code is identical at the session head). Real-file tablebase tests ran with the Linux Fathom helper; six live Lc0 checks and two pixel checks were skipped (no Linux Lc0 or display in the lane clone).
+
+1. Rating dialog, map, Profile sentence: pending (Bruno). Automated: LEARN-001/LEARN-002 tests in `tests/test_home.gd`, `tests/test_profile.gd`, `tests/test_course_screens.gd`, plus LEARN-001's review captures. Not examined: physical Escape/click-outside, real fresh profile.
+2. Lucena line and slow detour: pending (Bruno). Automated: LEARN-006 grading tests at the fake-probe seam, plus the real-helper Lucena flow that LEARN-006's review ran (13/13 targeted). Not examined: a person entering the line on screen, Lichess reference per position.
+3. Losing move in a hold play-out: pending (Bruno). Automated: LEARN-007 play-out tests; its review checked hold and convert against the real tablebase. Not examined: a real Maia (Lc0) reply, a person playing.
+4. Review check at 7 days: passed. `tests/test_course.gd::test_continue_offers_review_checks_at_seven_and_thirty_days` (day 6 no, day 7 review with 3 distinct positions, ahead of a from-your-game entry; 30 days; local calendar), `tests/test_home.gd::test_continue_shows_and_opens_the_due_review_position`, `tests/test_course_screens.gd::test_review_check_grades_three_positions_once_and_keeps_mastery`.
+5. From-your-game marker on a real lost draw: pending (Bruno, real game). Automated: REV-011 tests and its review's real-probe check. Not examined: a saved real game and the marker's look.
+
+Acceptance: pending | scenario 4 passed on the integrated session; 1, 2, 3 and 5 wait for Bruno's hand checks listed above.
+Disclosure: decision | release | [LEARN-006 split](issues/110-LEARN-006-grading-and-feedback.md), receipt `/tmp/sweatshop-proxy/20261108-020737-LEARN-006-0937d8.json`: the proxy replaced spec L5's Stockfish-only probe with a native Fathom helper (LEARN-010, `703fe57`). RES-001's review had reserved that contract change for Bruno; Bruno confirmed it on 2026-11-08.
+Disclosure: pending | release | Windows: the Fathom helper build (MSVC, static CRT), the windows-latest CI smoke job, the accented-folder release start and RES-001's Windows probe were not run on this Linux box.
+Disclosure: pending | release | Real Maia: no Linux Lc0 in the lane, so course play-outs (CORE-007, CLOCK-003, LEARN-007, LEARN-008) never met a real Maia reply.
 
 ## Out of Scope
 
@@ -139,7 +160,7 @@ Numbered so tickets can cite them (`spec §L3`).
 
 ## Tickets
 
-In `.scratch/learning/issues/`, build order: RES-001, CORE-007, CLOCK-003, CI-005, LEARN-001 to LEARN-009, REV-011. Each lists its blockers.
+In `.scratch/learning/issues/`, build order: RES-001, CORE-007, CLOCK-003, CI-005, LEARN-001 to LEARN-005, LEARN-010, LEARN-006 to LEARN-009, REV-011. Each lists its blockers.
 
 ## Further Notes
 

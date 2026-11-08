@@ -4,6 +4,169 @@ const MainScene = preload("res://ui/main.tscn")
 const Session = preload("res://tests/test_session.gd")
 
 
+func test_continue_starts_course_and_opens_the_next_part():
+	var folder := "user://test_continue_home_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var main = MainScene.instantiate()
+	main.course = load("res://core/course.gd").new(folder.path_join("course.json"))
+	main.history = load("res://core/history.gd").new(folder)
+	main.uci.free()
+	main.uci = Session.HeldBridge.new()
+	main.maia = main.MaiaPlayer.new(main.uci)
+	main.preferences = main.Settings.new(folder.path_join("settings.cfg"))
+	main.preferences.set_value("player_name", "You")
+	Engine.get_main_loop().root.add_child(main)
+	var card = main.get_node_or_null("Home/Center/Form/Continue")
+	assert_true(card != null, "Home offers Continue")
+	if card != null:
+		assert_true("Start the course" in card.text)
+		assert_eq(card.get_node("UnitTitle").text, "Start the course")
+		card.pressed.emit()
+		assert_true(main.rating_dialog.visible)
+		main.rating_dialog.hide()
+		assert_true(main.course.save_rating(1600, "chess.com"))
+		main._show_home()
+		assert_true("Rook endgames" in card.text)
+		assert_eq(card.get_node("UnitTitle").text, "Rook endgames")
+		card.pressed.emit()
+		assert_true(main.theory_pointer.visible, "Continue opens the theory pointer")
+		assert_true(not main.get_node("Home").visible)
+	main.free()
+	Session.HistoryStorage.clean(folder)
+
+
+func test_continue_shows_and_opens_the_due_review_position():
+	var folder := "user://test_continue_review_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var path := folder.path_join("course.json")
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	file.store_string(JSON.stringify({"rating": {"number": 1600, "site": "chess.com"}, "units": {"rook-endgames": {"mastered_date": "2000-01-01"}}}))
+	file = null
+	var main = MainScene.instantiate()
+	main.course = load("res://core/course.gd").new(path)
+	main.history = load("res://core/history.gd").new(folder)
+	main.uci.free()
+	main.uci = Session.HeldBridge.new()
+	main.maia = main.MaiaPlayer.new(main.uci)
+	main.preferences = main.Settings.new(folder.path_join("settings.cfg"))
+	main.preferences.set_value("player_name", "You")
+	Engine.get_main_loop().root.add_child(main)
+	var home = main.get_node("Home")
+	var card = home.get_node_or_null("Center/Form/Continue")
+	if card != null:
+		assert_true("REVIEW CHECK" in card.text)
+		assert_true("3 positions" in card.text)
+		assert_eq(card.get_node("Eyebrow").text, "REVIEW CHECK")
+		assert_true("3 positions" in card.get_node("Detail").text)
+		var expected: String = home.target.positions[0].fen
+		assert_eq(home.get_node("Center/Board").game.start_fen, expected)
+		card.pressed.emit()
+		assert_true(main.solving.visible)
+		if main.solving.visible:
+			assert_eq(main.solving.board.game.start_fen, expected, "the card opens the displayed position")
+	else:
+		assert_true(false, "Home offers Continue")
+	main.free()
+	Session.HistoryStorage.clean(folder)
+
+
+func test_continue_refreshes_after_profile_changes_the_stage():
+	var folder := "user://test_continue_profile_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var main = MainScene.instantiate()
+	main.course = load("res://core/course.gd").new(folder.path_join("course.json"), "res://tests/fixtures/course/course.json")
+	assert_true(main.course.save_rating(1000, "chess.com"))
+	main.history = load("res://core/history.gd").new(folder)
+	main.uci.free()
+	main.uci = Session.HeldBridge.new()
+	main.maia = main.MaiaPlayer.new(main.uci)
+	main.preferences = main.Settings.new(folder.path_join("settings.cfg"))
+	main.preferences.set_value("player_name", "You")
+	Engine.get_main_loop().root.add_child(main)
+	var home = main.get_node("Home")
+	var title: Label = home.get_node("Center/Form/Continue/UnitTitle")
+	assert_eq(title.text, "Rook endings")
+	home.get_node("Center/Form/Profile").pressed.emit()
+	var profile = home.get_node("Profile")
+	var rating: LineEdit = profile.find_child("RatingNumber", true, false)
+	rating.text = "1500"
+	rating.text_changed.emit(rating.text)
+	profile.find_child("SaveRating", true, false).pressed.emit()
+	profile.find_child("Back", true, false).pressed.emit()
+	assert_eq(title.text, "Club unit")
+	assert_eq(home.target.get("unit", {}).get("id"), "club")
+	main.free()
+	Session.HistoryStorage.clean(folder)
+
+
+func test_continue_opens_each_course_target_and_done_opens_custom():
+	var folder := "user://test_continue_targets_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var path := folder.path_join("course.json")
+	var unit: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/course/rook-endgames.json"))
+	var position: Dictionary = unit.positions[0].duplicate(true)
+	position.id = "game"
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	file.store_string(JSON.stringify({"rating": {"number": 1600, "site": "chess.com"}, "units": {unit.id: {"theory_opened": true, "from_your_game": [position]}}}))
+	file = null
+	var main = MainScene.instantiate()
+	main.course = load("res://core/course.gd").new(path)
+	main.history = load("res://core/history.gd").new(folder)
+	main.uci.free()
+	main.uci = Session.HeldBridge.new()
+	main.maia = main.MaiaPlayer.new(main.uci)
+	main.preferences = main.Settings.new(folder.path_join("settings.cfg"))
+	main.preferences.set_value("player_name", "You")
+	Engine.get_main_loop().root.add_child(main)
+	var home = main.get_node("Home")
+	var card: Button = home.get_node("Center/Form/Continue")
+	assert_true("FROM YOUR GAME" in card.text)
+	assert_eq(card.get_node("Eyebrow").text, "FROM YOUR GAME")
+	assert_eq(card.get_node("Detail").text, "1 new position from your games")
+	card.pressed.emit()
+	assert_true(main.solving.visible and main.solving.position_data.get("id") == "game")
+	assert_true(main.course.record_commit(unit, position, true))
+	main._show_home()
+	assert_true("Solving" in card.text)
+	assert_eq(card.get_node("Detail").text, "Solving · 0/12")
+	var next_fen: String = home.target.position.fen
+	assert_eq(home.get_node("Center/Board").game.start_fen, next_fen)
+	card.pressed.emit()
+	assert_true(main.solving.visible and main.solving.position_data.get("fen") == next_fen)
+	for item in unit.positions:
+		if item.pool == "practice":
+			assert_true(main.course.record_commit(unit, item, true))
+	main._show_home()
+	var playout_fen: String = home.target.position.fen
+	assert_eq(home.get_node("Center/Board").game.start_fen, playout_fen)
+	card.pressed.emit()
+	assert_true(main.playout.visible, "Continue opens play-out start")
+	assert_eq(main.playout.board.game.start_fen, playout_fen, "play-out opens the position shown on Home")
+	for item in unit.playouts:
+		assert_true(main.course.record_playout_pass(unit, item))
+	main._show_home()
+	card.pressed.emit()
+	assert_true(main.pass_test.visible, "Continue opens test start")
+	var answers := []
+	for i in 6:
+		answers.append({"solved": true})
+	assert_true(main.course.record_test_attempt(unit, answers, [true, true], Time.get_date_string_from_system()))
+	main._show_home()
+	assert_true("Unit done, go play some slow games" in card.text)
+	assert_eq(card.get_node("Eyebrow").text, "UNIT DONE")
+	assert_eq(card.get_node("UnitTitle").text, "Unit done, go play some slow games")
+	home.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	home.size = Vector2(800, 600)
+	var title: Label = card.get_node("UnitTitle")
+	var text_width: float = title.get_theme_font("font").get_string_size(title.text, HORIZONTAL_ALIGNMENT_LEFT, -1, title.get_theme_font_size("font_size")).x
+	assert_true(text_width <= title.size.x, "completed-course text fits at 800×600")
+	assert_eq(home.get_node("Center/Board").game.start_fen, load("res://core/game.gd").START)
+	card.pressed.emit()
+	assert_true(main.setup.visible, "completed course opens Custom")
+	main.free()
+	Session.HistoryStorage.clean(folder)
+
+
 func test_launch_opens_home():
 	var main = MainScene.instantiate()
 	var folder := "user://test_home_%d" % Time.get_ticks_usec()
@@ -299,20 +462,194 @@ func test_searching_keeps_long_player_name_inside_card_at_minimum_window():
 	Session.HistoryStorage.clean(folder)
 
 
-# Bruno's QA follow-up: each quick-play label sits at its tile's centre with the icon just left of it,
-# and the tiles stay landscape however narrow the panel gets.
+# Home's four game choices share a single row across supported window sizes.
 func test_quick_play_tiles_are_landscape_with_centred_labels():
 	var home = load("res://ui/home.tscn").instantiate()
 	home.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
 	Engine.get_main_loop().root.add_child(home)
 	for canvas in [Vector2(1422, 800), Vector2(1280, 960), Vector2(1911, 800), Vector2(800, 600)]:
 		home.size = canvas
+		var previous: Button
 		for name in ["OneZero", "ThreeTwo", "FiveZero", "Custom"]:
 			var tile: Button = home.find_child(name, true, false)
-			assert_true(tile.size.x > tile.size.y, "%s is landscape at %s (%s)" % [name, canvas, tile.size])
-			var placed: Vector3 = tile.placement()
-			var label: float = tile.get_theme_font("font").get_string_size(tile.text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(placed.z)).x
-			assert_true(absf(placed.y + label / 2 - tile.size.x / 2) <= 1.0, "%s label centred at %s" % [name, canvas])
-			var icon_end: float = placed.x + tile.get_theme_constant("icon_max_width")
-			assert_true(placed.x >= tile.icon_left and icon_end <= placed.y and placed.y - icon_end <= 12, "%s icon just left of its label at %s: %s" % [name, canvas, placed])
+			if previous != null:
+				assert_true(absf(tile.get_global_rect().position.y - previous.get_global_rect().position.y) <= 1.0, "%s shares the Play row at %s" % [name, canvas])
+				assert_true(tile.get_global_rect().position.x >= previous.get_global_rect().end.x - 1.0, "%s does not overlap the previous button at %s" % [name, canvas])
+			previous = tile
 	home.free()
+
+func test_course_requires_a_valid_rating_before_starting():
+	var folder := "user://test_course_home_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var main = MainScene.instantiate()
+	main.course = load("res://core/course.gd").new(folder.path_join("course.json"))
+	main.history = load("res://core/history.gd").new(folder)
+	main.uci.free()
+	main.uci = Session.HeldBridge.new()
+	main.maia = main.MaiaPlayer.new(main.uci)
+	main.preferences = main.Settings.new(folder.path_join("settings.cfg"))
+	main.preferences.set_value("player_name", "You")
+	main.preferences.save_last_game({"level": "maia-1300"})
+	Engine.get_main_loop().root.add_child(main)
+	var button = main.get_node_or_null("Home/Center/Form/Course")
+	assert_true(button != null, "Home offers Course")
+	if button == null:
+		main.free()
+		Session.HistoryStorage.clean(folder)
+		return
+	button.pressed.emit()
+	var dialog = main.get_node_or_null("RatingDialog")
+	assert_true(dialog != null and dialog.visible, "Course opens the rating dialog")
+	if dialog:
+		Session.new()._push_key(dialog, KEY_ESCAPE)
+		var click := InputEventMouseButton.new()
+		click.button_index = MOUSE_BUTTON_LEFT
+		click.pressed = true
+		click.position = Vector2(1, 1)
+		main.get_viewport().push_input(click, true)
+		await Engine.get_main_loop().process_frame
+		assert_true(dialog.visible, "Escape and an outside click do not dismiss the dialog")
+		assert_true(dialog.exclusive and not dialog.dialog_close_on_escape, "outside click cannot dismiss the dialog")
+		var number: LineEdit = dialog.find_child("RatingNumber", true, false)
+		var site: OptionButton = dialog.find_child("RatingSite", true, false)
+		var start: Button = dialog.get_ok_button()
+		assert_eq(site.get_item_text(site.selected), "chess.com")
+		for text in ["", "99", "3501", "1400.5", "abc", "-100"]:
+			number.text = text
+			number.text_changed.emit(text)
+			assert_true(start.disabled, "invalid rating %s is disabled" % text)
+		for text in ["100", "3500"]:
+			number.text = text
+			number.text_changed.emit(text)
+			assert_true(not start.disabled, "boundary %s is accepted" % text)
+		number.text = "1400"
+		number.text_changed.emit(number.text)
+		site.select(1)
+		site.item_selected.emit(1)
+		assert_eq(dialog.find_child("ScaleHint", true, false).text, "Shown as 1100 on the chess.com scale")
+		dialog.confirmed.emit()
+		assert_true(not dialog.visible, "saving returns to Home")
+		assert_eq(load("res://core/course.gd").new(folder.path_join("course.json")).rating(), {"number": 1400, "site": "lichess"})
+		button.pressed.emit()
+		assert_true(not dialog.visible, "saved rating skips dialog")
+		assert_eq(main.preferences.last_game().get("level"), "maia-1300", "course rating does not change the sandbox level")
+		assert_eq(main.get_node("Home/Center/Form/Level").get_item_text(main.get_node("Home/Center/Form/Level").selected), "Maia 1300")
+		main.get_node("Home/Center/Form/Profile").pressed.emit()
+		var profile = main.get_node("Home/Profile")
+		assert_eq(profile.find_child("RatingNumber", true, false).text, "1400")
+		var saved_site: OptionButton = profile.find_child("RatingSite", true, false)
+		assert_eq(saved_site.get_item_text(saved_site.selected), "lichess")
+	main.free()
+	Session.HistoryStorage.clean(folder)
+
+
+func test_rating_dialog_displays_the_rating_as_a_sentence():
+	var dialog = load("res://ui/rating_dialog.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(dialog)
+	dialog.present(load("res://core/course.gd").new("user://sentence_unused.json"))
+	await Engine.get_main_loop().process_frame
+	var first: Label = dialog.find_child("Sentence", true, false)
+	var number: LineEdit = dialog.find_child("RatingNumber", true, false)
+	var middle: Label = dialog.find_child("SiteLabel", true, false)
+	var site: OptionButton = dialog.find_child("RatingSite", true, false)
+	assert_true(first.get_global_rect().end.x <= number.get_global_rect().position.x, "rating follows 'I'm rated' in the sentence")
+	assert_true(number.get_global_rect().end.x <= middle.get_global_rect().position.x, "'in rapid on' follows the rating")
+	assert_true(middle.get_global_rect().end.x <= site.get_global_rect().position.x, "site completes the sentence")
+	dialog.free()
+
+
+func test_course_summary_tracks_available_units_and_progress():
+	var folder := "user://test_home_summary_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var path := folder.path_join("course.json")
+	var course = load("res://core/course.gd").new(path, "res://tests/fixtures/course/course.json")
+	var home = load("res://ui/home.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(home)
+	home.configure(load("res://core/settings.gd").new(folder.path_join("settings.cfg")), course)
+	var summary: Label = home.get_node_or_null("Center/Form/Course/Summary")
+	assert_true(summary != null, "Course displays a summary")
+	if summary != null:
+		assert_eq(summary.text, "0 units")
+		assert_true(course.save_rating(1100, "chess.com"))
+		home.refresh_continue()
+		assert_eq(summary.text, "1 unit · 1 new")
+		assert_true(course.open_theory(course.units()[0]))
+		home.refresh_continue()
+		assert_eq(summary.text, "1 unit · 1 in progress")
+	home.free()
+	Session.HistoryStorage.clean(folder)
+
+
+func test_home_decorations_fit_without_blocking_controls():
+	var home = load("res://ui/home.tscn").instantiate()
+	home.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	Engine.get_main_loop().root.add_child(home)
+	for canvas in [Vector2(1280, 800), Vector2(800, 600)]:
+		home.size = canvas
+		for missing in [false, true]:
+			if missing:
+				home.show_missing("Engine unavailable")
+			else:
+				home.get_node("Center/Form/Missing").hide()
+			for name in ["OneZero", "ThreeTwo", "FiveZero", "Custom"]:
+				var tile: Button = home.find_child(name, true, false)
+				var icon: Control = tile.get_node_or_null("Artwork")
+				var label: Label = tile.get_node_or_null("Caption")
+				assert_true(icon != null and label != null, "%s has separate artwork and caption" % name)
+				if icon != null and label != null:
+					assert_true(icon.get_global_rect().end.y <= label.get_global_rect().position.y, "%s icon above label" % name)
+					assert_true(label.get_global_rect().end.y <= tile.get_global_rect().end.y, "%s label fits" % name)
+					assert_eq(label.text, tile.text)
+					assert_eq(icon.mouse_filter, Control.MOUSE_FILTER_IGNORE)
+					assert_eq(label.mouse_filter, Control.MOUSE_FILTER_IGNORE)
+			var card: Button = home.get_node("Center/Form/Continue")
+			var bar: Control = card.get_node("Progress")
+			assert_true(bar.get_global_rect().end.y <= card.get_global_rect().end.y, "progress stays inside Continue")
+			var arrow: Control = card.get_node_or_null("Chevron")
+			assert_true(arrow != null, "Continue has a chevron")
+			if arrow != null:
+				assert_eq(arrow.mouse_filter, Control.MOUSE_FILTER_IGNORE)
+				for child_name in ["UnitTitle", "Detail", "Progress"]:
+					var content: Control = card.get_node(child_name)
+					assert_true(content.get_global_rect().end.x <= arrow.get_global_rect().position.x, "%s clears chevron" % child_name)
+	var course_icon: Control = home.get_node_or_null("Center/Form/Course/Icon")
+	assert_true(course_icon != null and course_icon.mouse_filter == Control.MOUSE_FILTER_IGNORE, "Course icon leaves the button clickable")
+	home.free()
+
+
+func test_long_review_and_mixed_course_summary_remain_readable():
+	var folder := "user://test_home_mixed_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var unit: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/course/rook.json"))
+	var names := ["new", "started", "mastered", "review"]
+	for name in names:
+		unit.id = name
+		var file := FileAccess.open(folder.path_join(name + ".json"), FileAccess.WRITE)
+		file.store_string(JSON.stringify(unit))
+	var index := FileAccess.open(folder.path_join("index.json"), FileAccess.WRITE)
+	index.store_string(JSON.stringify({"stages": [{"min_rating": 100, "max_rating": 3500, "units": ["new.json", "started.json", "mastered.json", "review.json"]}]}))
+	index = null
+	var progress := FileAccess.open(folder.path_join("progress.json"), FileAccess.WRITE)
+	progress.store_string(JSON.stringify({"rating": {"number": 1100, "site": "chess.com"}, "units": {"started": {"theory_opened": true}, "mastered": {"mastered_date": "2000-01-01"}, "review": {"mastered_date": "2000-01-01", "review_checks": [{"passed": false}]}}}))
+	progress = null
+	var course = load("res://core/course.gd").new(folder.path_join("progress.json"), folder.path_join("index.json"))
+	var home = load("res://ui/home.tscn").instantiate()
+	home.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	home.size = Vector2(800, 600)
+	Engine.get_main_loop().root.add_child(home)
+	home.configure(load("res://core/settings.gd").new(folder.path_join("settings.cfg")), course)
+	var summary: Label = home.get_node("Center/Form/Course/Summary")
+	assert_eq(summary.text, "4 units · 1 new · 1 in progress · 1 mastered · 1 needs review")
+	assert_true(summary.autowrap_mode != TextServer.AUTOWRAP_OFF, "mixed statuses wrap instead of clipping")
+	var lines := summary.get_theme_font("font").get_multiline_string_size(summary.text, HORIZONTAL_ALIGNMENT_RIGHT, summary.size.x, summary.get_theme_font_size("font_size"), -1, summary.autowrap_mode)
+	assert_true(lines.y <= summary.size.y, "all status lines fit the Course button")
+	var detail: Label = home.get_node("Center/Form/Continue/Detail")
+	var detail_width := detail.get_theme_font("font").get_string_size(detail.text, HORIZONTAL_ALIGNMENT_LEFT, -1, detail.get_theme_font_size("font_size")).x
+	assert_true(detail_width <= detail.size.x, "long review detail fits before the chevron")
+	for name in ["Icon", "Title", "Summary"]:
+		assert_eq(home.get_node("Center/Form/Course/" + name).mouse_filter, Control.MOUSE_FILTER_IGNORE)
+	home.show_missing("Engine unavailable")
+	home.get_node("Center/Form/Missing").hide()
+	assert_eq(home.get_node("Center/Form/Quick/OneZero/Caption").modulate.a, 1.0, "hiding the warning restores the normal appearance")
+	home.free()
+	Session.HistoryStorage.clean(folder)

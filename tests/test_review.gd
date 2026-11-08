@@ -2346,3 +2346,125 @@ func test_side_line_preserves_book_and_repertoire_context_from_game_prefix():
 		assert_eq(review._line_rows[0].get_icon(1), review._class_icon(label))
 		review._back_to_game()
 	main.free()
+
+func test_result_change_shows_link_and_adds_position_to_course():
+	var main = await _session(FakeTime.new())
+	var review = main.review
+	var fen := "4k3/8/8/8/4p3/R7/7r/4K3 w - - 0 1"
+	var game := Game.new(fen)
+	assert_true(game.play("a3a4"))
+	var probe = preload("res://tests/test_grader.gd").FakeProbe.new()
+	probe.answers[fen] = {"ok": true, "result": "draw"}
+	probe.answers[game.board.to_fen()] = {"ok": true, "result": "win"}
+	var path := "user://review_from_game_%d.json" % Time.get_ticks_usec()
+	var course = load("res://core/course.gd").new(path)
+	var unit := {"id": "rook-endgames", "title": "Rook endgames", "default_line_length": 3, "positions": []}
+	assert_true(review.get("own_game_probe") != null or "own_game_probe" in review, "review accepts a probe")
+	if "own_game_probe" in review:
+		review.own_game_probe = probe
+		review.own_game_course = course
+		review.own_game_unit = unit
+		var opened := []
+		review.unit_requested.connect(func(request): opened.append(request))
+		review.present(game, [180000], SETTINGS, "")
+		await Engine.get_main_loop().process_frame
+		var list: Tree = review.get_node("Margin/Content/ReviewBody/Side/Moves")
+		var rows := list.get_root().get_children()
+		assert_eq(rows.size(), 2)
+		if rows.size() == 2:
+			var marker: TreeItem = rows[1]
+			assert_true(marker.get_text(1).contains("this move turned draw into loss"))
+			assert_true(marker.get_text(1).contains("Practise in Rook endgames"))
+			assert_true(marker.get_expand_right(1) and not marker.is_selectable(1))
+			var click := InputEventMouseButton.new()
+			click.button_index = MOUSE_BUTTON_LEFT
+			click.pressed = true
+			click.position = list.get_item_area_rect(marker, 1).get_center()
+			list.gui_input.emit(click)
+			assert_eq(opened, [unit])
+		var saved: Array = course.practice_positions(unit)
+		assert_eq(saved.size(), 1)
+		if saved.size() == 1:
+			assert_eq(saved[0].fen, fen)
+			assert_eq(saved[0].goal, "hold")
+			assert_eq(saved[0].side, "w")
+			assert_eq(saved[0].line_length, 3)
+	DirAccess.remove_absolute(path)
+	main.free()
+
+func test_review_unit_request_opens_unit_page():
+	var main = await _session(FakeTime.new())
+	var unit: Dictionary = main.course._read_data("res://data/course/rook-endgames.json")
+	main.review.show()
+	main.review.unit_requested.emit(unit)
+	assert_true(main.unit_page.visible)
+	assert_true(not main.review.visible)
+	main.free()
+
+func test_stale_game_probe_does_not_add_positions_to_a_new_review():
+	var main = await _session(FakeTime.new())
+	var fen := "4k3/8/8/8/4p3/R7/7r/4K3 w - - 0 1"
+	var game := Game.new(fen)
+	game.play("a3a4")
+	var probe = preload("res://tests/test_grader.gd").FakeProbe.new()
+	probe.held = true
+	probe.answers[fen] = {"ok": true, "result": "draw"}
+	probe.answers[game.board.to_fen()] = {"ok": true, "result": "win"}
+	var path := "user://review_stale_%d.json" % Time.get_ticks_usec()
+	var course = load("res://core/course.gd").new(path)
+	var unit := {"id": "rook-endgames", "default_line_length": 3, "positions": []}
+	main.review.own_game_probe = probe
+	main.review.own_game_course = course
+	main.review.own_game_unit = unit
+	main.review.present(game, [180000], SETTINGS, "")
+	main.review.present(Game.new(), [], SETTINGS, "")
+	while not probe.pending.is_empty():
+		probe.reply()
+	assert_true(course.practice_positions(unit).is_empty())
+	assert_true(main.review.get_node("Margin/Content/ReviewBody/Side/Moves").get_root().get_children().is_empty())
+	DirAccess.remove_absolute(path)
+	main.free()
+
+func test_probe_failure_leaves_review_without_markers_or_saved_positions():
+	var main = await _session(FakeTime.new())
+	var game := Game.new("4k3/8/8/8/4p3/R7/7r/4K3 w - - 0 1")
+	game.play("a3a4")
+	var probe = preload("res://tests/test_grader.gd").FakeProbe.new()
+	var path := "user://review_unavailable_%d.json" % Time.get_ticks_usec()
+	var course = load("res://core/course.gd").new(path)
+	var unit := {"id": "rook-endgames", "default_line_length": 3, "positions": []}
+	main.review.own_game_probe = probe
+	main.review.own_game_course = course
+	main.review.own_game_unit = unit
+	main.review.present(game, [180000], SETTINGS, "")
+	var rows: Array = main.review.get_node("Margin/Content/ReviewBody/Side/Moves").get_root().get_children()
+	assert_eq(rows.size(), 1)
+	assert_true(course.practice_positions(unit).is_empty())
+	assert_true(not main.review.get_node("Margin/Content/AnalysisError").visible)
+	DirAccess.remove_absolute(path)
+	main.free()
+
+func test_winning_game_position_uses_unit_default_and_continue():
+	var main = await _session(FakeTime.new())
+	var fen := "4k3/8/8/8/4p3/R7/7r/4K3 w - - 0 1"
+	var game := Game.new(fen)
+	game.play("a3a4")
+	var probe = preload("res://tests/test_grader.gd").FakeProbe.new()
+	probe.answers[fen] = {"ok": true, "result": "win"}
+	probe.answers[game.board.to_fen()] = {"ok": true, "result": "draw"}
+	var path := "user://review_continue_%d.json" % Time.get_ticks_usec()
+	var course = load("res://core/course.gd").new(path)
+	course.save_rating(1200, "chess.com")
+	var unit: Dictionary = course.units()[0]
+	main.review.own_game_probe = probe
+	main.review.own_game_course = course
+	main.review.own_game_unit = unit
+	main.review.present(game, [180000], SETTINGS, "")
+	var target: Dictionary = course.continue_target(int(Time.get_unix_time_from_system()))
+	assert_eq(target.kind, "from_game")
+	if target.kind == "from_game":
+		assert_eq(target.position.fen, fen)
+		assert_eq(target.position.goal, "win")
+		assert_eq(target.position.line_length, unit.default_line_length)
+	DirAccess.remove_absolute(path)
+	main.free()

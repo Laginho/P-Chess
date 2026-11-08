@@ -1,7 +1,7 @@
 ﻿extends SceneTree
 
 # The launcher must set the data root before Godot starts, including its own log.
-const BOARDS := ["Main", "NameDialog", "Searching", "Game", "GamePanelStates", "GameSidePanel", "GameOver", "GameOverStates", "GameOverCard", "History", "Review", "ReviewAnalysing", "ReviewNotAnalysed", "ReviewSmall", "ReviewLegend", "Profile", "Repertoire", "OpeningPicker", "RepertoireEditor", "Board", "ClassIcon", "ClassLegend", "Settings", "Setup", "PromotionPicker", "RepertoireImport"]
+const BOARDS := ["Main", "CourseMap", "Unit", "Theory", "SolvingEntry", "SolvingFeedback", "PlayoutStart", "PlayoutEnd", "TestStart", "TestResult", "NameDialog", "Searching", "Game", "GamePanelStates", "GameSidePanel", "GameOver", "GameOverStates", "GameOverCard", "History", "Review", "ReviewAnalysing", "ReviewNotAnalysed", "ReviewSmall", "ReviewLegend", "Profile", "Repertoire", "OpeningPicker", "RepertoireEditor", "Board", "ClassIcon", "ClassLegend", "Settings", "Setup", "PromotionPicker", "RepertoireImport"]
 const CATALOG := """eco	name	pgn
 B12	Caro-Kann Defense: Advance Variation, Short Variation	1. e4 c6 2. d4 d5 3. e5 Bf5 4. Nf3 e6 5. Be2 c5
 B12	Caro-Kann Defense: Advance Variation, Tal Variation	1. e4 c6 2. d4 d5 3. e5 Bf5 4. h4 h5
@@ -144,6 +144,47 @@ func capture() -> void:
  if board not in ["Main", "NameDialog"]:
   main.name_dialog.hide()
  match board:
+  "Main":
+   main.course.save_rating(1600, "chess.com")
+   var unit: Dictionary = main.course.units()[0]
+   main.course.open_theory(unit)
+   var practice: Array = main.course.practice_positions(unit)
+   for i in mini(4, practice.size()):
+    main.course.record_commit(unit, practice[i], true)
+   main.get_node("Home").refresh_continue()
+  "CourseMap", "Unit", "Theory", "SolvingEntry":
+   main.course.save_rating(1600, "chess.com")
+   main._show_course_map()
+   if board in ["Unit", "Theory", "SolvingEntry"] and not main.course.units().is_empty():
+    main._show_unit(main.course.units()[0])
+    if board == "Theory":
+     main.unit_page.part_requested.emit(main.course.units()[0], "theory")
+    elif board == "SolvingEntry":
+     main.unit_page.part_requested.emit(main.course.units()[0], "solving")
+  "SolvingFeedback":
+   _solving_feedback(main, state)
+  "PlayoutStart", "PlayoutEnd":
+   main.course.save_rating(1600, "chess.com")
+   var unit: Dictionary = main.course.units()[0]
+   main._show_unit(unit)
+   main._show_course_part(unit, "playouts")
+   if board == "PlayoutEnd":
+    var position: Dictionary = unit.playouts[0]
+    var played = load("res://core/game.gd").new(position.fen)
+    var move: String = played.board.legal_moves()[0]
+    var san: String = played.board.san(move)
+    played.play(move)
+    main.playout.present_end(position, played, "Play-out failed", "✗ %s changed the result. Keep the win instead." % san, move, true)
+  "TestStart", "TestResult":
+   main.course.save_rating(1600, "chess.com")
+   var unit: Dictionary = main.course.units()[0]
+   main._show_unit(unit)
+   main._show_course_part(unit, "test")
+   if board == "TestResult":
+    var positions := []
+    for position in main.course.draw_test_positions(unit):
+     positions.append({"position": position, "solved": positions.size() < 4, "your_move": "Rc4", "best_move": "Rc5"})
+    main.pass_test.present_result({"passed": false, "score": 4, "positions": positions, "playouts": [true, false]})
   "Searching":
    main.get_node("Home").hide()
    main.searching.present(SETTINGS)
@@ -322,3 +363,35 @@ func _write_profile_history() -> void:
   file = FileAccess.open("user://analysis/%s.pgn.json" % stem, FileAccess.WRITE)
   file.store_string(JSON.stringify({"engine_version": "Stockfish 19", "node_budget": 3000000, "positions": positions}))
   file.close()
+
+
+# Scripted tablebase answers keep feedback captures independent of installed tables.
+class FeedbackProbe extends RefCounted:
+ var answers := {}
+ func probe(fen: String, callback: Callable) -> void:
+  callback.call(answers[fen])
+
+func _solving_feedback(main, state: String) -> void:
+ var fen := "4K1k1/4P3/8/8/8/8/7r/R7 w - - 0 1"
+ var unit := {"id": "capture-feedback", "title": "Rook endgames", "positions": [
+  {"id": "lucena", "pool": "practice", "fen": fen, "side": "w", "line_length": 2, "goal": "win"}]}
+ var probe := FeedbackProbe.new()
+ var board = load("res://core/board.gd").from_fen(fen)
+ probe.answers[board.to_fen()] = {"ok": true, "result": "win", "best": "a1d1", "moves": {"a1d1": {"result": "win", "dtz": 5}}}
+ board.make_move("a1d1")
+ probe.answers[board.to_fen()] = {"ok": true, "result": "loss", "best": "g8h7", "moves": {"g8h7": {"result": "loss", "dtz": 4}}}
+ board.make_move("g8h7")
+ probe.answers[board.to_fen()] = {"ok": true, "result": "win", "best": "e8d7" if state == "solved" else "d1d4", "moves": {
+  "e8d7": {"result": "win", "dtz": 3 if state == "solved" else 99}, "d1d4": {"result": "win", "dtz": 3}}}
+ board.make_move("d1d4")
+ probe.answers[board.to_fen()] = {"ok": true, "result": "loss", "best": "h7g6", "moves": {"h7g6": {"result": "loss", "dtz": 2}}}
+ board.make_move("h7g6")
+ probe.answers[board.to_fen()] = {"ok": true, "result": "win", "best": "e8d7", "moves": {"e8d7": {"result": "win", "dtz": 1}}}
+ main._show_unit(unit)
+ main._show_course_part(unit, "solving")
+ main.solving.probe = probe
+ for move in ["a1d1", "g8h7", "e8d7"]:
+  main.solving.board._commit(move, false)
+ main.solving.find_child("Commit", true, false).pressed.emit()
+ for i in 3:
+  main.solving.get_node("Playback").timeout.emit()
