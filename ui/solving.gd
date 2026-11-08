@@ -55,6 +55,11 @@ func present_test(store, selected: Dictionary, drawn: Array, index: int, setting
 	_open_position(positions[index])
 
 
+func present_review(store, selected: Dictionary, drawn: Array, index: int, settings = null) -> void:
+	present_test(store, selected, drawn, index, settings)
+	side.get_node("Header/Heading/UnitName").text = "%s · Review check" % unit.get("title", "")
+
+
 func _open_position(selected: Dictionary) -> void:
 	_generation += 1
 	$Playback.stop()
