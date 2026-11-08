@@ -192,3 +192,35 @@ func save_clock_choice(choice: String) -> bool:
 		return false
 	_progress = next
 	return true
+
+
+func open_theory(unit: Dictionary) -> bool:
+	var id = unit.get("id", "")
+	if not id is String or id.is_empty():
+		return false
+	var result := _read()
+	if not result.ok:
+		return false
+	var next: Dictionary = result.data
+	var all_units = next.get("units", {})
+	if not all_units is Dictionary:
+		return false
+	var saved = all_units.get(id, {})
+	if not saved is Dictionary:
+		return false
+	saved.theory_opened = true
+	all_units[id] = saved
+	next.units = all_units
+	var temporary := path + ".tmp"
+	var file := FileAccess.open(temporary, FileAccess.WRITE)
+	if file == null:
+		return false
+	file.store_string(JSON.stringify(next, "\t"))
+	file.flush()
+	var error := file.get_error()
+	file = null
+	if error != OK or DirAccess.rename_absolute(temporary, path) != OK:
+		DirAccess.remove_absolute(temporary)
+		return false
+	_progress = next
+	return true
