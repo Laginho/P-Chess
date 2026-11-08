@@ -1,5 +1,5 @@
 # CLOCK-003: Play-out time controls: 5+5 and no clock
-Stage: to-review
+Stage: done
 Blocked by: none
 Review: agent
 Difficulty: normal
@@ -40,3 +40,20 @@ Play-outs run at 5+5 or with no clock, chosen on the unit page (spec §L8). The 
 - Criterion 4 ✅ Independent criteria check: existing clock tests remain unchanged; the full gate passed 574 tests with 0 failures. The headless run skipped the graphical pixel check and six live Lc0 checks because the engine was unavailable.
 
 Gate evidence: /run/media/lage/New Volume/Scratch/clock-003-gate.json
+
+#### Resolution (2026-11-07)
+Verdict: Approve
+
+- Standards: independent read-only review (`clock_standards`) found 0 documented-standard violations and 0 actionable baseline smells. Production changes stay within Primary files; tests and production are in separate commits. All pre-existing clock tests and assertions remain unchanged.
+- Spec: independent read-only review (`clock_spec`) found 0 missing requirements, scope changes or regressions. All four numbered criteria pass:
+  1. ✅ `core/clock.gd:13,34-38` initializes both sides at 300000 ms with a 5000 ms increment. The existing `moved()` implementation applies it with the same first-move rule as `3+2`; `tests/test_clock.gd:76-85` checks both initial times and both increments.
+  2. ✅ `core/clock.gd:52-53` leaves an untimed clock stopped, so `left()` stays at its initial zero and `tick()` cannot emit `low_time` or `flagged`. `ui/clock.gd:28` displays blank text. `tests/test_clock.gd:88-115` covers a day of elapsed time, ordinary moves, a premove, stopping, both signals and the display.
+  3. ✅ `Clock.CONTROLS` still contains exactly `1+0`, `3+2`, `5+0`; `PLAY_OUT_CONTROLS` holds the new choices separately. Setup's enumeration and Home's quick-play buttons remain unchanged; `tests/test_clock.gd:29-45` checks both visible lists.
+  4. ✅ Existing clock tests are byte-for-byte unchanged and pass in the full gate.
+- Examined the complete diff, commit contents, clock construction and all callers of its changed behavior: first-move/increment/flag/premove paths, `left()`/`tick()`/`stop()`, clock rendering, Setup/Home, `ui/main.gd` input and Maia callbacks, Maia's time-model lookup, PGN serialization and Review's control matching/move-time calculation. Unknown controls retain their previous failure behavior. Existing game, Maia, PGN and Review paths still use sandbox controls and receive the same values as before. No course screen, end-to-end play-out, graphical appearance, exported build or live Lc0 behavior was exercised.
+- Files: `core/clock.gd`, `ui/clock.gd`, `tests/test_clock.gd`; the additional LEARN-007 change is an integration note. Review authored no production behavior and changes only this tracker record and the ledger.
+- Red-green proof: test-only `8c4fd99` precedes production-only `5c19d0c`; the retained red log reports the unknown `5+5` control and failed initial/increment assertions. Test-only `dd0e990` precedes production-only `ab2857c`; its retained red log reports the unknown `none` control, unwanted signals and failed display assertion. Test-only `e50270a` checks the preserved sandbox lists; its mutation log shows both visible lists failing when an extra control is introduced. The final gate passes all these checks.
+- Gate: reused the run on committed code `e50270a`: `godot --headless -s tests/run.gd`, exit 0, 574 passed, 0 failed. Seven checks printed skips: one graphical pixel check and six requiring Lc0. `Assert-GateEvidence` validated the receipt, log hash, recorded exit status and unchanged code, including after integration. Rebase was already current; merge `a58747d` had no conflicts and its tree exactly matches the reviewed ticket branch.
+
+Acceptance: pending | Clock behavior and blank display pass at the approved automated seams. End-to-end course play-outs remain with LEARN-007; the graphical and live-engine checks above were not performed.
+Disclosure: pending | release | [LEARN-007](111-LEARN-007-play-outs.md), CLOCK-003 integration note: adapt the existing main/Maia paths that index sandbox-only `Clock.CONTROLS` before exposing course games with `5+5` or `none`, and verify both choices in a real play-out. An untimed clock's stable `left()` value is zero. This does not block integrating CLOCK-003's clock capability into the session.
