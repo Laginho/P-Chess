@@ -123,7 +123,7 @@ function Get-PinnedDownload([string]$Url, [string]$Path, [string]$Hash, [switch]
     try {
         if ($StageOutsideDestination) {
             # A killed transfer must not leave an incomplete table in the probe's folder.
-            $stagingDir = Join-Path ([IO.Path]::GetTempPath()) ("P-Chess-tablebase-" + [guid]::NewGuid())
+            $stagingDir = Join-Path (Split-Path -Parent (Split-Path -Parent $Path)) (".tablebase-staging-" + [guid]::NewGuid())
             [IO.Directory]::CreateDirectory($stagingDir) | Out-Null
             $downloadPath = Join-Path $stagingDir ([IO.Path]::GetFileName($Path))
         }
@@ -133,7 +133,7 @@ function Get-PinnedDownload([string]$Url, [string]$Path, [string]$Hash, [switch]
             throw "Download did not create $downloadPath"
         }
         if ($StageOutsideDestination) {
-            Move-Item -LiteralPath $downloadPath -Destination $Path
+            [IO.File]::Move($downloadPath, $Path)
         }
     } catch {
         # Interrupted transfers must not become a cached file on the next run.
