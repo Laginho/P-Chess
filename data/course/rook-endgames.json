@@ -25,7 +25,7 @@
       "goal": "win",
       "line_length": 2,
       "pool": "practice",
-      "source": "Hand-built setup"
+      "source": "Generated setup, selected for course"
     },
     {
       "id": "practice-02",
@@ -70,7 +70,7 @@
       "goal": "win",
       "line_length": 4,
       "pool": "practice",
-      "source": "Hand-built setup"
+      "source": "Generated setup, selected for course"
     },
     {
       "id": "practice-07",
@@ -79,7 +79,7 @@
       "goal": "win",
       "line_length": 2,
       "pool": "practice",
-      "source": "Hand-built setup"
+      "source": "Generated setup, selected for course"
     },
     {
       "id": "practice-08",
@@ -115,7 +115,7 @@
       "goal": "win",
       "line_length": 3,
       "pool": "practice",
-      "source": "Hand-built setup"
+      "source": "Generated setup, selected for course"
     },
     {
       "id": "practice-12",
@@ -142,7 +142,7 @@
       "goal": "win",
       "line_length": 3,
       "pool": "test",
-      "source": "Hand-built setup"
+      "source": "Generated setup, selected for course"
     },
     {
       "id": "test-03",
@@ -151,7 +151,7 @@
       "goal": "win",
       "line_length": 4,
       "pool": "test",
-      "source": "Hand-built setup"
+      "source": "Generated setup, selected for course"
     },
     {
       "id": "test-04",
@@ -169,7 +169,7 @@
       "goal": "win",
       "line_length": 3,
       "pool": "test",
-      "source": "Hand-built setup"
+      "source": "Generated setup, selected for course"
     },
     {
       "id": "test-06",
@@ -178,7 +178,7 @@
       "goal": "win",
       "line_length": 4,
       "pool": "test",
-      "source": "Hand-built setup"
+      "source": "Generated setup, selected for course"
     },
     {
       "id": "test-07",
@@ -214,7 +214,7 @@
       "goal": "win",
       "line_length": 2,
       "pool": "test",
-      "source": "Hand-built setup"
+      "source": "Generated setup, selected for course"
     },
     {
       "id": "test-11",
@@ -223,7 +223,7 @@
       "goal": "win",
       "line_length": 3,
       "pool": "test",
-      "source": "Hand-built setup"
+      "source": "Generated setup, selected for course"
     },
     {
       "id": "test-12",
@@ -232,7 +232,7 @@
       "goal": "win",
       "line_length": 4,
       "pool": "test",
-      "source": "Hand-built setup"
+      "source": "Generated setup, selected for course"
     },
     {
       "id": "test-13",
@@ -250,7 +250,7 @@
       "goal": "win",
       "line_length": 3,
       "pool": "test",
-      "source": "Hand-built setup"
+      "source": "Generated setup, selected for course"
     },
     {
       "id": "test-15",
@@ -259,7 +259,7 @@
       "goal": "win",
       "line_length": 4,
       "pool": "test",
-      "source": "Hand-built setup"
+      "source": "Generated setup, selected for course"
     },
     {
       "id": "test-16",
@@ -277,7 +277,7 @@
       "goal": "win",
       "line_length": 3,
       "pool": "test",
-      "source": "Hand-built setup"
+      "source": "Generated setup, selected for course"
     },
     {
       "id": "test-18",
@@ -286,7 +286,7 @@
       "goal": "win",
       "line_length": 4,
       "pool": "test",
-      "source": "Hand-built setup"
+      "source": "Generated setup, selected for course"
     }
   ],
   "playouts": [
@@ -295,14 +295,14 @@
       "fen": "R7/8/4k3/1P6/K7/8/8/2r5 w - - 0 1",
       "side": "w",
       "goal": "convert",
-      "source": "Hand-built setup"
+      "source": "Generated setup, selected for course"
     },
     {
       "id": "playout-02",
       "fen": "8/8/8/6R1/8/2K1p3/4rk2/8 b - - 0 1",
       "side": "b",
       "goal": "convert",
-      "source": "Hand-built setup"
+      "source": "Generated setup, selected for course"
     },
     {
       "id": "playout-03",
@@ -325,7 +325,7 @@
       "fen": "8/8/8/6r1/3P4/2K2k2/R7/8 w - - 0 1",
       "side": "w",
       "goal": "convert",
-      "source": "Hand-built setup"
+      "source": "Generated setup, selected for course"
     },
     {
       "id": "test-playout-02",
