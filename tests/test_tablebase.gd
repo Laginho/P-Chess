@@ -444,6 +444,36 @@ func test_fragmented_or_batched_handshake_and_search_replies_preserve_order():
 		_cleanup(setup)
 
 
+func test_callback_polling_rejects_idle_output_before_the_next_search_once():
+	for unexpected in ["info string tbmove a1h1 win 1",
+			"info string tberror missing table", "bestmove a1h1"]:
+		for queue_timing in ["none", "before callback", "during callback"]:
+			var setup := _setup()
+			if setup.is_empty():
+				return
+			var received := [[], [], [], []]
+			setup.probe.probe(RES_FEN, func(answer):
+				received[0].append(answer)
+				if queue_timing == "during callback":
+					setup.probe.probe(RES_FEN, func(next): received[1].append(next))
+				# Output arrives as the client reenters the public poll method,
+				# before the bridge has finished dispatching the first bestmove.
+				setup.bridge.output([unexpected]))
+			if queue_timing == "before callback":
+				setup.probe.probe(RES_FEN, func(answer): received[1].append(answer))
+			_answer(setup)
+			assert_eq(received[0].size(), 1, unexpected)
+			if received[0].size() == 1:
+				assert_eq(received[0][0].ok, true, "the completed probe stays successful")
+			if queue_timing == "none":
+				setup.probe.probe(RES_FEN, func(answer): received[1].append(answer))
+			_answer(setup)
+			setup.probe.probe(RES_FEN, func(answer): received[2].append(answer))
+			_answer(setup)
+			_assert_failed_queries(setup, received.slice(1), unexpected + ": " + queue_timing)
+			_cleanup(setup)
+
+
 func test_requests_queue_and_callback_reentry_preserves_the_next_answer():
 	var setup := _setup()
 	if setup.is_empty():
