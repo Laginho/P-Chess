@@ -1,5 +1,5 @@
 # LEARN-007: Play-outs against Maia
-Stage: to-review
+Stage: reviewing
 Blocked by: CORE-007, CLOCK-003, LEARN-004, LEARN-006
 Review: agent
 Difficulty: normal
@@ -44,6 +44,8 @@ The unit's four play-outs (spec §L8, design `PlayoutStart.dc.html`, `PlayoutEnd
 - `tests/test_course.gd`: recording passes; play-outs done at 4 (red: no recording).
 
 ## Comments
+
+- Stage 3 documentation correction: `_show_result` now handles sandbox game endings; course endings use `_finish_playout`. Corrected its old all-games comment without changing behavior. The flow requires a fresh bound-gate receipt after this source-file comment change.
 
 - Criteria check by a fresh-context agent, rechecked after fixes:
   - 1 ✅ `ui/playout.gd:97`; `test_playout_start_describes_task_rules_and_all_states_including_replay` and `test_playout_starts_from_unit_and_failing_move_ends_before_maia_without_history`.

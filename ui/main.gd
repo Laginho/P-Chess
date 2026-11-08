@@ -927,7 +927,7 @@ func _on_flagged(side: String) -> void:
 		_show_result()
 
 
-# Every way a game ends lands here, after the game has its result.
+# Every way a sandbox game ends lands here, after the game has its result.
 func _show_result() -> void:
 	if _playout_active or playout.visible:
 		return
