@@ -45,6 +45,8 @@ The unit's four play-outs (spec §L8, design `PlayoutStart.dc.html`, `PlayoutEnd
 
 ## Comments
 
+- Judge test harness correction: the 29-move fixture had no pawn and therefore correctly passed early; the revised position retains a pawn to isolate the move-count boundary.
+
 - 2026-11-07 Written from `.scratch/learning/spec.md` §L4, §L8. "Not saved to History" is a spec decision (§L8) Bruno can reverse.
 
 - 2026-11-07 CLOCK-003 integration note: the clock accepts `5+5` and `none` via `Clock.PLAY_OUT_CONTROLS`; `Clock.CONTROLS` remains the three sandbox controls. The current game and Maia paths index `Clock.CONTROLS` directly (`ui/main.gd:678,771`, `bot/maia_player.gd:143`), so the play-out integration must handle its controls before reusing those paths. An untimed clock's stable `left()` value is 0.
