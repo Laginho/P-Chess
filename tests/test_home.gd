@@ -556,3 +556,25 @@ func test_rating_dialog_displays_the_rating_as_a_sentence():
 	assert_true(number.get_global_rect().end.x <= middle.get_global_rect().position.x, "'in rapid on' follows the rating")
 	assert_true(middle.get_global_rect().end.x <= site.get_global_rect().position.x, "site completes the sentence")
 	dialog.free()
+
+
+func test_course_summary_tracks_available_units_and_progress():
+	var folder := "user://test_home_summary_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var path := folder.path_join("course.json")
+	var course = load("res://core/course.gd").new(path, "res://tests/fixtures/course/course.json")
+	var home = load("res://ui/home.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(home)
+	home.configure(load("res://core/settings.gd").new(folder.path_join("settings.cfg")), course)
+	var summary: Label = home.get_node_or_null("Center/Form/Course/Summary")
+	assert_true(summary != null, "Course displays a summary")
+	if summary != null:
+		assert_eq(summary.text, "0 units")
+		assert_true(course.save_rating(1100, "chess.com"))
+		home.refresh_continue()
+		assert_eq(summary.text, "1 unit · 1 new")
+		assert_true(course.open_theory(course.units()[0]))
+		home.refresh_continue()
+		assert_eq(summary.text, "1 unit · 1 in progress")
+	home.free()
+	Session.HistoryStorage.clean(folder)

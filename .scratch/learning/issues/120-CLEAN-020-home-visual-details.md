@@ -1,5 +1,5 @@
 # CLEAN-020: Align Home's remaining visual details with the learning canvas
-Stage: to-implement
+Stage: implementing
 Status: ready-for-agent
 Blocked by: none
 Review: human
