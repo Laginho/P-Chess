@@ -1,22 +1,22 @@
 # CLEAN-017: Share the course progress persistence sequence
 Stage: to-implement
-Status: needs-triage
+Status: ready-for-agent
 Blocked by: LEARN-002
 Review: agent
 Difficulty: normal
 
 - Primary files:
-  - core/course.gd (the shared persistence sequence in save_rating and save_clock_choice)
+  - core/course.gd (the shared persistence sequence in save_rating, save_clock_choice and open_theory)
   - tests/test_course.gd (existing persistence coverage, test-only)
 
 #### What to build
 
-`save_clock_choice()` repeats the read-preserve-write sequence already used by `save_rating()`: reread the current file, refuse overwriting unreadable data, preserve unrelated fields, write a temporary file, flush and rename it, then publish the in-memory progress. Consider sharing that sequence so future persistence fixes cannot drift between the two setters. Preserve player behavior.
+`save_clock_choice()` and `open_theory()` repeat the read-preserve-write sequence used by `save_rating()`: reread the current file, refuse overwriting unreadable data, preserve unrelated fields, write a temporary file, flush and rename it, then publish the in-memory progress. Share that sequence so future persistence fixes cannot drift. Preserve player behavior.
 
 #### Acceptance criteria
 
-1. Rating and clock saves use one shared persistence sequence while retaining their distinct validation.
-2. Both setters preserve unrelated progress and refuse invalid changes or overwriting unreadable data; a failed write leaves the previously published in-memory progress intact.
+1. Rating, clock and theory saves use one shared persistence sequence while retaining their distinct validation.
+2. All three operations preserve unrelated progress and refuse invalid changes or overwriting unreadable data; a failed write leaves the previously published in-memory progress intact.
 3. Existing rating conversion, stage selection and clock behavior stay unchanged, and the bound gate passes.
 
 #### Verification
@@ -32,3 +32,5 @@ Difficulty: normal
 - 2026-11-08 Opened by the Standards review of [LEARN-002](106-LEARN-002-course-map-and-unit-page.md#resolution-2026-11-08): possible Duplicated Code in `core/course.gd:174–194`, compared with `save_rating()`. This is a maintenance judgment, not a criterion failure or an integration/release condition. The separate criterion-2 status defect remains on reopened LEARN-002.
 
 - 2026-11-08 [LEARN-003 closing review](107-LEARN-003-theory-pointer.md#resolution-2026-11-08): `open_theory()` at `core/course.gd:197–226` adds a third caller of the same read-preserve-write/flush/rename sequence. Include it when triaging this optional extraction and preserve its validation, unrelated unit progress and corrupt-file refusal. No current behavior defect or integration/release condition was found; this note leaves the contract for stage-1 triage to settle.
+
+- Triage by the driver: ready-for-agent — all three operations repeat the same persistence sequence; sharing it reduces drift while preserving each operation's validation. Include theory in the contract and existing public-interface coverage. No concrete behavior defect was identified, so extraction needs no new regression test.
