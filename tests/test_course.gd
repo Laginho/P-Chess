@@ -1,6 +1,43 @@
 extends "res://tests/run.gd".Test
 
 
+func test_pass_test_draw_and_mastery_persist_across_attempts():
+	var path := "user://course_pass_test_%d.json" % Time.get_ticks_usec()
+	var script = load("res://core/course.gd")
+	var course = script.new(path)
+	var unit := {"id": "rook", "positions": [{"id": "practice", "pool": "practice"}]}
+	for i in 12:
+		unit.positions.append({"id": "test-%d" % i, "pool": "test"})
+	assert_true(course.has_method("draw_test_positions"))
+	assert_true(course.has_method("record_test_attempt"))
+	assert_true(course.has_method("test_attempts"))
+	if not course.has_method("draw_test_positions") or not course.has_method("record_test_attempt") or not course.has_method("test_attempts"):
+		return
+	var first: Array = course.draw_test_positions(unit)
+	assert_eq(first.size(), 6)
+	for position in first:
+		assert_eq(position.pool, "test")
+	var results := []
+	for i in 6:
+		results.append({"position": first[i], "solved": i < 5})
+	assert_true(course.record_test_attempt(unit, results, [true, true], "2026-11-08"))
+	var second: Array = course.draw_test_positions(unit)
+	assert_eq(second.size(), 6)
+	for position in second:
+		assert_true(not first.has(position), "prefer positions from outside previous attempt")
+	assert_eq(course.unit_progress(unit).status, "mastered")
+	assert_true(course.record_test_attempt(unit, results, [true, false], "2026-11-09"))
+	course = script.new(path)
+	var attempts: Array = course.test_attempts(unit)
+	assert_eq(attempts.size(), 2)
+	assert_true(attempts[0].passed and not attempts[1].passed)
+	assert_eq(attempts[0].date, "2026-11-08")
+	assert_eq(course.unit_progress(unit).status, "mastered")
+	var saved = JSON.parse_string(FileAccess.get_file_as_string(path))
+	assert_eq(saved.units.rook.mastered_date, "2026-11-08")
+	DirAccess.remove_absolute(path)
+
+
 func test_playout_passes_are_persistent_and_counted_once():
 	var path := "user://course_playout_pass_%d.json" % Time.get_ticks_usec()
 	var script = load("res://core/course.gd")
