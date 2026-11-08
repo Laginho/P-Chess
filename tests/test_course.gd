@@ -1,6 +1,29 @@
 extends "res://tests/run.gd".Test
 
 
+func test_continue_advances_to_the_next_unit_after_mastery():
+	var folder := "user://course_next_unit_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var index := folder.path_join("course.json")
+	var progress := folder.path_join("progress.json")
+	var file := FileAccess.open(index, FileAccess.WRITE)
+	file.store_string(JSON.stringify({"stages": [{"min_rating": 0, "max_rating": 3500, "units": ["first.json", "second.json"]}]}))
+	file = FileAccess.open(folder.path_join("first.json"), FileAccess.WRITE)
+	file.store_string(JSON.stringify({"id": "first", "positions": []}))
+	file = FileAccess.open(folder.path_join("second.json"), FileAccess.WRITE)
+	file.store_string(JSON.stringify({"id": "second", "positions": []}))
+	file = FileAccess.open(progress, FileAccess.WRITE)
+	file.store_string(JSON.stringify({"rating": {"number": 1000, "site": "chess.com"}, "units": {"first": {"mastered_date": "2026-01-01"}}}))
+	file = null
+	var course = load("res://core/course.gd").new(progress, index)
+	var target: Dictionary = course.continue_target(int(Time.get_unix_time_from_datetime_string("2026-01-02T00:00:00")))
+	assert_eq(target.get("kind"), "theory")
+	assert_eq(target.get("unit", {}).get("id"), "second")
+	for name in ["course.json", "first.json", "second.json", "progress.json"]:
+		DirAccess.remove_absolute(folder.path_join(name))
+	DirAccess.remove_absolute(folder)
+
+
 func test_continue_prefers_game_positions_then_unfinished_parts():
 	var path := "user://course_order_%d.json" % Time.get_ticks_usec()
 	var script = load("res://core/course.gd")
