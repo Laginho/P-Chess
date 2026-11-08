@@ -1,6 +1,6 @@
 # LEARN-011: A way back to the unit during a play-out
 Stage: to-implement
-Status: needs-triage
+Status: ready-for-agent
 Blocked by: none
 Review: agent
 Difficulty: normal
@@ -33,3 +33,4 @@ An ordinary course play-out (from the unit page) hides New game, Rematch, Resign
 
 - 2026-11-08 Opened by the PR #44 review loop (foreman) as the refutation of review finding 3: new behaviour beyond LEARN-007/LEARN-008's criteria, which define exits only on the end card.
 - 2026-11-08 Narrowed by the PR #44 review loop: pass-test play-outs already show "Back to the unit" (`ui/main.gd:707`), so the ticket covers ordinary play-outs only, and criterion 1 now matches the test section (the unit page).
+- Triage by the driver: ready-for-agent — ordinary play-outs have no way back while active; the existing unit and button seams cover the fix.
