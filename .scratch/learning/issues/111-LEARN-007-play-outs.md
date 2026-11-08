@@ -45,6 +45,8 @@ The unit's four play-outs (spec §L8, design `PlayoutStart.dc.html`, `PlayoutEnd
 
 ## Comments
 
+- Updated `test_course_navigation_unit_progress_and_clock` for the new play-out screen: return from it before continuing the existing navigation assertions. Disabling its Back connection makes the updated test fail.
+
 - Judge test harness correction: the 29-move fixture had no pawn and therefore correctly passed early; the revised position retains a pawn to isolate the move-count boundary.
 
 - 2026-11-07 Written from `.scratch/learning/spec.md` §L4, §L8. "Not saved to History" is a spec decision (§L8) Bruno can reverse.

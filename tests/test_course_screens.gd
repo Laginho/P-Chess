@@ -114,6 +114,9 @@ func test_course_navigation_unit_progress_and_clock():
 		var solving = main.get_node_or_null("Solving")
 		if solving != null and solving.visible:
 			solving.find_child("Back", true, false).pressed.emit()
+		var playout = main.get_node_or_null("Playout")
+		if playout != null and playout.visible:
+			playout.find_child("Back", true, false).pressed.emit()
 	assert_eq(requests, [["rook-endgames", "theory"], ["rook-endgames", "solving"], ["rook-endgames", "playouts"], ["rook-endgames", "test"]])
 	assert_true(unit.visible, "a part without a screen leaves the unit visible")
 	unit.find_child("NoClock", true, false).pressed.emit()
