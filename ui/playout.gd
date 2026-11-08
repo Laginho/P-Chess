@@ -90,7 +90,10 @@ func present_start(course, unit: Dictionary, index: int) -> void:
 	heading.text = "Play-out %d of 4" % (index + 1)
 	var labels := []
 	for i in unit.playouts.size():
-		labels.append("%d %s" % [i + 1, "Passed" if course.playout_passed(unit, unit.playouts[i]) else ("Current" if i == index else "To do")])
+		var state := "Passed" if course.playout_passed(unit, unit.playouts[i]) else ("Current" if i == index else "To do")
+		if i == index and state == "Passed":
+			state += " (Current)"
+		labels.append("%d %s" % [i + 1, state])
 	states.text = "   ·   ".join(labels)
 	var task := "win" if position.goal == "convert" else "draw"
 	details.text = "%s to play and %s\nMaia %s  ·  %s" % ["White" if position.side == "w" else "Black", task, course.maia_level().trim_prefix("maia-"), "No clock" if course.clock_choice() == "none" else "5+5"]
