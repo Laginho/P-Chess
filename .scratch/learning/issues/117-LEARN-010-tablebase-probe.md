@@ -1,5 +1,5 @@
 # LEARN-010: The tablebase probe (Fathom helper)
-Stage: to-implement
+Stage: implementing
 Blocked by: CI-005
 Review: agent
 Difficulty: hard
@@ -201,3 +201,10 @@ Next stage 2 addresses only the ❌ items: add regression tests at the approved 
 Acceptance: pending | criterion 4 repair; actual Windows CI, accented-folder release startup and LEARN-006 Lucena grading remain pending as already documented under Verification.
 Disclosure: pending | integration | [Stage-3 review](#resolution-2026-11-08): criterion 4 must fail closed for both malformed-output cases before this ticket integrates.
 Disclosure: pending | release | [Verification](#verification): Windows CI execution, release startup in an accented folder and LEARN-006 Lucena grading remain unverified; Linux evidence does not claim those checks passed.
+
+
+### Stage 2 repair after review (2026-11-08)
+
+- Resuming the existing `LEARN-010` branch at `c2eeafe`; only criterion 4's ❌ items remain. Existing helper, build, packaging and real-file evidence are retained. Callers affected: `probe` completion, `poll` stdout dispatch and queued callbacks on parser failure; `start` must preserve handshake/barrier handling. Degenerate inputs include unknown/empty stdout, malformed completion tokens, queued requests and later requests after failure. `engine/uci.gd` remains unchanged.
+- Regression tests at the approved fake-UCI seam: `test_malformed_completion_tokens_fail_closed_after_a_complete_move_set` reproduces both `bestmoves` and `bestmoveX`; `test_unknown_stdout_fails_active_queued_and_later_probes_once` reproduces unknown, empty and malformed stdout before valid completion. The harness now polls through the adapter's public `poll()` and retains the reader's original queue reference, matching UCI's worker-thread capture. All pre-existing assertions remain unchanged.
+- Red proof: rebuilt the pinned helper and restored the ignored HDD tablebase symlink. Focused run: **12 passed, 2 failed**, exit 1; all three real-file tests ran. Failures are successful callbacks/available probes for malformed output and unanswered pending requests, matching the review. Log: `/run/media/lage/New Volume/Scratch/LEARN-010/reopen-red.log`.

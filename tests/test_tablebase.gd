@@ -11,17 +11,21 @@ const MATERIALS := ["KBvK", "KNvK", "KPvK", "KQRvK", "KQRvKR", "KQvK", "KQvKR",
 class FakeUCI extends UCI:
 	var commands := "user://tb-commands-%d.txt" % Time.get_ticks_usec()
 	var child := {}
+	var reader_lines: Array
+	var poll_output: Callable
 	func start(_dirs := search_dirs()) -> bool:
 		child = OS.execute_with_pipe(OS.get_executable_path(), ["--headless", "--path",
 				ProjectSettings.globalize_path("res://"), "-s", "res://tests/fixtures/idle_child.gd"], false)
 		pid = child.pid
 		_stdio = FileAccess.open(commands, FileAccess.WRITE_READ)
 		available = true
+		# The real reader captures this queue when start() launches its thread.
+		reader_lines = _lines
 		_queue(["uci"], "uciok")
 		return true
 	func output(lines: Array) -> void:
-		_lines.append_array(lines)
-		poll()
+		reader_lines.append_array(lines)
+		poll_output.call()
 	func sent() -> String:
 		_stdio.flush()
 		return FileAccess.get_file_as_string(commands)
@@ -62,6 +66,7 @@ func _setup() -> Dictionary:
 		return {}
 	var bridge := FakeUCI.new("engine/tbprobe/tbprobe", "Tablebase probe")
 	var probe = script.new(bridge)
+	bridge.poll_output = probe.poll
 	var root := _installation()
 	assert_true(probe.start(PackedStringArray([root])), probe.error)
 	bridge.output(["id name P-Chess tbprobe (Fathom test)", "uciok", "readyok"])
@@ -248,6 +253,53 @@ func test_extra_or_incorrect_best_moves_are_rejected():
 	if received.size() == 1:
 		assert_eq(received[0].ok, false)
 	_cleanup(setup)
+
+
+func test_malformed_completion_tokens_fail_closed_after_a_complete_move_set():
+	for token in ["bestmoves", "bestmoveX"]:
+		var setup := _setup()
+		if setup.is_empty():
+			return
+		var received := []
+		setup.probe.probe(RES_FEN, func(answer): received.append(answer))
+		var lines := []
+		for move in Board.from_fen(RES_FEN).legal_moves():
+			lines.append("info string tbmove %s draw 0" % move)
+		lines.append(token + " a1h1")
+		setup.bridge.output(lines)
+		assert_eq(received.size(), 1, token)
+		if received.size() == 1:
+			assert_eq(received[0].ok, false, token)
+			assert_true(not received[0].get("error", "").is_empty(), token)
+		assert_eq(setup.probe.available, false, token)
+		_cleanup(setup)
+
+
+func test_unknown_stdout_fails_active_queued_and_later_probes_once():
+	for unexpected in ["garbage", "", "readyok unexpected", "tbmove a1h1 win 1"]:
+		var setup := _setup()
+		if setup.is_empty():
+			return
+		var received := [[], [], []]
+		for index in 2:
+			setup.probe.probe(RES_FEN, func(answer): received[index].append(answer))
+		var lines := []
+		for move in Board.from_fen(RES_FEN).legal_moves():
+			lines.append("info string tbmove %s draw 0" % move)
+		# UCI's generic parser would drop this line and accept the valid completion.
+		lines.append(unexpected)
+		lines.append("bestmove a1h1")
+		setup.bridge.output(lines)
+		assert_eq(setup.probe.available, false, unexpected)
+		assert_eq(setup.bridge.available, false, unexpected)
+		setup.probe.probe(RES_FEN, func(answer): received[2].append(answer))
+		setup.probe.poll()
+		for answers in received:
+			assert_eq(answers.size(), 1, unexpected)
+			if answers.size() == 1:
+				assert_eq(answers[0].ok, false, unexpected)
+				assert_true(not answers[0].get("error", "").is_empty(), unexpected)
+		_cleanup(setup)
 
 
 func test_requests_queue_and_callback_reentry_preserves_the_next_answer():
