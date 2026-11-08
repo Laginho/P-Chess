@@ -367,3 +367,18 @@ func test_course_requires_a_valid_rating_before_starting():
 		assert_true(not dialog.visible, "saved rating skips dialog")
 	main.free()
 	Session.HistoryStorage.clean(folder)
+
+
+func test_rating_dialog_displays_the_rating_as_a_sentence():
+	var dialog = load("res://ui/rating_dialog.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(dialog)
+	dialog.present(load("res://core/course.gd").new("user://sentence_unused.json"))
+	await Engine.get_main_loop().process_frame
+	var first: Label = dialog.find_child("Sentence", true, false)
+	var number: LineEdit = dialog.find_child("RatingNumber", true, false)
+	var middle: Label = dialog.find_child("SiteLabel", true, false)
+	var site: OptionButton = dialog.find_child("RatingSite", true, false)
+	assert_true(first.get_global_rect().end.x <= number.get_global_rect().position.x, "rating follows 'I'm rated' in the sentence")
+	assert_true(number.get_global_rect().end.x <= middle.get_global_rect().position.x, "'in rapid on' follows the rating")
+	assert_true(middle.get_global_rect().end.x <= site.get_global_rect().position.x, "site completes the sentence")
+	dialog.free()
