@@ -16,20 +16,31 @@ theme_override_constants/separation = 10
 [node name="Title" type="Label" parent="Content"]
 theme_type_variation = &"ExtraBoldText"
 theme_override_font_sizes/font_size = 22
-text = "Your rapid rating"
+text = "Where are you now?"
 
-[node name="Sentence" type="Label" parent="Content"]
+[node name="Description" type="Label" parent="Content"]
+custom_minimum_size = Vector2(480, 0)
+theme_type_variation = &"MutedText"
+text = "Your rating picks your stage and how strong Maia plays. You can change it in Profile."
+autowrap_mode = 3
+
+[node name="Row" type="HBoxContainer" parent="Content"]
+theme_override_constants/separation = 10
+
+[node name="Sentence" type="Label" parent="Content/Row"]
 text = "I'm rated"
+vertical_alignment = 1
 
-[node name="RatingNumber" type="LineEdit" parent="Content"]
-custom_minimum_size = Vector2(350, 42)
+[node name="RatingNumber" type="LineEdit" parent="Content/Row"]
+custom_minimum_size = Vector2(90, 48)
 placeholder_text = "Rating (100–3500)"
 
-[node name="SiteLabel" type="Label" parent="Content"]
+[node name="SiteLabel" type="Label" parent="Content/Row"]
 text = "in rapid on"
+vertical_alignment = 1
 
-[node name="RatingSite" type="OptionButton" parent="Content"]
-custom_minimum_size = Vector2(0, 40)
+[node name="RatingSite" type="OptionButton" parent="Content/Row"]
+custom_minimum_size = Vector2(120, 48)
 
 [node name="ScaleHint" type="Label" parent="Content"]
 theme_type_variation = &"MutedText"
