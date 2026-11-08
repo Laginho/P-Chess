@@ -1081,18 +1081,27 @@ func _on_move_played(san: String) -> void:
 					var converted: bool = _playout_unit.playouts[_playout_index].goal == "convert"
 					_finish_playout("Converted" if converted else "Held", result.get("reason", "You kept the result."))
 				elif game.is_over():
-					_finish_playout("Play-out failed", "The game ended before the task was complete.")
+					_finish_ended_playout()
 				else:
 					_playout_previous_fen = game.board.to_fen()
 					_next_turn())
 			return
 		_playout_previous_fen = game.board.to_fen()
 		if game.is_over():
-			_finish_playout("Play-out failed", "The game ended before the task was complete.")
+			_finish_ended_playout()
 			return
 	if game.is_over():
 		_show_result()
 	_next_turn()
+
+
+# The judge kept the draw on every move of yours, so a drawn end holds it (spec L8).
+func _finish_ended_playout() -> void:
+	var game = board_view.game
+	if game.result == "1/2-1/2" and _playout_unit.playouts[_playout_index].goal == "hold":
+		_finish_playout("Held", "The game ended in a draw (%s)." % game.reason)
+	else:
+		_finish_playout("Play-out failed", "The game ended before the task was complete.")
 
 
 # The clock has already stopped. Maia may still be thinking: its move then finds the game over.
