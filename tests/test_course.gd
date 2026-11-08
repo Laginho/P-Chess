@@ -310,3 +310,38 @@ func test_real_rook_endgame_content_has_complete_disjoint_pools():
 		assert_eq(goals.convert, entry[2])
 		assert_eq(goals.hold, entry[3])
 	DirAccess.remove_absolute(path)
+
+
+func test_commits_record_first_try_once_solved_forever_and_solving_done():
+	var path := "user://course_commits_%d.json" % Time.get_ticks_usec()
+	var script = load("res://core/course.gd")
+	var course = script.new(path)
+	assert_true(course.has_method("record_commit"), "records a graded commit")
+	if not course.has_method("record_commit"):
+		return
+	var unit := {"id": "rook", "positions": [{"id": "one", "pool": "practice"}, {"id": "two", "pool": "practice"}, {"id": "unseen", "pool": "test"}]}
+	assert_true(course.save_rating(1600, "chess.com"))
+	assert_true(course.open_theory(unit))
+	assert_true(not course.unit_progress(unit).get("solving_done", true))
+	assert_true(course.record_commit(unit, unit.positions[0], false))
+	assert_eq(course.practice_result(unit, unit.positions[0]), {"commits": 1, "solved": false, "first_try": false})
+	assert_true(course.record_commit(unit, unit.positions[0], true))
+	assert_eq(course.practice_result(unit, unit.positions[0]), {"commits": 2, "solved": true, "first_try": false})
+	assert_true(course.record_commit(unit, unit.positions[1], true))
+	course = script.new(path)
+	assert_eq(course.practice_result(unit, unit.positions[1]), {"commits": 1, "solved": true, "first_try": true})
+	assert_eq(course.unit_progress(unit).solved, 2)
+	assert_eq(course.unit_progress(unit).first_try, "50% (1 of 2)")
+	assert_true(course.unit_progress(unit).solving_done)
+	assert_true(course.record_commit(unit, unit.positions[1], false))
+	assert_true(course.practice_result(unit, unit.positions[1]).solved)
+	assert_true(course.practice_result(unit, unit.positions[1]).first_try)
+	assert_true(course.unit_progress(unit).theory_done)
+	assert_eq(course.rating(), {"number": 1600, "site": "chess.com"})
+	assert_true(not course.unit_progress({"id": "empty", "positions": []}).solving_done)
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	file.store_string("{broken")
+	file = null
+	assert_true(not course.record_commit(unit, unit.positions[1], true))
+	assert_eq(FileAccess.get_file_as_string(path), "{broken")
+	DirAccess.remove_absolute(path)
