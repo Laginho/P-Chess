@@ -2437,7 +2437,7 @@ func test_probe_failure_leaves_review_without_markers_or_saved_positions():
 	main.review.own_game_course = course
 	main.review.own_game_unit = unit
 	main.review.present(game, [180000], SETTINGS, "")
-	var rows := main.review.get_node("Margin/Content/ReviewBody/Side/Moves").get_root().get_children()
+	var rows: Array = main.review.get_node("Margin/Content/ReviewBody/Side/Moves").get_root().get_children()
 	assert_eq(rows.size(), 1)
 	assert_true(course.practice_positions(unit).is_empty())
 	assert_true(not main.review.get_node("Margin/Content/AnalysisError").visible)
