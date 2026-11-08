@@ -613,3 +613,41 @@ func test_home_decorations_fit_without_blocking_controls():
 	var course_icon: Control = home.get_node_or_null("Center/Form/Course/Icon")
 	assert_true(course_icon != null and course_icon.mouse_filter == Control.MOUSE_FILTER_IGNORE, "Course icon leaves the button clickable")
 	home.free()
+
+
+func test_long_review_and_mixed_course_summary_remain_readable():
+	var folder := "user://test_home_mixed_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var unit: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/course/rook.json"))
+	var names := ["new", "started", "mastered", "review"]
+	for name in names:
+		unit.id = name
+		var file := FileAccess.open(folder.path_join(name + ".json"), FileAccess.WRITE)
+		file.store_string(JSON.stringify(unit))
+	var index := FileAccess.open(folder.path_join("index.json"), FileAccess.WRITE)
+	index.store_string(JSON.stringify({"stages": [{"min_rating": 100, "max_rating": 3500, "units": ["new.json", "started.json", "mastered.json", "review.json"]}]}))
+	index = null
+	var progress := FileAccess.open(folder.path_join("progress.json"), FileAccess.WRITE)
+	progress.store_string(JSON.stringify({"rating": {"number": 1100, "site": "chess.com"}, "units": {"started": {"theory_opened": true}, "mastered": {"mastered_date": "2000-01-01"}, "review": {"mastered_date": "2000-01-01", "review_checks": [{"passed": false}]}}}))
+	progress = null
+	var course = load("res://core/course.gd").new(folder.path_join("progress.json"), folder.path_join("index.json"))
+	var home = load("res://ui/home.tscn").instantiate()
+	home.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	home.size = Vector2(800, 600)
+	Engine.get_main_loop().root.add_child(home)
+	home.configure(load("res://core/settings.gd").new(folder.path_join("settings.cfg")), course)
+	var summary: Label = home.get_node("Center/Form/Course/Summary")
+	assert_eq(summary.text, "4 units · 1 new · 1 in progress · 1 mastered · 1 needs review")
+	assert_true(summary.autowrap_mode != TextServer.AUTOWRAP_OFF, "mixed statuses wrap instead of clipping")
+	var lines := summary.get_theme_font("font").get_multiline_string_size(summary.text, HORIZONTAL_ALIGNMENT_RIGHT, summary.size.x, summary.get_theme_font_size("font_size"), -1, summary.autowrap_mode)
+	assert_true(lines.y <= summary.size.y, "all status lines fit the Course button")
+	var detail: Label = home.get_node("Center/Form/Continue/Detail")
+	var detail_width := detail.get_theme_font("font").get_string_size(detail.text, HORIZONTAL_ALIGNMENT_LEFT, -1, detail.get_theme_font_size("font_size")).x
+	assert_true(detail_width <= detail.size.x, "long review detail fits before the chevron")
+	for name in ["Icon", "Title", "Summary"]:
+		assert_eq(home.get_node("Center/Form/Course/" + name).mouse_filter, Control.MOUSE_FILTER_IGNORE)
+	home.show_missing("Engine unavailable")
+	home.get_node("Center/Form/Missing").hide()
+	assert_eq(home.get_node("Center/Form/Quick/OneZero/Caption").modulate.a, 1.0, "hiding the warning restores the normal appearance")
+	home.free()
+	Session.HistoryStorage.clean(folder)
