@@ -1,5 +1,5 @@
 # LEARN-002: Course map and unit page
-Stage: implementing
+Stage: to-review
 Blocked by: LEARN-001
 Review: agent
 Difficulty: normal
@@ -62,7 +62,7 @@ The course gets its first real screens (design `CourseMap.dc.html`, `Unit.dc.htm
   - 9 ✅ `ui/main.gd:216`, `:219`, `:477` and `:486`; `test_course_navigation_unit_progress_and_clock` checks both Back actions.
 - Red/green: new stage, progress and clock tests failed for missing public methods before implementation; screen navigation failed before the screens existed. Additional tests failed against mutants removing first-rating navigation, part identifiers, saved clock selection, visible rate and stage cards. The stage fixture change required updating a test rating to keep it in the intended stage.
 - Resolution: shipped the stage index and two Wikipedia seed positions, course map and unit page, persisted clock and navigation. The remaining play-out/test content and individual screens belong to LEARN-003 onward. The focused suite passed 13 tests; `godot --headless -s tests/run.gd` passed 590 tests. Captured the map and unit at 1280×800 and the unit at 800×600; persistence was verified by reloading the store in tests, not by a manual application restart.
-Gate evidence: /run/media/lage/New Volume/Scratch/LEARN-002/gate.json
+Gate evidence: /run/media/lage/New Volume/Scratch/LEARN-002-resume/gate.json
 
 #### Resolution (2026-11-08)
 Verdict: Reopen — criterion 2: a pending review check clears needs review before a later check passes.
@@ -107,3 +107,9 @@ Disclosure: pending | integration | [Criterion-2 reproduction](</run/media/lage/
 Disclosure: decision | release | [Proxy decision receipt](/tmp/sweatshop-proxy/20261108-000755-LEARN-002-28867a.json): the fixed four-part structure is visible with unfinished seed content; complete LEARN-004 and the planned part screens before release.
 Disclosure: pending | release | Complete the ticket's manual application-restart clock check before release and record its result.
 Disclosure: deferred | none | [CLEAN-017](116-CLEAN-017-shared-course-persistence.md) tracks duplicated persistence logic as optional maintenance, with no current behavior defect or release condition.
+
+#### Stage 2 follow-up (2026-11-08)
+
+- Criterion 2 ✅ Independent read-only check: `core/course.gd:150` derives mastery and `:160` skips explicitly pending checks; `tests/test_course.gd:143` covers a failed completed check followed by pending checks, and a later completed success. Existing tests cover the four statuses and completed records without a `done` field. The check found no additional defect in the reopened criterion.
+- Red/green: `ba34d0b` failed twice for the intended pending-review regression; `6f2ebc1` passes it and preserves earlier completed-record behavior. The map and unit page are the callers of `unit_progress`; they receive the corrected status without an interface change.
+- Gate: `godot --headless -s tests/run.gd` at `6f2ebc1` passed 591 tests, 0 failed. One graphical pixel check and six live Lc0 checks were skipped by the existing suite. The manual application-restart clock check remains pending; this session has no display.
