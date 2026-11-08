@@ -10,6 +10,7 @@ func test_pass_test_runs_positions_and_playouts_and_lists_misses():
 	DirAccess.make_dir_recursive_absolute(folder)
 	var main = MainScene.instantiate()
 	main.course = load("res://core/course.gd").new(folder.path_join("course.json"))
+	main.course.save_rating(1600, "chess.com")
 	main.history = load("res://core/history.gd").new(folder)
 	main.uci.free()
 	main.uci = Session.HeldBridge.new()
@@ -27,9 +28,9 @@ func test_pass_test_runs_positions_and_playouts_and_lists_misses():
 	main.tablebase = LifecycleProbe.new(probe, [])
 	Engine.get_main_loop().root.add_child(main)
 	var positions := []
-	for i in 6:
+	for i in 12:
 		positions.append({"id": str(i), "pool": "test", "fen": sample.FEN, "side": "b", "line_length": 1, "goal": "win"})
-	var unit := {"id": "rook", "title": "Rook endings", "positions": positions, "test_playouts": [
+	var unit := {"id": "rook-endgames", "title": "Rook endings", "positions": positions, "test_playouts": [
 		{"id": "convert", "fen": convert, "side": "w", "goal": "convert"},
 		{"id": "hold", "fen": hold, "side": "w", "goal": "hold"}]}
 	main._show_unit(unit)
@@ -72,6 +73,28 @@ func test_pass_test_runs_positions_and_playouts_and_lists_misses():
 	main.unit_page.part_requested.emit(unit, "test")
 	assert_true(screen.find_child("Details", true, false).text.contains("4 of 6"))
 	assert_true(screen.find_child("Details", true, false).text.contains(Time.get_date_string_from_system()))
+	var previous: Array = main.course.test_attempts(unit)[0].positions
+	screen.find_child("Start", true, false).pressed.emit()
+	for position in main.solving.positions:
+		assert_true(not previous.any(func(result): return result.position.id == position.id), "retry prefers fresh positions")
+	for i in 6:
+		main.solving.board._commit("c6c5", false)
+		main.solving.find_child("Commit", true, false).pressed.emit()
+	assert_true(main.board_view.play("a7a8q"))
+	assert_true(main.board_view.play("h2e2"))
+	assert_eq(screen.find_child("Heading", true, false).text, "Unit mastered")
+	assert_true(screen.find_child("Details", true, false).text.contains("7 and 30 days"))
+	assert_true(not screen.find_child("Retry", true, false).visible)
+	var saved_attempts: Array = main.course.test_attempts(unit)
+	assert_eq(saved_attempts.size(), 2)
+	assert_eq(saved_attempts[0].positions.size(), 6)
+	assert_eq(saved_attempts[0].playouts, [true, true])
+	assert_true(not saved_attempts[0].passed and saved_attempts[1].passed)
+	screen.find_child("Back", true, false).pressed.emit()
+	assert_true(main.unit_page.find_child("Title", true, false).text.contains("Mastered"))
+	main._show_course_map()
+	var labels = main.course_map.find_children("*", "Label", true, false)
+	assert_true(labels.any(func(label): return label.text.contains("Mastered")), "course map shows mastery")
 	main.free()
 	Session.HistoryStorage.clean(folder)
 
