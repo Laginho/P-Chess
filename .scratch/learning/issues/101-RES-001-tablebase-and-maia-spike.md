@@ -1,5 +1,5 @@
 # RES-001: Tablebase and Maia spike
-Stage: implementing
+Stage: to-review
 Blocked by: none
 Review: human
 Difficulty: normal
@@ -44,3 +44,11 @@ Criteria check by independent subagent (research ticket: no new tests):
 - ✅ 5: docs/research/tablebase.md:99 (ten positions per net and limitations).
 - ✅ 6: docs/research/tablebase.md:133 (source sizes and extraction cost).
 - ✅ 7: docs/research/tablebase.md:139 (CI-005 and LEARN-006 recommendations).
+
+## Resolution
+
+Research and reproducible source references are in `docs/research/tablebase.md`. Stockfish 19's Linux probe found 20 WDL and 20 DTZ files; the 40 downloaded files matched the Lichess SHA-256 manifest. Maia 1500 and 1900 were measured on ten positions each. Windows confirmation remains pending (Bruno); the recommendation for per-move DTZ also requires review of spec L5's Stockfish-only assumption. Independent criteria review completed and its two corrections were rechecked.
+
+Gate: `godot --headless -s tests/run.gd` — 569 passed, 0 failed, exit 0 on 2026-11-07, tested commit `45ae328d4b2d6e896c285b47514b50f48b948011`.
+
+Gate evidence: /run/media/lage/New Volume/Scratch/RES-001/gate.json
