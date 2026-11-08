@@ -2366,7 +2366,7 @@ func test_result_change_shows_link_and_adds_position_to_course():
 		review.own_game_unit = unit
 		var opened := []
 		review.unit_requested.connect(func(request): opened.append(request))
-		review.present(game, [], SETTINGS, "")
+		review.present(game, [180000], SETTINGS, "")
 		await Engine.get_main_loop().process_frame
 		var list: Tree = review.get_node("Margin/Content/ReviewBody/Side/Moves")
 		var rows := list.get_root().get_children()
