@@ -25,6 +25,8 @@ const CourseMap = preload("res://ui/course_map.tscn")
 const UnitPage = preload("res://ui/unit_page.tscn")
 const TheoryPointer = preload("res://ui/theory_pointer.tscn")
 const Solving = preload("res://ui/solving.tscn")
+const Playout = preload("res://ui/playout.tscn")
+const PlayoutJudge = preload("res://core/playout_judge.gd")
 
 const WINNERS := {"1-0": "White wins", "0-1": "Black wins", "1/2-1/2": "Draw"}
 const MIN_BOARD_SIZE := 320
@@ -52,6 +54,14 @@ var course_map = CourseMap.instantiate()
 var unit_page = UnitPage.instantiate()
 var theory_pointer = TheoryPointer.instantiate()
 var solving = Solving.instantiate()
+var playout = Playout.instantiate()
+var _playout_unit := {}
+var _playout_index := 0
+var _playout_active := false
+var _playout_previous_fen := ""
+var _playout_moves := 0
+var _playout_flagged := ""
+var _playout_generation := 0
 var analysis_queue
 var review_analysis_path := ""
 var resign_key := ResignKey.new(Time.get_ticks_msec)
@@ -167,6 +177,8 @@ func _ready() -> void:
 	board_view.sound_requested.connect(sound_player.play)
 	maia.move_ready.connect(_on_maia_move)
 	claim_draw.pressed.connect(func() -> void:
+		if _playout_active:
+			return
 		board_view.game.claim_draw()
 		_show_result())
 	resign_button.pressed.connect(_resign)
@@ -224,6 +236,11 @@ func _ready() -> void:
 	add_child(unit_page)
 	add_child(theory_pointer)
 	add_child(solving)
+	add_child(playout)
+	playout.back_requested.connect(func(): _show_unit(_playout_unit))
+	playout.start_requested.connect(_start_playout)
+	playout.retry_requested.connect(func(): _show_playout(_playout_index))
+	playout.next_requested.connect(func(): _show_playout(_playout_index + 1))
 	course_map.back_requested.connect(_show_home)
 	course_map.unit_requested.connect(_show_unit)
 	course_map.edit_requested.connect(_edit_course_rating)
@@ -296,6 +313,8 @@ func _input(_event: InputEvent) -> void:
 func _unhandled_key_input(event: InputEvent) -> void:
 	if not event.is_pressed() or event.is_echo():
 		return
+	if _playout_active or playout.visible:
+		return
 	if event.keycode == KEY_COMMA and event.ctrl_pressed:
 		if settings_screen.visible and not _covers_settings():
 			settings_screen.get_node("Panel").show()
@@ -324,12 +343,16 @@ func _covers_settings() -> bool:
 
 
 func _resign() -> void:
+	if _playout_active or playout.visible:
+		return
 	if not settings_screen.get_node("Panel").visible and clock != null and not board_view.game.is_over() and resign_key.press():
 		board_view.game.resign(human)
 		_show_result()
 
 
 func _offer_draw() -> void:
+	if _playout_active or playout.visible:
+		return
 	if settings_screen.get_node("Panel").visible or clock == null or board_view.game.is_over() or draw_button.disabled:
 		return
 	_draw_offered = true
@@ -364,6 +387,8 @@ func _start(new_settings: Dictionary) -> void:
 		_starting = false
 		searching.hide()
 		analysis_queue.resume()
+		if _playout_active:
+			_playout_start_failed(uci.error)
 		return
 	searching.status("Loading Maia %s…" % new_settings.level.trim_prefix("maia-"))
 	var ready := [false]
@@ -378,6 +403,8 @@ func _start(new_settings: Dictionary) -> void:
 		_starting = false
 		searching.hide()
 		analysis_queue.resume()
+		if _playout_active:
+			_playout_start_failed(uci.error)
 		return
 	searching.status("Preparing game…")
 	var error := ""
@@ -411,9 +438,14 @@ func _start(new_settings: Dictionary) -> void:
 	searching.hide()
 	if not uci.error.is_empty():
 		analysis_queue.resume()
+		if _playout_active:
+			_playout_start_failed(uci.error)
 		return
 	if not error.is_empty():
 		analysis_queue.resume()
+		if _playout_active:
+			_playout_start_failed(error)
+			return
 		setup.show()
 		var status: Label = setup.get_node("Center/Form/Missing")
 		status.text = error
@@ -436,7 +468,7 @@ func _start(new_settings: Dictionary) -> void:
 	white_score.visible = _show_match_score and not focus
 	black_score.visible = _show_match_score and not focus
 	_update_score_text()
-	var game = Game.new()
+	var game = Game.new(new_settings.get("start_fen", Game.START))
 	maia.book = practice_book
 	history.book = setup.book
 	maia.begin_game(game, settings.opening, history.practice_counts(), "b" if human == "w" else "w")
@@ -450,16 +482,16 @@ func _start(new_settings: Dictionary) -> void:
 	claim_draw.disabled = true
 	clock = Clock.new(settings.control, Time.get_ticks_msec)
 	resign_button.disabled = false
-	resign_button.show()
-	draw_button.show()
+	resign_button.visible = not _playout_active
+	draw_button.visible = not _playout_active
 	$Layout/Side/Actions/NewGameButton.hide()
 	$Layout/Side/Actions/RematchButton.hide()
 	_draw_offered = false
 	_draw_moves_left = 0
-	draw_button.disabled = false
+	draw_button.disabled = _playout_active
 	draw_notice.hide()
 	draw_notice_timer.stop()
-	maia.clock = clock
+	maia.clock = null if _playout_active else clock
 	maia.control = settings.control
 	maia.level = settings.level
 	clock.flagged.connect(_on_flagged)
@@ -491,6 +523,8 @@ func _show_setup() -> void:
 
 
 func _show_home() -> void:
+	_cancel_playout()
+	playout.hide()
 	solving.hide()
 	course_map.hide()
 	unit_page.hide()
@@ -502,6 +536,8 @@ func _show_home() -> void:
 
 
 func _show_course_map() -> void:
+	_cancel_playout()
+	playout.hide()
 	solving.hide()
 	$Home.hide()
 	setup.hide()
@@ -510,6 +546,8 @@ func _show_course_map() -> void:
 
 
 func _show_unit(unit: Dictionary) -> void:
+	_cancel_playout()
+	playout.hide()
 	solving.hide()
 	theory_pointer.hide()
 	course_map.hide()
@@ -523,6 +561,67 @@ func _show_course_part(unit: Dictionary, part: String) -> void:
 	elif part == "solving" and not str(course.next_practice_position(unit).get("fen", "")).is_empty():
 		unit_page.hide()
 		solving.present(course, unit, preferences)
+	elif part == "playouts" and not unit.get("playouts", []).is_empty():
+		_playout_unit = unit
+		var index := 0
+		for i in unit.playouts.size():
+			if not course.playout_passed(unit, unit.playouts[i]):
+				index = i
+				break
+		_show_playout(index)
+
+
+func _cancel_playout() -> void:
+	var leaving_game: bool = _playout_active or playout.visible
+	_playout_generation += 1
+	_playout_active = false
+	if clock != null:
+		clock.stop()
+	if leaving_game:
+		clock = null
+		white_clock.clock = null
+		black_clock.clock = null
+
+
+func _show_playout(index: int) -> void:
+	_cancel_playout()
+	_playout_index = index
+	unit_page.hide()
+	playout.present_start(course, _playout_unit, index)
+
+
+func _start_playout() -> void:
+	if not uci.error.is_empty():
+		_playout_start_failed(uci.error)
+		return
+	var position: Dictionary = _playout_unit.playouts[_playout_index]
+	_playout_active = true
+	_playout_generation += 1
+	_playout_previous_fen = position.fen
+	_playout_moves = 0
+	_playout_flagged = ""
+	playout.hide()
+	_start({"colour": position.side, "level": course.maia_level(), "control": course.clock_choice(), "opening": "Free", "start_fen": position.fen})
+
+
+func _playout_start_failed(message: String) -> void:
+	_cancel_playout()
+	playout.present_start(course, _playout_unit, _playout_index)
+	playout.reason.text = message
+
+
+func _finish_playout(title: String, message: String, failed_move := "") -> void:
+	_playout_generation += 1
+	_playout_active = false
+	clock.stop()
+	board_view.cancel_premoves()
+	board_view.mouse_filter = MOUSE_FILTER_IGNORE
+	analysis_queue.resume()
+	var position: Dictionary = _playout_unit.playouts[_playout_index]
+	if title in ["Converted", "Held"] and not course.record_playout_pass(_playout_unit, position):
+		title = "Play-out failed"
+		message = "Could not save your pass. Please retry."
+	playout.present_end(position, board_view.game, title, message, failed_move, _playout_index + 1 < _playout_unit.playouts.size())
 
 
 func _edit_course_rating() -> void:
@@ -763,7 +862,7 @@ func _on_maia_move(move: String) -> void:
 func _on_move_played(san: String) -> void:
 	move_list.add(san)
 	var game = board_view.game
-	claim_draw.disabled = not game.can_claim_draw()
+	claim_draw.disabled = _playout_active or not game.can_claim_draw()
 	var mover: String = "b" if game.board.side_to_move == "w" else "w"
 	if mover == human and _draw_moves_left > 0:
 		_draw_moves_left -= 1
@@ -775,6 +874,41 @@ func _on_move_played(san: String) -> void:
 		clock.moved(mover)
 	_move_clocks.append(clock.left(mover))
 	_recording_move = false
+	if _playout_active:
+		if not _playout_flagged.is_empty():
+			_finish_playout("Out of time" if _playout_flagged == human else "Play-out failed", "Your time ran out." if _playout_flagged == human else "Maia ran out of time.")
+			return
+		if mover == human:
+			_playout_moves += 1
+			var move: String = game.moves[-1]
+			var previous := _playout_previous_fen
+			var generation := _playout_generation
+			board_view.mouse_filter = MOUSE_FILTER_IGNORE
+			if tablebase.has_method("start"):
+				tablebase.start()
+			PlayoutJudge.new(tablebase).check(previous, move, _playout_unit.playouts[_playout_index].goal, _playout_moves, func(result: Dictionary):
+				if not _playout_active or generation != _playout_generation:
+					return
+				if not result.get("ok", false):
+					_finish_playout("Play-out failed", result.get("error", "Tablebase probe failed."))
+				elif result.state == "failed":
+					var before = preload("res://core/board.gd").from_fen(previous)
+					var best: String = result.get("best", "")
+					var correct: String = before.san(best) if not best.is_empty() else "unavailable"
+					_finish_playout("Play-out failed", "✗ %s changed the result. %s kept it." % [san, correct], move)
+				elif result.state == "passed":
+					var converted: bool = _playout_unit.playouts[_playout_index].goal == "convert"
+					_finish_playout("Converted" if converted else "Held", result.get("reason", "You kept the result."))
+				elif game.is_over():
+					_finish_playout("Play-out failed", "The game ended before the task was complete.")
+				else:
+					_playout_previous_fen = game.board.to_fen()
+					_next_turn())
+			return
+		_playout_previous_fen = game.board.to_fen()
+		if game.is_over():
+			_finish_playout("Play-out failed", "The game ended before the task was complete.")
+			return
 	if game.is_over():
 		_show_result()
 	_next_turn()
@@ -783,6 +917,11 @@ func _on_move_played(san: String) -> void:
 # The clock has already stopped. Maia may still be thinking: its move then finds the game over.
 func _on_flagged(side: String) -> void:
 	board_view.game.flag(side)
+	if _playout_active:
+		_playout_flagged = side
+		if not _recording_move:
+			_finish_playout("Out of time" if side == human else "Play-out failed", "Your time ran out." if side == human else "Maia ran out of time.")
+		return
 	# A flag during move accounting must wait for that move's clock snapshot.
 	if not _recording_move:
 		_show_result()
@@ -790,6 +929,8 @@ func _on_flagged(side: String) -> void:
 
 # Every way a game ends lands here, after the game has its result.
 func _show_result() -> void:
+	if _playout_active or playout.visible:
+		return
 	analysis_queue.resume()
 	draw_button.disabled = true
 	draw_button.hide()
@@ -842,7 +983,8 @@ func _next_turn() -> void:
 	var maia_to_move: bool = not game.is_over() and game.board.side_to_move != human
 	board_view.mouse_filter = MOUSE_FILTER_STOP
 	if maia_to_move:
-		maia.think(game, clock.left(game.board.side_to_move), Clock.CONTROLS[settings.control][0])
+		var start_time: int = Clock.CONTROLS[settings.control][0] if Clock.CONTROLS.has(settings.control) else Clock.PLAY_OUT_CONTROLS[settings.control][0]
+		maia.think(game, clock.left(game.board.side_to_move), start_time)
 	elif not game.is_over():
 		var move: String = board_view.premoves.take(game.board)
 		if move:

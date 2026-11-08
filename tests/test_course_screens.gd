@@ -114,6 +114,9 @@ func test_course_navigation_unit_progress_and_clock():
 		var solving = main.get_node_or_null("Solving")
 		if solving != null and solving.visible:
 			solving.find_child("Back", true, false).pressed.emit()
+		var playout = main.get_node_or_null("Playout")
+		if playout != null and playout.visible:
+			playout.find_child("Back", true, false).pressed.emit()
 	assert_eq(requests, [["rook-endgames", "theory"], ["rook-endgames", "solving"], ["rook-endgames", "playouts"], ["rook-endgames", "test"]])
 	assert_true(unit.visible, "a part without a screen leaves the unit visible")
 	unit.find_child("NoClock", true, false).pressed.emit()
@@ -645,3 +648,270 @@ func test_feedback_shows_better_defence_beside_the_opponent_move():
 	assert_true(not rows.get_child(1).text.contains("✗"))
 	assert_eq(screen.find_child("BannerTitle", true, false).text, "Solved, first try")
 	_feedback_cleanup(fixture)
+
+
+func test_playout_starts_from_unit_and_failing_move_ends_before_maia_without_history():
+	var folder := "user://course_playout_ui_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var main = MainScene.instantiate()
+	main.course = load("res://core/course.gd").new(folder.path_join("course.json"))
+	main.course.save_rating(1250, "chess.com")
+	main.course.save_clock_choice("none")
+	main.history = load("res://core/history.gd").new(folder)
+	main.uci.free()
+	main.uci = Session.HeldBridge.new()
+	main.maia = main.MaiaPlayer.new(main.uci)
+	main.preferences = main.Settings.new(folder.path_join("settings.cfg"))
+	main.preferences.set_value("player_name", "You")
+	var sample = load("res://tests/test_grader.gd")
+	var probe = sample.FakeProbe.new()
+	probe.answers[sample.FEN] = sample.answer("win", "c6c5", {"c6c5": {"result": "win", "dtz": 3}, "c6c4": {"result": "draw", "dtz": 0}})
+	main.tablebase.free()
+	# Main owns the injected probe as a node.
+	var adapter = LifecycleProbe.new(probe, [])
+	main.tablebase = adapter
+	Engine.get_main_loop().root.add_child(main)
+	var position := {"id": "a", "fen": sample.FEN, "side": "b", "goal": "convert"}
+	var unit := {"id": "rook", "title": "Rook endings", "playouts": [position, position, position, position]}
+	main._show_unit(unit)
+	main.unit_page.part_requested.emit(unit, "playouts")
+	var screen = main.get_node_or_null("Playout")
+	assert_true(screen != null and screen.visible, "unit opens the play-out start")
+	if screen == null:
+		main.free()
+		Session.HistoryStorage.clean(folder)
+		return
+	assert_true(screen.find_child("Heading", true, false).text.contains("Play-out 1 of 4"))
+	screen.find_child("Start", true, false).pressed.emit()
+	while main._starting:
+		await Engine.get_main_loop().process_frame
+	assert_eq(main.board_view.game.start_fen, sample.FEN)
+	assert_eq(main.human, "b")
+	assert_eq(main.settings.level, "maia-1600")
+	assert_eq(main.settings.control, "none")
+	assert_true(main.board_view.play("c6c4"))
+	assert_true(screen.visible, "end card opens")
+	assert_eq(screen.find_child("Heading", true, false).text, "Play-out failed")
+	assert_true(screen.find_child("Reason", true, false).text.contains("Rc4"))
+	assert_true(screen.find_child("Reason", true, false).text.contains("Rc5"))
+	assert_eq(screen.board.game.moves, PackedStringArray(["c6c4"]))
+	assert_eq(screen.board.review_square, "c4")
+	assert_true(screen.board.review_icon != null, "the failing move has the blunder icon")
+	assert_eq(main.uci.requests.size(), 0, "Maia does not reply to a failed move")
+	assert_true(main.history.games().is_empty(), "play-out does not enter history")
+	screen.find_child("Back", true, false).pressed.emit()
+	var session = Session.new()
+	session._key(main, KEY_ESCAPE)
+	session._key(main, KEY_ESCAPE)
+	session._key(main, KEY_SPACE)
+	assert_true(main.history.games().is_empty(), "game shortcuts cannot save after returning to the unit")
+	assert_true(not FileAccess.file_exists(folder.path_join("stats.cfg")))
+	assert_true(not main._starting, "game shortcuts cannot start a rematch on the unit page")
+	main.free()
+	Session.HistoryStorage.clean(folder)
+
+
+func test_playout_promotion_records_pass_and_next_opens_next_position():
+	var session = Session.new()
+	var main = await session._session(Session.ManualWaits.new(), false)
+	var folder: String = main.history._root
+	main.course = load("res://core/course.gd").new(folder.path_join("course.json"))
+	main.course.save_rating(1400, "chess.com")
+	var sample = load("res://tests/test_grader.gd")
+	var fen := "7k/P7/5K2/8/8/8/8/8 w - - 0 1"
+	var probe = sample.FakeProbe.new()
+	probe.answers[fen] = sample.answer("win", "a7a8q", {"a7a8q": {"result": "win", "dtz": 1}})
+	main.tablebase.queue_free()
+	var adapter = LifecycleProbe.new(probe, [])
+	main.tablebase = adapter
+	main.add_child(adapter)
+	var first := {"id": "a", "fen": fen, "side": "w", "goal": "convert"}
+	var second := {"id": "b", "fen": fen, "side": "w", "goal": "convert"}
+	var unit := {"id": "rook", "playouts": [first, second, second, second]}
+	main._show_unit(unit)
+	main.unit_page.part_requested.emit(unit, "playouts")
+	assert_true(main.playout.find_child("Details", true, false).text.contains("5+5"))
+	main.playout.find_child("Start", true, false).pressed.emit()
+	while main._starting:
+		await Engine.get_main_loop().process_frame
+	assert_true(main.board_view.play("a7a8q"))
+	assert_eq(main.playout.find_child("Heading", true, false).text, "Converted")
+	assert_true(main.playout.find_child("Reason", true, false).text.contains("promoted"))
+	assert_true(main.course.playout_passed(unit, first))
+	assert_true(main.playout.find_child("Next", true, false).visible)
+	assert_true(not FileAccess.file_exists(folder.path_join("stats.cfg")))
+	assert_true(main.history.games().is_empty())
+	main.playout.find_child("Next", true, false).pressed.emit()
+	assert_eq(main.playout.find_child("Heading", true, false).text, "Play-out 2 of 4")
+	assert_true(main.playout.find_child("States", true, false).text.contains("Passed"))
+	main.free()
+
+
+func test_playout_flag_fails_without_history_and_retry_returns_to_start():
+	var session = Session.new()
+	var main = await session._session(Session.ManualWaits.new(), false)
+	var folder: String = main.history._root
+	main.course = load("res://core/course.gd").new(folder.path_join("course.json"))
+	main.course.save_rating(1400, "chess.com")
+	var position := {"id": "a", "fen": "R7/8/4k3/1P6/K7/8/8/2r5 w - - 0 1", "side": "w", "goal": "convert"}
+	var unit := {"id": "rook", "playouts": [position]}
+	main._show_unit(unit)
+	main.unit_page.part_requested.emit(unit, "playouts")
+	main.playout.find_child("Start", true, false).pressed.emit()
+	while main._starting:
+		await Engine.get_main_loop().process_frame
+	main._on_flagged("w")
+	assert_eq(main.playout.find_child("Heading", true, false).text, "Out of time")
+	assert_true(not main.course.playout_passed(unit, position))
+	assert_true(main.history.games().is_empty())
+	main.playout.find_child("Retry", true, false).pressed.emit()
+	assert_eq(main.playout.find_child("Heading", true, false).text, "Play-out 1 of 4")
+	main.free()
+
+
+func test_playout_shows_engine_start_error_and_can_return_to_unit():
+	var session = Session.new()
+	var main = await session._session(Session.ManualWaits.new(), false)
+	main.course = load("res://core/course.gd").new(main.history._root.path_join("course.json"))
+	main.course.save_rating(1400, "chess.com")
+	var position := {"id": "a", "fen": "R7/8/4k3/1P6/K7/8/8/2r5 w - - 0 1", "side": "w", "goal": "convert"}
+	var unit := {"id": "rook", "playouts": [position]}
+	main._show_unit(unit)
+	main.unit_page.part_requested.emit(unit, "playouts")
+	main.uci.error = "Engine missing"
+	main.playout.find_child("Start", true, false).pressed.emit()
+	assert_true(main.playout.visible, "an engine error leaves an actionable screen")
+	assert_true(main.playout.find_child("Reason", true, false).text.contains("Engine missing"))
+	main.playout.find_child("Back", true, false).pressed.emit()
+	assert_true(main.unit_page.visible)
+	main.free()
+
+
+func test_playout_waits_for_probe_before_maia():
+	var session = Session.new()
+	var main = await session._session(Session.ManualWaits.new(), false)
+	main.course = load("res://core/course.gd").new(main.history._root.path_join("course.json"))
+	main.course.save_rating(1400, "chess.com")
+	var sample = load("res://tests/test_grader.gd")
+	var probe = sample.FakeProbe.new()
+	probe.held = true
+	probe.answers[sample.FEN] = sample.answer("win", "c6c5", {"c6c5": {"result": "win", "dtz": 3}})
+	main.tablebase.queue_free()
+	var adapter = LifecycleProbe.new(probe, [])
+	main.tablebase = adapter
+	main.add_child(adapter)
+	var position := {"id": "a", "fen": sample.FEN, "side": "b", "goal": "convert"}
+	var unit := {"id": "rook", "playouts": [position]}
+	main._show_unit(unit)
+	main.unit_page.part_requested.emit(unit, "playouts")
+	main.playout.find_child("Start", true, false).pressed.emit()
+	while main._starting:
+		await Engine.get_main_loop().process_frame
+	main.board_view.play("c6c5")
+	assert_eq(main.uci.requests.size(), 0, "the tablebase must answer before Maia is asked")
+	probe.reply()
+	assert_eq(main.uci.requests.size(), 2, "a kept result lets Maia reply")
+	if not main.uci.requests.is_empty():
+		assert_eq(main.uci.requests[-1][0], sample.FEN)
+		assert_eq(main.uci.requests[-1][1], PackedStringArray(["c6c5"]))
+	main.free()
+
+
+func test_playout_disables_sandbox_actions_and_hotkeys_do_not_save_a_game():
+	var session = Session.new()
+	var main = await session._session(Session.ManualWaits.new(), false)
+	main.course = load("res://core/course.gd").new(main.history._root.path_join("course.json"))
+	main.course.save_rating(1400, "chess.com")
+	var position := {"id": "a", "fen": "R7/8/4k3/1P6/K7/8/8/2r5 w - - 0 1", "side": "w", "goal": "convert"}
+	var unit := {"id": "rook", "playouts": [position]}
+	main._show_unit(unit)
+	main.unit_page.part_requested.emit(unit, "playouts")
+	main.playout.find_child("Start", true, false).pressed.emit()
+	while main._starting:
+		await Engine.get_main_loop().process_frame
+	assert_true(not main.resign_button.visible and not main.draw_button.visible)
+	assert_true(main.claim_draw.disabled)
+	session._key(main, KEY_ESCAPE)
+	session._key(main, KEY_ESCAPE)
+	assert_true(not main.board_view.game.is_over(), "Esc cannot resign a course game")
+	assert_true(main.history.games().is_empty())
+	main._on_flagged("w")
+	session._key(main, KEY_SPACE)
+	assert_true(main.playout.visible and not main._starting, "Space cannot rematch from the end card")
+	assert_true(main.history.games().is_empty())
+	assert_true(not FileAccess.file_exists(main.history._root.path_join("stats.cfg")))
+	main.free()
+
+
+func test_playout_flag_during_terminal_move_takes_precedence_over_mate():
+	var session = Session.new()
+	var main = await session._session(Session.ManualWaits.new(), false)
+	main.course = load("res://core/course.gd").new(main.history._root.path_join("course.json"))
+	main.course.save_rating(1400, "chess.com")
+	var sample = load("res://tests/test_grader.gd")
+	var fen := "7k/8/5KQ1/8/8/8/8/8 w - - 0 1"
+	var probe = sample.FakeProbe.new()
+	probe.answers[fen] = sample.answer("win", "g6g7", {"g6g7": {"result": "win", "dtz": 1}})
+	main.tablebase.queue_free()
+	var adapter = LifecycleProbe.new(probe, [])
+	main.tablebase = adapter
+	main.add_child(adapter)
+	var position := {"id": "a", "fen": fen, "side": "w", "goal": "convert"}
+	var unit := {"id": "rook", "playouts": [position]}
+	main._show_unit(unit)
+	main.unit_page.part_requested.emit(unit, "playouts")
+	main.playout.find_child("Start", true, false).pressed.emit()
+	while main._starting:
+		await Engine.get_main_loop().process_frame
+	main.clock._now = func(): return 2
+	main.clock._left.w = 1
+	main.clock._moved.w = true
+	main.clock._running = "w"
+	main.clock._since = 0
+	main.board_view.play("g6g7")
+	assert_eq(main.playout.find_child("Heading", true, false).text, "Out of time")
+	assert_true(not main.course.playout_passed(unit, position))
+	main.free()
+
+
+func test_playout_start_describes_task_rules_and_all_states_including_replay():
+	var path := "user://playout_start_%d.json" % Time.get_ticks_usec()
+	var course = load("res://core/course.gd").new(path)
+	course.save_rating(1250, "chess.com")
+	course.save_clock_choice("none")
+	var fen := "8/8/1RK5/r3k3/2P5/8/8/8 b - - 20 54"
+	var positions := []
+	for i in 4:
+		positions.append({"id": str(i), "fen": fen, "side": "b", "goal": "hold"})
+	var unit := {"id": "rook", "playouts": positions}
+	course.record_playout_pass(unit, positions[0])
+	var screen = load("res://ui/playout.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(screen)
+	screen.present_start(course, unit, 0)
+	var states: String = screen.find_child("States", true, false).text
+	assert_true(states.contains("1 Passed") and states.contains("Current"), "a replay is both passed and current")
+	assert_true(states.contains("2 To do") and states.contains("3 To do") and states.contains("4 To do"))
+	var details: String = screen.find_child("Details", true, false).text
+	assert_true(details.contains("Black to play and draw") and details.contains("Maia 1600") and details.contains("No clock"))
+	var rules: String = screen.find_child("Reason", true, false).text
+	assert_true(rules.contains("pawn") and rules.contains("30 moves") and rules.contains("time"))
+	screen.free()
+	DirAccess.remove_absolute(path)
+
+
+func test_fourth_playout_pass_offers_back_to_unit_without_next():
+	var screen = load("res://ui/playout.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(screen)
+	var position := {"fen": "4k3/8/8/8/8/8/4p2R/K7 w - - 0 1", "side": "w", "goal": "hold"}
+	var game = load("res://core/game.gd").new(position.fen)
+	game.play("h2e2")
+	screen.present_end(position, game, "Held", "You captured the pawn and kept the draw.", "", false)
+	assert_eq(screen.find_child("Heading", true, false).text, "Held")
+	assert_true(screen.find_child("Reason", true, false).text.contains("captured"))
+	assert_true(not screen.find_child("Next", true, false).visible)
+	assert_true(screen.find_child("Back", true, false).visible)
+	var backs := []
+	screen.back_requested.connect(func(): backs.append(true))
+	screen.find_child("Back", true, false).pressed.emit()
+	assert_eq(backs, [true])
+	screen.free()

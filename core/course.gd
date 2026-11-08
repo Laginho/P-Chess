@@ -212,6 +212,35 @@ func clock_choice() -> String:
 	return "none" if _progress.get("clock") == "none" else "5+5"
 
 
+func playout_passed(unit: Dictionary, position: Dictionary) -> bool:
+	var all_units = _progress.get("units", {})
+	var saved = all_units.get(unit.get("id", ""), {}) if all_units is Dictionary else {}
+	var playouts = saved.get("playouts", {}) if saved is Dictionary else {}
+	return playouts is Dictionary and playouts.get(position.get("id", ""), false) == true
+
+
+func record_playout_pass(unit: Dictionary, position: Dictionary) -> bool:
+	var id: String = unit.get("id", "")
+	var position_id: String = position.get("id", "")
+	if id.is_empty() or position_id.is_empty():
+		return false
+	return _save_progress(func(next: Dictionary) -> bool:
+		var all_units = next.get("units", {})
+		if not all_units is Dictionary:
+			return false
+		var saved = all_units.get(id, {})
+		if not saved is Dictionary:
+			return false
+		var playouts = saved.get("playouts", {})
+		if not playouts is Dictionary:
+			return false
+		playouts[position_id] = true
+		saved.playouts = playouts
+		all_units[id] = saved
+		next.units = all_units
+		return true)
+
+
 func save_clock_choice(choice: String) -> bool:
 	if choice not in ["5+5", "none"]:
 		return false

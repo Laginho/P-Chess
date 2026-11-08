@@ -1,6 +1,23 @@
 extends "res://tests/run.gd".Test
 
 
+func test_playout_passes_are_persistent_and_counted_once():
+	var path := "user://course_playout_pass_%d.json" % Time.get_ticks_usec()
+	var script = load("res://core/course.gd")
+	var course = script.new(path)
+	var unit := {"id": "rook", "playouts": [{"id": "a"}, {"id": "b"}, {"id": "c"}, {"id": "d"}]}
+	assert_true(course.has_method("record_playout_pass"), "records a play-out pass")
+	if not course.has_method("record_playout_pass"):
+		return
+	for position in unit.playouts:
+		assert_true(course.record_playout_pass(unit, position))
+	assert_true(course.record_playout_pass(unit, unit.playouts[0]))
+	course = script.new(path)
+	assert_eq(course.unit_progress(unit).playouts_passed, 4)
+	assert_true(course.playout_passed(unit, unit.playouts[0]))
+	DirAccess.remove_absolute(path)
+
+
 func test_next_practice_prefers_unsolved_positions_from_games():
 	var path := "user://course_next_%d.json" % Time.get_ticks_usec()
 	var unit := {"id": "rook", "positions": [
