@@ -1306,8 +1306,19 @@ func test_leaving_playout_ignores_pending_replies_and_records_nothing():
 		var back: Button = main.get_node("Layout/Side/Actions/NewGameButton")
 		assert_true(back.is_visible_in_tree() and back.text == "Back to the unit", pending + ": exit is visible")
 		assert_true(back.focus_mode == Control.FOCUS_ALL, pending + ": exit is keyboard reachable")
-		back.grab_focus()
-		assert_eq(main.get_viewport().gui_get_focus_owner(), back)
+		for i in 40:
+			var tab := InputEventKey.new()
+			tab.keycode = KEY_TAB
+			tab.physical_keycode = KEY_TAB
+			tab.pressed = true
+			main.get_viewport().push_input(tab, true)
+			tab = tab.duplicate()
+			tab.pressed = false
+			main.get_viewport().push_input(tab, true)
+			await Engine.get_main_loop().process_frame
+			if main.get_viewport().gui_get_focus_owner() == back:
+				break
+		assert_eq(main.get_viewport().gui_get_focus_owner(), back, pending + ": Tab reaches the exit")
 		for pressed in [true, false, true, false]:
 			var key := InputEventKey.new()
 			key.keycode = KEY_ENTER
