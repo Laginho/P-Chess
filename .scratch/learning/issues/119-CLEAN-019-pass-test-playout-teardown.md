@@ -1,5 +1,5 @@
 # CLEAN-019: Share pass-test play-out teardown
-Stage: to-implement
+Stage: implementing
 Status: ready-for-agent
 Blocked by: none
 Review: agent

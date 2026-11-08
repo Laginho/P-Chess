@@ -171,14 +171,20 @@ func test_test_playout_uses_tablebase_best_move_without_maia():
 	var positions := []
 	for i in 6:
 		positions.append({"id": str(i), "pool": "test", "fen": sample.FEN, "side": "b", "line_length": 1, "goal": "win"})
+	var convert := "7k/P7/5K2/8/8/8/8/8 w - - 0 1"
+	probe.answers[convert] = sample.answer("win", "a7a8q", {"a7a8q": {"result": "win", "dtz": 1}})
+	var first_play := {"id": "first", "fen": convert, "side": "w", "goal": "convert"}
 	var play := {"id": "convert", "fen": sample.FEN, "side": "b", "goal": "convert"}
-	var unit := {"id": "rook", "positions": positions, "test_playouts": [play, play]}
+	var unit := {"id": "rook", "positions": positions, "test_playouts": [first_play, play]}
 	main._show_unit(unit)
 	main.unit_page.part_requested.emit(unit, "test")
 	main.pass_test.find_child("Start", true, false).pressed.emit()
 	for i in 6:
 		main.solving.board._commit("c6c5", false)
 		main.solving.find_child("Commit", true, false).pressed.emit()
+	assert_true(main.board_view.play("a7a8q"))
+	assert_eq(main.course.test_attempts(unit).size(), 0, "one completed play-out does not record an attempt")
+	assert_eq(main.board_view.game.start_fen, sample.FEN, "the second play-out starts once")
 	assert_eq(main.settings.control, "none")
 	assert_true(main.board_view.play("c6c5"))
 	assert_eq(main.board_view.game.moves, PackedStringArray(["c6c5", "e1f2"]))
@@ -189,12 +195,14 @@ func test_test_playout_uses_tablebase_best_move_without_maia():
 	assert_true(main.pass_test.find_child("Details", true, false).text.contains("Missing scripted table"))
 	assert_true(main.pass_test.find_child("Retry", true, false).visible, "the interrupted play-out can be restarted")
 	assert_true(main.course.test_attempts(unit).is_empty(), "a probe error is not a failed attempt")
+	assert_eq(main._test_playouts, [true], "the completed play-out survives a probe failure")
 	main.pass_test.find_child("Retry", true, false).pressed.emit()
 	assert_true(not main.pass_test.visible and main._playout_active, "retry returns to the play-out")
 	assert_eq(main.board_view.game.start_fen, sample.FEN, "retry restarts the interrupted play-out")
 	assert_true(main.board_view.game.moves.is_empty())
 	assert_eq(main.course.test_attempts(unit).size(), 0)
 	assert_eq(main._test_results.size(), 6, "previous answers survive a probe failure")
+	assert_eq(main._test_playouts, [true], "retry preserves the completed play-out")
 	main.free()
 
 
