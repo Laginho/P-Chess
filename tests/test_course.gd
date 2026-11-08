@@ -103,3 +103,26 @@ func test_unit_progress_and_status_are_derived_from_saved_work():
 		assert_eq([progress.theory_done, progress.solved, progress.total, progress.playouts_passed, progress.test], example[2])
 		assert_eq(progress.first_try, example[3])
 	DirAccess.remove_absolute(path)
+
+
+func test_clock_choice_persists_and_preserves_other_progress():
+	var path := "user://course_clock_%d.json" % Time.get_ticks_usec()
+	var script = load("res://core/course.gd")
+	var course = script.new(path)
+	assert_true(course.has_method("clock_choice"), "course exposes play-out clock")
+	if not course.has_method("clock_choice"):
+		return
+	assert_eq(course.clock_choice(), "5+5")
+	assert_true(course.save_rating(1600, "chess.com"))
+	assert_true(course.save_clock_choice("none"))
+	course = script.new(path)
+	assert_eq(course.clock_choice(), "none")
+	assert_eq(course.rating(), {"number": 1600, "site": "chess.com"})
+	assert_true(not course.save_clock_choice("3+2"))
+	assert_eq(course.clock_choice(), "none")
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	file.store_string("{broken")
+	file = null
+	assert_true(not course.save_clock_choice("5+5"))
+	assert_eq(FileAccess.get_file_as_string(path), "{broken")
+	DirAccess.remove_absolute(path)
