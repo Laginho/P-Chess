@@ -26,7 +26,7 @@ The unit's four play-outs (spec §L8, design `PlayoutStart.dc.html`, `PlayoutEnd
 2. The game starts from the play-out's FEN with you on its side, against Maia at the course level, with the unit's clock choice.
 3. After each of your moves the judge asks the probe; when the result for your side changed, the play-out fails at once, before Maia replies.
 4. Running out of time fails the play-out.
-5. A convert passes when you promote or mate; a hold passes when the pawn is captured, with the draw kept, or after `Tunables.COURSE_HOLD_MOVES` (30) of your moves with the draw kept.
+5. A convert passes when you promote or mate; a hold passes when the pawn is captured, with the draw kept, or after `Tunables.COURSE_HOLD_MOVES` (30) of your moves with the draw kept, or when the game ends drawn first.
 6. The end card shows Converted / Held / Play-out failed / Out of time with the reason; on a failed move it shows that move with the blunder icon and a move that kept the result, from the probe, and the board shows the position after the failing move with it highlighted.
 7. A pass records that play-out as passed; the end card offers Next play-out (or Back to the unit after the fourth) and Back to the unit; a fail offers Retry and Back to the unit.
 8. Play-out games write nothing to `user://games/` and don't change `user://stats.cfg`.
@@ -119,3 +119,7 @@ Delivery: rebase onto `sweatshop/learning/2026-11-07-2234` was a no-op. Integrat
 Acceptance: pending | Real-helper failure/conversion, automated criteria and current-code captures passed as linked above. Actual Maia play from the supplied FEN, an intentional hold failure, successful conversion and Bruno's difficulty assessment remain release checks from the original Verification and dependency notes; Lc0 and Maia nets are absent in this checkout.
 Disclosure: pending | release | [Original verification and dependency notes](111-LEARN-007-play-outs.md#verification), [RES-001](101-RES-001-tablebase-and-maia-spike.md) and [CORE-007](102-CORE-007-game-keeps-its-start-position.md): verify real Maia replies legally and complete Bruno's play-out/difficulty acceptance before release. The real-helper smoke above covers FEN, grading and conversion with a scripted opponent only.
 Disclosure: decision | none | [CLEAN-018](118-CLEAN-018-playout-hold-rule-copy.md) completed the nonblocking tunable-copy cleanup: the displayed hold limit now uses the judge's setting, preserving the shipped value of 30.
+
+- 2026-11-08 PR #44 integration review (gpt-6.1-sol xhigh, P2): a hold play-out whose game ended drawn (fivefold repetition, stalemate) before the player's 30th move was recorded as failed; with the perfect opponent repeating moves, the pass test's hold could not be passed.
+- Proxy decided (opus-5.5 xhigh): A — a hold play-out whose game ends drawn counts as Held; a convert that ends drawn still fails. The goal of a hold is the draw, and every one of your moves already passed the probe's draw check, so a drawn ending means the draw was kept. (receipt /tmp/sweatshop-proxy/20261108-074135-LEARN-007-6cdb7e.json)
+Disclosure: decision | none | [Proxy decision above](#comments): criterion 5, spec L8 and CONTEXT.md **Hold** now accept a drawn game end as Held; fixed in the PR #44 review loop.
