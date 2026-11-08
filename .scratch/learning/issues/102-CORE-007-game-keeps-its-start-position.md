@@ -1,5 +1,5 @@
 # CORE-007: A game keeps its start position, and Maia plays from it
-Stage: to-implement
+Stage: implementing
 Blocked by: none
 Review: agent
 Difficulty: normal
