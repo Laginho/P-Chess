@@ -125,12 +125,14 @@ func test_game_start_position_is_used_for_maia_requests():
 	bridge.immediate = false
 	var maia = MaiaPlayer.new(bridge)
 	maia.think(game)
+	assert_eq(bridge.requests, [[fen, PackedStringArray()]], "first request")
+	bridge.requests.clear()
 	assert_true(game.play("a2a3"))
 	assert_true(game.play("e8e7"))
 	assert_eq(game.get("start_fen"), fen, "moves do not change the start")
 	maia.think(game)
-	assert_eq(bridge.requests, [[fen, PackedStringArray()],
-			[fen, PackedStringArray(["a2a3"])], [fen, PackedStringArray(["a2a3", "e8e7"])]])
+	assert_eq(bridge.requests, [[fen, PackedStringArray(["a2a3"])],
+			[fen, PackedStringArray(["a2a3", "e8e7"])]])
 
 
 func test_prediction_compute_time_counts_toward_the_reply_delay():
