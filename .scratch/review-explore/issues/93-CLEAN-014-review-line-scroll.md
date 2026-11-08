@@ -1,5 +1,5 @@
 # CLEAN-014: Keep the current Review side-line move visible
-Stage: to-review
+Stage: done
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -40,8 +40,8 @@ One reproduction line is `1. d4 d5 2. c4 e6 3. Nc3 Nf6 4. Bg5 Be7 5. e3 O-O 6. N
 - Proxy decided (opus-5.5 xhigh): 5 settled, 0 escalated (receipt /tmp/sweatshop-proxy/20261108-125958-HIST-010-b9505f.json)
 - Proxy decided (opus-5.5 xhigh): 3 settled, 0 escalated (receipt /tmp/sweatshop-proxy/20261108-130224-HIST-010-5b620a.json)
 
-Acceptance: passed | Headless viewport test covers navigation and scroll preservation at 1280x800 and 800x600; gate 682 passed, 0 failed. Manual visual verification was not performed.
-Disclosure: pending | none | Non-blocking usability follow-up to REV-007; no integration or release hold imposed by this observation.
+Acceptance: passed | Headless gate: 682 passed, 0 failed. The focused test also passed with graphical rendering at 1280x800 and 800x600; stage 3 inspected both captured viewports. See Resolution for evidence.
+Disclosure: decision | none | Non-blocking usability follow-up to REV-007; the written criteria are met and no integration or release hold remains for this ticket.
 
 - 2026-11-08 Attempt 1 failed: exit 0. Log tail: O CLEAN-014 foi implementado e permanece em **`implementing`**: a passagem para revisão depende de um gate verde. /  / A lista agora mantém a jogada selecionada visível e mostra “Back to game” no fim da linha, inclusive quando a navegação começa abaixo dela. O teste focado passou nos dois tamanhos previstos. /  / O gate completo terminou com **681 testes aprovados e 1 falha**, fora de Review. O teste de tablebase falhou com o fixture em CRLF neste checkout Windows; uma cópia isolada do teste passou ao remover os finais de linha. A regra do repositório permite repetir o gate somente após mudança de código, então não há recibo verde nem handoff para revisão. Registrei o resultado no [ticket](<C:/Users/bruno/Desktop/Pastinha/Programas/Projects/P-Chess/.artifacts-build/lanes/review-explore/.scratch/review-explore/issues/93-CLEAN-014-review-line-scroll.md>). /  / Não fiz verificação gráfica manual; o gate também pulou verificações que exigem display e tablebases Linux. /  /
 
@@ -106,3 +106,37 @@ Disclosure: pending | none | Non-blocking usability follow-up to REV-007; no int
   - 4. ? Gate exit 0, 682 passed, 0 failed; log `C:\Users\bruno\AppData\Local\Temp\clean014-resume-gate.log`. Graphical pixel checks and Linux tablebase checks were skipped by the suite.
 
 Gate evidence: C:\Users\bruno\AppData\Local\Temp\clean014-resume-gate.json
+
+#### Resolution (2026-11-08)
+Verdict: Approve
+
+- Standards: 0 findings. Independent Standards review covered the complete three-file diff against `AGENTS.md`, `CONTEXT.md`, tracker conventions and the code-review smell baseline. The helper follows existing deferred layout handling; no extra abstraction or dependency was introduced.
+- Spec: 0 findings. Independent Spec review covered the same diff and all four numbered criteria. Production and tests remain within Primary files, with test-only commits preceding their production fixes.
+- Scope examined: board play through `_on_board_move`, Previous/Next and keyboard stepping through `_step`, deferred Tree row selection through `_show_line`, game/graph navigation through `_show_ply`, line rebuilding, replacement, return-to-game, hiding/disposal, and classification/live-analysis callbacks. `_scroll_line` reads the current line state when its deferred call runs, so index zero and discarded lines cancel pending scrolling. Classification updates do not schedule it. Real engine delivery and manual mouse/keyboard or screen-reader interaction were not exercised.
+
+Numbered criteria:
+
+1. ✅ The 20-move reproduction keeps both the selected move and Back to game inside the move list at 1280x800 and 800x600, including navigation after manually scrolling below the line. Covered by `test_side_line_navigation_keeps_current_and_exit_rows_visible`; graphical rerun and both inspected captures agree.
+2. ✅ Previous keeps the selected row visible after manually scrolling away. The same test covers both viewport sizes.
+3. ✅ Index zero and `_refresh_line_classes` preserve the scroll offset. The deferred helper also guards against leaving the line before it runs.
+4. ✅ The gate receipt validates against the reviewed and merged code: 682 passed, 0 failed, exit 0. No gate rerun was needed because production did not change during review or integration.
+
+Red-green proof and evidence:
+
+- `d31ef1c` (tests) → `6a3cca4` (production): the preserved `C:\Users\bruno\AppData\Local\Temp\clean014-red.log` shows the selected/exit rows outside the visible area in both viewport sizes, and Previous outside it at 1280x800.
+- `bb7dabd` (tests) → `cefddfb` (production): `C:\Users\bruno\AppData\Local\Temp\clean014-red2.log` shows the selected row at y=-22 when approaching the end from below. `clean014-green2.log` records 1 passed, 0 failed. `clean014-mutant.log` additionally detects a broken Previous path. These are preserved stage-2 logs inspected during this review, not new executions.
+- Gate: `C:\Users\bruno\AppData\Local\Temp\clean014-resume-gate.json`, tested commit `cefddfbfbb73930f3d24922868ef402807a33764`; matching log hash, final `ExitCode: 0`, and unchanged production tree verified before and after merge. The gate skips graphical pixel checks and Linux-installed tablebase/native-helper checks; its log contains existing warning-path coverage.
+- Stage-3 execution: an external temporary runner invoked only the new test with graphical rendering and captured the settled line end. `C:\Users\bruno\AppData\Local\Temp\clean014-stage3-graphical.log`: PASS, exit 0. Captures inspected: `C:\Users\bruno\AppData\Local\Temp\clean014-graphical-1280x800.png` and `C:\Users\bruno\AppData\Local\Temp\clean014-graphical-800x600.png`. The runner adds only capture/log statements to an in-memory copy of the test; repository code stays unchanged. The window ran at `--position 3000,3000`.
+
+Recorded proxy decisions reviewed:
+
+- Stage-1 record `Proxy decided (opus-5.5 xhigh): 5 settled, 0 escalated` (receipt `/tmp/sweatshop-proxy/20261108-125958-HIST-010-b9505f.json`): retained stage-1 provenance; the written Primary files and numbered criteria are the reviewed contract.
+- Stage-1 record `Proxy decided (opus-5.5 xhigh): 3 settled, 0 escalated` (receipt `/tmp/sweatshop-proxy/20261108-130224-HIST-010-5b620a.json`): same disposition. These Linux receipts were not available for independent inspection on this Windows host; this review made no further contract change.
+- Recorded ``Proxy decided (opus-5.5 xhigh): Authorized — run the gate once more now, with no code change. The "rerun only after changing code" rule (`~/.claude/CLAUDE.md` "Gate: rode uma vez, leia o log", and ticket-flow's "never merely to produce paperwork") stops you from repeating a run whose log still matches the checkout, and this log no longer does.`` (receipt `C:\Users\bruno\AppData\Local\Temp\sweatshop-proxy\20261108-143003-CLEAN-014-6a4249.json`): historical fixture-rerun decision. No exception was used in this review.
+- Recorded ``Proxy decided (opus-5.5 xhigh): Authorized again. The ruling recorded at `04004f0` (receipt `20261108-143003`) still stands: run the gate once now, with no code change. This is a reading of the rule, not an exception to it. The run at `fe96cb5` used a CRLF fixture in the working tree while the committed file is LF, so it never tested this commit as committed. "Rode de novo só depois de mudar código" stops you repeating a valid run, and this commit has not had one yet.`` (receipt `C:\Users\bruno\AppData\Local\Temp\sweatshop-proxy\20261108-143258-CLEAN-014-eacf51.json`): also historical. Bruno's later root-cause fix `6559a09`, already integrated into the session base, superseded both rerun disputes; the reviewed implementation then received a green gate. No unresolved fixture issue remains in this ticket.
+
+Acceptance: passed | All written criteria verified by code inspection, validated stage-2 gate evidence and the stage-3 focused graphical test/captures above.
+Disclosure: decision | none | The four recorded proxy decisions are disclosed above. No new contract change, unresolved defect, integration hold or release hold was introduced by this review.
+Disclosure: pending | none | Real Stockfish callbacks, manual routed input, screen-reader behavior, CI/export and Linux tablebase checks were not run during stage 3; those checks are outside this scrolling ticket's acceptance criteria.
+
+Integrated without conflicts into `sweatshop/review-explore/2026-11-08-1410` by merge `5cd6d58236b40031ecd5382bba455ef4c276f1f1`. No PR or push: the session driver owns publication.
