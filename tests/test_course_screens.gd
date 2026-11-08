@@ -962,6 +962,49 @@ func test_playout_promotion_records_pass_and_next_opens_next_position():
 	main.free()
 
 
+# White stalemates Black with Rb1: the game ends drawn on the player's move (PR #44 review).
+func _stalemate_playout(goal: String, result: String):
+	var session = Session.new()
+	var main = await session._session(Session.ManualWaits.new(), false)
+	main.course = load("res://core/course.gd").new(main.history._root.path_join("course.json"))
+	main.course.save_rating(1400, "chess.com")
+	main.course.save_clock_choice("none")
+	var sample = load("res://tests/test_grader.gd")
+	var fen := "k7/p7/K7/8/8/8/8/7R w - - 0 1"
+	var probe = sample.FakeProbe.new()
+	probe.answers[fen] = sample.answer(result, "h1b1", {"h1b1": {"result": result, "dtz": 0 if result == "draw" else 5}})
+	main.tablebase.queue_free()
+	var adapter = LifecycleProbe.new(probe, [])
+	main.tablebase = adapter
+	main.add_child(adapter)
+	var position := {"id": "a", "fen": fen, "side": "w", "goal": goal}
+	var unit := {"id": "rook", "playouts": [position, position, position, position]}
+	main._show_unit(unit)
+	main.unit_page.part_requested.emit(unit, "playouts")
+	main.playout.find_child("Start", true, false).pressed.emit()
+	while main._starting:
+		await Engine.get_main_loop().process_frame
+	assert_true(main.board_view.play("h1b1"))
+	return [main, unit, position]
+
+
+func test_hold_playout_that_ends_drawn_is_held():
+	var made = await _stalemate_playout("hold", "draw")
+	var main = made[0]
+	assert_eq(main.playout.find_child("Heading", true, false).text, "Held")
+	assert_true(main.course.playout_passed(made[1], made[2]), "a drawn end records the hold")
+	assert_true(main.history.games().is_empty())
+	main.free()
+
+
+func test_convert_playout_that_ends_drawn_still_fails():
+	var made = await _stalemate_playout("convert", "win")
+	var main = made[0]
+	assert_eq(main.playout.find_child("Heading", true, false).text, "Play-out failed")
+	assert_true(not main.course.playout_passed(made[1], made[2]))
+	main.free()
+
+
 func test_playout_flag_fails_without_history_and_retry_returns_to_start():
 	var session = Session.new()
 	var main = await session._session(Session.ManualWaits.new(), false)
