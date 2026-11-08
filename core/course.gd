@@ -157,7 +157,7 @@ func unit_progress(unit: Dictionary) -> Dictionary:
 	if mastered and checks is Array:
 		for i in range(checks.size() - 1, -1, -1):
 			var check = checks[i]
-			if check is Dictionary and (check.has("passed") or check.has("missed")):
+			if check is Dictionary and check.get("done", true) != false and (check.has("passed") or check.has("missed")):
 				needs_review = check.get("missed", false) == true or check.get("passed", true) == false
 				break
 	var theory: bool = saved.get("theory_opened", false) == true
