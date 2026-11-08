@@ -1,6 +1,6 @@
 # UI-039: Reach Review's "Practise in Rook endgames" link with the keyboard
 Stage: to-implement
-Status: needs-triage
+Status: ready-for-agent
 Blocked by: none
 Review: agent
 Difficulty: normal
@@ -31,3 +31,5 @@ REV-011's marker row in Review's move list is unselectable in every column (`ui/
 ## Comments
 
 - 2026-11-08 Opened by the PR #44 review loop (foreman) as the refutation of review finding 4: REV-011's criteria name no keyboard access; the gap is real and is new work.
+
+- Triage by the driver: ready-for-agent — the marker opens only by mouse, leaving keyboard users unable to reach the saved position.
