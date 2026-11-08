@@ -30,3 +30,5 @@ Difficulty: normal
 ## Comments
 
 - 2026-11-08 Opened by the Standards review of [LEARN-002](106-LEARN-002-course-map-and-unit-page.md#resolution-2026-11-08): possible Duplicated Code in `core/course.gd:174–194`, compared with `save_rating()`. This is a maintenance judgment, not a criterion failure or an integration/release condition. The separate criterion-2 status defect remains on reopened LEARN-002.
+
+- 2026-11-08 [LEARN-003 closing review](107-LEARN-003-theory-pointer.md#resolution-2026-11-08): `open_theory()` at `core/course.gd:197–226` adds a third caller of the same read-preserve-write/flush/rename sequence. Include it when triaging this optional extraction and preserve its validation, unrelated unit progress and corrupt-file refusal. No current behavior defect or integration/release condition was found; this note leaves the contract for stage-1 triage to settle.
