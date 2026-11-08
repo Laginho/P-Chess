@@ -1,5 +1,5 @@
 # CLEAN-014: Keep the current Review side-line move visible
-Stage: blocked
+Stage: to-implement
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -96,3 +96,5 @@ Disclosure: pending | none | Non-blocking usability follow-up to REV-007; no int
   > I didn't run the gate. A fresh Windows checkout with `autocrlf=true` can still fail on this fixture until CLEAN-021 lands.
 
 - 2026-11-08 Attempt 2 stopped to ask (its commits are on branch `recovery/asked/20261108-143633/CLEAN-014`): O **CLEAN-014 está bloqueado**, com a implementação e os testes recuperados na branch `CLEAN-014` e a árvore limpa. Também preservei o [CLEAN-021](<C:/Users/bruno/Desktop/Pastinha/Programas/Projects/P-Chess/.artifacts-build/lanes/review-explore/.scratch/review-explore/issues/94-CLEAN-021-tablebase-fixture-line-endings.md>) para tratar a portabilidade do fixture. /  / O gate anterior registrou **681 testes aprovados e 1 falha** no teste de tablebase com o fixture em CRLF. O fixture agora está em LF, mas o código continua igual ao testado e ainda não há recibo de gate verde. A aprovação do teste focado é um resultado relatado pela tentativa anterior; não o executei novamente nesta retomada. /  / Você autoriza executar o gate uma vez com o fixture corrigido, sem outra mudança de código? /  / Preciso da autorização porque o `AGENTS.md` fornecido determina **“Rode de novo só depois de mudar código”**, enquanto a skill [ticket-flow](<C:/Users/bruno/.agents/skills/ticket-flow/SKILL.md>) exige gate verde para entregar o ticket à revisão. /  / Não repeti o gate nem fiz verificação gráfica manual; a falha de fixture também pode ocorrer em outros checkouts Windows.
+
+- 2026-11-08 Foreman: Bruno chose to fix the root cause. `main` 6559a09 (merged into this session) makes `test_tablebase.gd` strip CR from the fixture, so the gate passes on a CRLF checkout. That is a code change: run the gate once on it. Resume from `recovery/asked/20261108-143633/CLEAN-014`. CLEAN-021 (opened on the recovery branches) is covered by 6559a09; drop it.
