@@ -8,8 +8,9 @@ extends RefCounted
 signal low_time(side: String)
 signal flagged(side: String)
 
-# Control -> [starting ms, increment ms]. Only these three: the time model has no data for others.
+# Sandbox controls -> [starting ms, increment ms]. The time model has data for these three.
 const CONTROLS := {"1+0": [60000, 0], "3+2": [180000, 2000], "5+0": [300000, 0]}
+const PLAY_OUT_CONTROLS := {"5+5": [300000, 5000]}
 
 var increment := 0
 # 10% of the starting time or 10 s, whichever is lower.
@@ -28,8 +29,9 @@ var _since := 0
 
 func _init(control: String, time_source: Callable) -> void:
 	_now = time_source
-	var start: int = CONTROLS[control][0]
-	increment = CONTROLS[control][1]
+	var values: Array = CONTROLS[control] if CONTROLS.has(control) else PLAY_OUT_CONTROLS[control]
+	var start: int = values[0]
+	increment = values[1]
 	low_time_ms = mini(start / 10, 10000)
 	_left = {"w": start, "b": start}
 
