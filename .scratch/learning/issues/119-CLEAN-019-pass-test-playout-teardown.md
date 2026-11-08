@@ -1,5 +1,5 @@
 # CLEAN-019: Share pass-test play-out teardown
-Stage: to-review
+Stage: done
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -41,3 +41,19 @@ Consider sharing the identical play-out teardown used when a pass-test play-out 
 - Criterion 3 ✅ Independent check: `ui/main.gd:733` retains progress, and Retry uses `_start_test_playout` at `ui/main.gd:265`; `tests/test_course_screens.gd:159` verifies error after a completed first play-out, no attempt, retained answers and result, and restart of the interrupted second play-out. Answer contents are not individually compared.
 - Verification: `godot --headless -s tests/run.gd` passed at `e54762db6fc212ac0f0d2c9983fa1040149dbceb`: 674 passed, 0 failed. Two pixel checks require a display; six live Lc0 checks were skipped because the Windows engine executable is unavailable. `git diff --check` passed.
 Gate evidence: /run/media/lage/New Volume/Scratch/CLEAN-019-gate.json
+
+#### Resolution (2026-11-08)
+Verdict: Approve
+
+- Standards: 0 findings. Independent Standards review found no documented-standard breaches or baseline smells introduced by the complete diff.
+- Spec: 0 findings. Independent Spec review confirmed all three numbered criteria, Primary-file scope and separate test/production commits.
+- Examined callers and failure paths: `_finish_playout`, `_on_move_played`'s judgement callback, `_next_turn`'s perfect-opponent callback, generation guards, clock setup/stop, Retry wiring, attempt-save success/failure and sandbox History isolation. The shared helper retains the original operations and their order. Delayed callbacks and clock stopping were checked statically; live engine/tablebase and windowed UI behavior were not exercised during review.
+- Criterion 1 ✅ Both `_finish_test_playout` (`ui/main.gd:719`) and `_test_playout_error` (`ui/main.gd:734`) call `_teardown_test_playout` (`ui/main.gd:738`). It invalidates callbacks, stops and detaches the clocks, cancels premoves and disables input. Both screen scenarios assert the observable teardown outcomes (`tests/test_course_screens.gd:113`, `tests/test_course_screens.gd:203`).
+- Criterion 2 ✅ Completion appends once, starts the next play-out and returns before recording an attempt until both finish (`ui/main.gd:720`). The screen tests verify sequential starts, no early attempt, one final attempt and History isolation (`tests/test_course_screens.gd:97`, `tests/test_course_screens.gd:112`, `tests/test_course_screens.gd:189`).
+- Criterion 3 ✅ Probe error preserves solving results and completed play-outs; Retry restarts from their retained count (`ui/main.gd:265`, `ui/main.gd:689`, `ui/main.gd:733`). The scenario verifies no attempt, the retained first completion, six solving results and restart of the interrupted second play-out (`tests/test_course_screens.gd:199`).
+- Files: `ui/main.gd` and `tests/test_course_screens.gd`; review required no source or test changes.
+- Red/green proof: reviewed test-only commits `7ebd422` and `e54762d`, production-only extraction `de004a6`, and both recorded mutant logs. Clearing completed progress fails the retry assertions; omitting clock-display detachment and premove cancellation fails both teardown scenarios. The extraction itself preserves behavior, as the contract requires.
+- Gate: reused the committed-code receipt for `e54762db6fc212ac0f0d2c9983fa1040149dbceb`: `godot --headless -s tests/run.gd`, 674 passed, 0 failed, exit 0. Verified the receipt command, log hash, successful exit and unchanged code with `Assert-GateEvidence`; `git diff --check` passed. Two pixel checks need a display and six live Lc0 checks lack the Windows executable. Both relevant pass-test screen scenarios ran and passed.
+- Integration: rebased onto the unchanged session base and merged with `--no-ff` as `63edec4` into `sweatshop/learning/2026-11-07-2234`.
+
+Acceptance: passed | [Pass-test completion, History isolation and probe-error Retry scenarios](../../../tests/test_course_screens.gd), confirmed in the [green gate log](</run/media/lage/New Volume/Scratch/CLEAN-019-gate.log>).
