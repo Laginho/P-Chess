@@ -87,3 +87,27 @@ func test_continue_moves_to_first_unfinished_part_and_disappears_when_done():
 			assert_eq(parts.get_child(i).find_child("Open", true, false).text, "Continue" if i == sample[1] else "Open")
 	main.free()
 	Session.HistoryStorage.clean(folder)
+
+
+func test_new_rating_lands_on_the_map():
+	var folder := "user://course_new_rating_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var main = MainScene.instantiate()
+	main.course = load("res://core/course.gd").new(folder.path_join("course.json"))
+	main.history = load("res://core/history.gd").new(folder)
+	main.uci.free()
+	main.uci = Session.HeldBridge.new()
+	main.maia = main.MaiaPlayer.new(main.uci)
+	main.preferences = main.Settings.new(folder.path_join("settings.cfg"))
+	main.preferences.set_value("player_name", "You")
+	Engine.get_main_loop().root.add_child(main)
+	main.get_node("Home/Center/Form/Course").pressed.emit()
+	var dialog = main.rating_dialog
+	assert_true(dialog.visible)
+	var number: LineEdit = dialog.find_child("RatingNumber", true, false)
+	number.text = "1600"
+	number.text_changed.emit(number.text)
+	dialog.confirmed.emit()
+	assert_true(main.course_map.visible and not main.get_node("Home").visible, "saving the first rating opens the map")
+	main.free()
+	Session.HistoryStorage.clean(folder)

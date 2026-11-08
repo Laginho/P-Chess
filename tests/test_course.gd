@@ -150,3 +150,12 @@ func test_failed_playout_is_in_progress():
 	assert_eq(course.unit_progress(unit).status, "in progress")
 	assert_eq(course.unit_progress(unit).playouts_passed, 0)
 	DirAccess.remove_absolute(path)
+
+
+func test_missing_unit_files_are_not_listed():
+	var path := "user://course_missing_unit_%d.json" % Time.get_ticks_usec()
+	var course = load("res://core/course.gd").new(path, "res://tests/fixtures/course/missing.json")
+	assert_true(course.save_rating(1500, "chess.com"))
+	assert_eq(course.units().size(), 1)
+	assert_eq(course.units()[0].id, "rook")
+	DirAccess.remove_absolute(path)
