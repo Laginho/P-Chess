@@ -1,5 +1,5 @@
 # LEARN-011: A way back to the unit during a play-out
-Stage: to-implement
+Stage: to-review
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -44,3 +44,10 @@ An ordinary course play-out (from the unit page) hides New game, Rematch, Resign
 - Gate attempt: 682 passed, 1 failed, exit 1; log: C:/Users/bruno/AppData/Local/Temp/learn011-gate.log. The unrelated test_recorded_fathom_transcript_is_parsed_without_live_tables fails with this Windows checkout's CRLF fixture (index LF); it passed in isolation with the fixture temporarily converted to LF, then the original checkout was restored. No green gate receipt exists, so Stage remains implementing.
 
 - 2026-11-08 Driver retry: attempt 1 ended short of to-review (exit 0). Resume from this branch's commits; edits the stage left uncommitted are saved in run-log/recovery.txt.
+
+- Stage 2 retry criteria check (independent agent): criterion 1: ui/main.gd:198-202, 527-528; tests/test_course_screens.gd:1271 and 1346 cover Tab, Enter and the pass-test exit.
+- Stage 2 retry criteria check: criterion 2: ui/main.gd:751-767 and 1078; tests/test_course_screens.gd:1271 hold Maia and probe replies and check the clock and late replies. Probe cancellation is logical: the shared tablebase process finishes its current request and the stale callback is ignored.
+- Stage 2 retry criteria check: criterion 3: ui/main.gd:617-626 and 797-812; tests/test_course_screens.gd:1271 checks unchanged progress, History and stats.
+- Stage 2 retry: Enter on a focused game exit after the end card appeared incorrectly opened Home; tests/test_course_screens.gd:918 failed before ui/main.gd:803 hid the action and passed after. The existing exit test now reaches it by Tab.
+- Gate retry: 683 passed, 0 failed, exit 0; graphical pixel checks and Linux tablebase/native-helper checks skipped. Log: C:/Users/bruno/AppData/Local/Temp/learn011-retry-gate.log.
+Gate evidence: C:/Users/bruno/AppData/Local/Temp/learn011-retry-gate.json
