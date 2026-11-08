@@ -904,8 +904,18 @@ func test_playout_starts_from_unit_and_failing_move_ends_before_maia_without_his
 	assert_eq(main.human, "b")
 	assert_eq(main.settings.level, "maia-1600")
 	assert_eq(main.settings.control, "none")
+	var game_back: Button = main.get_node("Layout/Side/Actions/NewGameButton")
+	game_back.grab_focus()
 	assert_true(main.board_view.play("c6c4"))
 	assert_true(screen.visible, "end card opens")
+	for pressed in [true, false]:
+		var key := InputEventKey.new()
+		key.keycode = KEY_ENTER
+		key.physical_keycode = KEY_ENTER
+		key.pressed = pressed
+		main.get_viewport().push_input(key, true)
+		await Engine.get_main_loop().process_frame
+	assert_true(screen.visible, "Enter cannot activate the game exit behind the end card")
 	assert_eq(screen.find_child("Heading", true, false).text, "Play-out failed")
 	assert_true(screen.find_child("Reason", true, false).text.contains("Rc4"))
 	assert_true(screen.find_child("Reason", true, false).text.contains("Rc5"))
