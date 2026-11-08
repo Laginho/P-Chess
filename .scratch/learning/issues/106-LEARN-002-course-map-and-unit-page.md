@@ -1,5 +1,5 @@
 # LEARN-002: Course map and unit page
-Stage: implementing
+Stage: to-review
 Blocked by: LEARN-001
 Review: agent
 Difficulty: normal
@@ -49,3 +49,17 @@ The course gets its first real screens (design `CourseMap.dc.html`, `Unit.dc.htm
 
 - Proxy decided (opus-5.5 xhigh): Keep all four parts on the unit page and the course-map card; reword criterion 5 so it bans placeholder units and stages, not the four fixed parts. Criterion 6 stays as written. (receipt /tmp/sweatshop-proxy/20261108-000755-LEARN-002-28867a.json)
 - Criterion 5 follows story 13 and ADR 0001: the four parts are the unit structure. Seed play-outs and test data remain for LEARN-004; the empty parts show 0/4 and Not taken until then.
+
+- Stage 2 criteria check (independent subagent, read-only; rechecked after fixes):
+  - 1 ✅ `core/course.gd:94` and `:107`; `test_stage_follows_converted_rating_and_loads_units` checks the converted rating boundary and loaded units.
+  - 2 ✅ `core/course.gd:118`; `test_unit_progress_and_status_are_derived_from_saved_work`, `test_passed_test_and_failed_review_determine_mastery` and `test_failed_playout_is_in_progress` cover the four statuses and failed work.
+  - 3 ✅ `core/course.gd:118`, `ui/unit_page.gd:19` and `ui/course_map.gd:16`; `test_unit_progress_and_status_are_derived_from_saved_work` and `test_map_shows_only_selected_stage_and_unit_page_reports_progress` check counts, rate, empty state and display.
+  - 4 ✅ `ui/main.gd:176`, `ui/main.gd:498` and `ui/rating_dialog.gd:52`; `test_course_navigation_unit_progress_and_clock` and `test_new_rating_lands_on_the_map` cover saved and fresh ratings and Edit.
+  - 5 ✅ `core/course.gd:94`, `core/course.gd:107` and `ui/course_map.gd:16`; `test_missing_unit_files_are_not_listed` and `test_map_shows_only_selected_stage_and_unit_page_reports_progress` cover missing units and distinct stages. The proxy clarified the fixed four-part structure above.
+  - 6 ✅ `ui/unit_page.gd:42`; `test_continue_moves_to_first_unfinished_part_and_disappears_when_done` and `test_map_shows_only_selected_stage_and_unit_page_reports_progress` cover the ordered labels, progress and each Continue state.
+  - 7 ✅ `core/course.gd:170` and `ui/unit_page.gd:87`; `test_clock_choice_persists_and_preserves_other_progress` and `test_course_navigation_unit_progress_and_clock` cover the default, save, reload and selected control.
+  - 8 ✅ `ui/unit_page.gd:82`; `test_course_navigation_unit_progress_and_clock` checks all four requests and that unimplemented screens leave the unit visible.
+  - 9 ✅ `ui/main.gd:216`, `:219`, `:477` and `:486`; `test_course_navigation_unit_progress_and_clock` checks both Back actions.
+- Red/green: new stage, progress and clock tests failed for missing public methods before implementation; screen navigation failed before the screens existed. Additional tests failed against mutants removing first-rating navigation, part identifiers, saved clock selection, visible rate and stage cards. The stage fixture change required updating a test rating to keep it in the intended stage.
+- Resolution: shipped the stage index and two Wikipedia seed positions, course map and unit page, persisted clock and navigation. The remaining play-out/test content and individual screens belong to LEARN-003 onward. The focused suite passed 13 tests; `godot --headless -s tests/run.gd` passed 590 tests. Captured the map and unit at 1280×800 and the unit at 800×600; persistence was verified by reloading the store in tests, not by a manual application restart.
+Gate evidence: /run/media/lage/New Volume/Scratch/LEARN-002/gate.json
