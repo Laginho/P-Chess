@@ -1,5 +1,5 @@
 # CLEAN-014: Keep the current Review side-line move visible
-Stage: blocked
+Stage: to-implement
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -46,3 +46,22 @@ Disclosure: pending | none | Non-blocking usability follow-up to REV-007; no int
 - 2026-11-08 Attempt 1 failed: exit 0. Log tail: O CLEAN-014 foi implementado e permanece em **`implementing`**: a passagem para revisão depende de um gate verde. /  / A lista agora mantém a jogada selecionada visível e mostra “Back to game” no fim da linha, inclusive quando a navegação começa abaixo dela. O teste focado passou nos dois tamanhos previstos. /  / O gate completo terminou com **681 testes aprovados e 1 falha**, fora de Review. O teste de tablebase falhou com o fixture em CRLF neste checkout Windows; uma cópia isolada do teste passou ao remover os finais de linha. A regra do repositório permite repetir o gate somente após mudança de código, então não há recibo verde nem handoff para revisão. Registrei o resultado no [ticket](<C:/Users/bruno/Desktop/Pastinha/Programas/Projects/P-Chess/.artifacts-build/lanes/review-explore/.scratch/review-explore/issues/93-CLEAN-014-review-line-scroll.md>). /  / Não fiz verificação gráfica manual; o gate também pulou verificações que exigem display e tablebases Linux. /  /
 
 - 2026-11-08 Attempt 2 stopped to ask (its commits are on branch `recovery/asked/20261108-142949/CLEAN-014`): O **CLEAN-014 está bloqueado** na branch `CLEAN-014`, com a implementação e os testes preservados. O último gate terminou com **681 testes aprovados e 1 falha** no teste de tablebase; não há recibo de gate verde. Registrei o bloqueio no commit `0f1fc45`. /  / O fixture que causou a falha agora está em LF. O proxy recomendou repetir o gate, mas sua instrução no `AGENTS.md` diz: **“Rode de novo só depois de mudar código.”** A correção do fixture no ambiente não foi uma mudança de código. A skill [ticket-flow](C:/Users/bruno/.agents/skills/ticket-flow/SKILL.md) também exige gate verde para entregar o ticket à revisão. /  / Você autoriza uma exceção para repetir o gate agora, com o fixture corrigido, sem alterar código? /  / Não repeti o gate nem fiz verificação gráfica manual; o comportamento visual ainda precisa dessa validação. /  /
+
+- 2026-11-08 Proxy decided (opus-5.5 xhigh): Authorized — run the gate once more now, with no code change. The "rerun only after changing code" rule (`~/.claude/CLAUDE.md` "Gate: rode uma vez, leia o log", and ticket-flow's "never merely to produce paperwork") stops you from repeating a run whose log still matches the checkout, and this log no longer does. (receipt C:\Users\bruno\AppData\Local\Temp\sweatshop-proxy\20261108-143003-CLEAN-014-6a4249.json)
+  > Decision: Authorized — run the gate once more now, with no code change. The "rerun only after changing code" rule (`~/.claude/CLAUDE.md` "Gate: rode uma vez, leia o log", and ticket-flow's "never merely to produce paperwork") stops you from repeating a run whose log still matches the checkout, and this log no longer does.
+  > 
+  > **Evidence**
+  > - **What failed.** The run at `fe96cb5` had exactly one failure: `test_tablebase.gd:155` (`clean014-gate.log:733-734`, `799: 681 passed, 1 failed`). The cause was CRLF line endings in `tests/fixtures/tablebase/res001.txt`. The test splits on `"\n"`, so each line keeps a stray `\r`.
+  > - **What changed since.** That fixture is now LF in the lane, `core.autocrlf` is `false`, and `git status` is clean. So the working tree now matches the committed file byte for byte, and the input that failed is different. There is no green receipt to reuse, so the rerun is a new check, not paperwork.
+  > - **Scope.** This is how the existing rule reads, not a change to it. No ticket criteria, Primary files or `AGENTS.md` change.
+  > 
+  > **What stage 2 does next**
+  > 1. Run the gate once through `gate-evidence.ps1` at the current HEAD of the CLEAN-014 branch. Since `fe96cb5` only ticket commits have landed, and the receipt allows those.
+  > 2. **If it's green:** add the `Gate evidence: <JSON>` line. That meets criterion 4, so move to `Stage: to-review`.
+  > 3. **If it fails again on the same tablebase test:** don't run it again and don't fix it in this ticket, because the file is outside its Primary files. Record the log and leave the ticket `Stage: blocked`.
+  > 4. **If it fails on anything else:** fix the code. After a code change the normal rule allows another run.
+  > 5. **Either way:** open a separate needs-triage CLEAN ticket for a lasting fix. The fixture breaks on any Windows checkout with `autocrlf=true`. Two options: a `.gitattributes` line `tests/fixtures/** text eol=lf`, or have the test strip `\r`. A new ticket is a tracker-only change, so it doesn't invalidate the receipt.
+  > 
+  > **Manual visual check:** this is not required for handoff. The ticket is `Review: agent`, and criteria 1–3 are covered by the headless viewport test at 1280×800 and 800×600. If stage 3 wants to see it running, it can open a window with `--position 3000,3000`.
+  > 
+  > I didn't run the gate or open the game. The fixture fix only lives in this lane's settings, so a fresh Windows checkout can fail the same way until that CLEAN ticket is done.
