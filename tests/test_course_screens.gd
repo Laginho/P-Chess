@@ -172,8 +172,13 @@ func test_course_navigation_unit_progress_and_clock():
 		var playout = main.get_node_or_null("Playout")
 		if playout != null and playout.visible:
 			playout.find_child("Back", true, false).pressed.emit()
+		var test_screen = main.get_node_or_null("PassTest")
+		if requests[-1][1] == "test":
+			assert_true(test_screen != null and test_screen.visible, "test opens its start screen")
+		if test_screen != null and test_screen.visible:
+			test_screen.find_child("Back", true, false).pressed.emit()
 	assert_eq(requests, [["rook-endgames", "theory"], ["rook-endgames", "solving"], ["rook-endgames", "playouts"], ["rook-endgames", "test"]])
-	assert_true(unit.visible, "a part without a screen leaves the unit visible")
+	assert_true(unit.visible, "returning from each part restores the unit")
 	unit.find_child("NoClock", true, false).pressed.emit()
 	assert_eq(load("res://core/course.gd").new(path).clock_choice(), "none")
 	unit.present(load("res://core/course.gd").new(path), main.course.units()[0])
