@@ -247,7 +247,12 @@ func _ready() -> void:
 	add_child(pass_test)
 	pass_test.back_requested.connect(func(): _show_unit(_test_unit))
 	pass_test.start_requested.connect(_begin_test)
-	pass_test.retry_requested.connect(_begin_test)
+	pass_test.retry_requested.connect(func():
+		if _test_active:
+			pass_test.hide()
+			_start_test_playout()
+		else:
+			_begin_test())
 	solving.test_graded.connect(_test_position_graded)
 	playout.back_requested.connect(func(): _show_unit(_playout_unit))
 	playout.start_requested.connect(_start_playout)
@@ -667,6 +672,15 @@ func _finish_test_playout(passed: bool) -> void:
 	_test_active = false
 
 
+func _test_playout_error(message: String) -> void:
+	_playout_generation += 1
+	_playout_active = false
+	clock.stop()
+	board_view.cancel_premoves()
+	board_view.mouse_filter = MOUSE_FILTER_IGNORE
+	pass_test.present_error(message)
+
+
 func _cancel_playout() -> void:
 	var leaving_game: bool = _playout_active or playout.visible
 	_playout_generation += 1
@@ -851,7 +865,7 @@ func _set_flipped(flipped: bool) -> void:
 	bot.get_parent().move_child(bot, 0)
 	player.get_parent().move_child(player, -1)
 	$Layout/Side.move_child(claim_draw.get_parent(), -1)
-	bot.get_node("Name").text = "Maia"
+	bot.get_node("Name").text = "Perfect opponent" if _test_active else "Maia"
 	bot.get_node("Name/Colour").hide()
 	# The player's name and colour centre as a pair; Maia's name alone.
 	bot.get_node("Name").vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -989,7 +1003,10 @@ func _on_move_played(san: String) -> void:
 				if not _playout_active or generation != _playout_generation:
 					return
 				if not result.get("ok", false):
-					_finish_playout("Play-out failed", result.get("error", "Tablebase probe failed."))
+					if _test_active:
+						_test_playout_error(result.get("error", "Tablebase probe failed."))
+					else:
+						_finish_playout("Play-out failed", result.get("error", "Tablebase probe failed."))
 				elif result.state == "failed":
 					var before = preload("res://core/board.gd").from_fen(previous)
 					var best: String = result.get("best", "")
@@ -1092,7 +1109,7 @@ func _next_turn() -> void:
 					return
 				var move: String = answer.get("best", "")
 				if not answer.get("ok", false) or move not in game.board.legal_moves():
-					_finish_playout("Play-out failed", answer.get("error", "Tablebase probe failed."))
+					_test_playout_error(answer.get("error", "Tablebase probe failed."))
 				else:
 					board_view.play(move))
 			return

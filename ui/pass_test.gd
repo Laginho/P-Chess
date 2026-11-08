@@ -102,6 +102,16 @@ func present_result(attempt: Dictionary) -> void:
 	retry_button.visible = not attempt.passed
 	show()
 
+func present_error(message: String) -> void:
+	heading.text = "Could not continue the test"
+	details.text = message
+	results.text = ""
+	_clear_boards()
+	start_button.hide()
+	retry_button.text = "Retry play-out"
+	retry_button.show()
+	show()
+
 func _clear_boards() -> void:
 	for child in boards.get_children():
 		boards.remove_child(child)
