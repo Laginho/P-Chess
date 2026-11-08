@@ -23,6 +23,7 @@ const NameDialog = preload("res://ui/name_dialog.tscn")
 const CourseMap = preload("res://ui/course_map.tscn")
 const UnitPage = preload("res://ui/unit_page.tscn")
 const TheoryPointer = preload("res://ui/theory_pointer.tscn")
+const Solving = preload("res://ui/solving.tscn")
 
 const WINNERS := {"1-0": "White wins", "0-1": "Black wins", "1/2-1/2": "Draw"}
 const MIN_BOARD_SIZE := 320
@@ -48,6 +49,7 @@ var course = Course.new()
 var course_map = CourseMap.instantiate()
 var unit_page = UnitPage.instantiate()
 var theory_pointer = TheoryPointer.instantiate()
+var solving = Solving.instantiate()
 var analysis_queue
 var review_analysis_path := ""
 var resign_key := ResignKey.new(Time.get_ticks_msec)
@@ -216,12 +218,14 @@ func _ready() -> void:
 	add_child(course_map)
 	add_child(unit_page)
 	add_child(theory_pointer)
+	add_child(solving)
 	course_map.back_requested.connect(_show_home)
 	course_map.unit_requested.connect(_show_unit)
 	course_map.edit_requested.connect(_edit_course_rating)
 	unit_page.back_requested.connect(_show_course_map)
 	unit_page.part_requested.connect(_show_course_part)
 	theory_pointer.back_requested.connect(func(): _show_unit(theory_pointer.unit))
+	solving.back_requested.connect(func(): _show_unit(solving.unit))
 	theory_pointer.solving_requested.connect(func(selected):
 		_show_unit(selected)
 		unit_page.part_requested.emit(selected, "solving"))
@@ -482,6 +486,7 @@ func _show_setup() -> void:
 
 
 func _show_home() -> void:
+	solving.hide()
 	course_map.hide()
 	unit_page.hide()
 	_show_setup()
@@ -492,6 +497,7 @@ func _show_home() -> void:
 
 
 func _show_course_map() -> void:
+	solving.hide()
 	$Home.hide()
 	setup.hide()
 	unit_page.hide()
@@ -499,6 +505,7 @@ func _show_course_map() -> void:
 
 
 func _show_unit(unit: Dictionary) -> void:
+	solving.hide()
 	theory_pointer.hide()
 	course_map.hide()
 	unit_page.present(course, unit)
@@ -508,6 +515,9 @@ func _show_course_part(unit: Dictionary, part: String) -> void:
 	if part == "theory":
 		unit_page.hide()
 		theory_pointer.present(course, unit)
+	elif part == "solving" and not str(course.next_practice_position(unit).get("fen", "")).is_empty():
+		unit_page.hide()
+		solving.present(course, unit, preferences)
 
 
 func _edit_course_rating() -> void:
