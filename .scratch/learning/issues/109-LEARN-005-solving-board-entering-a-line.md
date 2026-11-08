@@ -1,5 +1,5 @@
 # LEARN-005: Solving board: entering a line
-Stage: to-implement
+Stage: implementing
 Blocked by: LEARN-002
 Review: agent
 Difficulty: normal

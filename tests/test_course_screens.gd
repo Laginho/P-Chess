@@ -4,6 +4,22 @@ const MainScene = preload("res://ui/main.tscn")
 const Session = preload("res://tests/test_session.gd")
 
 
+func test_black_first_line_pairs_san_by_side_after_undo_and_clear():
+	var screen = load("res://ui/solving.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(screen)
+	var unit := {"id": "black", "positions": [{"id": "one", "pool": "practice", "fen": "4k3/8/2r5/8/8/8/8/4K3 b - - 0 1", "line_length": 2, "side": "b", "goal": "win"}]}
+	screen.present(load("res://core/course.gd").new("user://absent_black_line_test.json"), unit)
+	var moves = screen.find_child("Moves", true, false)
+	for move in ["c6c5", "e1f2", "c5c4"]:
+		screen.board._commit(move, false)
+	assert_eq(moves.text, "1...  Rc5\n2.  Kf2  Rc4")
+	screen.find_child("Undo", true, false).pressed.emit()
+	assert_eq(moves.text, "1...  Rc5\n2.  Kf2")
+	screen.find_child("Clear", true, false).pressed.emit()
+	assert_eq(moves.text, "")
+	screen.free()
+
+
 func test_course_navigation_unit_progress_and_clock():
 	var folder := "user://course_screens_%d" % Time.get_ticks_usec()
 	DirAccess.make_dir_recursive_absolute(folder)
