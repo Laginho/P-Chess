@@ -198,6 +198,55 @@ func test_attempts(unit: Dictionary) -> Array:
 	return attempts.duplicate(true) if attempts is Array else []
 
 
+func continue_target(now: int) -> Dictionary:
+	for unit in units():
+		var all_units = _progress.get("units", {})
+		var saved = all_units.get(unit.id, {}) if all_units is Dictionary else {}
+		if not saved is Dictionary:
+			continue
+		var date := str(saved.get("mastered_date", ""))
+		if date.is_empty():
+			continue
+		var mastered_at := int(Time.get_unix_time_from_datetime_string(date + "T00:00:00"))
+		var checks = saved.get("review_checks", [])
+		if not checks is Array:
+			checks = []
+		for day in [7, 30]:
+			var completed := false
+			for check in checks:
+				if check is Dictionary and int(check.get("day", 0)) == day and check.get("done", false):
+					completed = true
+			if not completed and now >= mastered_at + day * 86400:
+				var positions := []
+				for position in unit.get("positions", []):
+					if position is Dictionary and position.get("pool") in ["practice", "test"]:
+						positions.append(position)
+				positions.shuffle()
+				return {"kind": "review", "unit": unit, "day": day, "positions": positions.slice(0, 3)}
+	return {"kind": "done"}
+
+
+func record_review_check(unit: Dictionary, day: int, passed: bool) -> bool:
+	var id: String = unit.get("id", "")
+	if id.is_empty() or day not in [7, 30]:
+		return false
+	return _save_progress(func(next: Dictionary) -> bool:
+		var all_units = next.get("units", {})
+		if not all_units is Dictionary:
+			return false
+		var saved = all_units.get(id, {})
+		if not saved is Dictionary or str(saved.get("mastered_date", "")).is_empty():
+			return false
+		var checks = saved.get("review_checks", [])
+		if not checks is Array:
+			return false
+		checks.append({"day": day, "done": true, "passed": passed, "missed": not passed})
+		saved.review_checks = checks
+		all_units[id] = saved
+		next.units = all_units
+		return true)
+
+
 func draw_test_positions(unit: Dictionary) -> Array:
 	var fresh := []
 	var previous := []
