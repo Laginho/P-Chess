@@ -48,3 +48,5 @@ The unit's four play-outs (spec §L8, design `PlayoutStart.dc.html`, `PlayoutEnd
 - 2026-11-07 Written from `.scratch/learning/spec.md` §L4, §L8. "Not saved to History" is a spec decision (§L8) Bruno can reverse.
 
 - 2026-11-07 RES-001 review follow-up: assess hold/convert difficulty with Bruno on the actual LEARN-004 course positions before release. The research's small random sample and WDL-preserving opponent do not validate human difficulty or 50-move-perfect play; record the manual play-out outcome here. See `docs/research/tablebase.md` and RES-001's dated Resolution; this adds no implementation criterion.
+
+- 2026-11-07 CORE-007 review follow-up: before release, verify that a course play-out starts at its supplied FEN and real Maia replies with legal moves after the player moves. CORE-007's fake-bridge tests cover the start FEN and both current/previous-position request histories, but the headless gate skipped live Lc0 checks because the engine was unavailable. Record the real-engine outcome here with the play-out acceptance above; see `102-CORE-007-game-keeps-its-start-position.md` Resolution. This adds no implementation criterion.
