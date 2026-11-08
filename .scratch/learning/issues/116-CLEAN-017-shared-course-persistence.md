@@ -1,5 +1,5 @@
 # CLEAN-017: Share the course progress persistence sequence
-Stage: to-review
+Stage: done
 Status: ready-for-agent
 Blocked by: LEARN-002
 Review: agent
@@ -43,3 +43,24 @@ Difficulty: normal
   - 3 ✅ `core/course.gd:49`, `:101`, `:211` retain conversion, stage selection and clock behavior; `tests/test_course.gd:36`, `:95`, `:140` exercise them. The bound gate passed.
 - Resolution: shared the reread, validation callback, temporary write, flush, rename and in-memory publication sequence for rating, clock and theory. `godot --headless -s tests/run.gd` passed 603 tests, 0 failed; two graphical pixel checks and six live Lc0 checks were skipped in this environment. No new test was added for this behavior-preserving extraction.
 Gate evidence: /run/media/lage/New Volume/Scratch/CLEAN-017/gate.json
+
+#### Resolution (2026-11-08)
+Verdict: Approve
+
+Standards review (independent read-only reviewer `standards_review`): 0 findings. No documented-standard violation or actionable baseline smell. The shared callback serves the three existing mutations, stays inside the logic-only course module and changes no domain rules. The metadata-only starting commit follows this ticket's explicit exemption from new tests for a behavior-preserving extraction.
+
+Spec review (independent read-only reviewer `spec_review`): 0 findings. Reviewed the complete diff `aa52271...22c7d18`, including the production change `30e4c38`, and approved all criteria:
+
+- Criterion 1 ✅ `save_rating()`, `save_clock_choice()` and `open_theory()` use `_save_progress()` at `core/course.gd:66`. Each retains its previous validation, including nested theory progress dictionaries.
+- Criterion 2 ✅ Every save rereads independently of `_progress`, refuses unreadable data, preserves unrelated fields and publishes only after successful write, flush and rename. Invalid input, callback rejection, temporary-file open failure, write/flush error and rename failure return false without replacing published progress. The theory callback validates its dictionaries before mutation.
+- Criterion 3 ✅ Rating conversion, Maia level, stage selection and clock behavior are unchanged. Existing public-interface coverage and the bound gate pass.
+
+Callers and interactions examined: rating-dialog confirmation and saved signal, Profile rating save/error display, unit-page clock save and restored selection on failure, theory-pointer save/error display, and shared-file preservation across rating, clock and unit progress. Read refusal, invalid changes, temporary write failure, rename failure and publication order were compared with the prior implementation. No material concern remains in the changed path. Runtime fault injection for write/rename failures, invalid theory IDs and malformed nested dictionaries was not added; those unchanged branches were checked by inspection. A fresh graphical/manual play-through and unrelated engine behavior were outside this cleanup's review.
+
+Verification: this ticket explicitly requires no new test or red commit for extraction alone. Existing `tests/test_course.gd` tests cover rating round trips and validation, conversion and stage selection, progress preservation, clock persistence, theory persistence and corrupt/read-failure refusal. `godot --headless -s tests/run.gd` passed 603 tests, 0 failed, exit 0 at production commit `30e4c38`. `Assert-GateEvidence` verified the command, exit marker, log SHA-256 and identical tested code before and after the no-op rebase and session merge. Reused that green run because review and integration changed no tested code. `git diff --check` passed. The receipt and log are local evidence; the test names, commit and result above provide the durable verification record.
+
+Gate limitations: two graphical pixel checks and six live Lc0 checks were skipped by the existing gate in this environment. No new manual acceptance check is required by this ticket.
+
+Delivery: integrated into `sweatshop/learning/2026-11-07-2234` with merge commit `196c433`. This closing commit records `Stage: done` and its ledger entry together. No proxy decision, contract change or unresolved finding.
+
+Acceptance: passed | Existing public-interface persistence coverage at `30e4c38` verifies the retained rating, clock and theory behavior; all three criteria are approved above.
