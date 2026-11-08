@@ -1,5 +1,5 @@
 # REV-011: The from-your-game marker in Review
-Stage: to-implement
+Stage: implementing
 Blocked by: LEARN-006, LEARN-009
 Review: agent
 Difficulty: normal
