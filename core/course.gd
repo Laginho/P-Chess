@@ -191,6 +191,67 @@ func practice_positions(unit: Dictionary) -> Array:
 	return result
 
 
+func test_attempts(unit: Dictionary) -> Array:
+	var all_units = _progress.get("units", {})
+	var saved = all_units.get(unit.get("id", ""), {}) if all_units is Dictionary else {}
+	var attempts = saved.get("test_attempts", []) if saved is Dictionary else []
+	return attempts.duplicate(true) if attempts is Array else []
+
+
+func draw_test_positions(unit: Dictionary) -> Array:
+	var fresh := []
+	var previous := []
+	var attempts := test_attempts(unit)
+	if not attempts.is_empty() and attempts.back() is Dictionary:
+		for result in attempts.back().get("positions", []):
+			if result is Dictionary:
+				var position = result.get("position", result)
+				if position is Dictionary:
+					previous.append(position.get("id", ""))
+	var used := []
+	for position in unit.get("positions", []):
+		if position is Dictionary and position.get("pool") == "test":
+			if position.get("id", "") in previous:
+				used.append(position)
+			else:
+				fresh.append(position)
+	fresh.shuffle()
+	used.shuffle()
+	fresh.append_array(used)
+	return fresh.slice(0, preload("res://core/tunables.gd").COURSE_TEST_POSITIONS)
+
+
+func record_test_attempt(unit: Dictionary, positions: Array, playouts: Array, date: String) -> bool:
+	var id: String = unit.get("id", "")
+	var tunables = preload("res://core/tunables.gd")
+	if id.is_empty() or date.is_empty() or positions.size() != tunables.COURSE_TEST_POSITIONS or playouts.size() != 2:
+		return false
+	var score := 0
+	for result in positions:
+		if not result is Dictionary:
+			return false
+		if result.get("solved", false) == true:
+			score += 1
+	var passed: bool = score >= tunables.COURSE_TEST_PASS and playouts[0] == true and playouts[1] == true
+	return _save_progress(func(next: Dictionary) -> bool:
+		var all_units = next.get("units", {})
+		if not all_units is Dictionary:
+			return false
+		var saved = all_units.get(id, {})
+		if not saved is Dictionary:
+			return false
+		var attempts = saved.get("test_attempts", [])
+		if not attempts is Array:
+			return false
+		attempts.append({"date": date, "positions": positions.duplicate(true), "playouts": playouts.duplicate(true), "score": score, "passed": passed})
+		saved.test_attempts = attempts
+		if passed and str(saved.get("mastered_date", "")).is_empty():
+			saved.mastered_date = date
+		all_units[id] = saved
+		next.units = all_units
+		return true)
+
+
 func practice_result(unit: Dictionary, position: Dictionary) -> Dictionary:
 	var all_units = _progress.get("units", {})
 	var saved = all_units.get(unit.get("id", ""), {}) if all_units is Dictionary else {}
