@@ -1,5 +1,5 @@
 # LEARN-011: A way back to the unit during a play-out
-Stage: implementing
+Stage: to-implement
 Status: ready-for-agent
 Blocked by: none
 Review: agent
@@ -42,3 +42,5 @@ An ordinary course play-out (from the unit page) hides New game, Rematch, Resign
 - Stage 2 criteria check: criterion 3: ui/main.gd:617 and 752; tests/test_course_screens.gd:1316 checks unchanged progress and no History or stats after late replies.
 - Stage 2 validation: focused course screens passed 31/31 before the keyboard follow-up; the two updated targeted tests passed. Red tests exposed the missing exit and a second Enter escaping to Home. A temporary test-edit encoding error was corrected in f38c8b7.
 - Gate attempt: 682 passed, 1 failed, exit 1; log: C:/Users/bruno/AppData/Local/Temp/learn011-gate.log. The unrelated test_recorded_fathom_transcript_is_parsed_without_live_tables fails with this Windows checkout's CRLF fixture (index LF); it passed in isolation with the fixture temporarily converted to LF, then the original checkout was restored. No green gate receipt exists, so Stage remains implementing.
+
+- 2026-11-08 Driver retry: attempt 1 ended short of to-review (exit 0). Resume from this branch's commits; edits the stage left uncommitted are saved in run-log/recovery.txt.
