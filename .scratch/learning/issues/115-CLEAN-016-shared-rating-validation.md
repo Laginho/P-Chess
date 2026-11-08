@@ -1,6 +1,6 @@
 # CLEAN-016: Reuse the shared rating validator in the dialog
 Stage: to-implement
-Status: needs-triage
+Status: ready-for-agent
 Blocked by: LEARN-001
 Review: agent
 Difficulty: normal
@@ -30,3 +30,5 @@ The rating dialog repeats the 100–3500 bounds already owned by `Course.valid_r
 ## Comments
 
 - 2026-11-08 Opened by the Standards review of [LEARN-001](105-LEARN-001-rating-sentence.md#resolution-2026-11-08): possible Duplicated Code smell in `ui/rating_dialog.gd:38`, compared with `core/course.gd:30` and `ui/profile.gd:183`. This is a maintenance judgement, not a failed acceptance criterion; no integration or release condition. The LEARN-001 closing reviewer deferred it to this triage ticket under the stage-3 scope rule.
+
+- Triage by the driver: ready-for-agent — reuse removes duplicated rating bounds and matches Profile; existing integration coverage protects the current behavior.
