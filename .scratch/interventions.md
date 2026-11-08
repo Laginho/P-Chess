@@ -119,3 +119,6 @@
 | 2026-11-08T10:34-03:00 | RES-001 | routine-approval | Bruno confirmed the probe design in the foreman chat: native Fathom helper LEARN-010 and spec L5 rewrite 703fe57 stand; Needs your call resolved (PR #44) |
 | 2026-11-08T10:34-03:00 | - | routine-approval | Bruno approved the `Review: human` reviews of LEARN-004, LEARN-009 and CLEAN-020 in the foreman chat ("parece bom", may come back with comments); hand checks stay pending (PR #44) |
 | 2026-11-08T11:04-03:00 | - | routine-approval | Bruno approved merging learning session PR #44 once CI passed; merged by the foreman (bdba459) |
+| 2026-11-08T14:27-03:00 | - | automatic-recovery | Foreman set clone-local core.autocrlf=false + core.eol=lf in the audit-fixes, learning and review-explore lane clones and re-checked out tests/fixtures/tablebase/res001.txt as LF; the CRLF checkout failed test_recorded_fathom_transcript (CLEAN-014 and LEARN-011 attempt 1) |
+| 2026-11-08T14:31-03:00 | CLEAN-014 | proxy-decision | Proxy decided (opus-5.5 xhigh): authorized one gate rerun after the fixture fix; the stage asked again (session commits 04004f0, b91bb0e) |
+| 2026-11-08T14:40-03:00 | CLEAN-014 | human-rescue | Bruno chose to fix the root cause: main 6559a09 makes test_tablebase.gd strip CR; session synced, CLEAN-014 back to to-implement and the lane relaunched (PR #45 comment) |
