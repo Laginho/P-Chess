@@ -41,6 +41,9 @@ func test_pass_test_runs_positions_and_playouts_and_lists_misses():
 		main.free()
 		Session.HistoryStorage.clean(folder)
 		return
+	var step_texts = screen.start_steps.find_children("*", "Label", true, false)
+	assert_true(step_texts.any(func(label): return label.text.contains("6 positions")))
+	assert_true(step_texts.any(func(label): return label.text.contains("2 play-outs")))
 	screen.find_child("Start", true, false).pressed.emit()
 	for i in 6:
 		assert_true(main.solving.visible)
@@ -56,6 +59,8 @@ func test_pass_test_runs_positions_and_playouts_and_lists_misses():
 	assert_true(screen.find_child("Results", true, false).text.contains("Rc4"))
 	assert_true(screen.find_child("Results", true, false).text.contains("Rc5"))
 	assert_eq(screen.find_child("Boards", true, false).get_child_count(), 6)
+	assert_true(screen.boards.get_child(0).get_child(1).text.contains("✗"))
+	assert_true(screen.boards.get_child(2).get_child(1).text.contains("✓"))
 	assert_true(screen.find_child("Results", true, false).text.contains("Convert: Passed"))
 	assert_true(screen.find_child("Results", true, false).text.contains("Hold: Passed"))
 	assert_true(screen.find_child("Retry", true, false).visible)
@@ -65,6 +70,10 @@ func test_pass_test_runs_positions_and_playouts_and_lists_misses():
 	for key in [KEY_ESCAPE, KEY_ESCAPE, KEY_SPACE]:
 		session._key(main, key)
 	assert_true(main.history.games().is_empty())
+	screen.find_child("Retry", true, false).pressed.emit()
+	assert_true(main.solving.visible, "Retry starts another set")
+	main.solving.find_child("Back", true, false).pressed.emit()
+	main.unit_page.part_requested.emit(unit, "test")
 	screen.find_child("Back", true, false).pressed.emit()
 	for key in [KEY_ESCAPE, KEY_ESCAPE, KEY_SPACE]:
 		session._key(main, key)
@@ -136,6 +145,10 @@ func test_test_playout_uses_tablebase_best_move_without_maia():
 	assert_true(main.pass_test.find_child("Details", true, false).text.contains("Missing scripted table"))
 	assert_true(main.pass_test.find_child("Retry", true, false).visible, "the interrupted play-out can be restarted")
 	assert_true(main.course.test_attempts(unit).is_empty(), "a probe error is not a failed attempt")
+	main.pass_test.find_child("Retry", true, false).pressed.emit()
+	assert_eq(main.board_view.game.start_fen, sample.FEN, "retry restarts the interrupted play-out")
+	assert_eq(main.course.test_attempts(unit).size(), 0)
+	assert_eq(main._test_results.size(), 6, "previous answers survive a probe failure")
 	main.free()
 
 

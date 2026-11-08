@@ -25,6 +25,14 @@ func test_pass_test_draw_and_mastery_persist_across_attempts():
 	assert_eq(second.size(), 6)
 	for position in second:
 		assert_true(not first.has(position), "prefer positions from outside previous attempt")
+	var restricted := unit.duplicate(true)
+	restricted.positions = first.duplicate(true)
+	for position in second.slice(0, 2):
+		restricted.positions.append(position)
+	var fallback: Array = course.draw_test_positions(restricted)
+	assert_eq(fallback.size(), 6)
+	for position in second.slice(0, 2):
+		assert_true(fallback.has(position), "use every fresh position before reusing the previous draw")
 	assert_eq(course.unit_progress(unit).status, "mastered")
 	assert_true(course.record_test_attempt(unit, results, [true, false], "2026-11-09"))
 	course = script.new(path)
