@@ -1,5 +1,5 @@
 # LEARN-010: The tablebase probe (Fathom helper)
-Stage: to-review
+Stage: to-implement
 Blocked by: CI-005
 Review: agent
 Difficulty: hard
@@ -223,3 +223,35 @@ Fresh read-only Codex subagent checked the full ticket and diff from session bas
 - `engine/uci.gd` is byte-for-byte unchanged against the session base (SHA-256 `176b600971b0dd38211849f91de7a24ce39b9dc3f5542292a6fafdce1ab2fd03`). Actual Windows CI, accented-folder release startup and LEARN-006's end-to-end Lucena grading remain pending as previously authorized.
 
 Stage 2 hands off at `to-review`; no merge or ledger entry.
+
+### Stage 3 re-review after parser repair (2026-11-08)
+
+#### Resolution (2026-11-08)
+Verdict: Reopen — criterion 4 still ignores malformed output and `tberror` while a pending probe waits for the startup handshake.
+
+Standards: **0 findings**. Independent read-only reviewer `standards_review` examined `c2eeafe...62f6fd7`, the complete ticket, repository rules and the affected adapter/UCI/test paths. No documented-standard violation, actionable baseline smell, Primary-files breach or test-first breach. `976b820` is test-only, `ee7cae3` production-only and `62f6fd7` metadata-only; `engine/uci.gd` remains unchanged.
+
+Spec: **1 finding**, independently reproduced by reviewer `spec_review` and the stage-3 reviewer. The prior active-search reproductions are fixed: after a complete move set, `bestmoves a1h1`, `bestmoveX a1h1` and `garbage` now each produce one error callback and an unavailable probe. The separate worker inbox also prevents late arrivals from bypassing validation. However, criterion 4 requires failure "on `tberror`, on a line it cannot parse", and that requirement still fails before either startup barrier:
+
+- At `engine/tablebase.gd:82–86`, the raw-line filter passes every `info ` and `bestmove` prefix to the generic bridge. Strict validation remains in `_on_line()` at `:119–147`.
+- At unchanged `engine/uci.gd:181–182`, those lines reach `_on_line()` only while `_awaiting == "bestmove"`. A probe can already be pending in the adapter while the bridge awaits `uciok` or `readyok`, so the bridge silently drops the invalid line instead.
+- Confirmed examples before each barrier: `bestmoves a1h1`, `bestmoveX a1h1`, `info garbage`, `info string tbmove a1h1 win -1` and `info string tberror missing table`. After a subsequent valid handshake and complete replies, the pending request, a queued request and a later request each receive one `{ok: true, ...}` callback; `available` stays true. Expected: failure callbacks and an unavailable probe. The same invalid lines are also ignored while idle; ordinary `garbage` and empty stdout correctly fail in all three phases.
+
+**Prior-pass miss:** this startup/barrier path already existed in `c2eeafe`; the earlier review exercised malformed output only after the search began. The Spec reviewer loaded that commit's adapter from an external copy and reproduced the same five ignored line types before both barriers and while idle (`stage3-prior-handshake-parser-summary.log`, beside the diagnostic below). This is an uncovered part of the same numbered criterion, not a new regression or a contract change.
+
+Reproduction at the approved FakeUCI seam: create the bridge and adapter as `_setup()` does, but withhold `uciok` (or send `uciok` and withhold `readyok`); call `probe(RES_FEN, callback)` twice; inject one invalid line through `bridge.output()`; then supply the remaining handshake lines and a complete valid move set plus `bestmove a1h1` for each request. Finally issue and answer a third request. Observe three successes and `available == true`. The diagnostic reports `HARNESS_FAILURES []` and also checks the idle phase. Local script and captured log:
+
+```sh
+godot --headless --path . -s '/run/media/lage/New Volume/Scratch/LEARN-010/stage3-handshake-parser-probe.gd'
+# Captured output: /run/media/lage/New Volume/Scratch/LEARN-010/stage3-handshake-parser-probe.log
+```
+
+Criterion 4: ❌ for the startup/barrier cases above; its active-search malformed-token and unknown-stdout cases now pass. Criteria 1–3 and 5–9 retain their previous approved assessments; their implementation is unchanged by this repair. Reviewed interactions: retained reader inbox, raw-line ordering, UCI handshake/ready barriers, pending and queued requests, completion parsing, callback reentry, process-stop/error/free paths and later requests after failure. Windows execution and end-to-end Lucena grading remain outside this local review as previously documented.
+
+Verification retained: red commit `976b820` recorded **12 passed, 2 failed**; production commit `ee7cae3` recorded **14 passed, 0 failed** in the focused suite. `Assert-GateEvidence` verified the bound command, tested commit `ee7cae3a88dd686753ade9ef4577692f747fcdf9`, exit marker, log SHA-256 and identical tested code at `62f6fd7`: **617 passed, 0 failed**, including all three real-file tablebase tests. Reused this valid receipt because no production or committed tests changed in review. Passing tests do not cover the startup/barrier finding. `git diff --check` passed.
+
+Next stage 2 addresses only the remaining ❌: add regression tests at the existing FakeUCI seam before both handshake barriers, prove them red, and make invalid output and `tberror` fail closed for pending, queued and later probes while preserving valid startup and reply ordering. Keep `engine/uci.gd` unchanged; the existing stop-and-ask rule still applies if a bridge change proves necessary. Stage 3 changed only this ticket; no merge, ledger entry, proxy decision or contract change.
+
+Acceptance: pending | [Stage-3 re-review](#stage-3-re-review-after-parser-repair-2026-11-08): criterion 4 startup/barrier repair and re-review remain open.
+Disclosure: pending | integration | [Stage-3 re-review](#stage-3-re-review-after-parser-repair-2026-11-08): pending probes can succeed after invalid helper output or `tberror` during startup; resolve before session integration.
+Disclosure: pending | release | [Verification](#verification): actual Windows CI, accented-folder release startup and LEARN-006 Lucena grading remain unverified under the approved ticket.
