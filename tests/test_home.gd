@@ -603,6 +603,8 @@ func test_home_decorations_fit_without_blocking_controls():
 					assert_eq(icon.mouse_filter, Control.MOUSE_FILTER_IGNORE)
 					assert_eq(label.mouse_filter, Control.MOUSE_FILTER_IGNORE)
 			var card: Button = home.get_node("Center/Form/Continue")
+			var bar: Control = card.get_node("Progress")
+			assert_true(bar.get_global_rect().end.y <= card.get_global_rect().end.y, "progress stays inside Continue")
 			var arrow: Control = card.get_node_or_null("Chevron")
 			assert_true(arrow != null, "Continue has a chevron")
 			if arrow != null:
