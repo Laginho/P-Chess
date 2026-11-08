@@ -32,6 +32,7 @@ Answer the facts the learning spec leaves open (spec "Further Notes", §L5, §L1
 
 ## Comments
 
+- 2026-11-08 Bruno confirmed the probe design in the foreman chat: the native Fathom helper (LEARN-010) and spec L5's rewrite in `703fe57` stand. This resolves the Needs your call above; the Windows probe and course play-out difficulty checks stay pending Bruno.
 - 2026-11-07 Written from `.scratch/learning/spec.md`.
 
 - Proxy decided (opus-5.5 xhigh): proceed on Linux and do not wait for a Windows run. Criterion 2 gets measured with the Linux build of the same Stockfish 19 release (`sf_19`). The Windows-only syntax is cited from the source and stays marked pending until Bruno checks it on Windows. Build lc0 v0.32.1 natively for criterion 5. — Syzygy probing is the same code on both platforms, the ticket is `Review: human` anyway, and the repo has done this before: Windows-only live checks were written up as "pending (Bruno)" rather than holding the work (review-explore spec scenario 1, CLEAN-009). (receipt /tmp/sweatshop-proxy/20261107-223947-RES-001-ce51d3.json)

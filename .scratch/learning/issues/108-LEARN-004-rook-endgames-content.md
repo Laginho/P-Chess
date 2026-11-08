@@ -34,6 +34,7 @@ Claude drafts the unit's content and Bruno tunes it (spec Further Notes). The un
 
 ## Comments
 
+- 2026-11-08 Bruno approved this `Review: human` review in the foreman chat (PR #44): "parece bom"; he may come back with comments. The hand checks under Acceptance stay pending.
 - 2026-11-08 Stage 3 found a criterion 7 coverage gap: the real-data shape test checked the minimum hold share but not the presence of wins in each pool, required by criterion 2. Replacing all solving goals with `hold` passed the original focused test (exit 0, `/run/media/lage/New Volume/Scratch/LEARN-004/review-all-hold-before.log`). Added the missing mixed-goal assertion inside the existing approved seam; the supplied content already meets the rule. No production change is needed.
 
 - Proxy decided (opus-5.5 xhigh): Name the stage "Endgame foundations" and go ahead with the draft content. Bruno can change the name or the content when he does the `Review: human` review — it's one string in a data file, so it's cheap to change. (receipt /tmp/sweatshop-proxy/20261108-005906-LEARN-004-0a1258.json)

@@ -143,7 +143,7 @@ Evidence reused from the integrated session's last gate (`godot --headless -s te
 5. From-your-game marker on a real lost draw: pending (Bruno, real game). Automated: REV-011 tests and its review's real-probe check. Not examined: a saved real game and the marker's look.
 
 Acceptance: pending | scenario 4 passed on the integrated session; 1, 2, 3 and 5 wait for Bruno's hand checks listed above.
-Disclosure: decision | release | [LEARN-006 split](issues/110-LEARN-006-grading-and-feedback.md), receipt `/tmp/sweatshop-proxy/20261108-020737-LEARN-006-0937d8.json`: the proxy replaced spec L5's Stockfish-only probe with a native Fathom helper (LEARN-010, `703fe57`). RES-001's review had reserved that contract change for Bruno; confirm or reverse it before merging.
+Disclosure: decision | release | [LEARN-006 split](issues/110-LEARN-006-grading-and-feedback.md), receipt `/tmp/sweatshop-proxy/20261108-020737-LEARN-006-0937d8.json`: the proxy replaced spec L5's Stockfish-only probe with a native Fathom helper (LEARN-010, `703fe57`). RES-001's review had reserved that contract change for Bruno; Bruno confirmed it on 2026-11-08.
 Disclosure: pending | release | Windows: the Fathom helper build (MSVC, static CRT), the windows-latest CI smoke job, the accented-folder release start and RES-001's Windows probe were not run on this Linux box.
 Disclosure: pending | release | Real Maia: no Linux Lc0 in the lane, so course play-outs (CORE-007, CLOCK-003, LEARN-007, LEARN-008) never met a real Maia reply.
 

@@ -33,6 +33,7 @@ Triage the remaining presentation differences between the new Home and `docs/des
 
 ## Comments
 
+- 2026-11-08 Bruno approved this `Review: human` review in the foreman chat (PR #44): "parece bom"; he may come back with comments. The hand checks under Acceptance stay pending.
 - 2026-11-08 Opened during the [LEARN-009 stage-3 review](113-LEARN-009-home-and-continue.md) after comparing the [current Home capture](</run/media/lage/New Volume/Scratch/LEARN-009-review-capture-QwHiXE/Main.png>) with the learning canvas. These presentation details are absent from LEARN-009's numbered criteria; that implementation is approved. This is a needs-triage follow-up, with no integration condition or accepted release waiver. No Escaped-from line applies.
 
 - Triage by the driver: ready for agent — the canvas specifies the arrangement and artwork; Home can use four dedicated SVGs without changing shared icons. Aggregate status counts describe multiple units without inventing a single course status.

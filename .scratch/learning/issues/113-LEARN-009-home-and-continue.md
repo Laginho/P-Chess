@@ -51,6 +51,7 @@ Gate evidence: /run/media/lage/New Volume/Scratch/learn009-gate-final.json
 
 ## Comments
 
+- 2026-11-08 Bruno approved this `Review: human` review in the foreman chat (PR #44): "parece bom"; he may come back with comments. The hand checks under Acceptance stay pending.
 - 2026-11-07 Written from `.scratch/learning/spec.md` §L9, §L11. `Review: human`: the Home redesign is the first thing Bruno sees.
 - Stage 2 criteria check, independently reviewed against the committed diff:
   - ✅ 1: `ui/home.gd:124`, `ui/main.gd:570`; `tests/test_home.gd:7` checks the visible start label and rating dialog.
