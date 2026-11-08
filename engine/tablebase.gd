@@ -18,6 +18,7 @@ var _pending := []
 var _active := {}
 var _moves := {}
 var _ranks := {}
+var _stdout := []
 
 
 func _init(bridge = null) -> void:
@@ -58,6 +59,11 @@ func start(dirs := UCI.search_dirs()) -> bool:
 	if not _bridge.start(dirs):
 		error = _bridge.error
 		return false
+	# UCI's readers captured the original array in start(). Keep that shared
+	# inbox, and give its generic parser a separate, validated queue. Otherwise
+	# an unknown line can arrive between validation and UCI.poll() and be dropped.
+	_stdout = _bridge._lines
+	_bridge._lines = []
 	available = true
 	# Reuse the bridge's existing command queue and readyok barrier, unchanged.
 	_bridge._queue(["setoption name SyzygyPath value ../tablebase", "isready"], "readyok")
@@ -66,6 +72,18 @@ func start(dirs := UCI.search_dirs()) -> bool:
 
 func poll() -> void:
 	if available:
+		_bridge._mutex.lock()
+		var lines := _stdout.duplicate()
+		_stdout.clear()
+		_bridge._mutex.unlock()
+		for line: String in lines:
+			# The generic bridge tolerates unrelated stdout; this helper's
+			# enumerated protocol must fail closed, including during startup.
+			if not (line.begins_with("id name ") or line in ["uciok", "readyok"]
+					or line.begins_with("info ") or line.begins_with("bestmove")
+					or line.begins_with("error ")):
+				line = "error Invalid tablebase line: " + line
+			_bridge._lines.append(line)
 		_bridge.poll()
 
 
@@ -117,7 +135,7 @@ func _on_line(line: String) -> void:
 		_ranks[move] = RANKS.find(wdl)
 	elif line.begins_with("bestmove"):
 		var words := line.split(" ")
-		if words.size() != 2 or not words[1] in _active.legal or _moves.size() != _active.legal.size():
+		if words.size() != 2 or words[0] != "bestmove" or not words[1] in _active.legal or _moves.size() != _active.legal.size():
 			stop("Tablebase move set differs from Board.legal_moves(): " + line)
 			return
 		var ordered := _moves.keys()
