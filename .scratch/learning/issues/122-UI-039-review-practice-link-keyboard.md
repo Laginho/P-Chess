@@ -1,5 +1,5 @@
 # UI-039: Reach Review's "Practise in Rook endgames" link with the keyboard
-Stage: to-implement
+Stage: implementing
 Status: ready-for-agent
 Blocked by: none
 Review: agent
