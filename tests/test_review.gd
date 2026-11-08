@@ -2382,7 +2382,7 @@ func test_result_change_shows_link_and_adds_position_to_course():
 			click.position = list.get_item_area_rect(marker, 1).get_center()
 			list.gui_input.emit(click)
 			assert_eq(opened, [unit])
-		var saved := course.practice_positions(unit)
+		var saved: Array = course.practice_positions(unit)
 		assert_eq(saved.size(), 1)
 		if saved.size() == 1:
 			assert_eq(saved[0].fen, fen)
