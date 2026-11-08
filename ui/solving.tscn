@@ -145,3 +145,88 @@ text = "Clear"
 custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
 text = "Commit line   Enter"
+
+[node name="ProbeError" type="Label" parent="Margin/Content/Side"]
+visible = false
+layout_mode = 2
+autowrap_mode = 2
+theme_override_colors/font_color = Color(0.94, 0.64, 0.63, 1)
+
+[node name="Feedback" type="VBoxContainer" parent="Margin/Content/Side"]
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 18
+
+[node name="Banner" type="PanelContainer" parent="Margin/Content/Side/Feedback"]
+layout_mode = 2
+[node name="BannerText" type="VBoxContainer" parent="Margin/Content/Side/Feedback/Banner"]
+layout_mode = 2
+[node name="BannerTitle" type="Label" parent="Margin/Content/Side/Feedback/Banner/BannerText"]
+layout_mode = 2
+theme_type_variation = &"ExtraBoldText"
+theme_override_font_sizes/font_size = 22
+[node name="BannerReason" type="Label" parent="Margin/Content/Side/Feedback/Banner/BannerText"]
+layout_mode = 2
+autowrap_mode = 2
+
+[node name="YourLine" type="PanelContainer" parent="Margin/Content/Side/Feedback"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("Card")
+[node name="LineContent" type="VBoxContainer" parent="Margin/Content/Side/Feedback/YourLine"]
+layout_mode = 2
+theme_override_constants/separation = 10
+[node name="Heading" type="Label" parent="Margin/Content/Side/Feedback/YourLine/LineContent"]
+layout_mode = 2
+text = "YOUR LINE"
+theme_type_variation = &"MutedText"
+[node name="Scroll" type="ScrollContainer" parent="Margin/Content/Side/Feedback/YourLine/LineContent"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+[node name="FeedbackMoves" type="VBoxContainer" parent="Margin/Content/Side/Feedback/YourLine/LineContent/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="CorrectCard" type="PanelContainer" parent="Margin/Content/Side/Feedback"]
+visible = false
+layout_mode = 2
+theme_override_styles/panel = SubResource("Card")
+[node name="Correct" type="VBoxContainer" parent="Margin/Content/Side/Feedback/CorrectCard"]
+layout_mode = 2
+theme_override_constants/separation = 8
+[node name="Heading" type="Label" parent="Margin/Content/Side/Feedback/CorrectCard/Correct"]
+layout_mode = 2
+text = "CORRECT"
+theme_type_variation = &"MutedText"
+[node name="CorrectMove" type="Label" parent="Margin/Content/Side/Feedback/CorrectCard/Correct"]
+layout_mode = 2
+theme_type_variation = &"ExtraBoldText"
+theme_override_font_sizes/font_size = 22
+theme_override_colors/font_color = Color(0.596, 0.737, 0.286, 1)
+[node name="CorrectLine" type="Label" parent="Margin/Content/Side/Feedback/CorrectCard/Correct"]
+layout_mode = 2
+autowrap_mode = 2
+
+[node name="Note" type="Label" parent="Margin/Content/Side/Feedback"]
+layout_mode = 2
+autowrap_mode = 2
+theme_type_variation = &"MutedText"
+[node name="Buttons" type="HBoxContainer" parent="Margin/Content/Side/Feedback"]
+layout_mode = 2
+theme_override_constants/separation = 10
+[node name="Retry" type="Button" parent="Margin/Content/Side/Feedback/Buttons"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 56)
+size_flags_horizontal = 3
+text = "Retry"
+[node name="Next" type="Button" parent="Margin/Content/Side/Feedback/Buttons"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 56)
+size_flags_horizontal = 3
+text = "Next  ›"
+
+[node name="Playback" type="Timer" parent="."]
+wait_time = 0.65
