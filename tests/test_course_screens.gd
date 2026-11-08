@@ -645,3 +645,53 @@ func test_feedback_shows_better_defence_beside_the_opponent_move():
 	assert_true(not rows.get_child(1).text.contains("✗"))
 	assert_eq(screen.find_child("BannerTitle", true, false).text, "Solved, first try")
 	_feedback_cleanup(fixture)
+
+
+func test_playout_starts_from_unit_and_failing_move_ends_before_maia_without_history():
+	var folder := "user://course_playout_ui_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var main = MainScene.instantiate()
+	main.course = load("res://core/course.gd").new(folder.path_join("course.json"))
+	main.course.save_rating(1250, "chess.com")
+	main.course.save_clock_choice("none")
+	main.history = load("res://core/history.gd").new(folder)
+	main.uci.free()
+	main.uci = Session.HeldBridge.new()
+	main.maia = main.MaiaPlayer.new(main.uci)
+	main.preferences = main.Settings.new(folder.path_join("settings.cfg"))
+	main.preferences.set_value("player_name", "You")
+	var sample = load("res://tests/test_grader.gd")
+	var probe = sample.FakeProbe.new()
+	probe.answers[sample.FEN] = sample.answer("win", "c6c5", {"c6c5": {"result": "win", "dtz": 3}, "c6c4": {"result": "draw", "dtz": 0}})
+	main.tablebase.free()
+	# Main owns the injected probe as a node.
+	var adapter = LifecycleProbe.new(probe, [])
+	main.tablebase = adapter
+	Engine.get_main_loop().root.add_child(main)
+	var position := {"id": "a", "fen": sample.FEN, "side": "b", "goal": "convert"}
+	var unit := {"id": "rook", "title": "Rook endings", "playouts": [position, position, position, position]}
+	main._show_unit(unit)
+	main.unit_page.part_requested.emit(unit, "playouts")
+	var screen = main.get_node_or_null("Playout")
+	assert_true(screen != null and screen.visible, "unit opens the play-out start")
+	if screen == null:
+		main.free()
+		Session.HistoryStorage.clean(folder)
+		return
+	assert_true(screen.find_child("Heading", true, false).text.contains("Play-out 1 of 4"))
+	screen.find_child("Start", true, false).pressed.emit()
+	while main._starting:
+		await Engine.get_main_loop().process_frame
+	assert_eq(main.board_view.game.start_fen, sample.FEN)
+	assert_eq(main.human, "b")
+	assert_eq(main.settings.level, "maia-1600")
+	assert_eq(main.settings.control, "none")
+	assert_true(main.board_view.play("c6c4"))
+	assert_true(screen.visible, "end card opens")
+	assert_eq(screen.find_child("Heading", true, false).text, "Play-out failed")
+	assert_true(screen.find_child("Reason", true, false).text.contains("Rc4"))
+	assert_true(screen.find_child("Reason", true, false).text.contains("Rc5"))
+	assert_eq(main.uci.requests.size(), 0, "Maia does not reply to a failed move")
+	assert_true(main.history.list_games().is_empty(), "play-out does not enter history")
+	main.free()
+	Session.HistoryStorage.clean(folder)
