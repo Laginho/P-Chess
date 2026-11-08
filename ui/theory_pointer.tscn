@@ -56,16 +56,24 @@ theme_type_variation = &"ExtraBoldText"
 theme_override_font_sizes/font_size = 30
 text = "Theory pointer"
 
-[node name="Center" type="CenterContainer" parent="Margin/Content"]
+[node name="Center" type="HBoxContainer" parent="Margin/Content"]
 layout_mode = 2
 size_flags_vertical = 3
+
+[node name="LeftSpacer" type="Control" parent="Margin/Content/Center"]
+layout_mode = 2
+size_flags_horizontal = 3
 
 [node name="Scroll" type="ScrollContainer" parent="Margin/Content/Center"]
 custom_minimum_size = Vector2(760, 0)
 layout_mode = 2
-size_flags_horizontal = 3
+size_flags_horizontal = 0
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
+
+[node name="RightSpacer" type="Control" parent="Margin/Content/Center"]
+layout_mode = 2
+size_flags_horizontal = 3
 
 [node name="Body" type="VBoxContainer" parent="Margin/Content/Center/Scroll"]
 layout_mode = 2

@@ -57,5 +57,6 @@ func present(course, selected: Dictionary) -> void:
 			chapter.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			row.add_child(chapter)
 			books.add_child(row)
+	$Margin/Content/Center/Scroll/Body/ReadCard.visible = books.get_child_count() > 0
 	$Margin/Content/Center/Scroll/Body/SaveError.visible = not course.open_theory(unit)
 	show()
