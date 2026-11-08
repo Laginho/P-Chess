@@ -537,3 +537,34 @@ func test_probe_failure_and_cancelled_async_commit_record_nothing():
 		probe.reply()
 	assert_eq(fixture.course.practice_result(fixture.unit, screen.position_data), {})
 	_feedback_cleanup(fixture)
+
+
+func test_feedback_replays_legal_hold_line_through_material_and_fifty_move_draws():
+	var sample = load("res://tests/test_grader.gd")
+	var examples := [
+		["4k3/8/8/8/8/8/5r2/4K3 w - - 0 1", ["e1f2", "e8d7", "f2g3"], "8/3k4/8/8/8/6K1/8/8 b - - 2 2"],
+		["4k3/8/2r5/8/8/8/8/4K3 b - - 99 1", ["c6c5", "e1f2", "c5c4"], "4k3/8/8/8/2r5/8/5K2/8 w - - 102 3"]]
+	for example in examples:
+		var probe = sample.FakeProbe.new()
+		var board = load("res://core/board.gd").from_fen(example[0])
+		var side: String = board.side_to_move
+		for move in example[1]:
+			probe.answers[board.to_fen()] = sample.answer("draw", move, {move: {"result": "draw", "dtz": 0}})
+			board.make_move(move)
+		var fixture := _feedback_setup(probe)
+		if fixture.is_empty():
+			return
+		fixture.unit.positions[0].fen = example[0]
+		fixture.unit.positions[0].side = side
+		fixture.unit.positions[0].goal = "hold"
+		var screen = fixture.screen
+		screen.present(fixture.course, fixture.unit)
+		for move in example[1]:
+			screen.board._commit(move, false)
+		screen.find_child("Commit", true, false).pressed.emit()
+		assert_eq(screen.find_child("BannerTitle", true, false).text, "Solved, first try")
+		for i in 3:
+			screen.get_node("Playback").timeout.emit()
+		assert_eq(screen.board.game.moves, PackedStringArray(example[1]), "playback follows every legal entry ply even after a drawn position")
+		assert_eq(screen.board.game.board.to_fen(), example[2])
+		_feedback_cleanup(fixture)
