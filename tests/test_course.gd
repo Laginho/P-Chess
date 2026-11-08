@@ -172,3 +172,29 @@ func test_missing_unit_files_are_not_listed():
 	assert_eq(course.units().size(), 1)
 	assert_eq(course.units()[0].id, "rook")
 	DirAccess.remove_absolute(path)
+
+
+func test_opening_theory_persists_without_losing_other_progress():
+	var path := "user://course_theory_%d.json" % Time.get_ticks_usec()
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	file.store_string(JSON.stringify({"rating": {"number": 1600, "site": "chess.com"}, "units": {"rook": {"practice": {"one": {"solved": true}}}, "other": {"theory_opened": true}}}))
+	file = null
+	var script = load("res://core/course.gd")
+	var course = script.new(path)
+	assert_true(course.has_method("open_theory"), "course records opening theory")
+	if not course.has_method("open_theory"):
+		DirAccess.remove_absolute(path)
+		return
+	var unit := {"id": "rook", "positions": [{"id": "one", "pool": "practice"}]}
+	assert_true(course.open_theory(unit))
+	course = script.new(path)
+	assert_true(course.unit_progress(unit).theory_done)
+	assert_eq(course.unit_progress(unit).solved, 1)
+	assert_eq(course.rating(), {"number": 1600, "site": "chess.com"})
+	assert_true(course.unit_progress({"id": "other"}).theory_done)
+	file = FileAccess.open(path, FileAccess.WRITE)
+	file.store_string("{broken")
+	file = null
+	assert_true(not course.open_theory(unit))
+	assert_eq(FileAccess.get_file_as_string(path), "{broken")
+	DirAccess.remove_absolute(path)

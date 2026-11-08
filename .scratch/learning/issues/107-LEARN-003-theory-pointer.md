@@ -1,5 +1,5 @@
 # LEARN-003: Theory pointer
-Stage: to-implement
+Stage: implementing
 Blocked by: LEARN-002
 Review: agent
 Difficulty: normal
