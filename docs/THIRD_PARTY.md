@@ -136,6 +136,16 @@ Its exact source tag is [sf_19](https://github.com/official-stockfish/Stockfish/
 Stockfish is licensed under [GPL-3.0](https://github.com/official-stockfish/Stockfish/blob/sf_19/Copying.txt).
 Release ZIPs ship the unmodified executable and its `Copying.txt` in `engine/stockfish/`.
 
+## Tablebases: Syzygy
+
+The 20 WDL and 20 DTZ Syzygy files under `engine/tablebase/` come from the
+[Lichess tablebase mirror](https://tablebase.lichess.ovh/tables/standard/).
+The Syzygy tables are public domain, as identified by the
+[Gentoo tablebase package](https://packages.gentoo.org/packages/games-board/tablebase-syzygy).
+The selected files and their SHA-256 hashes are documented in
+the RES-001 research (`docs/research/tablebase.md` in the source); the fetch script pins and verifies
+the same hashes. The release retains the unmodified files.
+
 ## Runtime: Microsoft Visual C++
 
 `lc0.exe` needs the Visual C++ runtime, which the Lc0 archive does not ship and a

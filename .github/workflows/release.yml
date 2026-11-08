@@ -108,6 +108,13 @@ jobs:
         run: |
           $required = @('P-Chess.exe', 'P-Chess.pck', 'THIRD_PARTY.md', 'engine/lc0/lc0.exe', 'engine/lc0/COPYING', 'engine/weights/COPYING', 'engine/stockfish/stockfish.exe', 'engine/stockfish/Copying.txt')
           $required += 11..19 | ForEach-Object { "engine/weights/maia-$($_ * 100).pb.gz" }
+          $tablebaseMaterials = @(
+            'KBvK', 'KNvK', 'KPvK', 'KQRvK', 'KQRvKR', 'KQvK', 'KQvKR', 'KRBvK', 'KRBvKR', 'KRNvK', 'KRNvKR', 'KRPvK', 'KRPvKR', 'KRRvK', 'KRRvKR', 'KRvK', 'KRvKB', 'KRvKN', 'KRvKP', 'KRvKR'
+          )
+          $required += foreach ($material in $tablebaseMaterials) {
+            "engine/tablebase/$material.rtbw"
+            "engine/tablebase/$material.rtbz"
+          }
           $required += 'msvcp140.dll', 'vcruntime140.dll', 'vcruntime140_1.dll', 'vcomp140.dll' | ForEach-Object { "engine/lc0/$_" }
           $required += 'Godot-LICENSE.txt', 'Godot-COPYRIGHT.txt', 'AGPL-3.0.txt' | ForEach-Object { "licenses/$_" }
           foreach ($file in $required) {
