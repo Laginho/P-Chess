@@ -4,6 +4,35 @@ const MainScene = preload("res://ui/main.tscn")
 const Session = preload("res://tests/test_session.gd")
 
 
+func test_continue_starts_course_and_opens_the_next_part():
+	var folder := "user://test_continue_home_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var main = MainScene.instantiate()
+	main.course = load("res://core/course.gd").new(folder.path_join("course.json"))
+	main.history = load("res://core/history.gd").new(folder)
+	main.uci.free()
+	main.uci = Session.HeldBridge.new()
+	main.maia = main.MaiaPlayer.new(main.uci)
+	main.preferences = main.Settings.new(folder.path_join("settings.cfg"))
+	main.preferences.set_value("player_name", "You")
+	Engine.get_main_loop().root.add_child(main)
+	var card = main.get_node_or_null("Home/Center/Form/Continue")
+	assert_true(card != null, "Home offers Continue")
+	if card != null:
+		assert_true("Start the course" in card.text)
+		card.pressed.emit()
+		assert_true(main.rating_dialog.visible)
+		main.rating_dialog.hide()
+		assert_true(main.course.save_rating(1600, "chess.com"))
+		main._show_home()
+		assert_true("Rook endgames" in card.text)
+		card.pressed.emit()
+		assert_true(main.theory_pointer.visible, "Continue opens the theory pointer")
+		assert_true(not main.get_node("Home").visible)
+	main.free()
+	Session.HistoryStorage.clean(folder)
+
+
 func test_launch_opens_home():
 	var main = MainScene.instantiate()
 	var folder := "user://test_home_%d" % Time.get_ticks_usec()
