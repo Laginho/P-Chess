@@ -1,5 +1,18 @@
 # Third-party assets
 
+## Tablebase helper: Fathom
+
+`scripts/build-tbprobe.ps1` builds `engine/tbprobe/tbprobe.exe` (Windows) or
+`tbprobe` (Linux) from [Fathom commit c9c6fef0dddc05d2e242c183acf5833149ab676d](https://github.com/jdart1/Fathom/tree/c9c6fef0dddc05d2e242c183acf5833149ab676d).
+The source files and [MIT licence](https://github.com/jdart1/Fathom/blob/c9c6fef0dddc05d2e242c183acf5833149ab676d/LICENSE)
+are downloaded at that commit and individually checked against pinned SHA-256
+hashes. The licence's copyright holders are Ronald de Man (2013–2018), basil00
+(2015) and Jon Dart (2016–2025). The release includes the full notice at
+`licenses/Fathom-LICENSE.txt` (SHA-256
+`c8038055839bd02f995cd7d1bba19657720097f5604411a7977ebcb5b4a37759`).
+Fathom is built single-threaded with the static MSVC runtime on Windows; its
+helper uses the Syzygy files listed below, outside the exported game pack.
+
 ## Font: Noto Sans
 
 `fonts/NotoSans-Variable.ttf` is the Noto Sans variable font from the
