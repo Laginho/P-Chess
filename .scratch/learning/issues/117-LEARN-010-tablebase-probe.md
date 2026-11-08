@@ -1,5 +1,5 @@
 # LEARN-010: The tablebase probe (Fathom helper)
-Stage: implementing
+Stage: to-review
 Blocked by: CI-005
 Review: agent
 Difficulty: hard
@@ -162,7 +162,7 @@ Windows release/engine startup, the actual windows-latest job and LEARN-006's en
 
 Gate: `godot --headless -s tests/run.gd`, tested commit `75fc6f3bbd9376461c4be5a218d9c904f2782cc0`: **615 passed, 0 failed**, exit 0. All real tablebase tests ran.
 
-Gate evidence: /run/media/lage/New Volume/Scratch/LEARN-010/reopen-gate.json
+Gate evidence: /run/media/lage/New Volume/Scratch/LEARN-010/consolidated-gate.json
 
 #### Resolution (2026-11-08)
 Verdict: Reopen — criterion 4 accepts malformed helper output instead of failing closed.
@@ -271,3 +271,27 @@ Disclosure: pending | release | [Verification](#verification): actual Windows CI
 - Callers and boundaries checked before writing tests: `poll()` is called by `_process()` and the approved FakeUCI harness; it dispatches `_on_line()` through the unchanged UCI queue. `_finish()` calls the user's callback and `_next()`, which can queue another search before the bridge consumes the previous `bestmove`. `stop()` is reached by parsing, the stopped signal and PREDELETE, and must drain active/queued callbacks before rejecting later requests. There are no production callers of this new adapter yet. Regression cases cover split/coalesced reader batches, both startup barriers (including identity not received), idle lines immediately after completion, queued searches, callback reentry, malformed identity/order, and zero DTZ in all four decisive WDL classes. All tests stay at the approved FakeUCI/probe seam; all three real-file tests will run with the HDD tables.
 - Red before production changes: focused suite **15 passed, 5 failed**, exit 1 (`/run/media/lage/New Volume/Scratch/LEARN-010/phase-red.log`). The five failures reproduce ignored startup output, invalid identity/barrier ordering, handshake lines during search, idle output (separate/coalesced batches), and decisive moves with DTZ 0. Existing tests and the new positive fragmented/coalesced ordering test pass; all three live tests ran. The fake identity now uses the pinned helper's actual commit. Helper rebuilt from verified cached sources; the 40-file table directory is an ignored symlink to the HDD installation.
 - Fresh read-only criteria check of `a541507` found one additional criterion-4 path: the successful client's callback can reenter public `poll()` while UCI still awaits the completed `bestmove`. `_active` has already been cleared, so `_on_line()` drops a late `tbmove`/`tberror` and the next requests can succeed. Reproduction: `/run/media/lage/New Volume/Scratch/LEARN-010/criteria-reentrant-poll.gd` and `.log`. Added a FakeUCI regression covering no queued request, an already queued request, and a request queued by the callback, with late `tbmove`, `tberror` and `bestmove`. Red on `a541507`: **20 passed, 1 failed**, exit 1 (`callback-phase-red.log`), before changing production. Criteria 1–3 and 5–9 had no concrete miss in the independent check; criterion 4 will be rechecked after this cycle.
+
+#### Consolidated repair and verification
+
+- `b826327` (test-only plus ticket): **15 passed, 5 failed** → `a541507` (production-only): **20 passed, 0 failed**. Raw lines are validated against the bridge's current barrier, and dispatched individually so every next line sees the updated phase. Identity must have the helper's specified name and a commit SHA; duplicate/out-of-order handshake tokens and all idle output fail closed. Only `draw` may have move DTZ 0.
+- `3c3b200` (test-only plus ticket): **20 passed, 1 failed** → `64469e0` (production-only): **21 passed, 0 failed**, including all three live tests (`callback-phase-green.log`). A success callback is explicitly marked as a completion interval: a reentrant poll cannot treat idle output as the completed search or a request queued by that callback. A valid completed answer stays successful; queued and later requests fail exactly once when new output violates the protocol.
+- The same fresh read-only subagent rechecked criterion 4 at `64469e0`, including all phases and completion reentry: no remaining concrete miss found. Its 18 fake-seam tests passed (`criteria-phase-focused.log`), and the independent reproduction now returns `[true, false, false]` with `available == false` and no harness failures for late `tbmove`, `tberror` and duplicate `bestmove` (`criteria-reentrant-poll-fixed.log`). Other criteria retain the initial independent check below. No contract change or proxy decision.
+
+#### Stage 2 criteria check after consolidated repair
+
+Fresh independent check of the complete ticket and diff against the session base, with criterion 4 rechecked after the additional red/green cycle:
+
+- ✅ 1: `scripts/build-tbprobe.ps1:9`, `:32`, `:44`, `:88`, `:93`, `:103` pin/hash files, locate a compiler, keep caches external, build single-threaded/static and remove failed output. Approved manual failure checks remain recorded above; a fresh successful Linux build is in `phase-build.log`.
+- ✅ 2: `native/tbprobe/main.c:31`, `:62`, `:180`, `:223` implement own-directory startup, FEN validation, root/child probes and protocol. `test_real_helper_protocol_and_missing_position_or_child_tables` and `test_real_promotions_nonzeroing_distance_rule50_and_bare_kings` cover these behaviors.
+- ✅ 3: `engine/tablebase.gd:42`, `:52`, `:71` discover the helper, check the 40 files and send the relative Syzygy path. `test_start_checks_the_helper_and_each_required_table` and `test_start_sets_a_relative_path_and_probe_returns_every_move_once` cover the exact diagnostics and command.
+- ✅ 4: `engine/tablebase.gd:86`, `:97`, `:112`, `:144`, `:153`, `:173`, `:177`, `:193` cover all protocol phases, callback reentry, asynchronous queuing, strict move parsing/sets, DTZ, normalization and ranking. FakeUCI tests cover both startup barriers, identity/order, active search, idle output in split/coalesced batches, terminal/castling/malformed positions, ranking ties, and reentrant callbacks with requests queued before or during completion. Red/green proof and the independent reproduction above exercise production code, not a parser copy.
+- ✅ 5: `engine/tablebase.gd:35`, `:113`, `:199`, `:203` stop on free/crash/error, drain active and queued callbacks and reject later requests. `test_stop_error_and_free_finish_all_pending_callbacks_once` and the new phase/reentry regressions assert exact callback counts and unavailable state.
+- ✅ 6: `native/tbprobe/main.c:185`, `:201`, `:209` enforce real-file availability/child probing and DTZ normalization. All three live tests at `tests/test_tablebase.gd:548`, `:570`, `:610` passed in the focused suite and full gate; none were skipped. All 40 installed SHA-256 hashes were freshly verified against `scripts/fetch-engine.ps1` (`phase-table-hashes.log`). Independent-reader commands and warm median remain recorded above; native probing is unchanged by this repair.
+- ✅ 7: `.github/workflows/release.yml:69`, `:119`, `:133` build/inspect the helper, verify Fathom's license and require both artifacts. Approved manual/CI verification remains as above; actual Windows execution is still pending.
+- ✅ 8: `.github/workflows/ci.yml:9`, `:19`, `:23`, `:27`, `:54` provide the Windows build and spaced/accented-path smoke probe with the pinned KRvK pair. The actual Windows job remains pending a push, as authorized in the ticket.
+- ✅ 9: `docs/THIRD_PARTY.md:3`, `docs/spec.md:41`, `.gitignore:5`, `export_presets.cfg:8` document/license the helper and exclude its binary/native sources from the pack. The recorded export/pack inspection remains applicable; these files are unchanged by the repair.
+
+Fresh bound foreground gate at tested commit `64469e0ffea8994a3f461361a4e6e0bea554cd16`: `godot --headless -s tests/run.gd`, **624 passed, 0 failed**, exit 0. All 21 tablebase tests, including the three real-file checks, passed. Log: `/run/media/lage/New Volume/Scratch/LEARN-010/consolidated-gate.log`; receipt is the `Gate evidence:` line above. Only this ticket changes after that tested commit. `git diff --check` passed, and `engine/uci.gd` remains byte-for-byte unchanged against the session base.
+
+Stage 2 hands off at `to-review`; no merge or ledger entry. Actual Windows CI/release startup in an accented folder and LEARN-006's end-to-end Lucena grading remain pending under the original approved verification limits. Stage 3 must re-review criterion 4 across all phases, including completion callback reentry, before session integration.
