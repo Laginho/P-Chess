@@ -97,6 +97,7 @@ func test_pass_test_runs_positions_and_playouts_and_lists_misses():
 	assert_eq(main.board_view.game.start_fen, convert)
 	assert_true(main.board_view.play("a7a8q"))
 	assert_eq(main.board_view.game.start_fen, hold)
+	main.board_view.premoves.moves.append("h2h3")
 	assert_true(main.board_view.play("h2e2"))
 	assert_true(screen.visible)
 	assert_true(screen.find_child("Heading", true, false).text.contains("Not passed yet"))
@@ -110,6 +111,9 @@ func test_pass_test_runs_positions_and_playouts_and_lists_misses():
 	assert_true(screen.find_child("Retry", true, false).visible)
 	assert_eq(main.course.test_attempts(unit).size(), 1)
 	assert_true(main.clock == null, "test games leave no active game clock behind the result")
+	assert_true(main.white_clock.clock == null and main.black_clock.clock == null, "both clock displays are detached")
+	assert_true(main.board_view.premoves.moves.is_empty(), "completion cancels pending premoves")
+	assert_eq(main.board_view.mouse_filter, Control.MOUSE_FILTER_IGNORE, "completion disables board input")
 	var session = Session.new()
 	for key in [KEY_ESCAPE, KEY_ESCAPE, KEY_SPACE]:
 		session._key(main, key)
@@ -171,30 +175,42 @@ func test_test_playout_uses_tablebase_best_move_without_maia():
 	var positions := []
 	for i in 6:
 		positions.append({"id": str(i), "pool": "test", "fen": sample.FEN, "side": "b", "line_length": 1, "goal": "win"})
+	var convert := "7k/P7/5K2/8/8/8/8/8 w - - 0 1"
+	probe.answers[convert] = sample.answer("win", "a7a8q", {"a7a8q": {"result": "win", "dtz": 1}})
+	var first_play := {"id": "first", "fen": convert, "side": "w", "goal": "convert"}
 	var play := {"id": "convert", "fen": sample.FEN, "side": "b", "goal": "convert"}
-	var unit := {"id": "rook", "positions": positions, "test_playouts": [play, play]}
+	var unit := {"id": "rook", "positions": positions, "test_playouts": [first_play, play]}
 	main._show_unit(unit)
 	main.unit_page.part_requested.emit(unit, "test")
 	main.pass_test.find_child("Start", true, false).pressed.emit()
 	for i in 6:
 		main.solving.board._commit("c6c5", false)
 		main.solving.find_child("Commit", true, false).pressed.emit()
+	assert_true(main.board_view.play("a7a8q"))
+	assert_eq(main.course.test_attempts(unit).size(), 0, "one completed play-out does not record an attempt")
+	assert_eq(main.board_view.game.start_fen, sample.FEN, "the second play-out starts once")
 	assert_eq(main.settings.control, "none")
 	assert_true(main.board_view.play("c6c5"))
 	assert_eq(main.board_view.game.moves, PackedStringArray(["c6c5", "e1f2"]))
 	assert_eq(main.uci.requests.size(), 0, "the perfect opponent uses the tablebase, not Maia")
 	assert_true(main.history.games().is_empty())
+	main.board_view.premoves.moves.append("c5c3")
 	assert_true(main.board_view.play("c5c4"))
 	assert_true(main.pass_test.visible, "probe error is shown to the player")
 	assert_true(main.pass_test.find_child("Details", true, false).text.contains("Missing scripted table"))
 	assert_true(main.pass_test.find_child("Retry", true, false).visible, "the interrupted play-out can be restarted")
 	assert_true(main.course.test_attempts(unit).is_empty(), "a probe error is not a failed attempt")
+	assert_true(main.clock == null and main.white_clock.clock == null and main.black_clock.clock == null, "probe error detaches the clocks")
+	assert_true(main.board_view.premoves.moves.is_empty(), "probe error cancels pending premoves")
+	assert_eq(main.board_view.mouse_filter, Control.MOUSE_FILTER_IGNORE, "probe error disables board input")
+	assert_eq(main._test_playouts, [true], "the completed play-out survives a probe failure")
 	main.pass_test.find_child("Retry", true, false).pressed.emit()
 	assert_true(not main.pass_test.visible and main._playout_active, "retry returns to the play-out")
 	assert_eq(main.board_view.game.start_fen, sample.FEN, "retry restarts the interrupted play-out")
 	assert_true(main.board_view.game.moves.is_empty())
 	assert_eq(main.course.test_attempts(unit).size(), 0)
 	assert_eq(main._test_results.size(), 6, "previous answers survive a probe failure")
+	assert_eq(main._test_playouts, [true], "retry preserves the completed play-out")
 	main.free()
 
 

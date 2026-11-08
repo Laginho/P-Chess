@@ -716,14 +716,7 @@ func _start_test_playout() -> void:
 
 
 func _finish_test_playout(passed: bool) -> void:
-	_playout_generation += 1
-	_playout_active = false
-	clock.stop()
-	clock = null
-	white_clock.clock = null
-	black_clock.clock = null
-	board_view.cancel_premoves()
-	board_view.mouse_filter = MOUSE_FILTER_IGNORE
+	_teardown_test_playout()
 	_test_playouts.append(passed)
 	if _test_playouts.size() < 2:
 		_start_test_playout()
@@ -738,6 +731,11 @@ func _finish_test_playout(passed: bool) -> void:
 
 
 func _test_playout_error(message: String) -> void:
+	_teardown_test_playout()
+	pass_test.present_error(message)
+
+
+func _teardown_test_playout() -> void:
 	_playout_generation += 1
 	_playout_active = false
 	clock.stop()
@@ -746,7 +744,6 @@ func _test_playout_error(message: String) -> void:
 	black_clock.clock = null
 	board_view.cancel_premoves()
 	board_view.mouse_filter = MOUSE_FILTER_IGNORE
-	pass_test.present_error(message)
 
 
 func _cancel_playout() -> void:
