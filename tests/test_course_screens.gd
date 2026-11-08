@@ -215,6 +215,7 @@ func test_theory_pointer_displays_data_copies_and_navigates():
 	if DisplayServer.has_feature(DisplayServer.FEATURE_CLIPBOARD):
 		assert_eq(DisplayServer.clipboard_get(), "second term")
 	var books = theory.find_child("Books", true, false)
+	assert_true(theory.find_child("ReadCard", true, false).visible, "populated books section is visible")
 	assert_eq(books.get_child_count(), 2)
 	assert_eq(books.get_child(0).find_child("Title", true, false).text, "Book one")
 	assert_eq(books.get_child(0).find_child("Chapter", true, false).text, "Chapter 7")
