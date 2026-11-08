@@ -64,6 +64,9 @@ layout_mode = 2
 custom_minimum_size = Vector2(260, 0)
 theme_override_constants/separation = 16
 
+[node name="Preview" type="CenterContainer" parent="Margin/Content/Body/Side"]
+layout_mode = 2
+
 [node name="FirstTryTitle" type="Label" parent="Margin/Content/Body/Side"]
 layout_mode = 2
 theme_type_variation = &"MutedText"
