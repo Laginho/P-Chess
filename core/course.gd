@@ -178,6 +178,34 @@ func unit_progress(unit: Dictionary) -> Dictionary:
 			"playouts_passed": passed, "test": test, "first_try": rate, "solving_done": total > 0 and solved == total}
 
 
+func add_from_game(unit: Dictionary, position: Dictionary) -> bool:
+	var unit_id: String = unit.get("id", "")
+	var fen: String = position.get("fen", "")
+	if unit_id.is_empty() or fen.is_empty():
+		return false
+	return _save_progress(func(next: Dictionary) -> bool:
+		var all_units = next.get("units", {})
+		if not all_units is Dictionary:
+			return false
+		var saved = all_units.get(unit_id, {})
+		if not saved is Dictionary:
+			return false
+		var positions = saved.get("from_your_game", [])
+		if not positions is Array:
+			return false
+		for existing in positions:
+			if existing is Dictionary and existing.get("fen", "") == fen:
+				return true
+		var entry := position.duplicate(true)
+		entry.id = "from-game-" + fen.sha256_text()
+		entry.from_your_game = true
+		positions.append(entry)
+		saved.from_your_game = positions
+		all_units[unit_id] = saved
+		next.units = all_units
+		return true)
+
+
 func practice_positions(unit: Dictionary) -> Array:
 	var result := []
 	for position in unit.get("positions", []):

@@ -5,6 +5,7 @@ Review: agent
 Difficulty: normal
 
 - Primary files:
+  - data/course/rook-endgames.json (default line length for positions from games)
   - ui/review.gd (`present` move-list rows, `_fit_exit_rows`; the marker row beside the "Left repertoire" one)
   - ui/main.gd (the marker's link opens the unit page)
   - core/course.gd (adding a from-your-game position, once per FEN)
