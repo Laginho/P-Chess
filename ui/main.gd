@@ -210,6 +210,7 @@ func _ready() -> void:
 			rating_dialog.present(course)
 		else:
 			_show_course_map())
+	$Home.continue_requested.connect(_continue_course)
 	rating_dialog.saved.connect(_show_course_map)
 	$Home.started.connect(_start)
 	$Home.custom_requested.connect(_show_setup)
@@ -556,7 +557,19 @@ func _show_home() -> void:
 	_set_focus(false)
 	setup.hide()
 	$Home.sync_level()
+	$Home.refresh_continue()
 	$Home.show()
+
+
+func _continue_course(target: Dictionary) -> void:
+	var kind: String = target.get("kind", "rating")
+	if kind == "rating":
+		rating_dialog.present(course)
+	elif kind == "done":
+		_show_setup()
+	elif kind != "review":
+		$Home.hide()
+		_show_course_part(target.unit, "solving" if kind == "from_game" else kind)
 
 
 func _show_course_map() -> void:

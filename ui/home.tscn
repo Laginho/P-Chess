@@ -50,13 +50,19 @@ text = "P-Chess"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="Course" type="Button" parent="Center/Form"]
+[node name="Continue" type="Button" parent="Center/Form"]
 theme_type_variation = &"PrimaryButton"
+theme_override_font_sizes/font_size = 20
+text = "Start the course"
+alignment = 0
+
+[node name="Course" type="Button" parent="Center/Form"]
+theme_type_variation = &"RaisedButton"
 text = "Course"
 
 [node name="QuickLabel" type="Label" parent="Center/Form"]
 theme_type_variation = &"SectionLabel"
-text = "QUICK PLAY"
+text = "PLAY"
 vertical_alignment = 1
 
 [node name="Level" type="OptionButton" parent="Center/Form"]
