@@ -1,5 +1,5 @@
 # LEARN-002: Course map and unit page
-Stage: to-review
+Stage: done
 Blocked by: LEARN-001
 Review: agent
 Difficulty: normal
@@ -113,3 +113,25 @@ Disclosure: deferred | none | [CLEAN-017](116-CLEAN-017-shared-course-persistenc
 - Criterion 2 ✅ Independent read-only check: `core/course.gd:150` derives mastery and `:160` skips explicitly pending checks; `tests/test_course.gd:143` covers a failed completed check followed by pending checks, and a later completed success. Existing tests cover the four statuses and completed records without a `done` field. The check found no additional defect in the reopened criterion.
 - Red/green: `ba34d0b` failed twice for the intended pending-review regression; `6f2ebc1` passes it and preserves earlier completed-record behavior. The map and unit page are the callers of `unit_progress`; they receive the corrected status without an interface change.
 - Gate: `godot --headless -s tests/run.gd` at `6f2ebc1` passed 591 tests, 0 failed. One graphical pixel check and six live Lc0 checks were skipped by the existing suite. The manual application-restart clock check remains pending; this session has no display.
+
+#### Resolution (2026-11-08)
+Verdict: Approve
+
+Re-reviewed the previous criterion-2 failure and the entire follow-up diff `3fd9f61...1a2f57f` with independent read-only Standards and Spec reviewers `/root/rereview_standards` and `/root/rereview_spec`. The implementation author supplied test commit `ba34d0b`, production repair `6f2ebc1`, and metadata handoff `1a2f57f`. Neither this closing reviewer nor the independent reviewers authored production changes. The earlier integration blocker is resolved.
+
+- Standards: 0 documented violations and 0 new baseline smells. The guard in `core/course.gd:160` preserves the return contract, status precedence and legacy records without `done`. The regression uses the public course boundary with isolated saved progress. Test/production commit separation and Primary-file scope are intact. The unchanged persistence duplication remains tracked by CLEAN-017.
+- Spec: 0 unresolved findings, missing requirements or scope creep in the follow-up. Criterion 2 ✅: explicitly pending review records cannot replace the latest completed result; a later completed success clears needs review. The regression at `tests/test_course.gd:143` would fail in its first and third examples without the repair, while its completed-success control and the existing legacy completed-record controls remain valid.
+- Criteria 1 and 3–9 retain their previous passing verdicts: their production code and tests did not change. The course map, unit page, navigation, part progress and persisted clock remain as reviewed in the first pass.
+
+Examined both affected callers (`ui/course_map.gd:26`, `ui/unit_page.gd:22`), empty/non-array check collections, non-mastered units, explicit pending success/failure records, completed success/failure transitions, legacy records without `done`, and malformed/empty entries. The independent Spec reviewer ran [ten production cases](</run/media/lage/New Volume/Scratch/LEARN-002-rereview-spec/probe.log>): 10 passed, 0 failed. The closing reviewer reran the original [three-case reproduction](</run/media/lage/New Volume/Scratch/LEARN-002-review/rereview-status.log>): 3 passed, exit 0. These probes used isolated files and did not read or change player progress. Physical input, a full interactive application restart, Windows and live Lc0 were not exercised in this re-review; no graphical display is available.
+
+Red/green: the stage-2 record identifies `ba34d0b` failing for the pending-review regression before `6f2ebc1`; inspection confirms the regression calls production code and that the removed guard produces the two incorrect `mastered` results. Gate evidence was reused from `6f2ebc1`: `godot --headless -s tests/run.gd`, 591 passed, 0 failed, exit 0, including the new regression. The existing suite skips one graphical pixel check and six live Lc0 checks. The official `Assert-GateEvidence` helper validated the [receipt](</run/media/lage/New Volume/Scratch/LEARN-002-resume/gate.json>), command, log hash, exit marker and identical tested code before and after integration. `git diff --check` passed. No full gate rerun was needed because review/rebase changed no code.
+
+Delivery: rebasing onto `sweatshop/learning/2026-11-07-2234` was a no-op. Integrated with merge commit `8fed772`; this closing commit records `Stage: done` and the ledger entry together. No PR or push was performed in this session flow.
+
+Proxy disclosure: the existing `Proxy decided (opus-5.5 xhigh)` line was checked against [its receipt](/tmp/sweatshop-proxy/20261108-000755-LEARN-002-28867a.json). It retains all four fixed parts while excluding placeholder units/stages. This re-review made no contract change or proxy call.
+
+Acceptance: pending | The manual open-unit, clock-toggle and full application-restart check remains outstanding. Automated navigation/reload coverage, the recorded layout captures and the passing gate support implementation acceptance; no interactive restart is claimed.
+Disclosure: decision | release | [Existing proxy decision](/tmp/sweatshop-proxy/20261108-000755-LEARN-002-28867a.json): LEARN-004 and the planned part screens must complete the currently unfinished seed content before release.
+Disclosure: pending | release | Complete and record the manual application-restart clock check before release; this headless session cannot perform it.
+Disclosure: deferred | none | [CLEAN-017](116-CLEAN-017-shared-course-persistence.md) remains open for optional persistence cleanup; it is not an integration or release condition.
