@@ -126,3 +126,27 @@ func test_clock_choice_persists_and_preserves_other_progress():
 	assert_true(not course.save_clock_choice("5+5"))
 	assert_eq(FileAccess.get_file_as_string(path), "{broken")
 	DirAccess.remove_absolute(path)
+
+
+func test_passed_test_and_failed_review_determine_mastery():
+	var path := "user://course_mastery_%d.json" % Time.get_ticks_usec()
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	file.store_string(JSON.stringify({"units": {"rook": {"test_attempts": [{"passed": true}], "review_checks": [{"missed": true}]}}}))
+	file = null
+	var course = load("res://core/course.gd").new(path, "res://tests/fixtures/course/course.json")
+	var unit = JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/course/rook.json"))
+	assert_eq(course.unit_progress(unit).status, "needs review")
+	assert_eq(course.unit_progress(unit).test, "passed")
+	DirAccess.remove_absolute(path)
+
+
+func test_failed_playout_is_in_progress():
+	var path := "user://course_playout_%d.json" % Time.get_ticks_usec()
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	file.store_string('{"units":{"rook":{"playouts":{"a":false}}}}')
+	file = null
+	var course = load("res://core/course.gd").new(path, "res://tests/fixtures/course/course.json")
+	var unit = JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/course/rook.json"))
+	assert_eq(course.unit_progress(unit).status, "in progress")
+	assert_eq(course.unit_progress(unit).playouts_passed, 0)
+	DirAccess.remove_absolute(path)

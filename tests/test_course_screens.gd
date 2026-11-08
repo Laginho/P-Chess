@@ -54,3 +54,36 @@ func test_course_navigation_unit_progress_and_clock():
 	assert_true(main.get_node("Home").visible and not map.visible)
 	main.free()
 	Session.HistoryStorage.clean(folder)
+
+
+func test_continue_moves_to_first_unfinished_part_and_disappears_when_done():
+	var folder := "user://course_continue_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var path := folder.path_join("course.json")
+	var main = MainScene.instantiate()
+	main.course = load("res://core/course.gd").new(path, "res://tests/fixtures/course/course.json")
+	main.history = load("res://core/history.gd").new(folder)
+	main.uci.free()
+	main.uci = Session.HeldBridge.new()
+	main.maia = main.MaiaPlayer.new(main.uci)
+	main.preferences = main.Settings.new(folder.path_join("settings.cfg"))
+	main.preferences.set_value("player_name", "You")
+	Engine.get_main_loop().root.add_child(main)
+	var samples := [
+		[{"theory_opened": true}, 1],
+		[{"theory_opened": true, "practice": {"one": {"solved": true}, "two": {"solved": true}}}, 2],
+		[{"theory_opened": true, "practice": {"one": {"solved": true}, "two": {"solved": true}}, "playouts": {"a": true, "b": true, "c": true, "d": true}}, 3],
+		[{"theory_opened": true, "practice": {"one": {"solved": true}, "two": {"solved": true}}, "playouts": {"a": true, "b": true, "c": true, "d": true}, "test_attempts": [{"passed": true}]}, -1]
+	]
+	for sample in samples:
+		var file := FileAccess.open(path, FileAccess.WRITE)
+		file.store_string(JSON.stringify({"rating": {"number": 1300, "site": "chess.com"}, "units": {"rook": sample[0]}}))
+		file = null
+		main.course = load("res://core/course.gd").new(path, "res://tests/fixtures/course/course.json")
+		main._show_course_map()
+		main.course_map.find_child("Units", true, false).get_child(0).pressed.emit()
+		var parts = main.unit_page.find_child("Parts", true, false)
+		for i in 4:
+			assert_eq(parts.get_child(i).find_child("Open", true, false).text, "Continue" if i == sample[1] else "Open")
+	main.free()
+	Session.HistoryStorage.clean(folder)
