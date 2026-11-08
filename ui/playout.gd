@@ -7,6 +7,7 @@ signal retry_requested
 
 const BoardView = preload("res://ui/board_view.tscn")
 const Game = preload("res://core/game.gd")
+const Tunables = preload("res://core/tunables.gd")
 var board
 var heading: Label
 var reason: Label
@@ -113,7 +114,7 @@ func present_start(course, unit: Dictionary, index: int) -> void:
 	states.text = "   ·   ".join(labels)
 	var task := "win" if position.goal == "convert" else "draw"
 	details.text = "%s to play and %s\nMaia %s  ·  %s" % ["White" if position.side == "w" else "Black", task, course.maia_level().trim_prefix("maia-"), "No clock" if course.clock_choice() == "none" else "5+5"]
-	reason.text = "Pass: promote or mate.\nFail: change the result or run out of time." if task == "win" else "Pass: capture the pawn or hold the draw for 30 moves.\nFail: change the result or run out of time."
+	reason.text = "Pass: promote or mate.\nFail: change the result or run out of time." if task == "win" else "Pass: capture the pawn or hold the draw for %d moves.\nFail: change the result or run out of time." % Tunables.COURSE_HOLD_MOVES
 	start_button.show()
 	next_button.hide()
 	retry_button.hide()

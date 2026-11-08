@@ -2,6 +2,7 @@ extends "res://tests/run.gd".Test
 
 const MainScene = preload("res://ui/main.tscn")
 const Session = preload("res://tests/test_session.gd")
+const Tunables = preload("res://core/tunables.gd")
 
 
 func test_black_first_line_pairs_san_by_side_after_undo_and_clear():
@@ -894,7 +895,10 @@ func test_playout_start_describes_task_rules_and_all_states_including_replay():
 	var details: String = screen.find_child("Details", true, false).text
 	assert_true(details.contains("Black to play and draw") and details.contains("Maia 1600") and details.contains("No clock"))
 	var rules: String = screen.find_child("Reason", true, false).text
-	assert_true(rules.contains("pawn") and rules.contains("30 moves") and rules.contains("time"))
+	assert_eq(rules, "Pass: capture the pawn or hold the draw for %d moves.\nFail: change the result or run out of time." % Tunables.COURSE_HOLD_MOVES)
+	positions[0].goal = "convert"
+	screen.present_start(course, unit, 0)
+	assert_eq(screen.find_child("Reason", true, false).text, "Pass: promote or mate.\nFail: change the result or run out of time.")
 	screen.free()
 	DirAccess.remove_absolute(path)
 
