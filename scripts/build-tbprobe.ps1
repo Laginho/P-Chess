@@ -48,7 +48,8 @@ try {
     $cacheRoot = [IO.Path]::GetFullPath($cacheRoot)
     foreach ($excluded in @($Root, $repo)) {
         $prefix = [IO.Path]::GetFullPath($excluded).TrimEnd([char[]]'\/') + [IO.Path]::DirectorySeparatorChar
-        if ($cacheRoot.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)) {
+        if ($cacheRoot.Equals($prefix.TrimEnd([IO.Path]::DirectorySeparatorChar), [StringComparison]::OrdinalIgnoreCase) -or
+            $cacheRoot.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)) {
             throw "Fathom cache must be outside -Root and the repo: $cacheRoot"
         }
     }
