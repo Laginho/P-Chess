@@ -240,7 +240,7 @@ func test_real_rook_endgame_content_has_complete_disjoint_pools():
 		assert_eq(pieces.count("r"), 1)
 		assert_eq(pieces.count("P") + pieces.count("p"), 1)
 		assert_eq(pieces.length(), 5)
-		assert_eq(board.castling, "-", "no castling in a rook ending")
+		assert_eq(board.castling, "-", "these course positions have no castling rights")
 		assert_eq(board.en_passant, "-", "no en passant in a one-pawn ending")
 		for square in range(8):
 			assert_true(board.squares[square] not in ["P", "p"] and board.squares[56 + square] not in ["P", "p"], "pawn is not on a back rank")
