@@ -1,6 +1,6 @@
 # CLEAN-019: Share pass-test play-out teardown
 Stage: to-implement
-Status: needs-triage
+Status: ready-for-agent
 Blocked by: none
 Review: agent
 Difficulty: normal
@@ -31,3 +31,5 @@ Consider sharing the identical play-out teardown used when a pass-test play-out 
 ## Comments
 
 - 2026-11-08 Opened by the LEARN-008 stage-3 Standards review, [original ticket](112-LEARN-008-pass-test.md). Possible Duplicated Code at `ui/main.gd::_finish_test_playout` and `_test_playout_error`; this is a nonblocking maintainability judgement with no demonstrated defect or integration/release condition. No `Escaped-from` line applies.
+
+- Triage by the driver: ready-for-agent — extracting the identical teardown gives the two paths one place to maintain; the existing retry test needs a completed first play-out to verify preservation across a second-play-out error.
