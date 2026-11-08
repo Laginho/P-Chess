@@ -1,5 +1,5 @@
 # LEARN-005: Solving board: entering a line
-Stage: to-review
+Stage: done
 Blocked by: LEARN-002
 Review: agent
 Difficulty: normal
@@ -90,3 +90,28 @@ Disclosure: pending|integration | [LEARN-005](109-LEARN-005-solving-board-enteri
 - Criterion 7 ✅ Independent read-only check: `ui/solving.gd:87` checks the full line and `:92` consumes both Enter key phases before focused buttons; `tests/test_course_screens.gd:23` dispatches Enter and keypad Enter through the viewport with Undo, Clear, Back and Commit focused, checking short and full lines. Test commit `7117a83` reproduced unintended button actions and duplicate commits; production commit `fa8a8f6` passed it. Commit is disabled for a short line, so that case cannot retain Commit focus.
 - Verification: the focused course-screen suite passed 8 tests. The required `godot --headless -s tests/run.gd` gate passed 603 tests, 0 failed, exit 0. Two pixel checks and six live Lc0 checks were skipped in the headless environment; the previous stage recorded the graphical board checks. The Lucena line was previously exercised automatically; this follow-up did not repeat a manual play-through.
 Gate evidence: /run/media/lage/New Volume/Scratch/LEARN-005-reopen-gate.json
+
+#### Resolution (2026-11-08)
+
+Verdict: Approve
+
+Re-reviewed all six commits and every hunk in `edcb8fa...69dc228`, covering the two failed criteria and all changes since the previous review. Independent read-only reviewers `/root/standards_review` and `/root/spec_review` approved the added diff. No production code or tests were authored during this review.
+
+Standards: 0 findings. The changes respect Primary files, domain vocabulary and separate test-only/production-only commits. No documented-standard violation or actionable baseline smell was found.
+
+Spec: 0 remaining findings. Both defects from the previous Resolution are closed:
+
+- Criterion 5 ✅ `ui/solving.gd:73` places Black's first move on its own row and pairs subsequent White/Black moves. `tests/test_course_screens.gd:7` checks the displayed SAN after entry, Undo and Clear. The original shipped-position probe now displays `1... Rc5 / 2. Kf7 Rc4` for `c6c5 e8f7 c5c4`.
+- Criterion 7 ✅ `ui/solving.gd:92` consumes Enter/keypad Enter press and release before a focused button can act; only a non-echo press commits a full line. `tests/test_course_screens.gd:23` exercises actual Viewport dispatch with Undo, Clear, Back and Commit focused. A short line cannot retain focus on the disabled Commit button. Repeating the original Clear-click/board-click/Enter probe preserves `e2e4` through both key phases and emits zero commits.
+- Criteria 1–4, 6 and 8–10 ✅ retain the previous review's verdicts; their implementation is unchanged by the follow-up. No new regression, scope creep or missing requirement was found.
+
+Callers/interactions examined in this re-review: starting-side SAN grouping, empty/full/undone/cleared lines, focused-button keyboard dispatch, signal multiplicity, screen navigation/hiding, promotion-picker focus and Settings dispatch. The first review above records the broader board/course checks. Live Maia/tablebase gameplay, native Windows behavior and full-feature grading/playback acceptance were not exercised here.
+
+Red/green proof: test commit `821ac74` failed with White-first grouping and production commit `8d781f5` passed; test commit `7117a83` failed with focused-button actions and duplicate commits and production commit `fa8a8f6` passed. Inspected the recorded red/green logs. The independent Spec reviewer reran both new regression methods with Godot 4.7.2 and isolated user data: 2 passed, 0 failed, exit 0 ([runtime log](</run/media/lage/New Volume/Scratch/learn005-rereview-spec.log>)). The parent reviewer repeated the two original reproductions: [short-line Enter](</run/media/lage/New Volume/Scratch/learn005-rereview-input.log>) and [shipped Black-first SAN](</run/media/lage/New Volume/Scratch/learn005-rereview-san.log>).
+
+Gate: `godot --headless -s tests/run.gd` — 603 passed, 0 failed, exit 0 at tested commit `fa8a8f6`. `Assert-GateEvidence` verified the command, successful exit marker, log SHA-256 and identical tested code before and after integration. Reused this green run because rebase was a no-op and review changed no code. Two graphical pixel checks and six live Lc0 checks were skipped; the previous stage's graphical board suite passed 20 tests. `git diff --check` passed.
+
+Delivery: integrated into `sweatshop/learning/2026-11-07-2234` with merge commit `20ba779`. This closing commit records `Stage: done` and its ledger entry together. No proxy call or contract change was made. This approval resolves the earlier integration hold for criteria 5 and 7.
+
+Acceptance: pending | The automated line-entry contract and both original runtime reproductions pass. The manual Lucena play-through remains unperformed; its exact line, Undo and Clear are covered by `tests/test_board_view.gd:77`. Full solving acceptance in [spec acceptance scenario 2](../spec.md#acceptance-scenarios) also needs [LEARN-006 grading/playback](110-LEARN-006-grading-and-feedback.md).
+Disclosure: pending | release | [Manual verification above](#verification) and [LEARN-006](110-LEARN-006-grading-and-feedback.md): complete the human Lucena play-through and full solving acceptance before release; neither blocks this line-entry implementation's session integration.
