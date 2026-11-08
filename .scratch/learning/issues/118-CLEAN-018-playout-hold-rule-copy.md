@@ -1,5 +1,5 @@
 # CLEAN-018: Keep the play-out hold rule text in sync with its tunable
-Stage: to-implement
+Stage: implementing
 Status: ready-for-agent
 Blocked by: none
 Review: agent
