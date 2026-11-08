@@ -1,5 +1,5 @@
 # CLEAN-020: Align Home's remaining visual details with the learning canvas
-Stage: to-review
+Stage: done
 Status: ready-for-agent
 Blocked by: none
 Review: human
@@ -53,3 +53,30 @@ Gate evidence: /run/media/lage/New Volume/Scratch/clean020-gate.json
 - ✅ 4: `ui/home.gd:129`, `ui/home.gd:151`, and `ui/home.gd:160` retain the existing actions and warning placement; existing tests at `tests/test_home.gd:7`, `tests/test_home.gd:102`, `tests/test_home.gd:186`, `tests/test_home.gd:262`, and `tests/test_home.gd:359` exercise destinations, preferences and the warning.
 
 Independent criteria review identified clipped long review text and mixed statuses; test-only commits `0206cfd` and `5d1117b` recorded red cases, and production commits `13cc146` and `fc42110` fixed them. The reviewer rechecked the long-content fixes, including a full missing-engine message at 800×600. The additional compact progress-bar bounds test then found and verified the final correction. The normal warning-visibility transition also restores the Play artwork opacity.
+
+#### Resolution (2026-11-08)
+Verdict: Approve
+
+Standards: 0 documented-standard violations; 1 optional duplication heuristic. Independent reviewer `/root/review_standards` checked the complete diff, Primary-file scope, domain vocabulary and all nine commits. The four cycles separate tests from production. The reviewer noted that `_fit_continue_detail` repeats the short font-fitting loop in `_fit_continue_title`. The integrating reviewer accepts the separate helpers: they express distinct title/detail size limits, and extracting this small idiom has no demonstrated maintenance benefit. This is not a confirmed defect or outstanding cleanup requirement.
+
+Spec: 0 findings. Independent reviewer `/root/review_spec` and the integrating reviewer confirmed all four numbered criteria, with no scope creep:
+
+- 1 ✅ `ui/home.gd:19` and `ui/home.gd:109` place the separate artwork above captions; dedicated Bullet/Blitz SVGs match the canvas's green/yellow. The existing row tests and new decoration test cover supported dimensions. Fresh rendered captures confirm four readable controls at 1280×800 and 800×600.
+- 2 ✅ `ui/home.gd:65` reserves the chevron's space; title/detail fitting preserves long review text, and compact progress remains inside Continue. New bounds/long-content assertions and rendered review/solving states confirm separation. Mouse events over the chevron, title, detail and progress each reach Continue.
+- 3 ✅ `ui/home.gd:174` derives the unit count and every present status count from the stage's actual units/progress, including `0 units`. `test_course_summary_tracks_available_units_and_progress` and `test_long_review_and_mixed_course_summary_remain_readable` check zero/new/in-progress and all four statuses. Fresh mixed-status captures verify wrapping after frame layout. Existing Home tests retain rating-dialog/course-map routing.
+- 4 ✅ Existing action wiring and preferences remain unchanged. The green gate exercises all Continue targets, quick-play settings, Maia level, Custom and navigation. Added decorations ignore mouse events; 34 graphical mouse-event clicks passed across both dimensions. Full missing-engine guidance fits above navigation, including the mixed-status state at 800×600.
+
+Examined callers, failure paths and cross-feature interactions: `_ready`, configuration, resize/warning visibility, `refresh_continue` after Profile/stage changes and returning Home, all Continue target kinds, course status derivation, main-screen Course/Continue routing, quick-play settings and missing-engine disabling. Engine startup, persistence failure handling and native Windows pointer behavior were inspected through unchanged callers or existing tests, not exercised against live engines during review. GUI mouse events were dispatched through Godot's viewport, not an OS-level pointer driver.
+
+Files: `ui/home.gd`, `ui/home.tscn`, the four dedicated Home SVGs and `tests/test_home.gd`; no production or test repair was needed in stage 3. No proxy decision or contract change was introduced.
+
+Red/green proof: reviewed the four test/production pairs (`571001c`/`5957784`, `3ac3250`/`27d3707`, `0206cfd`/`13cc146`, `5d1117b`/`fc42110`) and the decoration, long-content and progress red logs. The original summary log ends before the Home tests, so review independently reran the current summary test against the immutable session-base Home scene/script: it exits 1 with `Course displays a summary`, the intended missing-control failure ([red log](</run/media/lage/New Volume/Scratch/CLEAN-020-review/summary-red.log>)). The final green gate includes all three added Home tests.
+
+Gate: reused the committed-code receipt for `fc421106289fedfd3b221e49df641e1e60133262`: `godot --headless -s tests/run.gd`, 677 passed, 0 failed, exit 0. `Assert-GateEvidence` verified the command, tested commit, log SHA-256, exit marker and unchanged code, including after the no-op rebase. Two headless pixel checks and six live Lc0 checks skip under the existing environment limitations. [Gate log](</run/media/lage/New Volume/Scratch/clean020-gate.log>); [receipt](</run/media/lage/New Volume/Scratch/clean020-gate.json>). `git diff --check` passed.
+
+Graphical review: generated and inspected isolated captures under Xvfb with windows at `3000,3000`, comparing the new details against `docs/design/learning/png/Main.png`: [1280×800 normal](</run/media/lage/New Volume/Scratch/CLEAN-020-review/normal-1280.png>), [800×600 normal](</run/media/lage/New Volume/Scratch/CLEAN-020-review/normal-800.png>), [1280×800 missing engine](</run/media/lage/New Volume/Scratch/CLEAN-020-review/missing-1280.png>), [800×600 missing engine](</run/media/lage/New Volume/Scratch/CLEAN-020-review/missing-800.png>), and mixed statuses [normal](</run/media/lage/New Volume/Scratch/CLEAN-020-review/mixed-normal-800.png>)/[missing engine](</run/media/lage/New Volume/Scratch/CLEAN-020-review/mixed-missing-800.png>). The external harness confirms 34 mouse-event clicks and 0 failures, complete warning text and post-frame summary/detail bounds ([script](</run/media/lage/New Volume/Scratch/CLEAN-020-review/verify.gd>), [log](</run/media/lage/New Volume/Scratch/CLEAN-020-review/verify.log>)). An initial harness-only failure came from configuring a zero-sized detached Home before assigning its window dimensions; assigning the supported dimensions before `_ready`, as the main scene does, corrected the harness without source changes.
+
+Integration: rebase onto `sweatshop/learning/2026-11-07-2234` changed no code or commits; merge `0ddc711` integrates the ticket without squash. This closure commits `Stage: done` and the ledger entry together on the session branch. `Review: human` remains for the driver's session PR.
+
+Acceptance: pending | Automated scenarios, graphical mouse-event routing and the six rendered capture comparisons passed. Bruno's final visual acceptance and native pointer checks remain for human review.
+Disclosure: pending | none | Human acceptance remains in the session PR; this ticket introduces no integration condition. The broader manual release checks remain recorded in [LEARN-009](113-LEARN-009-home-and-continue.md).
