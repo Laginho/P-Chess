@@ -1,5 +1,5 @@
 # LEARN-004: Rook endgames content
-Stage: to-implement
+Stage: implementing
 Blocked by: RES-001, LEARN-002
 Review: human
 Difficulty: normal
@@ -33,6 +33,8 @@ Claude drafts the unit's content and Bruno tunes it (spec Further Notes). The un
 - `tests/test_course.gd`: the real `rook-endgames.json` has 12 practice positions, a 15–20 test pool, no shared FENs, the side and goal mix, and 4 + 2 play-outs (red: the file has only the two seed positions).
 
 ## Comments
+
+- Proxy decided (opus-5.5 xhigh): Name the stage "Endgame foundations" and go ahead with the draft content. Bruno can change the name or the content when he does the `Review: human` review — it's one string in a data file, so it's cheap to change. (receipt /tmp/sweatshop-proxy/20261108-005906-LEARN-004-0a1258.json)
 
 - 2026-11-07 Written from `.scratch/learning/spec.md` §L1. `Review: human` because Bruno tunes the content.
 
