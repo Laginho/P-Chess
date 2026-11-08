@@ -25,7 +25,7 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
-	text = Clock.format(clock.left(side)) if clock else ""
+	text = Clock.format(clock.left(side)) if clock and not clock.untimed else ""
 	var running: bool = clock != null and clock._running == side
 	if running != _was_running:
 		_was_running = running

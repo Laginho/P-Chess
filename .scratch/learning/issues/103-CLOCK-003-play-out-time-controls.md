@@ -1,5 +1,5 @@
 # CLOCK-003: Play-out time controls: 5+5 and no clock
-Stage: to-implement
+Stage: to-review
 Blocked by: none
 Review: agent
 Difficulty: normal
@@ -32,3 +32,11 @@ Play-outs run at 5+5 or with no clock, chosen on the unit page (spec §L8). The 
 ## Comments
 
 - 2026-11-07 Written from `.scratch/learning/spec.md` §L8.
+
+- 2026-11-07 Stage 2: `5+5` and `none` are accepted by the clock through `PLAY_OUT_CONTROLS`; `CONTROLS` remains the three sandbox controls so the existing test and Custom game stay unchanged. The untimed clock returns zero as its stable start value, including after premoves.
+- Criterion 1 ✅ Independent criteria check: `core/clock.gd:13,31` supplies 300000 ms and a 5000 ms increment; `tests/test_clock.gd:76` checks both sides. The test failed on the unknown control before implementation.
+- Criterion 2 ✅ Independent criteria check: `core/clock.gd:33,52` and `ui/clock.gd:28` prevent time changes, signals and display; `tests/test_clock.gd:88` covers long elapsed time, premove, signals and display. Both tests failed before implementation.
+- Criterion 3 ✅ Independent criteria recheck: `core/clock.gd:12`, `ui/setup.gd:43` and `ui/home.tscn:63` retain the three controls; `tests/test_clock.gd:29` checks both visible lists exactly. Temporarily adding an extra control to each list made the test fail for both.
+- Criterion 4 ✅ Independent criteria check: existing clock tests remain unchanged; the full gate passed 574 tests with 0 failures. The headless run skipped the graphical pixel check and six live Lc0 checks because the engine was unavailable.
+
+Gate evidence: /run/media/lage/New Volume/Scratch/clock-003-gate.json
