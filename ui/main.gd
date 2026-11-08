@@ -198,6 +198,8 @@ func _ready() -> void:
 	$Layout/Side/Actions/NewGameButton.pressed.connect(func():
 		if _test_active:
 			_show_unit(_test_unit)
+		elif _playout_active:
+			_show_unit(_playout_unit)
 		else:
 			_show_home())
 	$Layout/Side/Actions/RematchButton.pressed.connect(func(): _start(rematch(settings)))
@@ -522,8 +524,8 @@ func _start(new_settings: Dictionary) -> void:
 	resign_button.disabled = false
 	resign_button.visible = not _playout_active
 	draw_button.visible = not _playout_active
-	$Layout/Side/Actions/NewGameButton.hide()
-	$Layout/Side/Actions/NewGameButton.text = "New game"
+	$Layout/Side/Actions/NewGameButton.visible = _playout_active
+	$Layout/Side/Actions/NewGameButton.text = "Back to the unit" if _playout_active else "New game"
 	$Layout/Side/Actions/RematchButton.hide()
 	_draw_offered = false
 	_draw_moves_left = 0
@@ -748,6 +750,12 @@ func _teardown_test_playout() -> void:
 
 func _cancel_playout() -> void:
 	var leaving_game: bool = _playout_active or playout.visible
+	if _playout_active:
+		maia.begin_game(null)
+		maia.clock = null
+		board_view.cancel_premoves()
+		board_view.mouse_filter = MOUSE_FILTER_IGNORE
+		analysis_queue.resume()
 	_playout_generation += 1
 	_playout_active = false
 	if clock != null:
