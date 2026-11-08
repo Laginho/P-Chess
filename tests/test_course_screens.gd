@@ -1290,10 +1290,21 @@ func test_leaving_playout_ignores_pending_replies_and_records_nothing():
 		var replies := []
 		main.maia.move_ready.connect(func(move): replies.append(move))
 		var game_clock = main.clock
+		game_clock.moved("w")
+		game_clock.moved("b")
+		assert_true(not game_clock._running.is_empty(), "clock is running before leaving")
 		var back: Button = main.get_node("Layout/Side/Actions/NewGameButton")
 		assert_true(back.is_visible_in_tree() and back.text == "Back to the unit", pending + ": exit is visible")
 		assert_true(back.focus_mode == Control.FOCUS_ALL, pending + ": exit is keyboard reachable")
-		back.pressed.emit()
+		back.grab_focus()
+		assert_eq(main.get_viewport().gui_get_focus_owner(), back)
+		for pressed in [true, false, true, false]:
+			var key := InputEventKey.new()
+			key.keycode = KEY_ENTER
+			key.physical_keycode = KEY_ENTER
+			key.pressed = pressed
+			main.get_viewport().push_input(key, true)
+			await Engine.get_main_loop().process_frame
 		assert_true(main.unit_page.visible and not main.playout.visible, pending + ": unit page opens")
 		assert_true(main.clock == null and main.white_clock.clock == null and main.black_clock.clock == null)
 		assert_eq(game_clock._running, "", pending + ": clock stopped")
@@ -1309,3 +1320,22 @@ func test_leaving_playout_ignores_pending_replies_and_records_nothing():
 		assert_true(main.history.games().is_empty())
 		assert_true(not FileAccess.file_exists(main.history._root.path_join("stats.cfg")))
 		main.free()
+
+
+func test_pass_test_playout_back_still_returns_to_the_unit():
+	var session = Session.new()
+	var main = await session._session(Session.ManualWaits.new(), false)
+	main.course = load("res://core/course.gd").new(main.history._root.path_join("course.json"))
+	main.course.save_rating(1400, "chess.com")
+	var position := {"id": "a", "fen": load("res://tests/test_grader.gd").FEN, "side": "b", "goal": "convert"}
+	var unit := {"id": "rook", "title": "Rook endings", "test_playouts": [position]}
+	main._show_unit(unit)
+	main._test_unit = unit
+	main._test_active = true
+	main._start_test_playout()
+	var back: Button = main.get_node("Layout/Side/Actions/NewGameButton")
+	assert_true(back.is_visible_in_tree() and back.text == "Back to the unit")
+	back.pressed.emit()
+	assert_true(main.unit_page.visible and not main._test_active)
+	assert_true(main.course.test_attempts(unit).is_empty())
+	main.free()
