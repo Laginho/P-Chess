@@ -1,10 +1,12 @@
 # REV-011: The from-your-game marker in Review
-Stage: to-implement
+Stage: to-review
 Blocked by: LEARN-006, LEARN-009
 Review: agent
 Difficulty: normal
+Gate evidence: /run/media/lage/New Volume/Scratch/REV-011/gate.json
 
 - Primary files:
+  - data/course/rook-endgames.json (default line length for positions from games)
   - ui/review.gd (`present` move-list rows, `_fit_exit_rows`; the marker row beside the "Left repertoire" one)
   - ui/main.gd (the marker's link opens the unit page)
   - core/course.gd (adding a from-your-game position, once per FEN)
@@ -62,3 +64,22 @@ When Review shows a game that reached rook and pawn against rook, each of your m
   > **Next:** record this under REV-011 `## Comments`, apply the two drafts, set `Stage: 2`, and rerun stage 2 starting from the kept commit `ff03584`. That run still has to confirm the expected red failure, which attempt 1 never checked.
   > 
   > I did not run the gate or check the test in `ff03584`.
+
+
+## Resolution
+
+Review scans relevant moves with the tablebase, shows a linked green marker and saves each starting FEN for Continue. The unit sets a default of three moves. The headless gate `godot --headless -s tests/run.gd` passed with 674 tests and 0 failures. The saved-game visual walkthrough remains for manual verification.
+
+### Criteria check
+
+Fresh-context subagent checked each criterion and rechecked the added coverage.
+
+- ✅ 1: `core/own_game_scan.gd:11` filters side and exact material; `tests/test_own_game_scan.gd:7`, `:49`, `:100` cover player colours and adjacent material.
+- ✅ 2: `core/own_game_scan.gd:30` compares results from the player's perspective; `tests/test_own_game_scan.gd:7`, `:49`, `:78` cover changed and kept results and a PGN reaching the material.
+- ✅ 3: `ui/review.gd:1437` adds a full-width, green, nonselectable marker sized by `ui/review.gd:448`; `tests/test_review.gd:2350` checks the text, placement and selection. Colour, multiple markers and resize remain visual verification gaps.
+- ✅ 4: `ui/review.gd:347` emits the request and `ui/main.gd:290` opens the unit; `tests/test_review.gd:2350` and `:2395` check both links.
+- ✅ 5: `ui/review.gd:1449`, `core/course.gd:181`, `data/course/rook-endgames.json:5` save the position, deduplicate the FEN and set the default; `tests/test_course.gd:539`, `tests/test_review.gd:2350`, `:2447` cover persistence, goals and Continue.
+- ✅ 6: `core/own_game_scan.gd:11` returns without probing nonmatching material; `tests/test_own_game_scan.gd:32`, `:100` cover no probes. A direct visual comparison of Review without matching material remains manual.
+- ✅ 7: `core/own_game_scan.gd:30` discards results on probe failure; `tests/test_review.gd:2428` checks no marker, saved position or error dialog.
+
+The initial marker fixture needed explicit Array typing and one clock per move; these harness corrections are in test-only commits. A mutation of material filtering and result inversion failed the scan tests as expected. The stale-review test exposed a freed row capture, fixed before the gate.

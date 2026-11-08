@@ -2,6 +2,7 @@
   "id": "rook-endgames",
   "title": "Rook endgames",
   "subtitle": "Lucena and Philidor",
+  "default_line_length": 3,
   "theory": {
     "goal": "Learn to convert and hold rook and pawn against rook.",
     "search_terms": [

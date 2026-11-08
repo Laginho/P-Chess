@@ -3,6 +3,7 @@ extends Control
 signal rematch_requested
 signal setup_requested
 signal back_history_requested
+signal unit_requested(unit: Dictionary)
 
 # Clock snapshots are the mover's remaining milliseconds after each move (HIST-001).
 const ThemeLoader = preload("res://ui/theme_loader.gd")
@@ -17,6 +18,14 @@ const Tunables = preload("res://core/tunables.gd")
 const Classification = preload("res://core/classification.gd")
 const Accuracy = preload("res://core/accuracy.gd")
 const Badges = preload("res://bot/badges.gd")
+const OwnGameScan = preload("res://core/own_game_scan.gd")
+
+var own_game_probe
+var own_game_course
+var own_game_unit := {}
+var _own_game_generation := 0
+var _marker_rows: Array[TreeItem] = []
+var _start_fen := Game.START
 
 # System boundaries stay replaceable for headless tests.
 var analysis_bridge_factory: Callable = func(): return Uci.new("engine/stockfish/stockfish.exe", "Stockfish")
@@ -336,6 +345,11 @@ func _ready() -> void:
 	_moves.resized.connect(func():
 		_fit_exit_rows()
 		_moves.ensure_cursor_is_visible.call_deferred())
+	_moves.gui_input.connect(func(event: InputEvent):
+		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			var row := _moves.get_item_at_position(event.position)
+			if row in _marker_rows:
+				unit_requested.emit(own_game_unit))
 	_moves.item_selected.connect(func():
 		var selected := _moves.get_selected()
 		if selected:
@@ -1107,7 +1121,7 @@ func _show_line(index: int, announce := false, already_played := false) -> void:
 		return
 	var before := _line_index
 	_line_index = clampi(index, 0, _line_moves.size())
-	var position = Game.new()
+	var position = Game.new(_start_fen)
 	for i in _ply:
 		position.play(_game_moves[i])
 	var san := ""
@@ -1169,7 +1183,7 @@ func _show_ply(ply: int, announce := false, already_played := false) -> void:
 	elif _moves.get_selected() != null:
 		_moves.deselect_all()
 	_moves.set_block_signals(false)
-	var position = Game.new()
+	var position = Game.new(_start_fen)
 	var san := ""
 	for i in _ply:
 		if i == _ply - 1:
@@ -1333,6 +1347,9 @@ func _update_eval_bar() -> void:
 
 func present(game, clocks: Array, settings: Dictionary, result_text: String,
 		catalog: Array = [], repertoire: Array = [], check_repertoire := false) -> void:
+	_own_game_generation += 1
+	var generation := _own_game_generation
+	_start_fen = game.start_fen
 	_discard_line()
 	_leaving_for_game = false
 	_from_history = false
@@ -1358,7 +1375,7 @@ func present(game, clocks: Array, settings: Dictionary, result_text: String,
 		get_node("Margin/Content/" + ["WhiteHead", "BlackHead"][index]).text = "Maia" if _player_names[index].begins_with("Maia ") else _player_names[index]
 	_check_repertoire = check_repertoire
 	_positions = []
-	var position = Game.new()
+	var position = Game.new(_start_fen)
 	_positions.append({"fen": position.board.to_fen()})
 	for move in _game_moves:
 		position.play(move)
@@ -1370,9 +1387,10 @@ func present(game, clocks: Array, settings: Dictionary, result_text: String,
 	_result.text = "%s \u00b7 %s \u00b7 %d %s" % [settings.get("control", ""), result_text.replace("\nSpace for a rematch", ""), moves, "move" if moves == 1 else "moves"]
 	_moves.clear()
 	_exit_rows.clear()
+	_marker_rows.clear()
 	_clock_cells.clear()
 	var root := _moves.create_item()
-	var board = Board.from_fen(Pgn.START)
+	var board = Board.from_fen(_start_fen)
 	var badges := Badges.evaluate(game.moves, catalog, repertoire, settings.colour, check_repertoire)
 	var row: TreeItem
 	for i in game.moves.size():
@@ -1411,6 +1429,25 @@ func present(game, clocks: Array, settings: Dictionary, result_text: String,
 	_fit_exit_rows()
 	_pgn = Pgn.write(Pgn.finished_game(game, clocks, settings))
 	_url = lichess_url(game)
+	if own_game_probe != null and own_game_course != null and not own_game_unit.is_empty():
+		OwnGameScan.new(own_game_probe).scan(_positions.duplicate(true), _colour, func(markers: Array):
+			if generation != _own_game_generation or not is_inside_tree():
+				return
+			for marker in markers:
+				var anchor: TreeItem = _move_rows[marker.ply - 1]
+				var marker_row := _moves.create_item(_moves.get_root())
+				marker_row.move_after(anchor)
+				marker_row.set_text(1, "Rook and pawn against rook · this move turned %s into %s · Practise in Rook endgames" % [marker.before, marker.after])
+				marker_row.set_expand_right(1, true)
+				marker_row.set_custom_color(1, Color("a4cf78"))
+				marker_row.set_custom_font_size(1, 12)
+				marker_row.set_custom_bg_color(1, Color("42652b"), true)
+				for column in 3:
+					marker_row.set_selectable(column, false)
+				_marker_rows.append(marker_row)
+				_exit_rows.append(marker_row)
+				own_game_course.add_from_game(own_game_unit, {"fen": marker.fen, "side": _colour, "goal": "win" if marker.before == "win" else "hold", "line_length": int(own_game_unit.get("default_line_length", 3))})
+			_fit_exit_rows())
 	show()
 
 

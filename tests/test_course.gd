@@ -534,3 +534,24 @@ func test_commits_record_first_try_once_solved_forever_and_solving_done():
 	assert_true(not course.record_commit(unit, unit.positions[1], true))
 	assert_eq(FileAccess.get_file_as_string(path), "{broken")
 	DirAccess.remove_absolute(path)
+
+
+func test_from_game_position_is_persisted_once_per_fen():
+	var path := "user://course_from_game_%d.json" % Time.get_ticks_usec()
+	var course = load("res://core/course.gd").new(path)
+	var unit := {"id": "rook", "positions": []}
+	var position := {"fen": "8/8/8/8/4pk2/R7/7r/4K3 w - - 0 1", "side": "w", "goal": "hold", "line_length": 3}
+	assert_true(course.has_method("add_from_game"), "course records a position from a game")
+	if course.has_method("add_from_game"):
+		assert_true(course.add_from_game(unit, position))
+		assert_true(course.add_from_game(unit, position))
+		course = load("res://core/course.gd").new(path)
+		var positions: Array = course.practice_positions(unit)
+		assert_eq(positions.size(), 1)
+		if positions.size() == 1:
+			assert_eq(positions[0].fen, position.fen)
+			assert_eq(positions[0].side, "w")
+			assert_eq(positions[0].goal, "hold")
+			assert_eq(positions[0].line_length, 3)
+			assert_true(positions[0].get("from_your_game", false))
+	DirAccess.remove_absolute(path)
