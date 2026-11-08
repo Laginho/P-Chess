@@ -76,3 +76,30 @@ func test_stage_follows_converted_rating_and_loads_units():
 	assert_true(course.save_rating(1500, "lichess"))
 	assert_eq(course.stage().get("name"), "Club")
 	DirAccess.remove_absolute(path)
+
+
+func test_unit_progress_and_status_are_derived_from_saved_work():
+	var path := "user://course_progress_%d.json" % Time.get_ticks_usec()
+	var script = load("res://core/course.gd")
+	var course = script.new(path, "res://tests/fixtures/course/course.json")
+	assert_true(course.has_method("unit_progress"), "course reports unit progress")
+	if not course.has_method("unit_progress"):
+		return
+	var unit = JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/course/rook.json"))
+	var examples := [
+		[{}, "new", [false, 0, 2, 0, "not taken"], "–"],
+		[{"theory_opened": true, "practice": {"one": {"solved": true, "first_try": true}, "two": {"solved": false, "first_try": false}}, "playouts": {"a": true}, "test_attempts": [{"passed": false}]}, "in progress", [true, 1, 2, 1, "not passed"], "50% (1 of 2)"],
+		[{"mastered_date": "2026-01-01", "test_attempts": [{"passed": true}]}, "mastered", [false, 0, 2, 0, "passed"], "–"],
+		[{"mastered_date": "2026-01-01", "test_attempts": [{"passed": true}], "review_checks": [{"passed": false}]}, "needs review", [false, 0, 2, 0, "passed"], "–"],
+		[{"mastered_date": "2026-01-01", "review_checks": [{"passed": false}, {"passed": true}]}, "mastered", [false, 0, 2, 0, "passed"], "–"]
+	]
+	for example in examples:
+		var file := FileAccess.open(path, FileAccess.WRITE)
+		file.store_string(JSON.stringify({"units": {"rook": example[0]}}))
+		file = null
+		course = script.new(path, "res://tests/fixtures/course/course.json")
+		var progress: Dictionary = course.unit_progress(unit)
+		assert_eq(progress.status, example[1])
+		assert_eq([progress.theory_done, progress.solved, progress.total, progress.playouts_passed, progress.test], example[2])
+		assert_eq(progress.first_try, example[3])
+	DirAccess.remove_absolute(path)
