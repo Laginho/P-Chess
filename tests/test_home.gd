@@ -578,3 +578,38 @@ func test_course_summary_tracks_available_units_and_progress():
 		assert_eq(summary.text, "1 unit · 1 in progress")
 	home.free()
 	Session.HistoryStorage.clean(folder)
+
+
+func test_home_decorations_fit_without_blocking_controls():
+	var home = load("res://ui/home.tscn").instantiate()
+	home.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	Engine.get_main_loop().root.add_child(home)
+	for canvas in [Vector2(1280, 800), Vector2(800, 600)]:
+		home.size = canvas
+		for missing in [false, true]:
+			if missing:
+				home.show_missing("Engine unavailable")
+			else:
+				home.get_node("Center/Form/Missing").hide()
+			for name in ["OneZero", "ThreeTwo", "FiveZero", "Custom"]:
+				var tile: Button = home.find_child(name, true, false)
+				var icon: Control = tile.get_node_or_null("Artwork")
+				var label: Label = tile.get_node_or_null("Caption")
+				assert_true(icon != null and label != null, "%s has separate artwork and caption" % name)
+				if icon != null and label != null:
+					assert_true(icon.get_global_rect().end.y <= label.get_global_rect().position.y, "%s icon above label" % name)
+					assert_true(label.get_global_rect().end.y <= tile.get_global_rect().end.y, "%s label fits" % name)
+					assert_eq(label.text, tile.text)
+					assert_eq(icon.mouse_filter, Control.MOUSE_FILTER_IGNORE)
+					assert_eq(label.mouse_filter, Control.MOUSE_FILTER_IGNORE)
+			var card: Button = home.get_node("Center/Form/Continue")
+			var arrow: Control = card.get_node_or_null("Chevron")
+			assert_true(arrow != null, "Continue has a chevron")
+			if arrow != null:
+				assert_eq(arrow.mouse_filter, Control.MOUSE_FILTER_IGNORE)
+				for child_name in ["UnitTitle", "Detail", "Progress"]:
+					var content: Control = card.get_node(child_name)
+					assert_true(content.get_global_rect().end.x <= arrow.get_global_rect().position.x, "%s clears chevron" % child_name)
+	var course_icon: Control = home.get_node_or_null("Center/Form/Course/Icon")
+	assert_true(course_icon != null and course_icon.mouse_filter == Control.MOUSE_FILTER_IGNORE, "Course icon leaves the button clickable")
+	home.free()
