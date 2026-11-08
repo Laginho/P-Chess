@@ -49,6 +49,9 @@ func test_course_navigation_unit_progress_and_clock():
 			theory.present(main.course, without_books)
 			assert_true(not theory.find_child("ReadCard", true, false).visible, "empty books section is hidden")
 			theory.find_child("Back", true, false).pressed.emit()
+		var solving = main.get_node_or_null("Solving")
+		if solving != null and solving.visible:
+			solving.find_child("Back", true, false).pressed.emit()
 	assert_eq(requests, [["rook-endgames", "theory"], ["rook-endgames", "solving"], ["rook-endgames", "playouts"], ["rook-endgames", "test"]])
 	assert_true(unit.visible, "a part without a screen leaves the unit visible")
 	unit.find_child("NoClock", true, false).pressed.emit()
@@ -64,6 +67,55 @@ func test_course_navigation_unit_progress_and_clock():
 	assert_true(map.visible, "Profile returns to map")
 	map.find_child("Back", true, false).pressed.emit()
 	assert_true(main.get_node("Home").visible and not map.visible)
+	main.free()
+	Session.HistoryStorage.clean(folder)
+
+
+func test_solving_entry_opens_next_position_limits_line_and_handles_keys():
+	var folder := "user://solving_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var path := folder.path_join("course.json")
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	file.store_string(JSON.stringify({"units": {"unit": {"practice": {"first": {"solved": true}}}}}))
+	file = null
+	var main = MainScene.instantiate()
+	main.course = load("res://core/course.gd").new(path)
+	main.history = load("res://core/history.gd").new(folder)
+	main.uci.free()
+	main.uci = Session.HeldBridge.new()
+	main.maia = main.MaiaPlayer.new(main.uci)
+	main.preferences = main.Settings.new(folder.path_join("settings.cfg"))
+	Engine.get_main_loop().root.add_child(main)
+	var unit := {"id": "unit", "title": "Test", "positions": [
+		{"id": "first", "pool": "practice", "fen": preload("res://core/game.gd").START, "line_length": 2, "side": "w", "goal": "win"},
+		{"id": "next", "pool": "practice", "fen": preload("res://core/game.gd").START, "line_length": 2, "side": "w", "goal": "win"}]}
+	main._show_unit(unit)
+	main.unit_page.part_requested.emit(unit, "solving")
+	var screen = main.get_node_or_null("Solving")
+	assert_true(screen != null and screen.visible, "solving opens")
+	if screen != null:
+		assert_eq(screen.position_data.id, "next")
+		var commits := []
+		screen.line_committed.connect(func(position, uci, san): commits.append([position, uci, san]))
+		var board = screen.find_child("BoardView", true, false)
+		var key := InputEventKey.new()
+		key.pressed = true
+		key.keycode = KEY_ENTER
+		screen._unhandled_key_input(key)
+		assert_eq(commits.size(), 0, "a short line cannot be committed")
+		for move in ["e2e4", "e7e5", "g1f3", "b8c6"]:
+			board._commit(move, false)
+		assert_eq(board.entry_moves.size(), 3, "line ends after two own moves")
+		key.keycode = KEY_BACKSPACE
+		screen._unhandled_key_input(key)
+		assert_eq(board.entry_moves.size(), 2)
+		board._commit("g1f3", false)
+		key.keycode = KEY_ENTER
+		screen._unhandled_key_input(key)
+		assert_eq(commits.size(), 1)
+		if commits.size() == 1:
+			assert_eq(commits[0][1], PackedStringArray(["e2e4", "e7e5", "g1f3"]))
+			assert_eq(commits[0][2], PackedStringArray(["e4", "e5", "Nf3"]))
 	main.free()
 	Session.HistoryStorage.clean(folder)
 
