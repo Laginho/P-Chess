@@ -18,7 +18,7 @@ The first part of a unit only points elsewhere (design `Theory.dc.html`, CONTEXT
 
 #### Acceptance criteria
 
-1. The screen shows the unit's goal, its 3–5 search terms and its 1–2 books with chapters, from the unit file, and no other explanatory text.
+1. The screen shows the unit's goal, search terms and any books with chapters from the unit file, and no other explanatory text. LEARN-004 supplies the real unit's 1–2 books and chapters; until then, hide the empty books section.
 2. Clicking a search term copies it to the clipboard.
 3. Opening the screen marks the theory pointer done in `user://course.json`; the unit page then shows it done and moves Continue to the next part.
 4. Back to the unit returns to the unit page; Next: Solving emits the solving part request.
@@ -35,3 +35,6 @@ The first part of a unit only points elsewhere (design `Theory.dc.html`, CONTEXT
 ## Comments
 
 - 2026-11-07 Written from `.scratch/learning/spec.md` §L1, §L11.
+
+- Proxy decided (opus-5.5 xhigh): LEARN-003 adds no book or chapter entries. Criterion 1 is met by showing the books and chapters the unit file holds, and the real books come in LEARN-004 — that ticket already owns them, and neither of us can confirm the chapter titles or numbers. (receipt /tmp/sweatshop-proxy/20261108-004319-LEARN-003-ca1693.json)
+- LEARN-004 criterion 5 owns the checked book chapters and human content review. Until then, the released unit displays its goal and terms without a books section; integration is unaffected.

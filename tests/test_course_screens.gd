@@ -43,6 +43,7 @@ func test_course_navigation_unit_progress_and_clock():
 		row.find_child("Open", true, false).pressed.emit()
 		var theory = main.get_node_or_null("Theory")
 		if theory != null and theory.visible:
+			assert_true(not theory.find_child("ReadCard", true, false).visible, "empty books section is hidden")
 			theory.find_child("Back", true, false).pressed.emit()
 	assert_eq(requests, [["rook-endgames", "theory"], ["rook-endgames", "solving"], ["rook-endgames", "playouts"], ["rook-endgames", "test"]])
 	assert_true(unit.visible, "a part without a screen leaves the unit visible")
@@ -201,6 +202,9 @@ func test_theory_pointer_displays_data_copies_and_navigates():
 		main.free()
 		Session.HistoryStorage.clean(folder)
 		return
+	await Engine.get_main_loop().process_frame
+	await Engine.get_main_loop().process_frame
+	assert_true(theory.find_child("Scroll", true, false).size.y > 0, "the content viewport is laid out on screen")
 	assert_eq(theory.find_child("Goal", true, false).text, "Hold the ending")
 	var terms = theory.find_child("Terms", true, false)
 	assert_eq(terms.get_child_count(), 3)
@@ -217,6 +221,9 @@ func test_theory_pointer_displays_data_copies_and_navigates():
 	assert_eq(books.get_child(1).find_child("Title", true, false).text, "Book two")
 	assert_eq(books.get_child(1).find_child("Chapter", true, false).text, "Chapter 3")
 	assert_true(load("res://core/course.gd").new(path, index).unit_progress(course.units()[0]).theory_done)
+	theory.find_child("BackToUnit", true, false).pressed.emit()
+	assert_true(unit.visible and not theory.visible)
+	unit.find_child("Parts", true, false).get_child(0).find_child("Open", true, false).pressed.emit()
 	theory.find_child("Back", true, false).pressed.emit()
 	assert_true(unit.visible and not theory.visible)
 	var rows = unit.find_child("Parts", true, false)
