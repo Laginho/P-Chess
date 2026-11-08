@@ -725,6 +725,7 @@ func test_playout_promotion_records_pass_and_next_opens_next_position():
 		await Engine.get_main_loop().process_frame
 	assert_true(main.board_view.play("a7a8q"))
 	assert_eq(main.playout.find_child("Heading", true, false).text, "Converted")
+	assert_true(main.playout.find_child("Reason", true, false).text.contains("promoted"))
 	assert_true(main.course.playout_passed(unit, first))
 	assert_true(main.playout.find_child("Next", true, false).visible)
 	assert_true(not FileAccess.file_exists(folder.path_join("stats.cfg")))
@@ -802,4 +803,61 @@ func test_playout_waits_for_probe_before_maia():
 	if not main.uci.requests.is_empty():
 		assert_eq(main.uci.requests[-1][0], sample.FEN)
 		assert_eq(main.uci.requests[-1][1], PackedStringArray(["c6c5"]))
+	main.free()
+
+
+func test_playout_disables_sandbox_actions_and_hotkeys_do_not_save_a_game():
+	var session = Session.new()
+	var main = await session._session(Session.ManualWaits.new(), false)
+	main.course = load("res://core/course.gd").new(main.history._root.path_join("course.json"))
+	main.course.save_rating(1400, "chess.com")
+	var position := {"id": "a", "fen": "R7/8/4k3/1P6/K7/8/8/2r5 w - - 0 1", "side": "w", "goal": "convert"}
+	var unit := {"id": "rook", "playouts": [position]}
+	main._show_unit(unit)
+	main.unit_page.part_requested.emit(unit, "playouts")
+	main.playout.find_child("Start", true, false).pressed.emit()
+	while main._starting:
+		await Engine.get_main_loop().process_frame
+	assert_true(not main.resign_button.visible and not main.draw_button.visible)
+	assert_true(main.claim_draw.disabled)
+	session._key(main, KEY_ESCAPE)
+	session._key(main, KEY_ESCAPE)
+	assert_true(not main.board_view.game.is_over(), "Esc cannot resign a course game")
+	assert_true(main.history.games().is_empty())
+	main._on_flagged("w")
+	session._key(main, KEY_SPACE)
+	assert_true(main.playout.visible and not main._starting, "Space cannot rematch from the end card")
+	assert_true(main.history.games().is_empty())
+	assert_true(not FileAccess.file_exists(main.history._root.path_join("stats.cfg")))
+	main.free()
+
+
+func test_playout_flag_during_terminal_move_takes_precedence_over_mate():
+	var session = Session.new()
+	var main = await session._session(Session.ManualWaits.new(), false)
+	main.course = load("res://core/course.gd").new(main.history._root.path_join("course.json"))
+	main.course.save_rating(1400, "chess.com")
+	var sample = load("res://tests/test_grader.gd")
+	var fen := "7k/8/5KQ1/8/8/8/8/8 w - - 0 1"
+	var probe = sample.FakeProbe.new()
+	probe.answers[fen] = sample.answer("win", "g6g7", {"g6g7": {"result": "win", "dtz": 1}})
+	main.tablebase.queue_free()
+	var adapter = LifecycleProbe.new(probe, [])
+	main.tablebase = adapter
+	main.add_child(adapter)
+	var position := {"id": "a", "fen": fen, "side": "w", "goal": "convert"}
+	var unit := {"id": "rook", "playouts": [position]}
+	main._show_unit(unit)
+	main.unit_page.part_requested.emit(unit, "playouts")
+	main.playout.find_child("Start", true, false).pressed.emit()
+	while main._starting:
+		await Engine.get_main_loop().process_frame
+	main.clock._now = func(): return 2
+	main.clock._left.w = 1
+	main.clock._moved.w = true
+	main.clock._running = "w"
+	main.clock._since = 0
+	main.board_view.play("g6g7")
+	assert_eq(main.playout.find_child("Heading", true, false).text, "Out of time")
+	assert_true(not main.course.playout_passed(unit, position))
 	main.free()
