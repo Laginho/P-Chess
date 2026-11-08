@@ -1,5 +1,5 @@
 # CI-005: Bundle the tablebase files the unit needs
-Stage: to-review
+Stage: done
 Blocked by: RES-001
 Review: agent
 Difficulty: normal
@@ -57,3 +57,23 @@ Gate evidence: /run/media/lage/New Volume/Scratch/CI-005/gate-final.json
 - ✅ 5: the release workflow's existing package operations remain unchanged apart from requiring and including the newly fetched tables; `THIRD_PARTY.md` gains their attribution. No automated tests were prescribed by this ticket.
 
 The criteria were checked independently by a read-only subagent; its interruption finding was fixed by same-volume staging before the final gate.
+
+#### Resolution (2026-11-07)
+Verdict: Approve
+
+Reviewed the complete diff `1771954...bcb0990` and all four ticket commits. Independent read-only reviewers `/root/review_standards` and `/root/review_spec` checked Standards and Spec respectively; the closing reviewer checked their evidence. Standards: 0 findings. Spec: 0 findings. No production repairs or contract changes were made during review. All changed production files are Primary files, and the ticket explicitly exempts automated test commits.
+
+- ✅ 1: `scripts/fetch-engine.ps1:61`, `:104` and `:216` pin, verify and fetch exactly RES-001's 40 files. Independently compared every name/hash and downloaded byte: 47,896,448 bytes total. Re-ran the complete fetch script against the populated installation with PowerShell: exit 0, 51 verified download skips (40 tables, nine nets and two archives), no downloads or extraction. The earlier empty-table-directory run fetched all 40; existing engine/net caches mean a completely clean clone was not exercised.
+- ✅ 2: `scripts/fetch-engine.ps1:108` and `:124` reject mismatches by filename and stage outside the probe directory on the destination volume. Loaded the actual production function definitions through the PowerShell AST and injected successful, corrupt and interrupted transfers. Verified publication, cache skip, corrupt-cache removal, corrupt-download rejection and partial-transfer cleanup; no table or staging directory remained after failures. This negative/positive manual evidence is the prescribed verification in place of test commits.
+- ✅ 3: `.github/workflows/release.yml:111` requires precisely the same 40 files, and `:128` archives their tree. Executed the current workflow's package step verbatim against a fixture containing real tables and placeholder non-table files. All 40 ZIP entries at `engine/tablebase/` matched their pinned hashes; removing `KBvK.rtbw` made the actual step fail with that filename.
+- ✅ 4: `docs/THIRD_PARTY.md:139` names the Lichess source and links the Gentoo package's public-domain attribution; the linked package metadata was checked during review.
+- ✅ 5: Existing engine/network pins, other package requirements and archive operations are unchanged. The package gains the prescribed tables and their attribution only; `.gitignore` and `docs/spec.md` document their location.
+
+Affected callers and interactions examined: every `Get-PinnedDownload`/`Test-PinnedFile` caller (Lc0 and Stockfish archives, extracted engine files, Maia nets and tables), default versus staged downloads, missing/corrupt cached files, corrupt downloaded files, transfer failure and cleanup, release required-file checks and archive creation, export filters, third-party attribution, RES-001's dependency closure and LEARN-006's documented probe directory. Existing archive/net callers retain their default behavior. Not examined live: Windows PowerShell 5.1, the actual Windows release job, the shipped Windows executable's UCI probe or the future LEARN-006 adapter.
+
+Gate: reused `/run/media/lage/New Volume/Scratch/CI-005/gate-final.json`, tested commit `14ae8df677055f4c863e663132a4e5fe68069a12`: `godot --headless -s tests/run.gd`, 574 passed, 0 failed, exit 0. Verified the log SHA-256, exit marker and unchanged production tree with the official `Assert-GateEvidence` helper. Rebase onto the session was already up to date; review and integration changed no production code. Additional local review evidence is under `/run/media/lage/New Volume/Scratch/CI-005/review/`.
+
+Integrated without squash into `sweatshop/learning/2026-11-07-2234` as `0ea989c`. The implementation is approved; product acceptance remains pending under the existing RES-001 review decision.
+
+Acceptance: pending | [RES-001's dated review](101-RES-001-tablebase-and-maia-spike.md#resolution-2026-11-07) and [Windows procedure](../../../docs/research/tablebase.md#stockfish-loading-and-real-output): Bruno must check the actual Windows release package; the Linux checks and fixture ZIP do not establish Windows acceptance.
+Disclosure: pending | release | [RES-001's existing deferral and release condition](101-RES-001-tablebase-and-maia-spike.md#resolution-2026-11-07) permits session integration while Windows verification remains pending Bruno. Before release, run the fetch script twice on a clean Windows checkout, run the real Windows packaging workflow and execute the documented release-root UCI probe, checking `Found 20 WDL and 20 DTZ` and `bestmove a1h1`. Record the results here; closing implementation does not waive this condition. No new proxy decision was made in CI-005.
