@@ -221,7 +221,6 @@ static void probe(const char *fen) {
 }
 
 int main(void) {
-    setvbuf(stdout, NULL, _IOLBF, 0);
     if (!own_directory()) { puts("error could not change to helper directory"); return 1; }
     char line[16384], fen[512] = "", path[16384] = "";
     while (fgets(line, sizeof(line), stdin)) {

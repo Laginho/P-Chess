@@ -54,7 +54,7 @@ jobs:
           if ($process.ExitCode -ne 0 -or $errors -or $output -match '(?m)^(error |info string tberror )' -or
               $output -notmatch '(?m)^info string tbmove [a-h][1-8][a-h][1-8] win [0-9]+\r?$' -or
               $output -notmatch '(?m)^bestmove [a-h][1-8][a-h][1-8]\r?$') {
-            throw "tbprobe smoke probe failed: $errors"
+            throw "tbprobe smoke probe failed (exit $($process.ExitCode)): $errors"
           }
 
   test:
