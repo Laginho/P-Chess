@@ -1,5 +1,5 @@
 # LEARN-010: The tablebase probe (Fathom helper)
-Stage: to-implement
+Stage: implementing
 Blocked by: CI-005
 Review: agent
 Difficulty: hard
@@ -90,6 +90,8 @@ The one probe that grading, play-out checks, the perfect opponent and the review
 
 ## Comments
 
+- 2026-11-08 Second reopen: foreman diagnosis required before retrying. Classify new defect, earlier review miss, contract gap, or review-induced churn; record cause and next action, then return to-implement only when ready.
+
 - 2026-11-08 Split out of LEARN-006 (proxy). Named limits:
   - The probe sees only the FEN, so repetition is outside it.
   - A helper that hangs while still alive has no timeout.
@@ -98,14 +100,4 @@ The one probe that grading, play-out checks, the perfect opponent and the review
 
 - Draft application: `export_presets.cfg` is included in Primary files because criterion 9 explicitly requires those export exclusions. The helper's startup error is for no tables loaded, allowing criterion 8's KRvK-only smoke fixture; the application's adapter still requires all 40 files under criterion 3. The spec distinguishes that Windows smoke fixture from the full real-file suite. These reconcile supporting files and verification wording in the approved draft. Fathom source/API details and the static-CRT build remain to be verified by stage 2; this ticket does not claim those checks have run.
 
-- 2026-11-08 Second reopen: foreman diagnosis required before retrying. Classify new defect, earlier review miss, contract gap, or review-induced churn; record cause and next action, then return to-implement only when ready.
-
-- 2026-11-08 Reopen diagnosis (foreman): earlier review miss plus an incomplete stage-2 repair; one consolidated stage-2 repair of the adapter's line handling, then re-review.
-  - Cause 1, earlier review miss (drip-feed): round 2's finding (invalid `info`/`bestmove`/`tberror` lines dropped before the `uciok`/`readyok` barriers and while idle) already existed at `fcf2f67`. Round 2 reproduced it on `c2eeafe`'s adapter (`stage3-prior-handshake-parser-summary.log`). Round 1 exercised malformed output only during an active search.
-  - Cause 2, incomplete repair: `ee7cae3`'s raw-line filter (`engine/tablebase.gd:79-86`) says it fails closed "including during startup", but it passes every `info `/`bestmove` prefix to the unchanged bridge. `engine/uci.gd:181` forwards those only while `_awaiting == "bestmove"` and drops them otherwise. No test covered the handshake or idle phases.
-  - Not a contract gap: criterion 4 ("fails closed ... on `tberror`, on a line it cannot parse") and the helper protocol table settle it, and the repair fits the Primary files with `engine/uci.gd` unchanged. No regression from review advice.
-  - Consolidated review of the affected paths (`engine/tablebase.gd` `poll`, `_on_line`, `_finish`, `stop` against `engine/uci.gd:164-193`), done so the next pass fixes everything at once:
-    1. Phase: the adapter, not the bridge, must decide whether each raw line is legal in its current protocol phase, in arrival order. Handshake: only `id name P-Chess tbprobe (Fathom <commit>)`, `uciok`, `readyok`, or `error ...`. Active search: only `info string tbmove ...`, `info string tberror ...` (fails the probe), and `bestmove <move>`. Idle, between searches: any line fails. Today the bridge silently drops these lines out of phase: `info`/`bestmove`/`tberror` before either barrier or while idle (round 2), and stray `id name`/`uciok`/`readyok` during a search (same root cause, not yet reported).
-    2. Shape: the filter accepts any `id name ` text; the protocol fixes `id name P-Chess tbprobe (Fathom <commit>)`.
-    3. Values: `_on_line` (`:131`) rejects a `draw` with nonzero dtz, but accepts `win`/`cursed-win`/`blessed-loss`/`loss` with dtz `0`. The protocol counts dtz "with the move included", so only a draw can be 0.
-  - Next action: back to `to-implement` on `LEARN-010`. Write red tests at the FakeUCI seam for each phase (a pending and a queued probe before `uciok`, between `uciok` and `readyok`, idle after a `bestmove`, out-of-phase handshake lines during a search) and for items 2 and 3. Then make one adapter repair, with `engine/uci.gd` unchanged; the stop-and-ask rule still applies if it must change. Every pending, queued and later probe gets exactly one `{ok = false}` and `available` turns false. Fresh gate. Stage 3 re-reviews criterion 4 across all phases, not only the cases listed.
+- Stage 2 source check: pinned Fathom `c9c6fef0dddc05d2e242c183acf5833149ab676d`; `tb_probe_root` rejects castling and returns mover-side root WDL/DTZ including the halfmove clock. `probe_root` adds the current ply, handles mate as 1 and zeroing via WDL; intrinsic cursed/blessed distances carry a 100-ply encoding offset. The helper will remove that offset using the clock-zero classification and verify child probes so missing child DTZ files also fail closed. No change to `engine/uci.gd`. New adapter callers are the future grader/play-outs/review; existing UCI, Board and build-script callers are preserved. Boundary inputs under test: terminal boards, all promotion moves, castling, malformed output, empty/mismatched move sets, queued requests and process failure.
