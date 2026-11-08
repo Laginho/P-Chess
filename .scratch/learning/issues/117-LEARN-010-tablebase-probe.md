@@ -1,5 +1,5 @@
 # LEARN-010: The tablebase probe (Fathom helper)
-Stage: to-review
+Stage: to-implement
 Blocked by: CI-005
 Review: agent
 Difficulty: hard
@@ -163,3 +163,41 @@ Windows release/engine startup, the actual windows-latest job and LEARN-006's en
 Gate: `godot --headless -s tests/run.gd`, tested commit `75fc6f3bbd9376461c4be5a218d9c904f2782cc0`: **615 passed, 0 failed**, exit 0. All real tablebase tests ran.
 
 Gate evidence: /run/media/lage/New Volume/Scratch/LEARN-010/gate.json
+
+#### Resolution (2026-11-08)
+Verdict: Reopen — criterion 4 accepts malformed helper output instead of failing closed.
+
+Standards: **0 findings**. Independent Standards review read the full diff against session base `882c182` and the documented repository rules. All production changes are within Primary files, `engine/uci.gd` is unchanged, and the nine stage-2 commits separate tests, production and metadata. No actionable baseline smell was reported.
+
+Spec: **1 finding, with two reproduced cases**, under criterion 4. Independent Spec review and the stage-3 reviewer checked all nine criteria and the full diff. The contract requires failure "on a line it cannot parse":
+
+- At `engine/tablebase.gd:118–120`, `begins_with("bestmove")` accepts malformed command tokens. After a complete set of legal `tbmove` records, both `bestmoves a1h1` and `bestmoveX a1h1` produce one `{ok: true, ...}` callback and leave `available` true. The first token is never checked for equality with `bestmove`.
+- During the same active search, a line `garbage` followed by a valid `bestmove a1h1` also produces success. The unchanged bridge at `engine/uci.gd:181` forwards only `info ` and `bestmove` prefixes to the adapter; other output never reaches its rejection branch. Generic UCI tolerance does not exempt this helper's enumerated protocol from criterion 4.
+
+Reproduction used the existing `tests/test_tablebase.gd` FakeUCI seam. Call `_setup()`, start `probe(RES_FEN, callback)`, inject `info string tbmove <move> draw 0` for every `Board.from_fen(RES_FEN).legal_moves()`, then inject either malformed completion token, or `garbage` followed by `bestmove a1h1`. Expected: one error callback and unavailable probe. Observed in all three cases: one success callback and available probe. The external diagnostic script also checked that its harness recorded no assertion failures:
+
+```sh
+godot --headless --path . -s '/run/media/lage/New Volume/Scratch/LEARN-010/stage3-parser-probe.gd'
+```
+
+Local script and captured output: `/run/media/lage/New Volume/Scratch/LEARN-010/stage3-parser-probe.gd` and `/run/media/lage/New Volume/Scratch/LEARN-010/stage3-parser-probe.log`. The description above preserves the reproduction without depending on those local artifacts.
+
+Criteria reviewed:
+
+- ✅ 1: pinned source/license hashes, external cache, single-threaded host build, MSVC `/MT`, compiler errors and failed-output cleanup; reviewed `scripts/build-tbprobe.ps1` and stage-2 manual evidence.
+- ✅ 2: root/child Fathom probes, five WDL classes, DTZ normalization, promotions, terminal replies, own-directory startup and relative table path; reviewed native source, pinned Fathom implementation, recorded transcript and live-test evidence.
+- ✅ 3: helper discovery, all 40 required files and named errors, unchanged UCI bridge and relative Syzygy option.
+- ❌ 4: valid replies, ranking, terminal answers, castling and move-set checks are covered, but malformed completion tokens succeed and unrecognized active-search stdout is ignored, as reproduced above.
+- ✅ 5: stopped/error/free paths drain active and queued callbacks and reject subsequent probes; reviewed the existing lifecycle tests and callback reentry.
+- ✅ 6: all required Linux real-file scenarios ran in the verified gate; literal assertions and stage-2 independent-reader evidence cover promotions, child-plus-one distance, clock-induced and intrinsic curses, bare kings, unsupported material and missing tables. Warm timing is recorded above.
+- ✅ 7: release build ordering, pinned license, required artifacts and system-import check are present. Windows execution remains pending.
+- ✅ 8: Windows CI builds with the shared script and probes hash-verified KRvK files from a spaced, accented folder. The job's actual run remains pending.
+- ✅ 9: attribution, ignore rule, spec entry and export exclusions are present; stage-2 pack inspection confirmed both excluded directories absent.
+
+Affected callers and interactions examined: the new adapter's `start/probe/poll/stop` API; existing UCI handshake, queue, callback dispatch, error and process-stop handling; Board FEN parsing, terminal detection and legal moves; native root/child material checks and halfmove/promotion boundaries; fetch-file inventory, release licensing/import checks, Windows smoke job and exported pack. There are no production adapter callers yet in this diff; LEARN-006 and later grading/play-out/review integrations remain future work. Actual Windows execution and end-to-end Lucena grading were not examined because they remain pending.
+
+Next stage 2 addresses only the ❌ items: add regression tests at the approved fake-UCI seam, prove them red, repair fail-closed parsing in the approved Primary files, then obtain fresh green gate evidence. Preserve `engine/uci.gd`; if a transport change proves necessary, follow the existing stop-and-ask instruction. Stage 3 made no production or committed-test changes. The receipt still matches the unchanged code (`75fc6f3`, SHA-256 log verified): **615 passed, 0 failed**, all real tablebase tests ran. Those passing tests do not cover the malformed-output cases above. No merge or ledger entry was made.
+
+Acceptance: pending | criterion 4 repair; actual Windows CI, accented-folder release startup and LEARN-006 Lucena grading remain pending as already documented under Verification.
+Disclosure: pending | integration | [Stage-3 review](#resolution-2026-11-08): criterion 4 must fail closed for both malformed-output cases before this ticket integrates.
+Disclosure: pending | release | [Verification](#verification): Windows CI execution, release startup in an accented folder and LEARN-006 Lucena grading remain unverified; Linux evidence does not claim those checks passed.
