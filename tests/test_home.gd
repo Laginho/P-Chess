@@ -316,3 +316,54 @@ func test_quick_play_tiles_are_landscape_with_centred_labels():
 			var icon_end: float = placed.x + tile.get_theme_constant("icon_max_width")
 			assert_true(placed.x >= tile.icon_left and icon_end <= placed.y and placed.y - icon_end <= 12, "%s icon just left of its label at %s: %s" % [name, canvas, placed])
 	home.free()
+
+
+func test_course_requires_a_valid_rating_before_starting():
+	var folder := "user://test_course_home_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var main = MainScene.instantiate()
+	main.course = load("res://core/course.gd").new(folder.path_join("course.json"))
+	main.history = load("res://core/history.gd").new(folder)
+	main.uci.free()
+	main.uci = Session.HeldBridge.new()
+	main.maia = main.MaiaPlayer.new(main.uci)
+	main.preferences = main.Settings.new(folder.path_join("settings.cfg"))
+	main.preferences.set_value("player_name", "You")
+	Engine.get_main_loop().root.add_child(main)
+	var button = main.get_node_or_null("Home/Center/Form/Course")
+	assert_true(button != null, "Home offers Course")
+	if button == null:
+		main.free()
+		Session.HistoryStorage.clean(folder)
+		return
+	button.pressed.emit()
+	var dialog = main.get_node_or_null("RatingDialog")
+	assert_true(dialog != null and dialog.visible, "Course opens the rating dialog")
+	if dialog:
+		Session.new()._push_key(main.get_viewport(), KEY_ESCAPE)
+		assert_true(dialog.visible, "Escape does not dismiss the dialog")
+		assert_true(dialog.exclusive and not dialog.dialog_close_on_escape, "outside click cannot dismiss the dialog")
+		var number: LineEdit = dialog.find_child("RatingNumber", true, false)
+		var site: OptionButton = dialog.find_child("RatingSite", true, false)
+		var start: Button = dialog.get_ok_button()
+		assert_eq(site.get_item_text(site.selected), "chess.com")
+		for text in ["", "99", "3501", "1400.5", "abc", "-100"]:
+			number.text = text
+			number.text_changed.emit(text)
+			assert_true(start.disabled, "invalid rating %s is disabled" % text)
+		for text in ["100", "3500"]:
+			number.text = text
+			number.text_changed.emit(text)
+			assert_true(not start.disabled, "boundary %s is accepted" % text)
+		number.text = "1400"
+		number.text_changed.emit(number.text)
+		site.select(1)
+		site.item_selected.emit(1)
+		assert_eq(dialog.find_child("ScaleHint", true, false).text, "Shown as 1100 on the chess.com scale")
+		dialog.confirmed.emit()
+		assert_true(not dialog.visible, "saving returns to Home")
+		assert_eq(load("res://core/course.gd").new(folder.path_join("course.json")).rating(), {"number": 1400, "site": "lichess"})
+		button.pressed.emit()
+		assert_true(not dialog.visible, "saved rating skips dialog")
+	main.free()
+	Session.HistoryStorage.clean(folder)
