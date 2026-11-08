@@ -97,6 +97,7 @@ func test_solving_entry_opens_next_position_limits_line_and_handles_keys():
 		assert_eq(screen.position_data.id, "next")
 		assert_eq(screen.find_child("Position", true, false).text, "Position 2 of 2")
 		assert_eq(screen.find_child("Instruction", true, false).text, "Enter 2 of your moves, with Black's replies in between.")
+		assert_eq(screen.find_child("Goal", true, false).find_child("Title", true, false).text, "White to play and win")
 		var commits := []
 		screen.line_committed.connect(func(position, uci, san): commits.append([position, uci, san]))
 		var board = screen.find_child("BoardView", true, false)
@@ -116,6 +117,7 @@ func test_solving_entry_opens_next_position_limits_line_and_handles_keys():
 		screen._unhandled_key_input(key)
 		assert_eq(commits.size(), 1)
 		if commits.size() == 1:
+			assert_eq(commits[0][0].id, "next")
 			assert_eq(commits[0][1], PackedStringArray(["e2e4", "e7e5", "g1f3"]))
 			assert_eq(commits[0][2], PackedStringArray(["e4", "e5", "Nf3"]))
 		assert_eq(screen.find_child("Count", true, false).text, "2 of 2 moves")
@@ -129,6 +131,11 @@ func test_solving_entry_opens_next_position_limits_line_and_handles_keys():
 		var progress = screen.find_child("Progress", true, false)
 		assert_eq(progress.get_child_count(), 2)
 		assert_true(progress.get_child(1).get_meta("current", false), "current position has an independent indicator")
+		board._commit("e2e4", false)
+		board._commit("e7e5", false)
+		board._commit("g1f3", false)
+		screen.find_child("Commit", true, false).pressed.emit()
+		assert_eq(commits.size(), 2, "the button commits a full line")
 		file = FileAccess.open(path, FileAccess.WRITE)
 		file.store_string(JSON.stringify({"units": {"unit": {"practice": {"first": {"solved": true, "first_try": true}, "next": {"solved": true}}}}}))
 		file = null
@@ -136,6 +143,11 @@ func test_solving_entry_opens_next_position_limits_line_and_handles_keys():
 		assert_true(progress.get_child(0).get_meta("current", false), "the solved fallback is still current")
 		assert_eq(progress.get_child(0).get_theme_stylebox("panel").bg_color, Color("#7fa650"))
 		assert_eq(progress.get_child(0).get_theme_stylebox("panel").border_width_left, 2)
+		assert_eq(progress.get_child(1).get_theme_stylebox("panel").bg_color, Color("#4f6a33"))
+		var from_game: Dictionary = unit.duplicate(true)
+		from_game.positions[0].from_your_game = true
+		screen.present(load("res://core/course.gd").new(path), from_game)
+		assert_true(screen.find_child("FromGame", true, false).visible)
 	main.free()
 	Session.HistoryStorage.clean(folder)
 

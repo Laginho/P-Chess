@@ -98,6 +98,29 @@ func test_lucena_line_can_be_entered_undone_and_cleared():
 	board.free()
 
 
+func test_reused_entry_square_is_visibly_darker():
+	if DisplayServer.get_name() == "headless":
+		print("SKIP entry mark pixels: graphical display required")
+		return
+	var board = preload("res://ui/board_view.tscn").instantiate()
+	board.game = preload("res://core/game.gd").new()
+	Engine.get_main_loop().root.add_child(board)
+	board.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	board.size = Vector2(400, 400)
+	board.start_entry(2)
+	board._commit("e2e4", false)
+	board._commit("d7d5", false)
+	await Engine.get_main_loop().process_frame
+	await RenderingServer.frame_post_draw
+	var once = board.get_viewport().get_texture().get_image().get_pixel(155, 155)
+	board._commit("e4d5", false)
+	await Engine.get_main_loop().process_frame
+	await RenderingServer.frame_post_draw
+	var twice = board.get_viewport().get_texture().get_image().get_pixel(155, 155)
+	assert_true(twice.g < once.g, "a second mark deepens the red tint")
+	board.free()
+
+
 func test_board_size_clamps_and_fit_follows_layout():
 	var main = preload("res://ui/main.tscn").instantiate()
 	var path := "user://test_ui015_size_%d.cfg" % Time.get_ticks_usec()
