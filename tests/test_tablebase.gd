@@ -126,3 +126,150 @@ func test_start_sets_a_relative_path_and_probe_returns_every_move_once():
 		assert_eq(received[0].moves.a1h1, {"result": "win", "dtz": 1})
 		assert_eq(received[0].moves.a1a3, {"result": "loss", "dtz": 3})
 	_cleanup(setup)
+
+
+func test_ranking_keeps_five_wdl_classes_and_uses_distance_then_uci_order():
+	var setup := _setup()
+	if setup.is_empty():
+		return
+	var cases := [
+		[["loss", 2], {"a1a2": ["win", 3], "a1a3": ["win", 7]}, "a1a2", "win", 3],
+		[["loss", 2], {"a1a2": ["win", 3], "a1a3": ["win", 3]}, "a1a2", "win", 3],
+		[["loss", 2], {"a1a2": ["loss", 8], "a1a3": ["loss", 8]}, "a1a2", "loss", 8],
+		[["draw", 0], {"a1a3": ["cursed-win", 7], "a1a2": ["cursed-win", 3]}, "a1a2", "draw", 3],
+		[["loss", 2], {"a1a3": ["blessed-loss", 7], "a1a2": ["blessed-loss", 3]}, "a1a3", "draw", 7],
+		[["blessed-loss", 5], {"a1a3": ["draw", 0]}, "a1a3", "draw", 0],
+		[["cursed-win", 5], {"a1a3": ["win", 9]}, "a1a3", "win", 9],
+		[["draw", 0], {}, "a1a2", "draw", 0]]
+	for case in cases:
+		var changes := {}
+		for move in Board.from_fen(RES_FEN).legal_moves():
+			changes[move] = case[0]
+		changes.merge(case[1], true)
+		var received := []
+		setup.probe.probe(RES_FEN, func(answer): received.append(answer))
+		_answer(setup, changes)
+		assert_eq(received.size(), 1)
+		if received.size() == 1:
+			assert_eq(received[0].best, case[2], str(case))
+			assert_eq(received[0].result, case[3])
+			assert_eq(received[0].dtz, case[4])
+	_cleanup(setup)
+
+
+func test_terminal_and_invalid_positions_never_send_a_search():
+	var setup := _setup()
+	if setup.is_empty():
+		return
+	var before: String = setup.bridge.sent()
+	for case in [["7k/6Q1/5K2/8/8/8/8/8 b - - 0 1", "loss"],
+			["7k/5Q2/5K2/8/8/8/8/8 b - - 0 1", "draw"]]:
+		var received := []
+		setup.probe.probe(case[0], func(answer): received.append(answer))
+		assert_eq(received, [{"ok": true, "result": case[1], "dtz": 0, "best": "", "moves": {}}])
+	for fen in ["8/8/8/4k3/8/4K3/4P3/R6r w K - 0 1", "bad fen", "8/8/8/8/8/8/8/8 w - - 0 1"]:
+		var received := []
+		setup.probe.probe(fen, func(answer): received.append(answer))
+		assert_eq(received.size(), 1, fen)
+		if received.size() == 1:
+			assert_eq(received[0].ok, false, fen)
+	assert_eq(setup.bridge.sent(), before)
+	_cleanup(setup)
+
+
+func test_unparseable_errors_and_incomplete_move_sets_fail_closed():
+	for lines in [["info string tberror missing KRPvKR.rtbz", "bestmove (none)"],
+			["info string tbmove a1h1 win -1", "bestmove a1h1"],
+			["info string tbmove a1h1 win 1 extra", "bestmove a1h1"],
+			["info string tbmove a1h1 maybe 1", "bestmove a1h1"],
+			["info string tbmove a1h1 draw 1", "bestmove a1h1"],
+			["info string tbmove a1h1 win 9999999999999999999999", "bestmove a1h1"],
+			["info string tbmove", "bestmove a1h1"],
+			["info depth 1 score cp 999 pv a1h1", "bestmove a1h1"],
+			["info string tbmove a1h1 win 1", "bestmove a1h1"],
+			["bestmove (none)"], ["bestmove"],
+			["info string tbmove a1h1 win 1", "info string tbmove a1h1 win 1", "bestmove a1h1"]]:
+		var setup := _setup()
+		if setup.is_empty():
+			return
+		var received := []
+		setup.probe.probe(RES_FEN, func(answer): received.append(answer))
+		setup.bridge.output(lines)
+		assert_eq(received.size(), 1, str(lines))
+		if received.size() == 1:
+			assert_eq(received[0].ok, false, str(lines))
+			assert_true(not received[0].get("error", "").is_empty())
+		_cleanup(setup)
+
+
+func test_extra_or_incorrect_best_moves_are_rejected():
+	for bad_best in ["a1a1", "(none)", "a1h1 extra"]:
+		var setup := _setup()
+		if setup.is_empty():
+			return
+		var received := []
+		setup.probe.probe(RES_FEN, func(answer): received.append(answer))
+		_answer(setup, {}, bad_best)
+		assert_eq(received.size(), 1)
+		if received.size() == 1:
+			assert_eq(received[0].ok, false, bad_best)
+		_cleanup(setup)
+	var setup := _setup()
+	if setup.is_empty():
+		return
+	var received := []
+	setup.probe.probe(RES_FEN, func(answer): received.append(answer))
+	setup.bridge.output(["info string tbmove a1a1 draw 0"])
+	_answer(setup)
+	assert_eq(received.size(), 1)
+	if received.size() == 1:
+		assert_eq(received[0].ok, false)
+	_cleanup(setup)
+
+
+func test_requests_queue_and_callback_reentry_preserves_the_next_answer():
+	var setup := _setup()
+	if setup.is_empty():
+		return
+	var received := []
+	setup.probe.probe(RES_FEN, func(answer):
+		received.append(answer)
+		setup.probe.probe(RES_FEN, func(next): received.append(next)))
+	_answer(setup, {"a1h1": ["win", 1]})
+	assert_eq(received.size(), 1)
+	_answer(setup, {"a1a3": ["win", 2]})
+	assert_eq(received.size(), 2)
+	if received.size() == 2:
+		assert_eq(received[0].best, "a1h1")
+		assert_eq(received[1].best, "a1a3")
+	_cleanup(setup)
+
+
+func test_stop_error_and_free_finish_all_pending_callbacks_once():
+	for reason in ["crash", "error", "free"]:
+		var setup := _setup()
+		if setup.is_empty():
+			return
+		var received := []
+		for i in 3:
+			setup.probe.probe(RES_FEN, func(answer): received.append(answer))
+		if reason == "free":
+			setup.probe.free()
+		elif reason == "error":
+			setup.bridge.output(["error tablebase files not found in ../tablebase"])
+		else:
+			# Exercise the stopped signal at the UCI seam; UCI owns process detection.
+			setup.bridge._report_stopped("Tablebase probe crashed.")
+		assert_eq(setup.bridge.available, false, reason)
+		assert_eq(received.size(), 3, reason)
+		if reason != "free":
+			assert_eq(setup.probe.available, false, reason)
+			setup.probe.probe(RES_FEN, func(answer): received.append(answer))
+			assert_eq(received.size(), 4, reason)
+			setup.probe.free()
+		for answer in received:
+			assert_eq(answer.ok, false)
+			assert_true(not answer.error.is_empty())
+		setup.bridge.cleanup()
+		setup.bridge.free()
+		_remove(setup.root)
