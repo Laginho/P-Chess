@@ -1005,6 +1005,86 @@ func test_convert_playout_that_ends_drawn_still_fails():
 	main.free()
 
 
+# Maia's Kxe4 leaves bare kings: the game ends drawn on the opponent's move (PR #44 review).
+func test_hold_playout_drawn_by_the_opponents_move_is_held():
+	var waits := Session.ManualWaits.new()
+	var session = Session.new()
+	var main = await session._session(waits, false)
+	main.course = load("res://core/course.gd").new(main.history._root.path_join("course.json"))
+	main.course.save_rating(1400, "chess.com")
+	main.course.save_clock_choice("none")
+	var sample = load("res://tests/test_grader.gd")
+	var fen := "8/8/8/3k4/4P3/8/8/K7 w - - 0 1"
+	var probe = sample.FakeProbe.new()
+	probe.answers[fen] = sample.answer("draw", "a1b1", {"a1b1": {"result": "draw", "dtz": 0}})
+	main.tablebase.queue_free()
+	var adapter = LifecycleProbe.new(probe, [])
+	main.tablebase = adapter
+	main.add_child(adapter)
+	var position := {"id": "a", "fen": fen, "side": "w", "goal": "hold"}
+	var unit := {"id": "pawn", "playouts": [position]}
+	main._show_unit(unit)
+	main.unit_page.part_requested.emit(unit, "playouts")
+	main.playout.find_child("Start", true, false).pressed.emit()
+	while main._starting:
+		await Engine.get_main_loop().process_frame
+	assert_true(main.board_view.play("a1b1"))
+	assert_true(not main.playout.visible, "a kept draw lets Maia reply")
+	main.uci.policy_ready.emit({})
+	main.uci.policy_ready.emit({"d5e4": 1.0})
+	for wait in waits.pending:
+		wait.timeout.emit()
+	assert_eq(main.board_view.game.reason, "insufficient material")
+	assert_eq(main.playout.find_child("Heading", true, false).text, "Held")
+	assert_true(main.course.playout_passed(unit, position), "a drawn end on Maia's move records the hold")
+	assert_true(main.history.games().is_empty())
+	main.free()
+
+
+# The pass test's hold is its second play-out: a drawn end there must count (PR #44 review).
+func test_pass_test_hold_that_ends_drawn_masters_the_unit():
+	var session = Session.new()
+	var main = await session._session(Session.ManualWaits.new(), false)
+	main.course = load("res://core/course.gd").new(main.history._root.path_join("course.json"))
+	var sample = load("res://tests/test_grader.gd")
+	var probe = sample.FakeProbe.new()
+	probe.answers[sample.FEN] = sample.answer("win", "c6c5", {"c6c5": {"result": "win", "dtz": 3}})
+	var convert := "7k/P7/5K2/8/8/8/8/8 w - - 0 1"
+	var stalemate := "k7/p7/K7/8/8/8/8/7R w - - 0 1"
+	probe.answers[convert] = sample.answer("win", "a7a8q", {"a7a8q": {"result": "win", "dtz": 1}})
+	probe.answers[stalemate] = sample.answer("draw", "h1b1", {"h1b1": {"result": "draw", "dtz": 0}})
+	main.tablebase.queue_free()
+	var adapter = LifecycleProbe.new(probe, [])
+	main.tablebase = adapter
+	main.solving.probe = adapter
+	main.add_child(adapter)
+	var positions := []
+	for i in 6:
+		positions.append({"id": str(i), "pool": "test", "fen": sample.FEN, "side": "b", "line_length": 1, "goal": "win"})
+	var unit := {"id": "rook", "positions": positions, "test_playouts": [
+		{"id": "convert", "fen": convert, "side": "w", "goal": "convert"},
+		{"id": "hold", "fen": stalemate, "side": "w", "goal": "hold"}]}
+	main._show_unit(unit)
+	main.unit_page.part_requested.emit(unit, "test")
+	main.pass_test.find_child("Start", true, false).pressed.emit()
+	for i in 6:
+		main.solving.board._commit("c6c5", false)
+		main.solving.find_child("Commit", true, false).pressed.emit()
+	assert_true(main.board_view.play("a7a8q"))
+	assert_eq(main.board_view.game.start_fen, stalemate)
+	assert_true(main.board_view.play("h1b1"))
+	assert_eq(main.board_view.game.reason, "stalemate")
+	assert_eq(main.pass_test.find_child("Heading", true, false).text, "Unit mastered")
+	var attempts: Array = main.course.test_attempts(unit)
+	assert_eq(attempts.size(), 1)
+	if attempts.size() == 1:
+		assert_eq(attempts[0].playouts, [true, true])
+		assert_true(attempts[0].passed)
+	assert_eq(main.course.unit_progress(unit).test, "passed")
+	assert_true(main.history.games().is_empty())
+	main.free()
+
+
 func test_playout_flag_fails_without_history_and_retry_returns_to_start():
 	var session = Session.new()
 	var main = await session._session(Session.ManualWaits.new(), false)
