@@ -1,0 +1,22 @@
+id name P-Chess tbprobe (Fathom c9c6fef0dddc05d2e242c183acf5833149ab676d)
+uciok
+readyok
+info string tbmove a1h1 win 1
+info string tbmove a1a2 draw 0
+info string tbmove a1a4 draw 0
+info string tbmove a1a5 draw 0
+info string tbmove a1a6 draw 0
+info string tbmove a1a7 draw 0
+info string tbmove a1a8 draw 0
+info string tbmove a1a3 loss 3
+info string tbmove a1b1 loss 2
+info string tbmove a1c1 loss 2
+info string tbmove a1d1 loss 2
+info string tbmove a1e1 loss 2
+info string tbmove a1f1 loss 2
+info string tbmove a1g1 loss 2
+info string tbmove e3d2 loss 2
+info string tbmove e3d3 loss 2
+info string tbmove e3f2 loss 2
+info string tbmove e3f3 loss 2
+bestmove a1h1

@@ -128,6 +128,29 @@ func test_start_sets_a_relative_path_and_probe_returns_every_move_once():
 	_cleanup(setup)
 
 
+func test_recorded_fathom_transcript_is_parsed_without_live_tables():
+	var setup := _setup()
+	if setup.is_empty():
+		return
+	var received := []
+	setup.probe.probe(RES_FEN, func(answer): received.append(answer))
+	var lines := []
+	for line in FileAccess.get_file_as_string("res://tests/fixtures/tablebase/res001.txt").split("\n"):
+		if line.begins_with("info ") or line.begins_with("bestmove"):
+			lines.append(line)
+	setup.bridge.output(lines)
+	assert_eq(received.size(), 1)
+	if received.size() == 1:
+		assert_true(received[0].ok)
+		assert_eq(received[0].best, "a1h1")
+		assert_eq(received[0].result, "win")
+		assert_eq(received[0].dtz, 1)
+		assert_eq(received[0].moves.size(), 18)
+		assert_eq(received[0].moves.a1a5, {"result": "draw", "dtz": 0})
+		assert_eq(received[0].moves.a1a3, {"result": "loss", "dtz": 3})
+	_cleanup(setup)
+
+
 func test_ranking_keeps_five_wdl_classes_and_uses_distance_then_uci_order():
 	var setup := _setup()
 	if setup.is_empty():
@@ -343,6 +366,14 @@ func test_real_promotions_nonzeroing_distance_rule50_and_bare_kings():
 		assert_eq(child.dtz, 26)
 		assert_eq(win.moves.e3f3.dtz, child.dtz + 1)
 		assert_eq(cursed.result, "draw")
+	# This is intrinsically cursed even with clock 0: raw DTZ50=102 means 2 plies.
+	var intrinsic := _probe(probe, "7k/8/3Br3/8/3R2K1/8/8/8 w - - 0 1")
+	assert_true(intrinsic.ok, intrinsic.get("error", ""))
+	if intrinsic.ok:
+		assert_eq(intrinsic.best, "g4f5")
+		assert_eq(intrinsic.result, "draw")
+		assert_eq(intrinsic.dtz, 2)
+		assert_eq(intrinsic.moves.g4f5, {"result": "draw", "dtz": 2})
 	var capture := _probe(probe, "8/8/8/4k3/8/8/1r6/1K6 w - - 0 1")
 	assert_true(capture.ok, capture.get("error", ""))
 	if capture.ok:
