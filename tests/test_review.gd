@@ -2424,3 +2424,47 @@ func test_stale_game_probe_does_not_add_positions_to_a_new_review():
 	assert_true(main.review.get_node("Margin/Content/ReviewBody/Side/Moves").get_root().get_children().is_empty())
 	DirAccess.remove_absolute(path)
 	main.free()
+
+func test_probe_failure_leaves_review_without_markers_or_saved_positions():
+	var main = await _session(FakeTime.new())
+	var game := Game.new("4k3/8/8/8/4p3/R7/7r/4K3 w - - 0 1")
+	game.play("a3a4")
+	var probe = preload("res://tests/test_grader.gd").FakeProbe.new()
+	var path := "user://review_unavailable_%d.json" % Time.get_ticks_usec()
+	var course = load("res://core/course.gd").new(path)
+	var unit := {"id": "rook-endgames", "default_line_length": 3, "positions": []}
+	main.review.own_game_probe = probe
+	main.review.own_game_course = course
+	main.review.own_game_unit = unit
+	main.review.present(game, [180000], SETTINGS, "")
+	var rows := main.review.get_node("Margin/Content/ReviewBody/Side/Moves").get_root().get_children()
+	assert_eq(rows.size(), 1)
+	assert_true(course.practice_positions(unit).is_empty())
+	assert_true(not main.review.get_node("Margin/Content/AnalysisError").visible)
+	DirAccess.remove_absolute(path)
+	main.free()
+
+func test_winning_game_position_uses_unit_default_and_continue():
+	var main = await _session(FakeTime.new())
+	var fen := "4k3/8/8/8/4p3/R7/7r/4K3 w - - 0 1"
+	var game := Game.new(fen)
+	game.play("a3a4")
+	var probe = preload("res://tests/test_grader.gd").FakeProbe.new()
+	probe.answers[fen] = {"ok": true, "result": "win"}
+	probe.answers[game.board.to_fen()] = {"ok": true, "result": "draw"}
+	var path := "user://review_continue_%d.json" % Time.get_ticks_usec()
+	var course = load("res://core/course.gd").new(path)
+	course.save_rating(1200, "chess.com")
+	var unit: Dictionary = course.units()[0]
+	main.review.own_game_probe = probe
+	main.review.own_game_course = course
+	main.review.own_game_unit = unit
+	main.review.present(game, [180000], SETTINGS, "")
+	var target: Dictionary = course.continue_target(int(Time.get_unix_time_from_system()))
+	assert_eq(target.kind, "from_game")
+	if target.kind == "from_game":
+		assert_eq(target.position.fen, fen)
+		assert_eq(target.position.goal, "win")
+		assert_eq(target.position.line_length, unit.default_line_length)
+	DirAccess.remove_absolute(path)
+	main.free()

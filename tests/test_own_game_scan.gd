@@ -74,3 +74,32 @@ func test_probe_failure_after_a_marker_discards_the_whole_scan():
 	var replies := []
 	load("res://core/own_game_scan.gd").new(probe).scan(positions, "w", func(result): replies.append(result))
 	assert_eq(replies, [[]])
+
+func test_pgn_reaches_the_endgame_before_probing():
+	var pgn := "[FEN \"4k3/8/8/8/p3p3/R7/7r/4K3 w - - 0 1\"]\n\n1. Rxa4 Ke7 2. Ra5 *"
+	var parsed: Dictionary = load("res://core/pgn.gd").parse(pgn)
+	assert_eq(parsed.error, "")
+	if parsed.games.is_empty():
+		return
+	var game: Dictionary = parsed.games[0]
+	var board = Board.from_fen(game.headers.FEN)
+	var positions := [{"fen": board.to_fen()}]
+	for move in game.moves:
+		board.make_move(move.uci)
+		positions.append({"fen": board.to_fen()})
+	var probe = FakeProbe.new()
+	probe.answers[positions[2].fen] = {"ok": true, "result": "win"}
+	probe.answers[positions[3].fen] = {"ok": true, "result": "draw"}
+	var replies := []
+	load("res://core/own_game_scan.gd").new(probe).scan(positions, "w", func(result): replies.append(result))
+	assert_eq(probe.requests, [positions[2].fen, positions[3].fen])
+	assert_eq(replies[0].size(), 1)
+	if replies[0].size() == 1:
+		assert_eq(replies[0][0].ply, 3)
+
+func test_nearby_material_is_never_probed():
+	var probe = FakeProbe.new()
+	var scanner = load("res://core/own_game_scan.gd").new(probe)
+	for fen in ["4k3/8/8/8/4p3/R7/7r/3QK3 w - - 0 1", "4k3/8/8/8/4p3/R7/8/4K3 w - - 0 1", "4k3/8/8/8/4p3/R7/6pr/4K3 w - - 0 1"]:
+		scanner.scan([{"fen": fen}, {"fen": fen}], "w", func(_result): pass)
+	assert_true(probe.requests.is_empty())
