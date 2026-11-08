@@ -241,6 +241,11 @@ func _ready() -> void:
 	analysis_queue.maximum = preferences.get_value("analysis_threads") == "Max"
 	add_child(analysis_queue)
 	review.analysis_queue = analysis_queue
+	review.own_game_probe = tablebase
+	review.own_game_course = course
+	var rook_unit = course._read_data("res://data/course/rook-endgames.json")
+	if rook_unit is Dictionary:
+		review.own_game_unit = rook_unit
 	history_screen.analysis_queue = analysis_queue
 	settings_screen.store = preferences
 	review.settings_panel = settings_screen.get_node("Panel")
@@ -282,6 +287,12 @@ func _ready() -> void:
 	history_screen.back_requested.connect(_show_home)
 	history_screen.review_requested.connect(_review_history_game)
 	review.back_history_requested.connect(_show_history)
+	review.unit_requested.connect(func(unit: Dictionary):
+		review.hide()
+		history_screen.hide()
+		$Home.hide()
+		setup.hide()
+		_show_unit(unit))
 	review.rematch_requested.connect(func(): _start(rematch(settings)))
 	review.setup_requested.connect(_show_home)
 	preferences.changed.connect(_apply)
