@@ -39,6 +39,21 @@ Settled by the grill of 2026-11-08: caching derived per-record data on its own c
 ## Comments
 
 - 2026-11-08 Stage 2 scope: `_queue_changed` is connected to `analysis_queue.changed` and called by `present`; `_add_card` is shared with paging. Keep full refresh for `present`, tabs, deletion, resize and catalog completion. Test real queue transitions with the existing fake-runner seam, including unchanged cards/headings, queued ordinals, empty/off-page changes, paging, selection, focus and inline deletion. No caller or persistence API changes.
+- Test-first: `edbaea5` adds the finish/start regression and the `implementing` transition. Against the original production code, `hist010-red.log` reports 18 passed, 1 failed: unrelated card, still-queued card and date heading were replaced. Production commit `346fc3d` passes 19/0 (`hist010-green.log`).
+- Interaction coverage: test-only `b02ae78` covers selection, focus, scroll after layout, 40 loaded cards, the paging footer, failure/retry/removal with inline confirmation, hidden/present and empty History. Running these tests against the original production file gives 18 passed, 2 failed (`hist010-interaction-red.log`); it does not report script errors. Additional test-only `ebbc7dd` exposes unnecessary rebuilding of the current card when another game is enqueued or removed (19 passed, 1 failed, `hist010-active-red.log`). Production `b82c8c9` passes 20/0 (`hist010-interaction-green.log`). All logs are under `C:\Users\bruno\AppData\Local\Temp`; temporary test copies and the baseline production replacement were removed/restored.
+- Performance probe at `b82c8c9`: `C:\Users\bruno\AppData\Local\Temp\hist010_probe.gd`, output `C:\Users\bruno\AppData\Local\Temp\hist010-probe-results.txt`, exit 0. Godot 4.7.stable.official.5b4e0cb0f, Windows, Intel Core i5-12400F, 15.8 GiB usable RAM. Reuses HIST-007's exact 40-ply opening with 50 temporary PGNs, 20 visible cards, warmed parsed records and a held fake runner. Normal games have Result=1-0, Reason=resignation and Termination=Normal; legacy games omit Reason/Termination and use Result=*. No saved analysis cache or real engine. Rendering is excluded: no frame is awaited within a timed operation.
+- Probe method: enqueue measures one `changed.emit()` after adding a visible path to `_items` and updating `batch_total`, as in HIST-007; it excludes queue persistence/start. Start measures `_start_next()` with the fake runner; failure emits the fake runner's `finished(false, ...)` signal through the real queue. Each has one queue state transition. Analyze all is the real toolbar button over all 50 initially unanalysed games after clearing the queue, including validation, enqueue/persistence and every synchronous UI callback. All six runs reach 50 queued games. Each individual transition is below 200 ms; no timing assertion was added to the gate.
+
+| Fixture / run | Enqueue state (ms) | Start (ms) | Failure (ms) | Analyze all 50 (ms, informational) |
+| --- | ---: | ---: | ---: | ---: |
+| Normal 1 | 43.417 | 43.399 | 50.441 | 2002.030 |
+| Normal 2 | 48.357 | 56.506 | 80.782 | 1987.396 |
+| Normal 3 | 42.968 | 41.826 | 42.798 | 2180.724 |
+| Legacy 1 | 78.948 | 83.094 | 91.530 | 2870.459 |
+| Legacy 2 | 93.537 | 98.543 | 109.369 | 3117.037 |
+| Legacy 3 | 75.518 | 77.186 | 79.542 | 2987.985 |
+
+- Remaining measured limit: Analyze all still takes about 2.0–3.1 seconds synchronously for these 50 games. Criterion 3 requests an informational total, not a batch latency target. Full refresh on present, tab change and delete remains the separate HIST-011 scope.
 
 - 2026-11-06 Foreman measured one queue-state rebuild (HIST-007 probe trimmed: 50 finished 40-ply games, 20 cards, fake runner, headless, rendering excluded, 3 runs each, Windows i5-12400F): main f6daf32 438/460/450 ms; session adf06bf 773/792/800 ms. REV-010 adds about 340 ms (positions_from_game per card); main already exceeds the 200 ms bar. Reopen attribution row: session-review, REV-010.
 - 2026-11-08 Triaged in a stage-1 grill with Bruno through the proxy. Incremental in-place card rebuild on queue changes; the full-refresh cost moved to HIST-011; agent/hard.
