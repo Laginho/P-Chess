@@ -1,5 +1,5 @@
 # RES-001: Tablebase and Maia spike
-Stage: to-implement
+Stage: implementing
 Blocked by: none
 Review: human
 Difficulty: normal
