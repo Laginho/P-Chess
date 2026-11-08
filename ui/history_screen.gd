@@ -801,7 +801,8 @@ func _queue_changed() -> void:
 			_queue_state = state
 			for record in _tab_records.slice(0, _shown_count):
 				var path: String = record.path
-				if (path in previous[0]) != (path in state[0]) or path == previous[1] or path == state[1]:
+				var current_changed: bool = previous[1] != state[1] and path in [previous[1], state[1]]
+				if (path in previous[0]) != (path in state[0]) or current_changed:
 					_replace_card(record)
 				if path in state[0] and path != state[1]:
 					var card := $Margin/Content/Cards/List.get_node(NodePath(path.get_file().validate_node_name()))
