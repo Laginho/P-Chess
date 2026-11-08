@@ -1,5 +1,5 @@
 # LEARN-010: The tablebase probe (Fathom helper)
-Stage: implementing
+Stage: to-review
 Blocked by: CI-005
 Review: agent
 Difficulty: hard
@@ -162,7 +162,7 @@ Windows release/engine startup, the actual windows-latest job and LEARN-006's en
 
 Gate: `godot --headless -s tests/run.gd`, tested commit `75fc6f3bbd9376461c4be5a218d9c904f2782cc0`: **615 passed, 0 failed**, exit 0. All real tablebase tests ran.
 
-Gate evidence: /run/media/lage/New Volume/Scratch/LEARN-010/gate.json
+Gate evidence: /run/media/lage/New Volume/Scratch/LEARN-010/reopen-gate.json
 
 #### Resolution (2026-11-08)
 Verdict: Reopen — criterion 4 accepts malformed helper output instead of failing closed.
@@ -198,8 +198,8 @@ Affected callers and interactions examined: the new adapter's `start/probe/poll/
 
 Next stage 2 addresses only the ❌ items: add regression tests at the approved fake-UCI seam, prove them red, repair fail-closed parsing in the approved Primary files, then obtain fresh green gate evidence. Preserve `engine/uci.gd`; if a transport change proves necessary, follow the existing stop-and-ask instruction. Stage 3 made no production or committed-test changes. The receipt still matches the unchanged code (`75fc6f3`, SHA-256 log verified): **615 passed, 0 failed**, all real tablebase tests ran. Those passing tests do not cover the malformed-output cases above. No merge or ledger entry was made.
 
-Acceptance: pending | criterion 4 repair; actual Windows CI, accented-folder release startup and LEARN-006 Lucena grading remain pending as already documented under Verification.
-Disclosure: pending | integration | [Stage-3 review](#resolution-2026-11-08): criterion 4 must fail closed for both malformed-output cases before this ticket integrates.
+Acceptance: pending | stage-3 re-review of the criterion 4 repair; actual Windows CI, accented-folder release startup and LEARN-006 Lucena grading remain pending as already documented under Verification.
+Disclosure: pending | integration | [Stage-3 review](#resolution-2026-11-08): criterion 4 parser repair is committed and verified below; stage 3 must re-review it before this ticket integrates.
 Disclosure: pending | release | [Verification](#verification): Windows CI execution, release startup in an accented folder and LEARN-006 Lucena grading remain unverified; Linux evidence does not claim those checks passed.
 
 
@@ -210,3 +210,16 @@ Disclosure: pending | release | [Verification](#verification): Windows CI execut
 - Red proof: rebuilt the pinned helper and restored the ignored HDD tablebase symlink. Focused run: **12 passed, 2 failed**, exit 1; all three real-file tests ran. Failures are successful callbacks/available probes for malformed output and unanswered pending requests, matching the review. Log: `/run/media/lage/New Volume/Scratch/LEARN-010/reopen-red.log`.
 
 - Green repair: `tablebase.gd` retains the reader-thread inbox and hands UCI a separate main-thread queue. Each raw line is inspected before generic dispatch, with unknown stdout converted to UCI's fatal error path in arrival order; detaching the queues prevents a line arriving between inspection and generic polling from escaping validation. Completion now requires the exact `bestmove` token. Focused run: **14 passed, 0 failed**, exit 0, all real-file tests ran (`reopen-green.log`).
+
+
+### Stage 2 repair criteria check and handoff (2026-11-08)
+
+Fresh read-only Codex subagent checked the full ticket and diff from session base `882c182`, focusing on the repair `c2eeafe..ee7cae3`. No actionable miss found in the reopened criterion. The previous nine-criterion check remains recorded above; this pass preserves the helper, build, workflows, licenses and packaging unchanged.
+
+- ✅ 4 (reopened items): `engine/tablebase.gd:138` requires the exact completion token; `tests/test_tablebase.gd:258` fails on both malformed prefixes without that check. `engine/tablebase.gd:82` converts unknown raw stdout into a fatal bridge error; `tests/test_tablebase.gd:278` fails without it and verifies active, queued and later requests each receive exactly one error. `engine/tablebase.gd:65` separates the worker inbox from the validated queue so arrivals during generic polling cannot escape the next validation. Handshake, barrier, normal replies, callback reentry, crash/error/free and all real-file cases pass the existing assertions.
+- Independent focused run: **14 passed, 0 failed**, all real-file checks ran (`criteria-focused.log`). An external diagnostic (`criteria-late-stdout.gd`) injected unknown stdout plus a complete valid answer from the fake bridge's `poll()`, after the adapter drained its inbox: the first poll safely deferred the new data, the next poll rejected it exactly once. Both evidence files are under `/run/media/lage/New Volume/Scratch/LEARN-010/`.
+- Red/green commits for this repair: `976b820` test-only (12 passed, 2 failed against the reviewed production code) → `ee7cae3` production-only (14 passed, 0 failed). Existing tests only changed their injection harness to retain the reader queue and call public adapter polling; pre-existing behavior assertions were preserved.
+- Fresh foreground gate through `gate-evidence.ps1`: `godot --headless -s tests/run.gd`, tested commit `ee7cae3a88dd686753ade9ef4577692f747fcdf9`, **617 passed, 0 failed**, exit 0. All three real-file tablebase tests ran, with no tablebase SKIPs. Receipt: `/run/media/lage/New Volume/Scratch/LEARN-010/reopen-gate.json`; log: `/run/media/lage/New Volume/Scratch/LEARN-010/reopen-gate.log`. Only this ticket changes after the tested commit.
+- `engine/uci.gd` is byte-for-byte unchanged against the session base (SHA-256 `176b600971b0dd38211849f91de7a24ce39b9dc3f5542292a6fafdce1ab2fd03`). Actual Windows CI, accented-folder release startup and LEARN-006's end-to-end Lucena grading remain pending as previously authorized.
+
+Stage 2 hands off at `to-review`; no merge or ledger entry.
