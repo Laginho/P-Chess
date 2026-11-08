@@ -223,6 +223,22 @@ func continue_target(now: int) -> Dictionary:
 						positions.append(position)
 				positions.shuffle()
 				return {"kind": "review", "unit": unit, "day": day, "positions": positions.slice(0, 3)}
+	for unit in units():
+		for position in practice_positions(unit):
+			if position.get("from_your_game", false) and not practice_result(unit, position).get("solved", false):
+				return {"kind": "from_game", "unit": unit, "position": position}
+	for unit in units():
+		var progress := unit_progress(unit)
+		if progress.test == "passed":
+			continue
+		if not progress.theory_done:
+			return {"kind": "theory", "unit": unit}
+		if not progress.solving_done:
+			return {"kind": "solving", "unit": unit, "position": next_practice_position(unit)}
+		for position in unit.get("playouts", []):
+			if not playout_passed(unit, position):
+				return {"kind": "playouts", "unit": unit, "position": position}
+		return {"kind": "test", "unit": unit}
 	return {"kind": "done"}
 
 
