@@ -1,0 +1,73 @@
+extends RefCounted
+
+# Progress is shared with future course features; preserve fields we do not own.
+var path: String
+var _progress := {}
+
+
+func _init(file := "user://course.json") -> void:
+	path = file
+	var result := _read()
+	_progress = result.data
+
+
+func _read() -> Dictionary:
+	if not FileAccess.file_exists(path) and not DirAccess.dir_exists_absolute(path):
+		return {"ok": true, "data": {}}
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return {"ok": false, "data": {}}
+	var json := JSON.new()
+	if json.parse(file.get_as_text()) != OK or not json.data is Dictionary:
+		return {"ok": false, "data": {}}
+	return {"ok": true, "data": json.data}
+
+
+static func valid_rating(number, site: String) -> bool:
+	return typeof(number) == TYPE_INT and number >= 100 and number <= 3500 and site in ["chess.com", "lichess"]
+
+
+func rating() -> Dictionary:
+	var value = _progress.get("rating", {})
+	if not value is Dictionary:
+		return {}
+	var number = value.get("number")
+	if typeof(number) == TYPE_FLOAT and is_finite(number) and number == floor(number):
+		number = int(number)
+	var site = value.get("site", "")
+	if not site is String or not valid_rating(number, site):
+		return {}
+	return {"number": number, "site": site}
+
+
+func chess_com_rating() -> int:
+	var value := rating()
+	return 0 if value.is_empty() else value.number - (300 if value.site == "lichess" else 0)
+
+
+func maia_level() -> String:
+	return "maia-%d" % clampi(int(floor((chess_com_rating() + 350) / 100.0)) * 100, 1100, 1900)
+
+
+func save_rating(number, site: String) -> bool:
+	if not valid_rating(number, site):
+		return false
+	# Read again so a failed read or a concurrent update cannot silently discard progress.
+	var result := _read()
+	if not result.ok:
+		return false
+	var next: Dictionary = result.data
+	next.rating = {"number": number, "site": site}
+	var temporary := path + ".tmp"
+	var file := FileAccess.open(temporary, FileAccess.WRITE)
+	if file == null:
+		return false
+	file.store_string(JSON.stringify(next, "\t"))
+	file.flush()
+	var error := file.get_error()
+	file = null
+	if error != OK or DirAccess.rename_absolute(temporary, path) != OK:
+		DirAccess.remove_absolute(temporary)
+		return false
+	_progress = next
+	return true
