@@ -42,6 +42,12 @@ func _layout_home() -> void:
 	form.get_node("Title").size = Vector2(width, 48)
 	form.get_node("Continue").position = Vector2(0, 65)
 	form.get_node("Continue").size = Vector2(width, card_height)
+	var card: Button = form.get_node("Continue")
+	var text_y := maxf(6, (card_height - 92) / 2)
+	for item in [["Eyebrow", 0, 19], ["UnitTitle", 20, 30], ["Detail", 51, 22], ["Progress", 80, 5]]:
+		var child: Control = card.get_node(item[0])
+		child.position = Vector2(22, text_y + item[1])
+		child.size = Vector2(maxf(0, width - 44), item[2])
 	form.get_node("Course").position = Vector2(0, 75 + card_height)
 	form.get_node("Course").size = Vector2(width, 44)
 	var play_y := 130 + card_height
@@ -143,6 +149,16 @@ func refresh_continue() -> void:
 			"playouts": detail = "Play-outs"
 			"test": detail = "Pass test"
 	$Center/Form/Continue.text = "%s\n%s%s" % [eyebrow, title, "\n" + detail if not detail.is_empty() else ""]
+	$Center/Form/Continue/Eyebrow.text = eyebrow
+	$Center/Form/Continue/UnitTitle.text = title
+	$Center/Form/Continue/UnitTitle.add_theme_font_size_override("font_size", 16 if kind == "done" else 26)
+	$Center/Form/Continue/Detail.text = detail
+	var bar: ProgressBar = $Center/Form/Continue/Progress
+	bar.visible = kind == "solving"
+	if bar.visible:
+		var progress: Dictionary = course.unit_progress(target.unit)
+		bar.max_value = maxi(progress.total, 1)
+		bar.value = progress.solved
 	var position: Dictionary = target.get("position", {})
 	if kind == "review" and not target.positions.is_empty():
 		position = target.positions[0]

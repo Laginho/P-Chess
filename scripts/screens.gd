@@ -144,6 +144,14 @@ func capture() -> void:
  if board not in ["Main", "NameDialog"]:
   main.name_dialog.hide()
  match board:
+  "Main":
+   main.course.save_rating(1600, "chess.com")
+   var unit: Dictionary = main.course.units()[0]
+   main.course.open_theory(unit)
+   var practice: Array = main.course.practice_positions(unit)
+   for i in mini(4, practice.size()):
+    main.course.record_commit(unit, practice[i], true)
+   main.get_node("Home").refresh_continue()
   "CourseMap", "Unit", "Theory", "SolvingEntry":
    main.course.save_rating(1600, "chess.com")
    main._show_course_map()
