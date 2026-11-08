@@ -222,7 +222,7 @@ func continue_target(now: int) -> Dictionary:
 					if position is Dictionary and position.get("pool") in ["practice", "test"]:
 						positions.append(position)
 				positions.shuffle()
-				return {"kind": "review", "unit": unit, "day": day, "positions": positions.slice(0, 3)}
+				return {"kind": "review", "unit": unit, "day": day, "elapsed_days": int((now - mastered_at) / 86400), "positions": positions.slice(0, 3)}
 	for unit in units():
 		for position in practice_positions(unit):
 			if position.get("from_your_game", false) and not practice_result(unit, position).get("solved", false):

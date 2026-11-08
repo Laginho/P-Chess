@@ -132,7 +132,7 @@ func refresh_continue() -> void:
 		match kind:
 			"review":
 				eyebrow = "REVIEW CHECK"
-				detail = "3 positions · mastered %d days ago" % target.day
+				detail = "3 positions · mastered %d days ago" % target.elapsed_days
 			"from_game":
 				eyebrow = "FROM YOUR GAME"
 				detail = "1 new position from your games"
