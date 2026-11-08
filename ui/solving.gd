@@ -248,7 +248,10 @@ func _advance_feedback() -> void:
 			correct.append(move.san)
 		card.get_node("Correct/CorrectLine").text = " ".join(correct)
 	else:
-		board.game.play(ply.uci)
+		# Entry and the probe describe legal positions, including held draws.
+		# Replay that sequence without the live game's automatic draw endings.
+		board.game.board.make_move(ply.uci)
+		board.game.moves.append(ply.uci)
 		board.queue_redraw()
 		if _playback_ply == _grade.plies.size():
 			$Playback.stop()
