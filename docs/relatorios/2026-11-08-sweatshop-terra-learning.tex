@@ -28,11 +28,12 @@
 
 \textbf{Needs you:}
 \begin{enumerate}
-  \item \textbf{PR \href{https://github.com/Laginho/P-Chess/pull/44}{\#44} has red CI.} Job
-        \texttt{tbprobe-windows} has failed on every push since LEARN-010 merged: the Fathom
-        helper built on Windows prints nothing from the accented, spaced folder. The session
-        review (below) took it as a finding; see the chat summary for its outcome.
-        \texttt{windows-export} also failed on the last two pushes, on a 504 from the Godot download.
+  \item \textbf{Session review: approved at round 2} (\texttt{gpt-6.1-sol xhigh}); last gate 679 passed,
+        0 failed (exit 0); CI green on \texttt{fccc372}. Round 1 found the Windows helper's crash
+        (\texttt{setvbuf}, fixed, \texttt{tbprobe-windows} now passes) and a hold that ended drawn being
+        failed (fixed after a proxy decision). Two P3s left for you (coverage of the opponent's-move
+        draw; LEARN-011's wording); two gaps opened as LEARN-011 (no way out of a play-out) and UI-039
+        (keyboard access to Review's practice link).
   \item \textbf{Confirm or reverse the probe design.} RES-001 (\texttt{Needs your call}) showed that
         Stockfish's UCI never gives each move's distance to zeroing. Its review reserved the change
         of spec L5 for you, but the proxy split LEARN-006 and created LEARN-010, a native helper
@@ -115,6 +116,7 @@ is exact; each stage is $\pm$1 point. The proxy (\texttt{opus-5.5 xhigh}, Claude
 The Windows side of the new tablebase helper was never run before approval. LEARN-010 was split
 out mid-run by the proxy, built and tested on Linux only, and approved with Windows ``pending''.
 The windows-latest smoke job it added then failed on every push, and nobody read CI until the run ended.
+The session review found the cause (an invalid \texttt{setvbuf} mode that aborts MSVC's runtime) and fixed it.
 
 \begin{enumerate}
   \item Make a red check on the session PR stop the driver, or at least show in its line: the
@@ -352,12 +354,13 @@ LEARN-005 (1) & Enter wipes an unfinished line while Clear has focus & S2-explí
 LEARN-010 (1) & malformed \texttt{bestmove} tokens and unknown lines during a search succeed & S2-explícito/código & criterion 4 \\
 LEARN-010 (2) & invalid lines before the handshake barriers or while idle are dropped & S2-explícito/código & criterion 4; present since the first handoff: review miss (drip-feed) \\
 LEARN-004 (0) & the shape test did not require both goals in each pool & S2-explícito/teste & added by the review (\texttt{fdf31ff}) \\
-LEARN-010 (--) & Windows smoke probe fails in CI & unclassified & post-approval, \texttt{session-review} \\
+LEARN-010 (--) & Windows smoke probe fails in CI & unclassified & post-approval, \texttt{session-review}; \texttt{setvbuf} on MSVC, fixed in \texttt{63912b7} \\
+LEARN-007 (--) & a hold that ends drawn before move 30 is failed; the pass test's hold cannot pass & unclassified & post-approval, \texttt{session-review}; proxy decision, fixed in \texttt{6870cac} \\
 \bottomrule
 \end{tabularx}
 }
 
-Totals: S2-explícito/código 5, S2-explícito/teste 1 (fixed in review), unclassified 1
+Totals: S2-explícito/código 5, S2-explícito/teste 1 (fixed in review), unclassified 2
 (post-approval). No S1 or S3. Review miss: LEARN-010 round 2. No review-induced churn.
 
 \section*{Scoreboard}
