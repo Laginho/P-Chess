@@ -51,6 +51,12 @@ func _layout_home() -> void:
 	_fit_continue_title()
 	form.get_node("Course").position = Vector2(0, 75 + card_height)
 	form.get_node("Course").size = Vector2(width, 44)
+	form.get_node("Course/Icon").position = Vector2(16, 12)
+	form.get_node("Course/Icon").size = Vector2(20, 20)
+	form.get_node("Course/Title").position = Vector2(48, 0)
+	form.get_node("Course/Title").size = Vector2(62, 44)
+	form.get_node("Course/Summary").position = Vector2(116, 0)
+	form.get_node("Course/Summary").size = Vector2(maxf(0, width - 132), 44)
 	var play_y := 130 + card_height
 	form.get_node("QuickLabel").position = Vector2(0, play_y)
 	form.get_node("QuickLabel").size = Vector2(row, 36)
@@ -124,6 +130,16 @@ func configure(preferences, course_store = null) -> void:
 func refresh_continue() -> void:
 	if course == null:
 		return
+	var units: Array = course.units()
+	var summary := "%d %s" % [units.size(), "unit" if units.size() == 1 else "units"]
+	for status in ["new", "in progress", "mastered", "needs review"]:
+		var count := 0
+		for unit in units:
+			if course.unit_progress(unit).status == status:
+				count += 1
+		if count > 0:
+			summary += " · %d %s" % [count, status]
+	$Center/Form/Course/Summary.text = summary
 	var now: int = course.local_calendar_time(int(Time.get_unix_time_from_system()), int(Time.get_time_zone_from_system().bias))
 	target = {"kind": "rating"} if course.rating().is_empty() else course.continue_target(now)
 	var kind: String = target.kind

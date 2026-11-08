@@ -10,6 +10,7 @@
 [ext_resource type="Texture2D" path="res://ui/icons/settings.svg" id="8"]
 [ext_resource type="Texture2D" path="res://ui/icons/quit.svg" id="9"]
 [ext_resource type="Script" path="res://ui/icon_button.gd" id="10"]
+[ext_resource type="Texture2D" path="res://ui/icons/home-course.svg" id="11"]
 
 [node name="Home" type="Control"]
 layout_mode = 3
@@ -87,6 +88,34 @@ show_percentage = false
 [node name="Course" type="Button" parent="Center/Form"]
 theme_type_variation = &"RaisedButton"
 text = "Course"
+theme_override_colors/font_color = Color(0, 0, 0, 0)
+theme_override_colors/font_hover_color = Color(0, 0, 0, 0)
+theme_override_colors/font_pressed_color = Color(0, 0, 0, 0)
+theme_override_colors/font_hover_pressed_color = Color(0, 0, 0, 0)
+theme_override_colors/font_focus_color = Color(0, 0, 0, 0)
+
+[node name="Icon" type="TextureRect" parent="Center/Form/Course"]
+mouse_filter = 2
+texture = ExtResource("11")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Title" type="Label" parent="Center/Form/Course"]
+mouse_filter = 2
+theme_type_variation = &"SemiboldText"
+theme_override_font_sizes/font_size = 16
+text = "Course"
+vertical_alignment = 1
+
+[node name="Summary" type="Label" parent="Center/Form/Course"]
+mouse_filter = 2
+theme_type_variation = &"MutedText"
+theme_override_font_sizes/font_size = 14
+text = "0 units"
+horizontal_alignment = 2
+vertical_alignment = 1
+text_overrun_behavior = 3
+clip_text = true
 
 [node name="QuickLabel" type="Label" parent="Center/Form"]
 theme_type_variation = &"SectionLabel"
