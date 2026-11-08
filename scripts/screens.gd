@@ -349,18 +349,18 @@ func _solving_feedback(main, state: String) -> void:
  var board = load("res://core/board.gd").from_fen(fen)
  probe.answers[board.to_fen()] = {"ok": true, "result": "win", "best": "a1d1", "moves": {"a1d1": {"result": "win", "dtz": 5}}}
  board.make_move("a1d1")
- probe.answers[board.to_fen()] = {"ok": true, "result": "loss", "best": "g8f7", "moves": {"g8f7": {"result": "loss", "dtz": 4}}}
- board.make_move("g8f7")
+ probe.answers[board.to_fen()] = {"ok": true, "result": "loss", "best": "g8h7", "moves": {"g8h7": {"result": "loss", "dtz": 4}}}
+ board.make_move("g8h7")
  probe.answers[board.to_fen()] = {"ok": true, "result": "win", "best": "e8d7" if state == "solved" else "d1d4", "moves": {
   "e8d7": {"result": "win", "dtz": 3 if state == "solved" else 99}, "d1d4": {"result": "win", "dtz": 3}}}
  board.make_move("d1d4")
- probe.answers[board.to_fen()] = {"ok": true, "result": "loss", "best": "f7g6", "moves": {"f7g6": {"result": "loss", "dtz": 2}}}
- board.make_move("f7g6")
+ probe.answers[board.to_fen()] = {"ok": true, "result": "loss", "best": "h7g6", "moves": {"h7g6": {"result": "loss", "dtz": 2}}}
+ board.make_move("h7g6")
  probe.answers[board.to_fen()] = {"ok": true, "result": "win", "best": "e8d7", "moves": {"e8d7": {"result": "win", "dtz": 1}}}
  main._show_unit(unit)
  main._show_course_part(unit, "solving")
  main.solving.probe = probe
- for move in ["a1d1", "g8f7", "e8d7"]:
+ for move in ["a1d1", "g8h7", "e8d7"]:
   main.solving.board._commit(move, false)
  main.solving.find_child("Commit", true, false).pressed.emit()
  for i in 3:
