@@ -70,9 +70,16 @@ func _refresh_line() -> void:
 	var length := int(position_data.get("line_length", 1))
 	side.get_node("LineCard/Line/Count").text = "%d of %d moves" % [(board.entry_moves.size() + 1) / 2, length]
 	var rows := PackedStringArray()
-	for i in range(0, board.entry_san.size(), 2):
-		var reply: String = board.entry_san[i + 1] if i + 1 < board.entry_san.size() else ""
-		rows.append("%d.  %s  %s" % [i / 2 + 1, board.entry_san[i], reply])
+	var black_first: bool = board.game.board.side_to_move == "b"
+	var start := 0
+	if black_first and not board.entry_san.is_empty():
+		rows.append("1...  %s" % board.entry_san[0])
+		start = 1
+	for i in range(start, board.entry_san.size(), 2):
+		var row := "%d.  %s" % [(i - start) / 2 + 1 + int(black_first), board.entry_san[i]]
+		if i + 1 < board.entry_san.size():
+			row += "  " + board.entry_san[i + 1]
+		rows.append(row)
 	side.get_node("LineCard/Line/Moves").text = "\n".join(rows)
 	side.get_node("Commit").disabled = board.entry_limit == 0 or board.entry_moves.size() != board.entry_limit
 
