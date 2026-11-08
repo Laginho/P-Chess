@@ -91,6 +91,11 @@ func test_test_playout_uses_tablebase_best_move_without_maia():
 	assert_eq(main.board_view.game.moves, PackedStringArray(["c6c5", "e1f2"]))
 	assert_eq(main.uci.requests.size(), 0, "the perfect opponent uses the tablebase, not Maia")
 	assert_true(main.history.games().is_empty())
+	assert_true(main.board_view.play("c5c4"))
+	assert_true(main.pass_test.visible, "probe error is shown to the player")
+	assert_true(main.pass_test.find_child("Details", true, false).text.contains("Missing scripted table"))
+	assert_true(main.pass_test.find_child("Retry", true, false).visible, "the interrupted play-out can be restarted")
+	assert_true(main.course.test_attempts(unit).is_empty(), "a probe error is not a failed attempt")
 	main.free()
 
 
