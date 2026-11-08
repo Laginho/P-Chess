@@ -692,6 +692,6 @@ func test_playout_starts_from_unit_and_failing_move_ends_before_maia_without_his
 	assert_true(screen.find_child("Reason", true, false).text.contains("Rc4"))
 	assert_true(screen.find_child("Reason", true, false).text.contains("Rc5"))
 	assert_eq(main.uci.requests.size(), 0, "Maia does not reply to a failed move")
-	assert_true(main.history.list_games().is_empty(), "play-out does not enter history")
+	assert_true(main.history.games().is_empty(), "play-out does not enter history")
 	main.free()
 	Session.HistoryStorage.clean(folder)
