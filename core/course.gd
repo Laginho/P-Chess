@@ -136,11 +136,20 @@ func unit_progress(unit: Dictionary) -> Dictionary:
 	if not attempts is Array:
 		attempts = []
 	var mastered: bool = not str(saved.get("mastered_date", "")).is_empty()
+	for attempt in attempts:
+		if attempt is Dictionary and attempt.get("passed", false) == true:
+			mastered = true
 	var test := "passed" if mastered else ("not passed" if not attempts.is_empty() else "not taken")
 	var checks = saved.get("review_checks", [])
-	var needs_review: bool = mastered and checks is Array and not checks.is_empty() and checks[-1] is Dictionary and checks[-1].get("passed") == false
+	var needs_review := false
+	if mastered and checks is Array:
+		for i in range(checks.size() - 1, -1, -1):
+			var check = checks[i]
+			if check is Dictionary and (check.has("passed") or check.has("missed")):
+				needs_review = check.get("missed", false) == true or check.get("passed", true) == false
+				break
 	var theory: bool = saved.get("theory_opened", false) == true
-	var status := "needs review" if needs_review else ("mastered" if mastered else ("in progress" if theory or committed > 0 or passed > 0 or not attempts.is_empty() else "new"))
+	var status := "needs review" if needs_review else ("mastered" if mastered else ("in progress" if theory or committed > 0 or (playouts is Dictionary and not playouts.is_empty()) or not attempts.is_empty() else "new"))
 	var rate := "–" if committed == 0 else "%d%% (%d of %d)" % [roundi(100.0 * first / committed), first, committed]
 	return {"status": status, "theory_done": theory, "solved": solved, "total": total,
 			"playouts_passed": passed, "test": test, "first_try": rate}
