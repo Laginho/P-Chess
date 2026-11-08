@@ -6,7 +6,6 @@ extends RefCounted
 
 signal move_ready(move: String)
 
-const Game = preload("res://core/game.gd")
 const Clock = preload("res://core/clock.gd")
 const MovePicker = preload("res://bot/move_picker.gd")
 const TimeModel = preload("res://bot/time_model.gd")
@@ -94,10 +93,9 @@ func think(game, time_left := 0, start_time := 0) -> void:
 		prediction["last_move"] = game.moves[-1]
 		_pending.append(prediction)
 	_pending.append(request)
-	# shortcut: every game starts from the initial position; keep the start FEN in Game when one does not.
 	if not game.moves.is_empty():
-		_bridge.request_policy(Game.START, game.moves.slice(0, -1))
-	_bridge.request_policy(Game.START, game.moves)
+		_bridge.request_policy(game.start_fen, game.moves.slice(0, -1))
+	_bridge.request_policy(game.start_fen, game.moves)
 
 
 func median_ms() -> float:

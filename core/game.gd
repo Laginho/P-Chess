@@ -8,6 +8,7 @@ const Board = preload("res://core/board.gd")
 const START := "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
 var board
+var start_fen: String
 # UCI moves played since the starting position.
 var moves := PackedStringArray()
 # Ends the game the moment a threefold claim becomes available (§7's "auto-claim threefold").
@@ -21,6 +22,7 @@ var _seen := {}
 
 
 func _init(fen := START) -> void:
+	start_fen = fen
 	board = Board.from_fen(fen)
 	_after_move()
 
