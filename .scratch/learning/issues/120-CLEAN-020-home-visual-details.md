@@ -1,5 +1,5 @@
 # CLEAN-020: Align Home's remaining visual details with the learning canvas
-Stage: to-implement
+Stage: to-review
 Status: ready-for-agent
 Blocked by: none
 Review: human
@@ -36,3 +36,20 @@ Triage the remaining presentation differences between the new Home and `docs/des
 - 2026-11-08 Opened during the [LEARN-009 stage-3 review](113-LEARN-009-home-and-continue.md) after comparing the [current Home capture](</run/media/lage/New Volume/Scratch/LEARN-009-review-capture-QwHiXE/Main.png>) with the learning canvas. These presentation details are absent from LEARN-009's numbered criteria; that implementation is approved. This is a needs-triage follow-up, with no integration condition or accepted release waiver. No Escaped-from line applies.
 
 - Triage by the driver: ready for agent — the canvas specifies the arrangement and artwork; Home can use four dedicated SVGs without changing shared icons. Aggregate status counts describe multiple units without inventing a single course status.
+
+## Resolution
+
+- Home now stacks the canvas-colored Play icons and labels, shows a chevron in Continue, and summarizes the actual stage units and statuses in Course. Long review details and mixed status summaries fit at the minimum window size.
+- `godot --headless -s tests/run.gd`: 677 passed, 0 failed at `fc42110`. Two pixel tests require a graphical display and six live engine tests skip without the Windows Lc0 executable.
+- Compared isolated captures with `docs/design/learning/png/Main.png`: [1280×800 normal](</run/media/lage/New Volume/Scratch/CLEAN-020-captures/gate-normal-1280/Main.png>), [800×600 normal](</run/media/lage/New Volume/Scratch/CLEAN-020-captures/gate-normal-800/Main.png>), [1280×800 missing engine](</run/media/lage/New Volume/Scratch/CLEAN-020-captures/gate-missing-1280/Main.png>), and [800×600 missing engine](</run/media/lage/New Volume/Scratch/CLEAN-020-captures/gate-missing-800/Main.png>). Automated Home tests exercise destinations and preferences via signals; physical clicks and human visual acceptance remain for review.
+
+Gate evidence: /run/media/lage/New Volume/Scratch/clean020-gate.json
+
+## Stage 2 criteria check
+
+- ✅ 1: `ui/home.gd:17`, `ui/home.gd:91`, and `ui/home.tscn:137` arrange the four buttons; `tests/test_home.gd:583` fails without the stacked artwork and captions, and `tests/test_home.gd:466` checks the row. The captures check the canvas colors.
+- ✅ 2: `ui/home.gd:63`, `ui/home.gd:69`, and `ui/home.gd:247` reserve space, fit the detail and keep the progress bar inside the compact card; `tests/test_home.gd:583` and `tests/test_home.gd:620` fail without the chevron, bounds or long-detail fitting.
+- ✅ 3: `ui/home.gd:74`, `ui/home.gd:171`, and `ui/home.tscn:99` show the icon and actual status counts; `tests/test_home.gd:561` and `tests/test_home.gd:620` cover empty, changing and mixed progress, and `tests/test_home.gd:481` checks Course navigation.
+- ✅ 4: `ui/home.gd:129`, `ui/home.gd:151`, and `ui/home.gd:160` retain the existing actions and warning placement; existing tests at `tests/test_home.gd:7`, `tests/test_home.gd:102`, `tests/test_home.gd:186`, `tests/test_home.gd:262`, and `tests/test_home.gd:359` exercise destinations, preferences and the warning.
+
+Independent criteria review identified clipped long review text and mixed statuses; test-only commits `0206cfd` and `5d1117b` recorded red cases, and production commits `13cc146` and `fc42110` fixed them. The reviewer rechecked the long-content fixes, including a full missing-engine message at 800×600. The additional compact progress-bar bounds test then found and verified the final correction. The normal warning-visibility transition also restores the Play artwork opacity.

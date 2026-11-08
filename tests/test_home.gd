@@ -556,3 +556,100 @@ func test_rating_dialog_displays_the_rating_as_a_sentence():
 	assert_true(number.get_global_rect().end.x <= middle.get_global_rect().position.x, "'in rapid on' follows the rating")
 	assert_true(middle.get_global_rect().end.x <= site.get_global_rect().position.x, "site completes the sentence")
 	dialog.free()
+
+
+func test_course_summary_tracks_available_units_and_progress():
+	var folder := "user://test_home_summary_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var path := folder.path_join("course.json")
+	var course = load("res://core/course.gd").new(path, "res://tests/fixtures/course/course.json")
+	var home = load("res://ui/home.tscn").instantiate()
+	Engine.get_main_loop().root.add_child(home)
+	home.configure(load("res://core/settings.gd").new(folder.path_join("settings.cfg")), course)
+	var summary: Label = home.get_node_or_null("Center/Form/Course/Summary")
+	assert_true(summary != null, "Course displays a summary")
+	if summary != null:
+		assert_eq(summary.text, "0 units")
+		assert_true(course.save_rating(1100, "chess.com"))
+		home.refresh_continue()
+		assert_eq(summary.text, "1 unit · 1 new")
+		assert_true(course.open_theory(course.units()[0]))
+		home.refresh_continue()
+		assert_eq(summary.text, "1 unit · 1 in progress")
+	home.free()
+	Session.HistoryStorage.clean(folder)
+
+
+func test_home_decorations_fit_without_blocking_controls():
+	var home = load("res://ui/home.tscn").instantiate()
+	home.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	Engine.get_main_loop().root.add_child(home)
+	for canvas in [Vector2(1280, 800), Vector2(800, 600)]:
+		home.size = canvas
+		for missing in [false, true]:
+			if missing:
+				home.show_missing("Engine unavailable")
+			else:
+				home.get_node("Center/Form/Missing").hide()
+			for name in ["OneZero", "ThreeTwo", "FiveZero", "Custom"]:
+				var tile: Button = home.find_child(name, true, false)
+				var icon: Control = tile.get_node_or_null("Artwork")
+				var label: Label = tile.get_node_or_null("Caption")
+				assert_true(icon != null and label != null, "%s has separate artwork and caption" % name)
+				if icon != null and label != null:
+					assert_true(icon.get_global_rect().end.y <= label.get_global_rect().position.y, "%s icon above label" % name)
+					assert_true(label.get_global_rect().end.y <= tile.get_global_rect().end.y, "%s label fits" % name)
+					assert_eq(label.text, tile.text)
+					assert_eq(icon.mouse_filter, Control.MOUSE_FILTER_IGNORE)
+					assert_eq(label.mouse_filter, Control.MOUSE_FILTER_IGNORE)
+			var card: Button = home.get_node("Center/Form/Continue")
+			var bar: Control = card.get_node("Progress")
+			assert_true(bar.get_global_rect().end.y <= card.get_global_rect().end.y, "progress stays inside Continue")
+			var arrow: Control = card.get_node_or_null("Chevron")
+			assert_true(arrow != null, "Continue has a chevron")
+			if arrow != null:
+				assert_eq(arrow.mouse_filter, Control.MOUSE_FILTER_IGNORE)
+				for child_name in ["UnitTitle", "Detail", "Progress"]:
+					var content: Control = card.get_node(child_name)
+					assert_true(content.get_global_rect().end.x <= arrow.get_global_rect().position.x, "%s clears chevron" % child_name)
+	var course_icon: Control = home.get_node_or_null("Center/Form/Course/Icon")
+	assert_true(course_icon != null and course_icon.mouse_filter == Control.MOUSE_FILTER_IGNORE, "Course icon leaves the button clickable")
+	home.free()
+
+
+func test_long_review_and_mixed_course_summary_remain_readable():
+	var folder := "user://test_home_mixed_%d" % Time.get_ticks_usec()
+	DirAccess.make_dir_recursive_absolute(folder)
+	var unit: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/course/rook.json"))
+	var names := ["new", "started", "mastered", "review"]
+	for name in names:
+		unit.id = name
+		var file := FileAccess.open(folder.path_join(name + ".json"), FileAccess.WRITE)
+		file.store_string(JSON.stringify(unit))
+	var index := FileAccess.open(folder.path_join("index.json"), FileAccess.WRITE)
+	index.store_string(JSON.stringify({"stages": [{"min_rating": 100, "max_rating": 3500, "units": ["new.json", "started.json", "mastered.json", "review.json"]}]}))
+	index = null
+	var progress := FileAccess.open(folder.path_join("progress.json"), FileAccess.WRITE)
+	progress.store_string(JSON.stringify({"rating": {"number": 1100, "site": "chess.com"}, "units": {"started": {"theory_opened": true}, "mastered": {"mastered_date": "2000-01-01"}, "review": {"mastered_date": "2000-01-01", "review_checks": [{"passed": false}]}}}))
+	progress = null
+	var course = load("res://core/course.gd").new(folder.path_join("progress.json"), folder.path_join("index.json"))
+	var home = load("res://ui/home.tscn").instantiate()
+	home.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	home.size = Vector2(800, 600)
+	Engine.get_main_loop().root.add_child(home)
+	home.configure(load("res://core/settings.gd").new(folder.path_join("settings.cfg")), course)
+	var summary: Label = home.get_node("Center/Form/Course/Summary")
+	assert_eq(summary.text, "4 units · 1 new · 1 in progress · 1 mastered · 1 needs review")
+	assert_true(summary.autowrap_mode != TextServer.AUTOWRAP_OFF, "mixed statuses wrap instead of clipping")
+	var lines := summary.get_theme_font("font").get_multiline_string_size(summary.text, HORIZONTAL_ALIGNMENT_RIGHT, summary.size.x, summary.get_theme_font_size("font_size"), -1, summary.autowrap_mode)
+	assert_true(lines.y <= summary.size.y, "all status lines fit the Course button")
+	var detail: Label = home.get_node("Center/Form/Continue/Detail")
+	var detail_width := detail.get_theme_font("font").get_string_size(detail.text, HORIZONTAL_ALIGNMENT_LEFT, -1, detail.get_theme_font_size("font_size")).x
+	assert_true(detail_width <= detail.size.x, "long review detail fits before the chevron")
+	for name in ["Icon", "Title", "Summary"]:
+		assert_eq(home.get_node("Center/Form/Course/" + name).mouse_filter, Control.MOUSE_FILTER_IGNORE)
+	home.show_missing("Engine unavailable")
+	home.get_node("Center/Form/Missing").hide()
+	assert_eq(home.get_node("Center/Form/Quick/OneZero/Caption").modulate.a, 1.0, "hiding the warning restores the normal appearance")
+	home.free()
+	Session.HistoryStorage.clean(folder)
