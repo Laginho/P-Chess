@@ -755,3 +755,51 @@ func test_playout_flag_fails_without_history_and_retry_returns_to_start():
 	main.playout.find_child("Retry", true, false).pressed.emit()
 	assert_eq(main.playout.find_child("Heading", true, false).text, "Play-out 1 of 4")
 	main.free()
+
+
+func test_playout_shows_engine_start_error_and_can_return_to_unit():
+	var session = Session.new()
+	var main = await session._session(Session.ManualWaits.new(), false)
+	main.course = load("res://core/course.gd").new(main.history._root.path_join("course.json"))
+	main.course.save_rating(1400, "chess.com")
+	var position := {"id": "a", "fen": "R7/8/4k3/1P6/K7/8/8/2r5 w - - 0 1", "side": "w", "goal": "convert"}
+	var unit := {"id": "rook", "playouts": [position]}
+	main._show_unit(unit)
+	main.unit_page.part_requested.emit(unit, "playouts")
+	main.uci.error = "Engine missing"
+	main.playout.find_child("Start", true, false).pressed.emit()
+	assert_true(main.playout.visible, "an engine error leaves an actionable screen")
+	assert_true(main.playout.find_child("Reason", true, false).text.contains("Engine missing"))
+	main.playout.find_child("Back", true, false).pressed.emit()
+	assert_true(main.unit_page.visible)
+	main.free()
+
+
+func test_playout_waits_for_probe_before_maia():
+	var session = Session.new()
+	var main = await session._session(Session.ManualWaits.new(), false)
+	main.course = load("res://core/course.gd").new(main.history._root.path_join("course.json"))
+	main.course.save_rating(1400, "chess.com")
+	var sample = load("res://tests/test_grader.gd")
+	var probe = sample.FakeProbe.new()
+	probe.held = true
+	probe.answers[sample.FEN] = sample.answer("win", "c6c5", {"c6c5": {"result": "win", "dtz": 3}})
+	main.tablebase.queue_free()
+	var adapter = LifecycleProbe.new(probe, [])
+	main.tablebase = adapter
+	main.add_child(adapter)
+	var position := {"id": "a", "fen": sample.FEN, "side": "b", "goal": "convert"}
+	var unit := {"id": "rook", "playouts": [position]}
+	main._show_unit(unit)
+	main.unit_page.part_requested.emit(unit, "playouts")
+	main.playout.find_child("Start", true, false).pressed.emit()
+	while main._starting:
+		await Engine.get_main_loop().process_frame
+	main.board_view.play("c6c5")
+	assert_eq(main.uci.requests.size(), 0, "the tablebase must answer before Maia is asked")
+	probe.reply()
+	assert_eq(main.uci.requests.size(), 2, "a kept result lets Maia reply")
+	if not main.uci.requests.is_empty():
+		assert_eq(main.uci.requests[-1][0], sample.FEN)
+		assert_eq(main.uci.requests[-1][1], PackedStringArray(["c6c5"]))
+	main.free()
