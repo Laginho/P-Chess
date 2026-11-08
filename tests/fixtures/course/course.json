@@ -1,0 +1,1 @@
+{"stages":[{"name":"Foundation","min_rating":-200,"max_rating":1199,"units":["rook.json"]},{"name":"Club","min_rating":1200,"max_rating":3500,"units":["club.json"]}]}

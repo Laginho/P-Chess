@@ -1,0 +1,105 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://ui/unit_page.gd" id="1"]
+
+[node name="Unit" type="Control"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.121569, 0.117647, 0.109804, 1)
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_top = 32
+theme_override_constants/margin_bottom = 32
+
+[node name="Content" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Header" type="HBoxContainer" parent="Margin/Content"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Back" type="Button" parent="Margin/Content/Header"]
+layout_mode = 2
+custom_minimum_size = Vector2(44, 44)
+text = "‹"
+tooltip_text = "Back to Course"
+
+[node name="Title" type="Label" parent="Margin/Content/Header"]
+layout_mode = 2
+theme_type_variation = &"ExtraBoldText"
+theme_override_font_sizes/font_size = 30
+
+[node name="Body" type="HBoxContainer" parent="Margin/Content"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 24
+
+[node name="Parts" type="VBoxContainer" parent="Margin/Content/Body"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 12
+
+[node name="Side" type="VBoxContainer" parent="Margin/Content/Body"]
+layout_mode = 2
+custom_minimum_size = Vector2(260, 0)
+theme_override_constants/separation = 16
+
+[node name="Preview" type="CenterContainer" parent="Margin/Content/Body/Side"]
+layout_mode = 2
+
+[node name="FirstTryTitle" type="Label" parent="Margin/Content/Body/Side"]
+layout_mode = 2
+theme_type_variation = &"MutedText"
+text = "FIRST-TRY RATE"
+
+[node name="FirstTry" type="Label" parent="Margin/Content/Body/Side"]
+layout_mode = 2
+theme_type_variation = &"ExtraBoldText"
+theme_override_font_sizes/font_size = 28
+
+[node name="ClockTitle" type="Label" parent="Margin/Content/Body/Side"]
+layout_mode = 2
+theme_type_variation = &"MutedText"
+text = "PLAY-OUT CLOCK"
+
+[node name="Clock" type="HBoxContainer" parent="Margin/Content/Body/Side"]
+layout_mode = 2
+
+[node name="ClockOn" type="Button" parent="Margin/Content/Body/Side/Clock"]
+layout_mode = 2
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(0, 44)
+toggle_mode = true
+text = "5+5"
+
+[node name="NoClock" type="Button" parent="Margin/Content/Body/Side/Clock"]
+layout_mode = 2
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(0, 44)
+toggle_mode = true
+text = "No clock"
+
+[node name="ClockError" type="Label" parent="Margin/Content/Body/Side"]
+visible = false
+layout_mode = 2
+text = "Could not save clock choice."

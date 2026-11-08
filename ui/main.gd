@@ -20,6 +20,8 @@ const HistoryScreen = preload("res://ui/history_screen.tscn")
 const Course = preload("res://core/course.gd")
 const RatingDialog = preload("res://ui/rating_dialog.tscn")
 const NameDialog = preload("res://ui/name_dialog.tscn")
+const CourseMap = preload("res://ui/course_map.tscn")
+const UnitPage = preload("res://ui/unit_page.tscn")
 
 const WINNERS := {"1-0": "White wins", "0-1": "Black wins", "1/2-1/2": "Draw"}
 const MIN_BOARD_SIZE := 320
@@ -42,6 +44,8 @@ var history_screen := HistoryScreen.instantiate()
 var name_dialog := NameDialog.instantiate()
 var rating_dialog := RatingDialog.instantiate()
 var course = Course.new()
+var course_map = CourseMap.instantiate()
+var unit_page = UnitPage.instantiate()
 var analysis_queue
 var review_analysis_path := ""
 var resign_key := ResignKey.new(Time.get_ticks_msec)
@@ -171,7 +175,10 @@ func _ready() -> void:
 	add_child(rating_dialog)
 	$Home.course_requested.connect(func():
 		if course.rating().is_empty():
-			rating_dialog.present(course))
+			rating_dialog.present(course)
+		else:
+			_show_course_map())
+	rating_dialog.saved.connect(_show_course_map)
 	$Home.started.connect(_start)
 	$Home.custom_requested.connect(_show_setup)
 	$Home.history_requested.connect(_show_history)
@@ -204,6 +211,12 @@ func _ready() -> void:
 	review.visibility_changed.connect(func(): settings_screen.visible = not focus or review.visible)
 	review.get_node("Margin/Content/ReviewBody/BoardView").sound_requested.connect(sound_player.play)
 	add_child(history_screen)
+	add_child(course_map)
+	add_child(unit_page)
+	course_map.back_requested.connect(_show_home)
+	course_map.unit_requested.connect(_show_unit)
+	course_map.edit_requested.connect(_edit_course_rating)
+	unit_page.back_requested.connect(_show_course_map)
 	add_child(name_dialog)
 	history_screen.back_requested.connect(_show_home)
 	history_screen.review_requested.connect(_review_history_game)
@@ -461,11 +474,33 @@ func _show_setup() -> void:
 
 
 func _show_home() -> void:
+	course_map.hide()
+	unit_page.hide()
 	_show_setup()
 	_set_focus(false)
 	setup.hide()
 	$Home.sync_level()
 	$Home.show()
+
+
+func _show_course_map() -> void:
+	$Home.hide()
+	setup.hide()
+	unit_page.hide()
+	course_map.present(course)
+
+
+func _show_unit(unit: Dictionary) -> void:
+	course_map.hide()
+	unit_page.present(course, unit)
+
+
+func _edit_course_rating() -> void:
+	course_map.hide()
+	$Home.show()
+	$Home._show_profile()
+	var profile = $Home.get_node("Profile")
+	profile.back_requested.connect(func(): _show_course_map())
 
 
 func _show_history() -> void:

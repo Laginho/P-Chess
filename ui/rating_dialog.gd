@@ -1,5 +1,7 @@
 extends AcceptDialog
 
+signal saved
+
 var course
 
 
@@ -47,5 +49,6 @@ func _save() -> void:
 	_update()
 	if not get_ok_button().disabled and course.save_rating(int($Content/Row/RatingNumber.text), $Content/Row/RatingSite.get_item_text($Content/Row/RatingSite.selected)):
 		hide()
+		saved.emit()
 	else:
 		$Content/Error.show()
