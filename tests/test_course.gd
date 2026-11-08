@@ -38,6 +38,24 @@ func test_pass_test_draw_and_mastery_persist_across_attempts():
 	DirAccess.remove_absolute(path)
 
 
+func test_pass_test_requires_five_correct_and_both_playouts():
+	var path := "user://course_test_threshold_%d.json" % Time.get_ticks_usec()
+	var course = load("res://core/course.gd").new(path)
+	var unit := {"id": "rook"}
+	var positions := []
+	for i in 6:
+		positions.append({"position": {"id": str(i)}, "solved": i < 4})
+	assert_true(course.record_test_attempt(unit, positions, [true, true], "2026-01-01"))
+	assert_true(not course.test_attempts(unit)[0].passed, "four correct are insufficient")
+	positions[4].solved = true
+	assert_true(course.record_test_attempt(unit, positions, [false, true], "2026-01-02"))
+	assert_true(not course.test_attempts(unit)[1].passed, "both play-outs must pass")
+	assert_true(course.record_test_attempt(unit, positions, [true, true], "2026-01-03"))
+	assert_true(course.test_attempts(unit)[2].passed)
+	assert_eq(course.unit_progress(unit).status, "mastered")
+	DirAccess.remove_absolute(path)
+
+
 func test_playout_passes_are_persistent_and_counted_once():
 	var path := "user://course_playout_pass_%d.json" % Time.get_ticks_usec()
 	var script = load("res://core/course.gd")

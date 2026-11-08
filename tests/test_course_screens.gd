@@ -59,6 +59,41 @@ func test_pass_test_runs_positions_and_playouts_and_lists_misses():
 	Session.HistoryStorage.clean(folder)
 
 
+func test_test_playout_uses_tablebase_best_move_without_maia():
+	var session = Session.new()
+	var main = await session._session(Session.ManualWaits.new(), false)
+	var folder: String = main.history._root
+	main.course = load("res://core/course.gd").new(folder.path_join("course.json"))
+	var sample = load("res://tests/test_grader.gd")
+	var probe = sample.FakeProbe.new()
+	probe.answers[sample.FEN] = sample.answer("win", "c6c5", {"c6c5": {"result": "win", "dtz": 3}})
+	var after = load("res://core/board.gd").from_fen(sample.FEN)
+	after.make_move("c6c5")
+	probe.answers[after.to_fen()] = sample.answer("loss", "e1f2", {"e1f2": {"result": "loss", "dtz": 2}})
+	main.tablebase.queue_free()
+	var adapter = LifecycleProbe.new(probe, [])
+	main.tablebase = adapter
+	main.solving.probe = adapter
+	main.add_child(adapter)
+	var positions := []
+	for i in 6:
+		positions.append({"id": str(i), "pool": "test", "fen": sample.FEN, "side": "b", "line_length": 1, "goal": "win"})
+	var play := {"id": "convert", "fen": sample.FEN, "side": "b", "goal": "convert"}
+	var unit := {"id": "rook", "positions": positions, "test_playouts": [play, play]}
+	main._show_unit(unit)
+	main.unit_page.part_requested.emit(unit, "test")
+	main.pass_test.find_child("Start", true, false).pressed.emit()
+	for i in 6:
+		main.solving.board._commit("c6c5", false)
+		main.solving.find_child("Commit", true, false).pressed.emit()
+	assert_eq(main.settings.control, "none")
+	assert_true(main.board_view.play("c6c5"))
+	assert_eq(main.board_view.game.moves, PackedStringArray(["c6c5", "e1f2"]))
+	assert_eq(main.uci.requests.size(), 0, "the perfect opponent uses the tablebase, not Maia")
+	assert_true(main.history.games().is_empty())
+	main.free()
+
+
 func test_black_first_line_pairs_san_by_side_after_undo_and_clear():
 	var screen = load("res://ui/solving.tscn").instantiate()
 	Engine.get_main_loop().root.add_child(screen)
