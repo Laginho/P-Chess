@@ -40,20 +40,27 @@ func present(store, selected: Dictionary, settings = null) -> void:
 	var mover := "White" if board.game.board.side_to_move == "w" else "Black"
 	var opponent := "Black" if mover == "White" else "White"
 	var goal := "draw" if position_data.get("goal") in ["hold", "draw"] else "win"
-	side.get_node("Goal/Title").text = "%s to play and %s" % [mover, goal]
-	side.get_node("Goal/Instruction").text = "Enter %d of your moves, with %s's replies in between." % [int(position_data.get("line_length", 1)), opponent]
-	side.get_node("Goal/FromGame").visible = position_data.get("from_your_game", false)
+	side.get_node("GoalCard/Goal/Title").text = "%s to play and %s" % [mover, goal]
+	side.get_node("GoalCard/Goal/Instruction").text = "Enter %d of your moves, with %s's replies in between." % [int(position_data.get("line_length", 1)), opponent]
+	side.get_node("GoalCard/Goal/FromGame").visible = position_data.get("from_your_game", false)
 	var strip = side.get_node("Progress")
 	for child in strip.get_children():
 		strip.remove_child(child)
 		child.queue_free()
 	for i in positions.size():
-		var segment := ColorRect.new()
+		var segment := Panel.new()
 		segment.name = "Segment%d" % i
 		segment.custom_minimum_size = Vector2(0, 8)
 		segment.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var result: Dictionary = course.practice_result(unit, positions[i])
-		segment.color = Color("#7fa650") if result.get("first_try", false) and result.get("solved", false) else (Color("#4f6a33") if result.get("solved", false) else (Color("#ece9e4") if i == index else Color("#45423d")))
+		var style := StyleBoxFlat.new()
+		style.bg_color = Color("#7fa650") if result.get("first_try", false) and result.get("solved", false) else (Color("#4f6a33") if result.get("solved", false) else Color("#45423d"))
+		style.set_corner_radius_all(4)
+		if i == index:
+			style.border_color = Color("#ece9e4")
+			style.set_border_width_all(2)
+		segment.set_meta("current", i == index)
+		segment.add_theme_stylebox_override("panel", style)
 		strip.add_child(segment)
 	_refresh_line()
 	show()
@@ -61,12 +68,12 @@ func present(store, selected: Dictionary, settings = null) -> void:
 
 func _refresh_line() -> void:
 	var length := int(position_data.get("line_length", 1))
-	side.get_node("Line/Count").text = "%d of %d moves" % [(board.entry_moves.size() + 1) / 2, length]
+	side.get_node("LineCard/Line/Count").text = "%d of %d moves" % [(board.entry_moves.size() + 1) / 2, length]
 	var rows := PackedStringArray()
 	for i in range(0, board.entry_san.size(), 2):
 		var reply: String = board.entry_san[i + 1] if i + 1 < board.entry_san.size() else ""
 		rows.append("%d.  %s  %s" % [i / 2 + 1, board.entry_san[i], reply])
-	side.get_node("Line/Moves").text = "\n".join(rows)
+	side.get_node("LineCard/Line/Moves").text = "\n".join(rows)
 	side.get_node("Commit").disabled = board.entry_limit == 0 or board.entry_moves.size() != board.entry_limit
 
 

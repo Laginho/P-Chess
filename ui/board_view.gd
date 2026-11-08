@@ -231,19 +231,31 @@ func _draw() -> void:
 		checked = "K" if game.board.side_to_move == "w" else "k"
 	if _board_style.texture:
 		draw_texture_rect(_board_style.texture, Rect2(_corner(), Vector2.ONE * side), false)
+	if entry_mode and not _board_style.texture:
+		for i in 64:
+			var square: String = "abcdefgh"[i % 8] + str(i / 8 + 1)
+			var at := _corner() + square_position(square, side, flipped)
+			draw_rect(Rect2(at, cell), _board_style.light if _is_light(square) else _board_style.dark)
+	if entry_mode:
+		for i in 64:
+			var square: String = "abcdefgh"[i % 8] + str(i / 8 + 1)
+			var count := entry_mark_count(square)
+			if count == 0:
+				continue
+			var style := StyleBoxFlat.new()
+			style.bg_color = Color(ENTRY_MARK, minf(0.50, 0.26 + 0.12 * (count - 1)))
+			style.shadow_color = Color(ENTRY_MARK, 0.26)
+			style.shadow_size = roundi(side / 40)
+			draw_style_box(style, Rect2(_corner() + square_position(square, side, flipped), cell))
 	for i in 64:
 		var square: String = "abcdefgh"[i % 8] + str(i / 8 + 1)
 		var at := _corner() + square_position(square, side, flipped)
-		if not _board_style.texture:
+		if not entry_mode and not _board_style.texture:
 			draw_rect(Rect2(at, cell), _board_style.light if _is_light(square) else _board_style.dark)
 		if not entry_mode and last and square in [last.substr(0, 2), last.substr(2, 2)]:
 			draw_rect(Rect2(at, cell), LAST_MOVE_LIGHT if _is_light(square) else LAST_MOVE_DARK)
 		if square in premove_squares:
 			draw_rect(Rect2(at, cell), PREMOVE_LIGHT if _is_light(square) else PREMOVE_DARK)
-		if entry_mode and entry_mark_count(square) > 0:
-			var mark := ENTRY_MARK
-			mark.a = minf(0.50, 0.26 + 0.12 * (entry_mark_count(square) - 1))
-			draw_rect(Rect2(at, cell), mark)
 		var piece: String = position.piece_at(square) if position else ""
 		# A Lichess replacement is picked from the live position, so keep its source visible.
 		if game and premoves.style == "Lichess" and piece == "":
