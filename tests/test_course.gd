@@ -257,6 +257,7 @@ func test_real_rook_endgame_content_has_complete_disjoint_pools():
 			holds += 1 if position.get("goal") == "hold" else 0
 			sides[position.get("side", "")] = true
 		assert_true(holds * 3 >= pool.size(), "at least one third holds")
+		assert_true(holds < pool.size(), "both goals represented")
 		assert_true(sides.has("w") and sides.has("b"), "both sides represented")
 	for entry in [["playouts", 4, 2, 2], ["test_playouts", 2, 1, 1]]:
 		var playouts: Array = unit.get(entry[0], [])
