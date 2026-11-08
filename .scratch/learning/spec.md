@@ -132,6 +132,21 @@ The real probe is a small helper built from Fathom (MIT) that reads the bundled 
 4. Pass the test, move the clock 7 days forward (test only) or wait: Continue offers the 3-position review check before anything else. (Tests.)
 5. Review a game that reached rook and pawn against rook where you lost a draw: the move list shows the marker; its link opens the unit, where the position appears as "From your game", and Continue offers it. (Bruno, with a real game.)
 
+### Session check (2026-11-08, foreman, session `sweatshop/learning/2026-11-07-2234` at `66abb54`)
+
+Evidence reused from the integrated session's last gate (`godot --headless -s tests/run.gd`, 677 passed, 0 failed, CLEAN-020's receipt; the code is identical at the session head). Real-file tablebase tests ran with the Linux Fathom helper; six live Lc0 checks and two pixel checks were skipped (no Linux Lc0 or display in the lane clone).
+
+1. Rating dialog, map, Profile sentence: pending (Bruno). Automated: LEARN-001/LEARN-002 tests in `tests/test_home.gd`, `tests/test_profile.gd`, `tests/test_course_screens.gd`, plus LEARN-001's review captures. Not examined: physical Escape/click-outside, real fresh profile.
+2. Lucena line and slow detour: pending (Bruno). Automated: LEARN-006 grading tests at the fake-probe seam, plus the real-helper Lucena flow that LEARN-006's review ran (13/13 targeted). Not examined: a person entering the line on screen, Lichess reference per position.
+3. Losing move in a hold play-out: pending (Bruno). Automated: LEARN-007 play-out tests; its review checked hold and convert against the real tablebase. Not examined: a real Maia (Lc0) reply, a person playing.
+4. Review check at 7 days: passed. `tests/test_course.gd::test_continue_offers_review_checks_at_seven_and_thirty_days` (day 6 no, day 7 review with 3 distinct positions, ahead of a from-your-game entry; 30 days; local calendar), `tests/test_home.gd::test_continue_shows_and_opens_the_due_review_position`, `tests/test_course_screens.gd::test_review_check_grades_three_positions_once_and_keeps_mastery`.
+5. From-your-game marker on a real lost draw: pending (Bruno, real game). Automated: REV-011 tests and its review's real-probe check. Not examined: a saved real game and the marker's look.
+
+Acceptance: pending | scenario 4 passed on the integrated session; 1, 2, 3 and 5 wait for Bruno's hand checks listed above.
+Disclosure: decision | release | [LEARN-006 split](issues/110-LEARN-006-grading-and-feedback.md), receipt `/tmp/sweatshop-proxy/20261108-020737-LEARN-006-0937d8.json`: the proxy replaced spec L5's Stockfish-only probe with a native Fathom helper (LEARN-010, `703fe57`). RES-001's review had reserved that contract change for Bruno; confirm or reverse it before merging.
+Disclosure: pending | release | Windows: the Fathom helper build (MSVC, static CRT), the windows-latest CI smoke job, the accented-folder release start and RES-001's Windows probe were not run on this Linux box.
+Disclosure: pending | release | Real Maia: no Linux Lc0 in the lane, so course play-outs (CORE-007, CLOCK-003, LEARN-007, LEARN-008) never met a real Maia reply.
+
 ## Out of Scope
 
 - Any unit other than rook endgames, and any stage content beyond the one unit. No placeholders for them.
