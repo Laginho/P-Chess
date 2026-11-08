@@ -1,5 +1,5 @@
 # REV-011: The from-your-game marker in Review
-Stage: to-review
+Stage: done
 Blocked by: LEARN-006, LEARN-009
 Review: agent
 Difficulty: normal
@@ -83,3 +83,59 @@ Fresh-context subagent checked each criterion and rechecked the added coverage.
 - ✅ 7: `core/own_game_scan.gd:30` discards results on probe failure; `tests/test_review.gd:2428` checks no marker, saved position or error dialog.
 
 The initial marker fixture needed explicit Array typing and one clock per move; these harness corrections are in test-only commits. A mutation of material filtering and result inversion failed the scan tests as expected. The stale-review test exposed a freed row capture, fixed before the gate.
+
+
+#### Resolution (2026-11-08)
+Verdict: Approve
+
+Standards: no documented-standard violations or actionable baseline smells. The
+independent `review_standards` subagent reviewed the complete diff, glossary,
+ADRs, Primary files and commit separation. Test commits and production commits
+remain separate; the default-length/spec additions follow the proxy decision.
+
+Spec: no blocking findings across criteria 1–7. The independent `review_spec`
+subagent reviewed the complete diff against the numbered contract and §L10.
+Stage 3 authored no production behavior or test changes.
+
+Examined callers, failure paths and interactions: completed sandbox games and
+History → Review; tablebase startup, serialized asynchronous callbacks and failed
+probes; exact material/player filtering and result inversion; stale callbacks
+when another Review replaces the old one; marker placement beside repertoire
+rows, resizing and unit navigation; course writes, FEN deduplication, practice
+positions, Continue and solving. No known unresolved implementation defects.
+Visual rendering with multiple markers and the real saved-game walkthrough were
+not verified.
+
+- ✅ 1: `core/own_game_scan.gd:11` filters player moves and exactly K+R+P vs K+R; scan tests cover either colour, a PGN reaching that material and nearby excluded material.
+- ✅ 2: `core/own_game_scan.gd:30` probes both positions and inverts the result after the move; scan tests cover changed and unchanged results, and the installed probe reproduced draw → loss after `a3a4`.
+- ✅ 3: `ui/review.gd:1437` inserts green, nonselectable marker rows under the corresponding move row using the existing repertoire-row fitting; the Review test checks placement/text/selection. Headless layout measured wrapping at 1280×800 and 800×600; visual appearance remains pending.
+- ✅ 4: `ui/review.gd:347` emits `unit_requested`; `ui/main.gd:290` opens the unit. Tests cover the row click and navigation; the real-probe smoke also opened the unit.
+- ✅ 5: `core/course.gd:181` persists one entry per FEN; `ui/review.gd:1449` supplies the player's side, pre-move goal and unit default. Course/Review tests cover reload, duplication, win/hold goals and Continue.
+- ✅ 6: the scan returns without probing nonmatching material; the scan tests cover ordinary and nearby material and the Review UI changes only when markers are returned.
+- ✅ 7: startup/probe failures discard the entire scan; scan and Review tests cover failure after a prospective marker and the absence of rows, saved positions and an error dialog.
+
+Red/green evidence reviewed: course test `161bd43` → implementation `e184947`;
+scan test `b5f8795` → implementation `9308d01`; marker test `76bad42` →
+implementation `28228f0`; stale-callback test `9c29964` → repair `5d394b5`.
+The stage-2 record documents test-only fixture corrections and failing material/
+result-inversion mutations. Gate receipt for tested commit `9659c65` was verified
+with `Assert-GateEvidence`; the log hash matches and only ticket metadata changed
+since that code. Gate output: **674 passed, 0 failed**, exit 0. Rebase was a no-op;
+merge introduced no conflicts or code changes, so the existing gate was reused.
+
+Additional execution evidence: the installed tablebase found `a3a4` changed the
+practice Philidor position from draw to loss. An external headless smoke exercised
+the real asynchronous scan, marker, persisted hold position with line length 3,
+layout resizing and unit navigation, all passing. Script/log:
+`/run/media/lage/New Volume/Scratch/REV-011/review-smoke.gd` and
+`/run/media/lage/New Volume/Scratch/REV-011/review-smoke.log`.
+
+The recorded `Proxy decided (opus-5.5 xhigh)` decision sets
+`default_line_length: 3`; it is reflected in the unit JSON and spec §L1. It has no
+remaining integration action and changes no existing progress format.
+
+Acceptance: pending | [spec acceptance scenario 5](../spec.md#acceptance-scenarios): Bruno's real saved-game walkthrough and visual check of marker appearance, multiple rows and resizing remain; automated gate and real-probe smoke passed.
+Disclosure: decision | none | [recorded proxy decision](#comments): three moves is the unit default; data/spec already reflect it, with no remaining integration action.
+Disclosure: pending | release | [spec acceptance scenario 5](../spec.md#acceptance-scenarios): verify the marker and unit/Continue flow using a real saved game, including visual appearance at supported sizes and multiple markers, before release.
+
+Integrated into `sweatshop/learning/2026-11-07-2234` with merge `348cd15`.
