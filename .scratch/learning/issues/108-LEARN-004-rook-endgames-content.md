@@ -1,5 +1,5 @@
 # LEARN-004: Rook endgames content
-Stage: reviewing
+Stage: done
 Blocked by: RES-001, LEARN-002
 Review: human
 Difficulty: normal
@@ -103,3 +103,37 @@ Drafted the complete rook endgame unit and stage name; the position sources, all
 Gate: `godot --headless -s tests/run.gd` — 594 passed, 0 failed, exit 0 on 2026-11-08, tested commit `f573557fb057051aba65c09af4002c419d052841`. One graphical pixel check and six live Lc0 checks were skipped by the existing suite.
 
 Gate evidence: /run/media/lage/New Volume/Scratch/LEARN-004/gate.json
+
+#### Resolution (2026-11-08)
+
+Verdict: Approve
+
+Reviewed the complete five-file diff `9dbf066...fdf31ff` and all eleven commits with independent read-only Standards and Spec reviewers `/root/standards` and `/root/spec`. Author of the one-line test correction: `/root`; both independent reviewers checked `27e85c0..fdf31ff` and approved it. No production behavior was authored during stage 3.
+
+Standards: 0 documented violations or actionable smells. All eleven commits separate tests from production. The screen expectation updates fit stage 2's replacement-behavior exception: the stage name and populated books changed, while the empty-books assertion remains byte-for-byte and is reached with an explicit copy lacking books. Primary-file boundaries and ADRs are respected.
+
+Spec: one criterion 7 coverage gap was found and fixed in `fdf31ff`: the shape test accepted all-hold solving pools despite criterion 2 requiring mixed goals. The added assertion requires a winning position in each pool; current content already complies. Both independent reviewers confirmed the finding is closed. No other missing criteria, scope creep or regression was found.
+
+- ✅ 1: `data/course/rook-endgames.json:20` contains 12 practice and 18 test positions with distinct board/turn keys, the specified material, playable FENs, side to move and integer line lengths of 2–4. `tests/test_course.gd:203` checks the real data through `Course.units()`; the independent python-chess recheck validates every FEN.
+- ✅ 2: Practice has 7 wins/5 holds, 6 White/6 Black; test has 11 wins/7 holds, 8 White/10 Black. `tests/test_course.gd:253` now enforces the minimum hold share, both goals and both colors.
+- ✅ 3: Re-ran the supplied verifier against the current data using python-chess 1.11.2 and RES-001's local Syzygy files. All 36 solving/play-out FENs match the complete output pasted above: win/convert is WDL +2, hold is 0; DTZ fits the remaining 50-move clock. No goal relies on an engine evaluation.
+- ✅ 4: `data/course/rook-endgames.json:292` supplies 2 convert/2 hold play-outs and `:322` supplies 1 convert/1 hold test play-outs. The real-data test checks counts and disjoint keys across all 36 setups.
+- ✅ 5: `data/course/rook-endgames.json:5` provides a one-line goal, four search terms and one book with named Lucena/Philidor sections, without placeholders. The [publisher](https://www.silmanjamespress.com/shop/chess/silmans-complete-endgame-course/) confirms those topics. This review could not re-fetch the previously cited Library of Congress table of contents (HTTP 403); exact reference/content approval remains Bruno's pending review.
+- ✅ 6: `data/course/course.json:4` supplies the draft name “Endgame foundations”, selected by the recorded proxy decision. The map's real-data screen test checks its display. Bruno's final name confirmation remains pending as disclosed below.
+- ✅ 7: `tests/test_course.gd:203` loads the real unit through the production course module and checks the required shape and distributions. The review's all-hold mutation now fails once for each pool; restoring the supplied content passes.
+
+Affected callers, failure paths and cross-feature interactions examined: JSON loading and stage selection in `core/course.gd`; practice counts/status keyed by position ID; map and unit board previews; theory goal/search/book rendering and navigation through `ui/main.gd`; repeated theory presentation with populated and empty books; board FEN parsing, material, side to move, castling/en-passant state, back-rank pawns, prior-side check and legal moves; all position goals against Syzygy; Lichess source/provenance fields. The [Lichess export](https://database.lichess.org/) confirms CC0 and that the first listed opponent move must be applied before presenting a position. Not exercised here: physical play-throughs, native Windows behavior, visual layout of the populated reference, live Maia, future solving/grading screens, or educational difficulty. These are not established by shape or tablebase checks.
+
+Red/green proof: the stage-2 pool test `94309ec` rejected the two-position seed; screen expectations `de06a51` rejected the provisional name/empty references; separate test-only corrections account for JSON numeric types, legality and retained empty-book coverage. During review, replacing every solving goal with `hold` passed the old focused test (exit 0); after `fdf31ff`, the same mutation failed with exactly two “both goals represented” assertions (exit 1). Restoring the unchanged real JSON passed (0 failures, exit 0). Logs: [before](</run/media/lage/New Volume/Scratch/LEARN-004/review-all-hold-before.log>), [red](</run/media/lage/New Volume/Scratch/LEARN-004/review-all-hold-red.log>), [green](</run/media/lage/New Volume/Scratch/LEARN-004/review-content-green.log>).
+
+Gate: `godot --headless -s tests/run.gd` — 594 passed, 0 failed, exit 0 at tested commit `fdf31ff`. A fresh full gate was required because review strengthened the test. The official helper validated the command, log SHA-256, exit marker and identical tested code before and after integration. The suite skipped one graphical pixel check and six live Lc0 checks. `git diff --check` passed. Rebase onto the session was a no-op.
+
+Delivery: integrated into `sweatshop/learning/2026-11-07-2234` with merge commit `1d1b366`. This closing commit records `Stage: done` and its ledger entry together. No PR or push was performed in the session flow.
+
+Proxy disclosure: the existing `Proxy decided (opus-5.5 xhigh): Name the stage "Endgame foundations" and go ahead with the draft content.` record was checked against [its receipt](/tmp/sweatshop-proxy/20261108-005906-LEARN-004-0a1258.json). The proxy accepted a reversible draft name/content so implementation could proceed, leaving confirmation and tuning to Bruno's human review. No new proxy call or contract change was made during this review.
+
+Acceptance: pending | Bruno must review the draft stage name, book/section pointer, positions, line lengths and difficulty, then play representative solves and play-outs when those boards exist. Automated shape checks and all 36 Syzygy results pass; they do not establish educational quality. Actual Maia difficulty acceptance is also tracked under [LEARN-007 Comments](111-LEARN-007-play-outs.md).
+Disclosure: decision | release | [Recorded proxy receipt](/tmp/sweatshop-proxy/20261108-005906-LEARN-004-0a1258.json): “Endgame foundations” and the unit content are drafts accepted by the proxy for session integration; Bruno's final approval/tuning is required before release.
+Disclosure: pending | release | [Manual verification and Comments above](108-LEARN-004-rook-endgames-content.md) and [LEARN-007](111-LEARN-007-play-outs.md): Bruno's content/reference/line-length review and representative solves/play-outs remain pending; tablebase truth is verified, human difficulty is not.
+
+Gate evidence: /run/media/lage/New Volume/Scratch/LEARN-004/review-gate.json
