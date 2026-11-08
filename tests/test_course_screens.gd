@@ -20,6 +20,52 @@ func test_black_first_line_pairs_san_by_side_after_undo_and_clear():
 	screen.free()
 
 
+func test_enter_commits_only_full_line_even_when_action_buttons_have_focus():
+	var root = Engine.get_main_loop().root
+	var screen = load("res://ui/solving.tscn").instantiate()
+	root.add_child(screen)
+	var unit := {"id": "keys", "positions": [{"id": "one", "pool": "practice", "fen": preload("res://core/game.gd").START, "line_length": 2, "side": "w", "goal": "win"}]}
+	screen.present(load("res://core/course.gd").new("user://absent_keys_test.json"), unit)
+	var commits := []
+	var backs := []
+	screen.line_committed.connect(func(position, uci, san): commits.append([position, uci, san]))
+	screen.back_requested.connect(func(): backs.append(true))
+	await Engine.get_main_loop().process_frame
+	for keycode in [KEY_ENTER, KEY_KP_ENTER]:
+		for button_name in ["Undo", "Clear", "Back", "Commit"]:
+			screen.board.clear_entry()
+			for move in ["e2e4", "e7e5", "g1f3"]:
+				screen.board._commit(move, false)
+			var button = screen.find_child(button_name, true, false)
+			button.grab_focus()
+			assert_eq(root.gui_get_focus_owner(), button, button_name + " receives focus")
+			var previous := commits.size()
+			for pressed in [true, false]:
+				var event := InputEventKey.new()
+				event.keycode = keycode
+				event.physical_keycode = keycode
+				event.pressed = pressed
+				root.push_input(event, true)
+				await Engine.get_main_loop().process_frame
+			assert_eq(commits.size(), previous + 1, button_name + " commits once")
+			assert_eq(screen.board.entry_moves, PackedStringArray(["e2e4", "e7e5", "g1f3"]), button_name + " does not alter the line")
+			assert_eq(backs.size(), 0, "Enter does not go back")
+			if button_name != "Commit":
+				screen.board.undo_entry()
+				previous = commits.size()
+				for pressed in [true, false]:
+					var event := InputEventKey.new()
+					event.keycode = keycode
+					event.physical_keycode = keycode
+					event.pressed = pressed
+					root.push_input(event, true)
+					await Engine.get_main_loop().process_frame
+				assert_eq(commits.size(), previous, "short line cannot commit")
+				assert_eq(screen.board.entry_moves, PackedStringArray(["e2e4", "e7e5"]), button_name + " leaves a short line intact")
+				assert_eq(backs.size(), 0, "Enter on a short line does not go back")
+	screen.free()
+
+
 func test_course_navigation_unit_progress_and_clock():
 	var folder := "user://course_screens_%d" % Time.get_ticks_usec()
 	DirAccess.make_dir_recursive_absolute(folder)
