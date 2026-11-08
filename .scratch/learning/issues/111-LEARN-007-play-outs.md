@@ -1,5 +1,5 @@
 # LEARN-007: Play-outs against Maia
-Stage: reviewing
+Stage: done
 Blocked by: CORE-007, CLOCK-003, LEARN-004, LEARN-006
 Review: agent
 Difficulty: normal
@@ -59,7 +59,7 @@ The unit's four play-outs (spec §L8, design `PlayoutStart.dc.html`, `PlayoutEnd
   - 9 ✅ `ui/unit_page.gd:45`; `test_continue_moves_to_first_unfinished_part_and_disappears_when_done` and `test_playout_passes_are_persistent_and_counted_once`.
 - Verification: `godot --headless -s tests/run.gd` passed 650 tests, 0 failed. The headless run skipped two pixel checks and live Lc0 tests because the engine is absent. Captured the start at 1280×800 and the end at 800×600 using the graphical fixture. Manual play against real Maia (intentional hold failure, successful convert, legal reply from the supplied FEN) and Bruno's difficulty assessment remain for release; they could not be performed without Lc0 and the Maia nets.
 
-Gate evidence: /run/media/lage/New Volume/Scratch/learn007-captures/gate-final.json
+Gate evidence: /run/media/lage/New Volume/Scratch/LEARN-007-review/gate.json
 
 - Updated `test_course_navigation_unit_progress_and_clock` for the new play-out screen: return from it before continuing the existing navigation assertions. Disabling its Back connection makes the updated test fail.
 
@@ -72,3 +72,50 @@ Gate evidence: /run/media/lage/New Volume/Scratch/learn007-captures/gate-final.j
 - 2026-11-07 RES-001 review follow-up: assess hold/convert difficulty with Bruno on the actual LEARN-004 course positions before release. The research's small random sample and WDL-preserving opponent do not validate human difficulty or 50-move-perfect play; record the manual play-out outcome here. See `docs/research/tablebase.md` and RES-001's dated Resolution; this adds no implementation criterion.
 
 - 2026-11-07 CORE-007 review follow-up: before release, verify that a course play-out starts at its supplied FEN and real Maia replies with legal moves after the player moves. CORE-007's fake-bridge tests cover the start FEN and both current/previous-position request histories, but the headless gate skipped live Lc0 checks because the engine was unavailable. Record the real-engine outcome here with the play-out acceptance above; see `102-CORE-007-game-keeps-its-start-position.md` Resolution. This adds no implementation criterion.
+
+
+### Stage 3 review and integration (2026-11-08)
+
+#### Resolution (2026-11-08)
+Verdict: Approve
+
+Reviewed the complete `5e7acdd...3cbc730` diff and all 21 stage-2 commits with independent read-only reviewers `/root/review_standards` and `/root/review_spec`. All nine numbered criteria pass. The closing reviewer corrected one stale comment in `ui/main.gd` to identify `_show_result` as the sandbox result path; no production behavior was authored during review.
+
+##### Standards
+
+**0 documented-standard violations; 2 nonblocking heuristic suggestions.** All 11 changed files are within Primary files, and all stage-2 commits separate tests from production. The review covered `AGENTS.md`, tracker/domain guidance, `CONTEXT.md`, all ADRs, the learning design README and the code-review smell baseline. No `CODING_STANDARDS.md` or `CONTRIBUTING.md` exists.
+
+- Possible Duplicated Code: `ui/playout.gd:116` advertises a literal 30 while the judge reads `Tunables.COURSE_HOLD_MOVES`. The required and shipped limit is currently 30, so no criterion fails. Future synchronization is scheduled in [CLEAN-018](118-CLEAN-018-playout-hold-rule-copy.md), pending triage.
+- Possible Message Chains: `details.get_parent().get_parent()` controls the locally constructed card. The closing reviewer assessed this as a local construction detail consistent with the screen builder; retaining another card field is an optional style choice, with no confirmed defect or required repair.
+
+##### Spec
+
+**0 findings.** No missing numbered requirement, scope creep or introduced regression was found.
+
+- ✅ 1: `ui/playout.gd:97` presents the task, four states, course Maia level, clock and rules. Start-screen tests cover both clock choices and replaying a passed position.
+- ✅ 2: `ui/main.gd:593,471` supplies the course FEN, player side, Maia level and clock to the normal game screen. Both fake-bridge screen tests and the real-helper smoke check the supplied FEN/settings.
+- ✅ 3: `core/playout_judge.gd:16` compares the root result with the played move; `ui/main.gd:881` waits for the probe before Maia. Held-probe and real losing-hold checks confirm the ordering.
+- ✅ 4: `ui/main.gd:878,918` prioritizes the clock flag, including a flag during a mating move. Flag and terminal-move race regressions cover it.
+- ✅ 5: `core/playout_judge.gd:24` checks result preservation before promotion, mate, pawn removal or the 30-move boundary. Judge tests cover these conditions and 29/30; the real conversion reaches promotion.
+- ✅ 6: `ui/main.gd:894` supplies SAN failure/advice text; `ui/playout.gd:123` presents the final position and failed-square blunder icon. Screen tests and the real failing hold verify them.
+- ✅ 7: `core/course.gd:222`, `ui/main.gd:621` and `ui/playout.gd:136` persist passes and supply Next/Retry/Back. Tests cover reload, repeated passes, retry, next position and the fourth end card.
+- ✅ 8: The course move/finish paths return before the sandbox save path; guards at `ui/main.gd:316,345,932` isolate shortcuts and results. Tests and the real failure/conversion confirm empty History and untouched stats, including after Back.
+- ✅ 9: Existing `ui/unit_page.gd:45` uses the persisted four-pass count to mark the part done and advance Continue. Course persistence and Continue tests cover completion.
+
+Affected callers, failure paths and interactions examined: unit/start/end navigation; first unfinished position and replay; shared game startup and engine errors; current/previous FEN policy requests; asynchronous probe ordering and generation invalidation; clock, terminal move and premove ordering; promotion/mate/pawn/count passes; write-failure handling and progress reload; sandbox actions, result recording, History/Profile isolation and Continue. Not exercised live: actual Lc0/Maia policy, native Windows startup or physical user input. The existing manual difficulty assessment remains a release check.
+
+Independent real-file verification: [script](</run/media/lage/New Volume/Scratch/LEARN-007-review/real-smoke.gd>) and [log](</run/media/lage/New Volume/Scratch/LEARN-007-review/real-smoke.log>), **19 checks passed**, no runtime script errors, exit 0. Main used the real Fathom helper and installed tables with isolated progress/history. In bundled hold 3 (`8/8/1RK5/r3k3/2P5/8/8/8 b - - 20 54`), `Ra1` changed draw to loss; the failure card named `Ra1` and holding alternative `Kd4`, marked the failed move and opened before any Maia request. Bundled convert 1 promoted after 23 plies, recorded a pass surviving reload and wrote no History/stats. Opponent moves in this smoke came from the real probe through `Session.HeldBridge`; this is not a live-Maia result.
+
+Current-code graphical checks: [start at 800×600](</run/media/lage/New Volume/Scratch/LEARN-007-review/start-800.png>), [end at 800×600](</run/media/lage/New Volume/Scratch/LEARN-007-review/end-current.png>) and [end at 1280×800](</run/media/lage/New Volume/Scratch/LEARN-007-review/end-1280.png>). Headings, rules/reason, board and action buttons fit. The earlier end capture predates the final style commit; the current capture removes its empty details card. A suspected title crop was independently checked against the PNGs and [control geometry](</run/media/lage/New Volume/Scratch/LEARN-007-review/geometry-spec.gd>): at 800×600 the logical viewport is 1280×960, heading y32 and Back ending y928; no overflow was confirmed.
+
+Test-first history retained: `04d99f1` → `2bdcc2c` adds pass recording; `acc9b2a`/`450a404` → `a4d284a` adds judging; `ba5b7ef`/`28fd820` → `e79ea91` adds the game flow; later test-only commits precede the failure-marker, startup, flag/isolation, replay-state and return-to-unit corrections. The historical test-only commits target missing public behavior, and the final gate confirms them green. The retained pawn and History public-query corrections repair test harnesses. No test/production split or Primary-files violation was found.
+
+Foreground bound gate at tested commit `194d4a261d40f1b8db8f133cc0e06ff5c2c109f8`: `godot --headless -s tests/run.gd`, **650 passed, 0 failed**, exit 0. [Log](</run/media/lage/New Volume/Scratch/LEARN-007-review/gate.log>) and [receipt](</run/media/lage/New Volume/Scratch/LEARN-007-review/gate.json>). Real-file tablebase checks ran. Existing skips: two graphical pixel checks under headless and six live Lc0 methods because the engine is absent; current-code graphical captures and the real helper were checked separately above. The original receipt at `7601144` was valid, but the documentation-only source correction required this fresh run. The official `Assert-GateEvidence` helper validates the command, tested commit, exit marker, log SHA-256 and identical code through closure. `git diff --check` passed.
+
+No proxy decision or contract change was introduced. The ticket contains no `Proxy decided` record requiring a receipt.
+
+Delivery: rebase onto `sweatshop/learning/2026-11-07-2234` was a no-op. Integrated without squash in merge `2655e78`; documentation-only review correction `194d4a2` follows it. This closure records `Stage: done` and the ledger entry together on the session branch. No PR or push is part of this stage.
+
+Acceptance: pending | Real-helper failure/conversion, automated criteria and current-code captures passed as linked above. Actual Maia play from the supplied FEN, an intentional hold failure, successful conversion and Bruno's difficulty assessment remain release checks from the original Verification and dependency notes; Lc0 and Maia nets are absent in this checkout.
+Disclosure: pending | release | [Original verification and dependency notes](111-LEARN-007-play-outs.md#verification), [RES-001](101-RES-001-tablebase-and-maia-spike.md) and [CORE-007](102-CORE-007-game-keeps-its-start-position.md): verify real Maia replies legally and complete Bruno's play-out/difficulty acceptance before release. The real-helper smoke above covers FEN, grading and conversion with a scripted opponent only.
+Disclosure: pending | none | [CLEAN-018](118-CLEAN-018-playout-hold-rule-copy.md) tracks the nonblocking tunable-copy cleanup; the current displayed and enforced limit are both 30.
