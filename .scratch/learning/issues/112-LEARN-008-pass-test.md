@@ -1,5 +1,5 @@
 # LEARN-008: Pass test
-Stage: to-implement
+Stage: blocked
 Blocked by: LEARN-004, LEARN-007
 Review: agent
 Difficulty: normal
@@ -43,3 +43,5 @@ The unit's last part (spec §L8, design `TestStart.dc.html`, `TestResult.dc.html
 ## Comments
 
 - 2026-11-07 Written from `.scratch/learning/spec.md` §L8.
+
+- 2026-11-08 Stage stopped (incomplete handoff): Invalid committed handoff: test and production in one commit: 6e3dd50e mixes ui/pass_test.gd with scripts/screens.gd; e286bb1e mixes ui/pass_test.gd with ui/main.gd; 3f27f10b mixes ui/pass_test.gd with ui/main.gd. Split it; a test fixture kept beside production goes in the binding's `Test files:`. See /home/lage/Projects/P-Chess/.artifacts-build/lanes/learning/.scratch/run-log/LEARN-008-implement-20261108-045850.txt.runtime.json and run-log/recovery.txt; inspect the saved work before retrying.
