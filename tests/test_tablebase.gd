@@ -273,3 +273,126 @@ func test_stop_error_and_free_finish_all_pending_callbacks_once():
 		setup.bridge.cleanup()
 		setup.bridge.free()
 		_remove(setup.root)
+
+
+func _live():
+	if OS.get_name() != "Linux" or not FileAccess.file_exists("res://engine/tablebase/KRPvKR.rtbz"):
+		print("SKIP tablebase real-file checks: requires the Linux tablebase installation")
+		return null
+	var script = _script()
+	if script == null:
+		return null
+	var probe = script.new()
+	assert_true(probe.start(), probe.error)
+	return probe
+
+
+func _probe(probe, fen: String) -> Dictionary:
+	var received := []
+	probe.probe(fen, func(answer): received.append(answer))
+	var deadline := Time.get_ticks_msec() + 5000
+	while received.is_empty() and Time.get_ticks_msec() < deadline:
+		probe.poll()
+		OS.delay_msec(1)
+	assert_eq(received.size(), 1, "one answer within 5 s: " + fen)
+	return received[0] if received else {"ok": false, "error": "test timeout"}
+
+
+func test_real_res001_move_values_and_complete_move_set():
+	var probe = _live()
+	if probe == null:
+		return
+	var answer := _probe(probe, RES_FEN)
+	assert_true(answer.ok, answer.get("error", ""))
+	if answer.ok:
+		assert_eq(answer.result, "win")
+		assert_eq(answer.best, "a1h1")
+		assert_eq(answer.dtz, 1)
+		assert_eq(answer.moves.size(), 18)
+		assert_eq(answer.moves.a1h1, {"result": "win", "dtz": 1})
+		assert_eq(answer.moves.a1a5, {"result": "draw", "dtz": 0})
+		assert_eq(answer.moves.a1a3, {"result": "loss", "dtz": 3})
+		var expected := Array(Board.from_fen(RES_FEN).legal_moves())
+		var actual: Array = answer.moves.keys()
+		expected.sort()
+		actual.sort()
+		assert_eq(actual, expected)
+	probe.free()
+
+
+func test_real_promotions_nonzeroing_distance_rule50_and_bare_kings():
+	var probe = _live()
+	if probe == null:
+		return
+	# Independent expected values: python-chess 1.11.2, outside this repository.
+	var promotion := _probe(probe, "8/7P/8/8/2k5/8/8/1K6 w - - 0 1")
+	assert_true(promotion.ok, promotion.get("error", ""))
+	if promotion.ok:
+		assert_eq(promotion.moves.h7h8q, {"result": "win", "dtz": 1})
+		assert_eq(promotion.moves.h7h8r, {"result": "win", "dtz": 1})
+		assert_eq(promotion.moves.h7h8b, {"result": "draw", "dtz": 0})
+		assert_eq(promotion.moves.h7h8n, {"result": "draw", "dtz": 0})
+	var win_fen := "8/8/8/4k3/8/4K3/8/R7 w - - 0 1"
+	var win := _probe(probe, win_fen)
+	var child := _probe(probe, "8/8/8/4k3/8/5K2/8/R7 b - - 1 1")
+	var cursed := _probe(probe, win_fen.replace(" 0 1", " 98 1"))
+	assert_true(win.ok and child.ok and cursed.ok, str([win, child, cursed]))
+	if win.ok and child.ok and cursed.ok:
+		assert_eq(win.result, "win")
+		assert_eq(win.moves.e3f3, {"result": "win", "dtz": 27})
+		assert_eq(child.dtz, 26)
+		assert_eq(win.moves.e3f3.dtz, child.dtz + 1)
+		assert_eq(cursed.result, "draw")
+	var capture := _probe(probe, "8/8/8/4k3/8/8/1r6/1K6 w - - 0 1")
+	assert_true(capture.ok, capture.get("error", ""))
+	if capture.ok:
+		assert_eq(capture.moves.b1b2, {"result": "draw", "dtz": 0})
+	assert_eq(_probe(probe, "8/8/8/4k3/8/4K3/4P3/R5Rr w - - 0 1").ok, false)
+	assert_eq(_probe(probe, RES_FEN.replace(" w - ", " w K ")).ok, false)
+	probe.free()
+
+
+func test_real_helper_protocol_and_missing_position_or_child_tables():
+	if OS.get_name() != "Linux" or not FileAccess.file_exists("res://engine/tablebase/KRPvKR.rtbz"):
+		print("SKIP native helper checks: requires the Linux tablebase installation")
+		return
+	var helper := ProjectSettings.globalize_path("res://engine/tbprobe/tbprobe")
+	assert_true(FileAccess.file_exists(helper), "native helper is missing; run scripts/build-tbprobe.ps1")
+	if not FileAccess.file_exists(helper):
+		return
+	var child := OS.execute_with_pipe(helper, [])
+	child.stdio.store_string("uci\nsetoption name SyzygyPath value ../tablebase\nisready\nposition fen " + RES_FEN + "\ngo\n")
+	assert_true(child.stdio.get_line().begins_with("id name P-Chess tbprobe (Fathom "))
+	assert_eq(child.stdio.get_line(), "uciok")
+	assert_eq(child.stdio.get_line(), "readyok")
+	var count := 0
+	var line: String = child.stdio.get_line()
+	while line.begins_with("info string tbmove "):
+		count += 1
+		line = child.stdio.get_line()
+	assert_eq(count, 18)
+	assert_eq(line, "bestmove a1h1")
+	for fen in [RES_FEN.replace(" w - ", " w K "), "bad fen",
+			"8/8/8/4k3/8/4K3/4P3/R5Rr w - - 0 1"]:
+		child.stdio.store_string("position fen " + fen + "\ngo\n")
+		assert_true(child.stdio.get_line().begins_with("info string tberror "), fen)
+		assert_eq(child.stdio.get_line(), "bestmove (none)")
+	child.stdio.store_string("position fen 7k/6Q1/5K2/8/8/8/8/8 b - - 0 1\ngo\n")
+	assert_eq(child.stdio.get_line(), "bestmove (none)")
+	var root := OS.get_user_data_dir().path_join("tb-missing-%d" % Time.get_ticks_usec())
+	DirAccess.make_dir_recursive_absolute(root)
+	for suffix in [".rtbw", ".rtbz"]:
+		DirAccess.copy_absolute(ProjectSettings.globalize_path("res://engine/tablebase/KRvK" + suffix), root.path_join("KRvK" + suffix))
+	child.stdio.store_string("setoption name SyzygyPath value " + root + "\nposition fen " + RES_FEN + "\ngo\n")
+	assert_true(child.stdio.get_line().begins_with("info string tberror "))
+	assert_eq(child.stdio.get_line(), "bestmove (none)")
+	# The position's own pair is present; a capturable rook leads to missing KRPvK.
+	for suffix in [".rtbw", ".rtbz"]:
+		DirAccess.copy_absolute(ProjectSettings.globalize_path("res://engine/tablebase/KRPvKR" + suffix), root.path_join("KRPvKR" + suffix))
+	child.stdio.store_string("setoption name SyzygyPath value " + root + "\nposition fen " + RES_FEN + "\ngo\n")
+	assert_true(child.stdio.get_line().begins_with("info string tberror "))
+	assert_eq(child.stdio.get_line(), "bestmove (none)")
+	child.stdio.store_line("quit")
+	child.stdio.close()
+	child.stderr.close()
+	_remove(root)
