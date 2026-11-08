@@ -1,5 +1,5 @@
 # LEARN-006: Grading a line, and the feedback
-Stage: to-implement
+Stage: implementing
 Blocked by: CI-005, LEARN-005, LEARN-010
 Review: agent
 Difficulty: hard
@@ -55,3 +55,8 @@ Commit grades the line by tablebase and shows the feedback designed in `SolvingF
 - 2026-11-08 Contract reconciled before implementation: [LEARN-010](117-LEARN-010-tablebase-probe.md) owns the shared native probe, its fake-UCI and real-file seams, build and Windows packaging. LEARN-006 consumes that interface and preserves its grading/feedback scope, DTZ margin and error-without-recording requirement. Stage 2 stops here without code or a ticket branch, as the proxy directed; resume LEARN-006 after LEARN-010 is done. RES-001/CI-005's Windows Stockfish check still verifies table loading; LEARN-010 adds acceptance for the application's actual probe path, pending Bruno before release.
 
 - 2026-11-08 Attempt 1 failed: exit 0. Log tail: LEARN-006 permanece `to-implement`, aguardando o novo [LEARN-010](/home/lage/Projects/P-Chess/.artifacts-build/lanes/learning/.scratch/learning/issues/117-LEARN-010-tablebase-probe.md), que fornecerá DTZ exato via Fathom. /  / O proxy aprovou a separação. Tickets e especificação atualizados no commit `703fe57`; recibo e dependências validados. Apenas documentação mudou. /  / A [skill ticket-flow](/home/lage/.agents/skills/ticket-flow/SKILL.md) determina parar quando “the ticket needs more than one seam (back to stage 1)”. Próxima etapa: **LEARN-010**.
+
+### Stage 2 (2026-11-08)
+
+- LEARN-010 is done and merged into the learning session. Implementing on `LEARN-006` from `d4b6190`; no contract change.
+- Callers/boundaries before tests: the new grader consumes only `probe(fen, callback)` answers; Course readers are unit/map/solving and future Continue. Solving Commit currently emits an unhandled line signal; existing entry tests cover repeated commits without a configured probe. Main owns engine nodes. Boundaries to preserve: black-first SAN, empty practice, exact DTZ margin, draw/terminal positions, failed reads/writes, asynchronous errors, repeated Commit, Back/Retry/Next during pending callbacks, and reopening an already solved position. Approved seams: scripted probe/grader, Course public persistence/progress, scene controls with a fake probe.
