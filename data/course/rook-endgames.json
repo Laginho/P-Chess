@@ -1,0 +1,15 @@
+{
+  "id": "rook-endgames",
+  "title": "Rook endgames",
+  "subtitle": "Lucena and Philidor",
+  "theory": {
+    "goal": "Learn to convert and hold rook and pawn against rook.",
+    "search_terms": ["Lucena position", "Philidor position", "rook and pawn versus rook"],
+    "books": []
+  },
+  "positions": [
+    {"id": "lucena", "fen": "1K1k4/1P6/8/8/8/8/r7/2R5 w - - 0 1", "side": "w", "goal": "win", "line_length": 2, "pool": "practice", "source": "https://en.wikipedia.org/wiki/Lucena_position"},
+    {"id": "philidor", "fen": "8/8/8/8/4pk2/R7/7r/4K3 w - - 0 1", "side": "w", "goal": "hold", "line_length": 2, "pool": "practice", "source": "https://en.wikipedia.org/wiki/Philidor_position"}
+  ],
+  "playouts": []
+}

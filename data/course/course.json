@@ -1,0 +1,3 @@
+{
+  "stages": [{"name": "Your stage", "min_rating": -200, "max_rating": 3500, "units": ["rook-endgames.json"]}]
+}

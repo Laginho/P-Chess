@@ -3,10 +3,12 @@ extends RefCounted
 # Progress is shared with future course features; preserve fields we do not own.
 var path: String
 var _progress := {}
+var index_path: String
 
 
-func _init(file := "user://course.json") -> void:
+func _init(file := "user://course.json", index := "res://data/course/course.json") -> void:
 	path = file
+	index_path = index
 	var result := _read()
 	_progress = result.data
 
@@ -75,3 +77,27 @@ func save_rating(number, site: String) -> bool:
 		return false
 	_progress = next
 	return true
+
+
+func stage() -> Dictionary:
+	if rating().is_empty():
+		return {}
+	var index = JSON.parse_string(FileAccess.get_file_as_string(index_path))
+	if not index is Dictionary or not index.get("stages", []) is Array:
+		return {}
+	var value := chess_com_rating()
+	for item in index.stages:
+		if item is Dictionary and value >= item.get("min_rating", 0) and value <= item.get("max_rating", -1):
+			return item
+	return {}
+
+
+func units() -> Array:
+	var result := []
+	for filename in stage().get("units", []):
+		if not filename is String:
+			continue
+		var unit = JSON.parse_string(FileAccess.get_file_as_string(index_path.get_base_dir().path_join(filename)))
+		if unit is Dictionary and not unit.get("id", "").is_empty():
+			result.append(unit)
+	return result
