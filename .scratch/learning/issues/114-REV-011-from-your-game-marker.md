@@ -1,5 +1,5 @@
 # REV-011: The from-your-game marker in Review
-Stage: to-implement
+Stage: blocked
 Blocked by: LEARN-006, LEARN-009
 Review: agent
 Difficulty: normal
@@ -41,3 +41,5 @@ When Review shows a game that reached rook and pawn against rook, each of your m
 ## Comments
 
 - 2026-11-07 Written from `.scratch/learning/spec.md` §L10.
+
+- 2026-11-08 Attempt 1 stopped to ask (its commits are on branch `recovery/asked/20261108-062806/REV-011`): O REV-011 está **bloqueado** na branch `ticket/REV-011`. Preservei um teste para impedir posições duplicadas por FEN, mas a execução foi interrompida antes de verificar a falha esperada; a implementação ainda não começou. /  / Qual deve ser o comprimento padrão das linhas para posições “From your game”? A unidade atual não define um padrão; suas posições usam 2, 3 e 4 movimentos. Minha sugestão é definir **3 movimentos** explicitamente nos dados da unidade. /  / O proxy do fluxo falhou sem retornar uma decisão. A [skill ticket-flow](/home/lage/.agents/skills/ticket-flow/SKILL.md) determina que, nessa situação, se registre `Stage: blocked` e, em sessão acompanhada, se apresente a falha ao usuário. A pergunta e o trabalho preservado estão no [ticket REV-011](/home/lage/Projects/P-Chess/.artifacts-build/lanes/learning/.scratch/learning/issues/114-REV-011-from-your-game-marker.md).
