@@ -26,7 +26,7 @@ func test_course_navigation_unit_progress_and_clock():
 		main.free()
 		Session.HistoryStorage.clean(folder)
 		return
-	assert_true(map.find_child("Stage", true, false).text.contains("Your stage"))
+	assert_true(map.find_child("Stage", true, false).text.contains("Endgame foundations"))
 	var cards = map.find_child("Units", true, false)
 	assert_eq(cards.get_child_count(), 1)
 	cards.get_child(0).pressed.emit()
@@ -43,7 +43,7 @@ func test_course_navigation_unit_progress_and_clock():
 		row.find_child("Open", true, false).pressed.emit()
 		var theory = main.get_node_or_null("Theory")
 		if theory != null and theory.visible:
-			assert_true(not theory.find_child("ReadCard", true, false).visible, "empty books section is hidden")
+			assert_true(theory.find_child("ReadCard", true, false).visible, "populated books section is visible")
 			theory.find_child("Back", true, false).pressed.emit()
 	assert_eq(requests, [["rook-endgames", "theory"], ["rook-endgames", "solving"], ["rook-endgames", "playouts"], ["rook-endgames", "test"]])
 	assert_true(unit.visible, "a part without a screen leaves the unit visible")
